@@ -25,55 +25,57 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //system access levels
-        Gate::define('Super-Administrator-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Super Administrator") {
+        // Permission-based authorization gates
+        Gate::before(function ($user, $ability) {
+            if ($user->isSuperAdmin()) {
                 return true;
             }
-            return false;
+        });
+
+        // Define gates dynamically from permissions
+        foreach (\App\Permission::all() as $permission) {
+            Gate::define($permission->slug, function ($user) use ($permission) {
+                return $user->hasPermission($permission->slug);
+            });
+        }
+
+        //system access levels (legacy support)
+        Gate::define('Super-Administrator-Dashboard', function ($user) {
+            return $user->hasRole('Super Administrator') ||
+                   $user->hasPermission('access-super-admin-dashboard');
         });
 
         Gate::define('Admin-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Administrator") {
-                return true;
-            }
-            return false;
+            return $user->hasRole('Administrator') ||
+                   $user->hasPermission('access-admin-dashboard');
         });
 
         Gate::define('Doctor-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Doctor") {
-                return true;
-            }
-            return false;
+            return $user->hasRole('Doctor') ||
+                   $user->hasPermission('access-doctor-dashboard');
         });
 
         Gate::define('Receptionist-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Receptionist") {
-                return true;
-            }
-            return false;
+            return $user->hasRole('Receptionist') ||
+                   $user->hasPermission('access-receptionist-dashboard');
         });
 
         Gate::define('Nurse-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Nurse") {
-                return true;
-            }
-            return false;
+            return $user->hasRole('Nurse') ||
+                   $user->hasPermission('access-nurse-dashboard');
         });
 
         //individual records permissions
         Gate::define('action-settings', function ($user, $model) {
             // If user is administrator, then can edit any data
-            if ($user->UserRole->name == "Administrator") {
+            if ($user->isAdmin() || $user->isSuperAdmin()) {
                 return true;
             } elseif ($user->id == $model->_who_added) {
                 // Check if user is the data author
                 return true;
             }
 
-            return true;
+            return false;
         });
-
-
     }
 }
