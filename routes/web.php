@@ -17,6 +17,9 @@ Route::get('/', function () {
 
 Auth::routes();
 
+// Language switching
+Route::get('/language/{locale}', 'LanguageController@switch')->name('language.switch');
+
 Route::get('/book-appointment', 'OnlineBookingController@frontend');
 Route::post('request-appointment', 'OnlineBookingController@store');
 

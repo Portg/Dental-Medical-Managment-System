@@ -115,6 +115,49 @@
                                     </ul>
                                 </li>
 
+                                <!-- Language Switcher -->
+                                <li class="dropdown dropdown-extended dropdown-dark">
+                                    <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
+                                        <i class="icon-globe"></i>
+                                        <span class="badge badge-default">
+                                            {{ strtoupper(app()->getLocale()) }}
+                                        </span>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        <li class="external">
+                                            <h3>{{ __('app.select_language') }}</h3>
+                                        </li>
+                                        <li>
+                                            <ul class="dropdown-menu-list">
+                                                <li>
+                                                    <a href="{{ route('language.switch', 'en') }}">
+                                                        <i class="icon-flag"></i> English
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="{{ route('language.switch', 'zh') }}">
+                                                        <i class="icon-flag"></i> 中文 (Chinese)
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="{{ route('language.switch', 'es') }}">
+                                                        <i class="icon-flag"></i> Español (Spanish)
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="{{ route('language.switch', 'fr') }}">
+                                                        <i class="icon-flag"></i> Français (French)
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="{{ route('language.switch', 'ar') }}">
+                                                        <i class="icon-flag"></i> العربية (Arabic)
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
 
                                 <li class="dropdown dropdown-user dropdown-dark">
                                     <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown"
@@ -166,17 +209,17 @@
 
                             <ul class="nav navbar-nav">
                                 <li aria-haspopup="true" class="menu-dropdown classic-menu-dropdown active">
-                                    <a href="{{ url('home') }}"> Dashboard
+                                    <a href="{{ url('home') }}"> {{ __('app.dashboard') }}
                                         <span class="arrow"></span>
                                     </a>
                                 </li>
                                 <li aria-haspopup="true">
-                                    <a href="{{ url('patients') }}"> Patients
+                                    <a href="{{ url('patients') }}"> {{ __('app.patients') }}
                                         <span class="arrow"></span>
                                     </a>
                                 </li>
                                 <li aria-haspopup="true" class="menu-dropdown classic-menu-dropdown ">
-                                    <a href="javascript:;"> Appointments
+                                    <a href="javascript:;"> {{ __('app.appointments') }}
                                         <span class="arrow"></span>
                                     </a>
                                     <ul class="dropdown-menu pull-left">
@@ -192,12 +235,12 @@
 
 
                                 <li aria-haspopup="true" class="menu-dropdown classic-menu-dropdown ">
-                                    <a href="javascript:;"> Invoicing
+                                    <a href="javascript:;"> {{ __('app.invoices') }}
                                         <span class="arrow"></span>
                                     </a>
                                     <ul class="dropdown-menu pull-left">
                                         <li aria-haspopup="true" class=" ">
-                                            <a href="{{ url('invoices') }}" class="nav-link  ">Invoices </a>
+                                            <a href="{{ url('invoices') }}" class="nav-link  ">{{ __('app.invoices') }} </a>
                                         </li>
                                         <li aria-haspopup="true" class=" ">
                                             <a href="{{ url('quotations') }}" class="nav-link  ">Quotations </a>
@@ -286,7 +329,7 @@
                                     </ul>
                                 </li>
                                 <li aria-haspopup="true" class="menu-dropdown classic-menu-dropdown ">
-                                    <a href="javascript:;"> Settings
+                                    <a href="javascript:;"> {{ __('app.settings') }}
                                         <span class="arrow"></span>
                                     </a>
                                     <ul class="dropdown-menu pull-left">
