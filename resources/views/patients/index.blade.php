@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Patients Mgt/ Patients</span>
+                    <span class="caption-subject"> {{__('patient.patient_management')}}/ {{__('patient.patients')}}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,14 +17,14 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{__('patient.add_new_patient')}} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="btn-group pull-right">
                                 <a href="{{ url('export-patients') }}" class="text-danger">
-                                    <i class="icon-cloud-download"></i> Download Excel Report </a>
+                                    <i class="icon-cloud-download"></i> {{__('common.download_excel_report')}} </a>
                             </div>
                         </div>
                     </div>
@@ -38,7 +38,7 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Insurance Company</label>
+                                        <label class="control-label col-md-3">{{__('patient.insurance_company')}}</label>
                                         <div class="col-md-9">
                                             <select id="filter_company" name="filter_company" class="form-control"
                                                     { style="width: 100%;"></select>
@@ -47,16 +47,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Period</label>
+                                        <label class="control-label col-md-3">{{__('datetime.period')}}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option>All</option>
-                                                <option value="Today">Today</option>
-                                                <option value="Yesterday">Yesterday</option>
-                                                <option value="This week">This week</option>
-                                                <option value="Last week">Last week</option>
-                                                <option value="This Month">This Month</option>
-                                                <option value="Last Month">Last Month</option>
+                                                <option>{{__('datetime.time_periods.all')}}</option>
+                                                <option value="Today">{{__('datetime.time_periods.today')}}</option>
+                                                <option value="Yesterday">{{__('datetime.time_periods.yesterday')}}</option>
+                                                <option value="This week">{{__('datetime.time_periods.this_week')}}</option>
+                                                <option value="Last week">{{__('datetime.time_periods.last_week')}}</option>
+                                                <option value="This Month">{{__('datetime.time_periods.this_month')}}</option>
+                                                <option value="Last Month">{{__('datetime.time_periods.last_month')}}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -65,14 +65,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{__('datetime.date_range.start_date')}}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{__('datetime.date_range.end_date')}}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -85,10 +85,9 @@
                                 <div class="col-md-6">
                                     <div class="row">
                                         <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
-                                                Patients
+                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{__('patient.filter_patients')}}
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{__('common.clear')}}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -102,17 +101,17 @@
                        id="patients-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Surname</th>
-                        <th>Other Name</th>
-                        <th>Gender</th>
-                        <th>DOB</th>
-                        <th>Email Address</th>
-                        <th>Contacts</th>
-                        <th>Next Of Kin</th>
-                        <th>Medical Aid</th>
-                        <th>Added By</th>
-                        <th>Action</th>
+                        <th>{{ __('patient.id') }}</th>
+                        <th>{{ __('patient.surname') }}</th>
+                        <th>{{ __('patient.other_name') }}</th>
+                        <th>{{ __('patient.gender') }}</th>
+                        <th>{{ __('patient.dob') }}</th>
+                        <th>{{ __('patient.email_address') }}</th>
+                        <th>{{ __('patient.phone_no') }}</th>
+                        <th>{{ __('patient.next_of_kin') }}</th>
+                        <th>{{ __('patient.medical_aid') }}</th>
+                        <th>{{ __('patient.added_by') }}</th>
+                        <th>{{ __('patient.action') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -125,7 +124,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{__('common.loading')}}</span>
 </div>
 @include('patients.create')
 @include('patients.patient_history')
@@ -134,7 +133,24 @@
 
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
-    <script type="text/javascript">
+    <script src="{{ asset('js/lang-zh-CN.js') }}"></script>
+
+<script type="text/javascript">
+    // Internationalization variables
+    const i18n = {
+        saveRecord: "{{ __('common.save_record') }}",
+        processing: "{{ __('common.processing') }}",
+        updateRecord: "{{ __('common.update_record') }}",
+        updating: "{{ __('common.updating') }}",
+        confirmDeleteTitle: "{{ __('common.confirm_delete_title') }}",
+        confirmDeleteMessage: "{{ __('patient.confirm_delete_message') }}",
+        confirmDeleteButton: "{{ __('common.confirm_delete_button') }}",
+        alert: "{{ __('common.alert') }}",
+        chooseInsuranceCompany: "{{ __('patient.choose_insurance_company') }}"
+    };
+</script>
+
+<script type="text/javascript">
 
         let input = document.querySelector("#telephone");
         window.intlTelInput(input, {
@@ -229,7 +245,7 @@
             $("#patient-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btnSave').attr('disabled', false);
-            $('#btnSave').text('save record');
+            $('#btnSave').text(i18n.saveRecord);
             $('#patients-modal').modal('show');
         }
 
@@ -257,7 +273,7 @@
         });
         //filter insurance companies
         $('#company').select2({
-            placeholder: "Choose insurance company...",
+            placeholder: i18n.chooseInsuranceCompany,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-insurance-company',
@@ -332,7 +348,7 @@
         function save_new_record() {
             $.LoadingOverlay("show");
             $('#btnSave').attr('disabled', true);
-            $('#btnSave').text('processing...');
+            $('#btnSave').text(i18n.processing);
             $.ajax({
                 type: 'POST',
                 data: $('#patient-form').serialize(),
@@ -341,7 +357,7 @@
                     $('#patients-modal').modal('hide');
                     $.LoadingOverlay("hide");
                     $('#btnSave').attr('disabled', false);
-                    $('#btnSave').text('save record');
+                    $('#btnSave').text(i18n.saveRecord);
                     if (data.status) {
                         alert_dialog(data.message, "success");
                     } else {
@@ -351,7 +367,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btnSave').attr('disabled', false);
-                    $('#btnSave').text('Save Record');
+                    $('#btnSave').text(i18n.saveRecord);
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
                         $('.alert-danger').show();
@@ -365,7 +381,7 @@
             $("#patient-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btnSave').attr('disabled', false);
-            $('#btnSave').text('Update Record');
+            $('#btnSave').text(i18n.updateRecord);
             $.LoadingOverlay("show");
             $.ajax({
                 type: 'get',
@@ -423,7 +439,7 @@
         function update_record() {
             $.LoadingOverlay("show");
             $('#btnSave').attr('disabled', true);
-            $('#btnSave').text('Updating...');
+            $('#btnSave').text(i18n.updating);
             $.ajax({
                 type: 'PUT',
                 data: $('#patient-form').serialize(),
@@ -440,7 +456,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btnSave').attr('disabled', false);
-                    $('#btnSave').text('update record');
+                    $('#btnSave').text(i18n.updateRecord);
 
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -453,12 +469,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Patient!",
+                    title: i18n.confirmDeleteTitle,
+                    text: i18n.confirmDeleteMessage,
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: i18n.confirmDeleteButton,
                     closeOnConfirm: false
                 },
                 function () {
@@ -497,7 +513,7 @@
 
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal(i18n.alert, message, status);
             if (status) {
                 let oTable = $('#patients-table').dataTable();
                 oTable.fnDraw(false);
