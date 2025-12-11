@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>i18n.js 使用示例</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .language-switcher {
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 5px;
+        }
+        .language-switcher button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            background: #2196F3;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .language-switcher button:hover {
+            background: #1976D2;
+        }
+        .language-switcher button.active {
+            background: #0D47A1;
+        }
+        .example-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border-left: 4px solid #2196F3;
+            background: #f9f9f9;
+        }
+        .example-section h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+        .output {
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .output-label {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .code {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button.test-btn {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button.test-btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>i18n.js 国际化库使用示例</h1>
+
+        <!-- 语言切换器 -->
+        <div class="language-switcher">
+            <strong>选择语言 / Select Language: </strong>
+            <button onclick="switchLanguage('zh-CN')" id="btn-zh">中文</button>
+            <button onclick="switchLanguage('en')" id="btn-en">English</button>
+            <span style="margin-left: 20px;">当前语言 / Current: <strong id="current-locale">zh-CN</strong></span>
+        </div>
+
+        <!-- 示例1: 基础翻译 -->
+        <div class="example-section">
+            <h3>示例 1: 基础翻译</h3>
+            <div class="code">i18n.t('common.hello')</div>
+            <div class="output">
+                <div class="output-label">输出:</div>
+                <div id="example1"></div>
+            </div>
+        </div>
+
+        <!-- 示例2: 嵌套键翻译 -->
+        <div class="example-section">
+            <h3>示例 2: 嵌套键翻译</h3>
+            <div class="code">i18n.t('appointment.title')</div>
+            <div class="output">
+                <div class="output-label">输出:</div>
+                <div id="example2"></div>
+            </div>
+        </div>
+
+        <!-- 示例3: 变量插值 -->
+        <div class="example-section">
+            <h3>示例 3: 变量插值</h3>
+            <div class="code">i18n.t('user.greeting', { name: '张三' })</div>
+            <div class="output">
+                <div class="output-label">输出:</div>
+                <div id="example3"></div>
+            </div>
+            <div style="margin-top: 15px;">
+                <input type="text" id="username-input" placeholder="输入姓名">
+                <button class="test-btn" onclick="testGreeting()">测试</button>
+            </div>
+        </div>
+
+        <!-- 示例4: 多个变量 -->
+        <div class="example-section">
+            <h3>示例 4: 多个变量插值</h3>
+            <div class="code">i18n.t('user.welcome_message', { name: '李四', days: 5 })</div>
+            <div class="output">
+                <div class="output-label">输出:</div>
+                <div id="example4"></div>
+            </div>
+        </div>
+
+        <!-- 示例5: 复数形式 -->
+        <div class="example-section">
+            <h3>示例 5: 复数形式处理</h3>
+            <div class="code">
+i18n.tc('items.patient_count', 0)<br>
+i18n.tc('items.patient_count', 1)<br>
+i18n.tc('items.patient_count', 10)
+            </div>
+            <div class="output">
+                <div class="output-label">输出:</div>
+                <div id="example5"></div>
+            </div>
+            <div style="margin-top: 15px;">
+                <input type="number" id="count-input" value="3" min="0" max="100">
+                <button class="test-btn" onclick="testPlural()">测试复数</button>
+            </div>
+        </div>
+
+        <!-- 示例6: 日期格式化 -->
+        <div class="example-section">
+            <h3>示例 6: 日期格式化</h3>
+            <div class="code">
+i18n.d(new Date(), 'short')<br>
+i18n.d(new Date(), 'long')
+            </div>
+            <div class="output">
+                <div class="output-label">输出:</div>
+                <div id="example6"></div>
+            </div>
+        </div>
+
+        <!-- 示例7: 数字格式化 -->
+        <div class="example-section">
+            <h3>示例 7: 数字格式化</h3>
+            <div class="code">
+i18n.n(1234567.89)<br>
+i18n.n(1234567.89, { style: 'currency', currency: 'CNY' })
+            </div>
+            <div class="output">
+                <div class="output-label">输出:</div>
+                <div id="example7"></div>
+            </div>
+        </div>
+
+        <!-- 示例8: 检查翻译是否存在 -->
+        <div class="example-section">
+            <h3>示例 8: 检查翻译键是否存在</h3>
+            <div class="code">
+i18n.te('common.hello')  // true<br>
+i18n.te('common.notexist')  // false
+            </div>
+            <div class="output">
+                <div class="output-label">输出:</div>
+                <div id="example8"></div>
+            </div>
+        </div>
+
+        <!-- 示例9: 实际应用场景 -->
+        <div class="example-section">
+            <h3>示例 9: 实际应用 - 预约表单</h3>
+            <div class="output" style="padding: 20px;">
+                <h4 id="form-title"></h4>
+                <div style="margin-bottom: 10px;">
+                    <label id="label-patient"></label><br>
+                    <input type="text" style="width: 200px;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label id="label-doctor"></label><br>
+                    <input type="text" style="width: 200px;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label id="label-date"></label><br>
+                    <input type="date" style="width: 200px;">
+                </div>
+                <button class="test-btn" id="btn-submit"></button>
+                <button class="test-btn" style="background: #999;" id="btn-cancel"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 i18n.js 和语言文件 -->
+    <script src="../js/i18n.js"></script>
+    <script src="../js/locales/zh-CN.js"></script>
+    <script src="../js/locales/en.js"></script>
+
+    <script>
+        // 初始化 i18n
+        const i18n = new I18n({
+            locale: 'zh-CN',
+            fallbackLocale: 'en',
+            messages: window.i18nMessages
+        });
+
+        // 语言切换函数
+        function switchLanguage(locale) {
+            i18n.setLocale(locale);
+            document.getElementById('current-locale').textContent = locale;
+
+            // 更新按钮状态
+            document.querySelectorAll('.language-switcher button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('btn-' + (locale === 'zh-CN' ? 'zh' : locale)).classList.add('active');
+
+            // 更新所有示例
+            updateExamples();
+        }
+
+        // 更新所有示例
+        function updateExamples() {
+            // 示例1: 基础翻译
+            document.getElementById('example1').innerHTML = i18n.t('common.hello');
+
+            // 示例2: 嵌套键
+            document.getElementById('example2').innerHTML = i18n.t('appointment.title');
+
+            // 示例3: 变量插值
+            document.getElementById('example3').innerHTML = i18n.t('user.greeting', { name: '张三' });
+
+            // 示例4: 多个变量
+            document.getElementById('example4').innerHTML = i18n.t('user.welcome_message', { name: '李四', days: 5 });
+
+            // 示例5: 复数形式
+            document.getElementById('example5').innerHTML =
+                '0: ' + i18n.tc('items.patient_count', 0) + '<br>' +
+                '1: ' + i18n.tc('items.patient_count', 1) + '<br>' +
+                '10: ' + i18n.tc('items.patient_count', 10);
+
+            // 示例6: 日期格式化
+            const now = new Date();
+            document.getElementById('example6').innerHTML =
+                'Short: ' + i18n.d(now, 'short') + '<br>' +
+                'Long: ' + i18n.d(now, 'long');
+
+            // 示例7: 数字格式化
+            document.getElementById('example7').innerHTML =
+                'Number: ' + i18n.n(1234567.89) + '<br>' +
+                'Currency: ' + i18n.n(1234567.89, { style: 'currency', currency: i18n.locale === 'zh-CN' ? 'CNY' : 'USD' });
+
+            // 示例8: 检查翻译
+            document.getElementById('example8').innerHTML =
+                "i18n.te('common.hello'): " + i18n.te('common.hello') + '<br>' +
+                "i18n.te('common.notexist'): " + i18n.te('common.notexist');
+
+            // 示例9: 实际应用
+            document.getElementById('form-title').textContent = i18n.t('appointment.new_appointment');
+            document.getElementById('label-patient').textContent = i18n.t('dental.patient') + ':';
+            document.getElementById('label-doctor').textContent = i18n.t('dental.doctor') + ':';
+            document.getElementById('label-date').textContent = i18n.t('appointment.appointment_date') + ':';
+            document.getElementById('btn-submit').textContent = i18n.t('common.submit');
+            document.getElementById('btn-cancel').textContent = i18n.t('common.cancel');
+        }
+
+        // 测试问候功能
+        function testGreeting() {
+            const name = document.getElementById('username-input').value || '用户';
+            document.getElementById('example3').innerHTML = i18n.t('user.greeting', { name: name });
+        }
+
+        // 测试复数功能
+        function testPlural() {
+            const count = parseInt(document.getElementById('count-input').value) || 0;
+            document.getElementById('example5').innerHTML =
+                '0: ' + i18n.tc('items.patient_count', 0) + '<br>' +
+                '1: ' + i18n.tc('items.patient_count', 1) + '<br>' +
+                count + ': ' + i18n.tc('items.patient_count', count);
+        }
+
+        // 监听语言变化事件
+        i18n.on('localeChanged', function(locale) {
+            console.log('语言已切换到:', locale);
+        });
+
+        // 页面加载时更新示例
+        window.onload = function() {
+            document.getElementById('btn-zh').classList.add('active');
+            updateExamples();
+        };
+    </script>
+</body>
+</html>
