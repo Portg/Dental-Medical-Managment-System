@@ -40,7 +40,7 @@
                 <button type="button" class="btn btn-primary" id="btn-surgery" onclick="save_surgery()">Save
                     changes
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

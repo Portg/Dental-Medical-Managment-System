@@ -11,11 +11,10 @@
                     <ul class="nav nav-pills">
 
                         <li class="active" id="appointments_tab_link">
-                            <a href="#appointments_tab" data-toggle="tab" aria-expanded="true">Appointments</a>
+                            <a href="#appointments_tab" data-toggle="tab" aria-expanded="true">{{ __('appointments.appointments') }}</a>
                         </li>
                         <li class="" id="appointment_calender_tab_link">
-                            <a href="#appointment_calender_tab" data-toggle="tab" aria-expanded="false">Appointments
-                                Calender
+                            <a href="#appointment_calender_tab" data-toggle="tab" aria-expanded="false">{{ __('appointments.appointments_calender') }}
                             </a>
                         </li>
 
@@ -27,7 +26,7 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
                                         <div class="caption font-dark">
-                                            <span class="caption-subject"> Appointments Mgt</span>
+                                            <span class="caption-subject"> {{ __('appointments.appointments_mgt') }}</span>
                                         </div>
                                     </div>
                                     <div class="portlet-body">
@@ -36,14 +35,14 @@
                                                 <div class="col-md-6">
                                                     <div class="btn-group">
                                                         <a class="btn blue btn-outline sbold" href="#"
-                                                           onclick="createRecord()"> Add New <i
+                                                           onclick="createRecord()"> {{ __('common.add_new') }} <i
                                                                     class="fa fa-plus"></i> </a>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="btn-group pull-right">
                                                         <a href="{{ url('export-appointments') }}" class="text-danger">
-                                                            <i class="icon-cloud-download"></i> Download Excel Report
+                                                            <i class="icon-cloud-download"></i> {{ __('common.download_excel_report') }}
                                                         </a>
                                                     </div>
                                                 </div>
@@ -59,11 +58,10 @@
                                                     <div class="row">
                                                         <div class="col-md-6">
                                                             <div class="form-group">
-                                                                <label class="control-label col-md-3">Appointment
-                                                                    No</label>
+                                                                <label class="control-label col-md-3">{{ __('appointments.appointment_no') }}</label>
                                                                 <div class="col-md-9">
                                                                     <input type="text" class="form-control"
-                                                                           placeholder="Enter appointment No"
+                                                                           placeholder="{{ __('appointments.enter_appointment_no') }}"
                                                                            name="appointment_no"
                                                                            id="appointment_no_filter">
                                                                 </div>
@@ -71,16 +69,16 @@
                                                         </div>
                                                         <div class="col-md-6">
                                                             <div class="form-group">
-                                                                <label class="control-label col-md-3">Period</label>
+                                                                <label class="control-label col-md-3">{{ __('common.period') }}</label>
                                                                 <div class="col-md-9">
                                                                     <select class="form-control" id="period_selector">
-                                                                        <option>All</option>
-                                                                        <option value="Today">Today</option>
-                                                                        <option value="Yesterday">Yesterday</option>
-                                                                        <option value="This week">This week</option>
-                                                                        <option value="Last week">Last week</option>
-                                                                        <option value="This Month">This Month</option>
-                                                                        <option value="Last Month">Last Month</option>
+                                                                        <option>{{ __('common.all') }}</option>
+                                                                        <option value="Today">{{ __('common.today') }}</option>
+                                                                        <option value="Yesterday">{{ __('common.yesterday') }}</option>
+                                                                        <option value="This week">{{ __('common.this_week') }}</option>
+                                                                        <option value="Last week">{{ __('common.last_week') }}</option>
+                                                                        <option value="This Month">{{ __('common.this_month') }}</option>
+                                                                        <option value="Last Month">{{ __('common.last_month') }}</option>
                                                                     </select>
                                                                 </div>
                                                             </div>
@@ -89,7 +87,7 @@
                                                     <div class="row">
                                                         <div class="col-md-6">
                                                             <div class="form-group">
-                                                                <label class="control-label col-md-3">Start Date</label>
+                                                                <label class="control-label col-md-3">{{ __('common.start_date') }}</label>
                                                                 <div class="col-md-9">
                                                                     <input type="text" class="form-control start_date">
                                                                 </div>
@@ -97,7 +95,7 @@
                                                         </div>
                                                         <div class="col-md-6">
                                                             <div class="form-group">
-                                                                <label class="control-label col-md-3">End Date</label>
+                                                                <label class="control-label col-md-3">{{ __('common.end_date') }}</label>
                                                                 <div class="col-md-9">
                                                                     <input type="text" class="form-control end_date">
                                                                 </div>
@@ -111,10 +109,9 @@
                                                             <div class="row">
                                                                 <div class="col-md-offset-3 col-md-9">
                                                                     <button type="button" id="customFilterBtn"
-                                                                            class="btn purple-intense">Filter
-                                                                        Appointments
+                                                                            class="btn purple-intense">{{ __('appointments.filter_appointments') }}
                                                                     </button>
-                                                                    <button type="button" class="btn default">Clear
+                                                                    <button type="button" class="btn default">{{ __('common.clear') }}
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -129,14 +126,14 @@
                                                id="appointments-table">
                                             <thead>
                                             <tr>
-                                                <th>ID</th>
-                                                <th>Appointment Date</th>
-                                                <th>Appointment Time</th>
-                                                <th>Patient</th>
-                                                <th>Doctor</th>
-                                                <th>Appointment Category</th>
-                                                <th>Invoice status</th>
-                                                <th>Action</th>
+                                                <th>{{ __('common.id') }}</th>
+                                                <th>{{ __('appointments.appointment_date') }}</th>
+                                                <th>{{ __('appointments.appointment_time') }}</th>
+                                                <th>{{ __('appointments.patient') }}</th>
+                                                <th>{{ __('appointments.doctor') }}</th>
+                                                <th>{{ __('appointments.appointment_category') }}</th>
+                                                <th>{{ __('appointments.invoice_status') }}</th>
+                                                <th>{{ __('common.action') }}</th>
                                             </thead>
                                             <tbody>
 
@@ -154,7 +151,7 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
                                         <div class="caption font-dark">
-                                            <span class="caption-subject"> Appointments mgt/ Calender</span>
+                                            <span class="caption-subject"> {{ __('appointments.appointments_mgt') }}/ {{ __('appointments.appointment_calender') }}</span>
                                         </div>
                                     </div>
                                     <div class="portlet-body">
@@ -173,7 +170,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('appointments.create')
 @include('appointments.invoices.create')

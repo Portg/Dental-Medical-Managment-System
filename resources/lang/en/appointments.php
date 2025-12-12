@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'appointments' => 'Appointments',
+    'appointments_mgt' => 'Appointments Mgt',
+    'appointment_no' => 'Appointment No',
+    'appointment_date' => 'Appointment Date',
+    'appointment_time' => 'Appointment Time',
+    'appointment_category' => 'Appointment Category',
+    'appointment_status' => 'Appointment Status',
+    'appointment_calender' => 'Appointment Calender',
+    'appointments_calender' => 'Appointments Calender',
+    'patient' => 'Patient',
+    'doctor' => 'Doctor',
+    'visit_information' => 'Visit Information',
+    'invoice_status' => 'Invoice status',
+    'filter_appointments' => 'Filter Appointments',
+    'enter_appointment_no' => 'Enter appointment No',
+    'choose_patient' => 'Choose patient',
+    'choose_doctor' => 'Choose doctor',
+    'walk_in' => 'Walk In',
+    'reactivate_appointment' => 'Reactivate Appointment',
+    're_activate_appointment' => 'Re-Activate Appointment',
+    'reschedule_appointment' => 'Reschedule Appointment',
+    'delete_appointment_warning' => 'Your will not be able to recover this Appointment!',
+    'export_appointments' => 'Export Appointments',
+];

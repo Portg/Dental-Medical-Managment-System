@@ -30,7 +30,7 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>Payslip Month</th>
                         <th>Basic Salary</th>
                         <th>Total Advances</th>
@@ -48,7 +48,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('payslips.create')
 @endsection

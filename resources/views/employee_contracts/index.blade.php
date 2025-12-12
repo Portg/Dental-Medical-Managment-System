@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,7 +32,7 @@
                        id="contracts-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>Employee</th>
                         <th>Contract Type</th>
                         <th>Length</th>
@@ -42,7 +42,7 @@
                         <th>Salary/Commission</th>
                         {{--                        <th>status</th>--}}
                         {{--                        <th>Added By</th>--}}
-                        <th>Action</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -54,7 +54,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('employee_contracts.create')
 @endsection

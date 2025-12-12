@@ -22,10 +22,10 @@
                    id="leave-types_table">
                 <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>{{ __('common.id') }}</th>
                     <th>Added Date</th>
                     <th>Transaction</th>
-                    <th>Amount</th>
+                    <th>{{ __('common.amount') }}</th>
                     <th>Added By</th>
                 </thead>
                 <tbody>
@@ -38,7 +38,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('sms_transactions.create')
 @endsection

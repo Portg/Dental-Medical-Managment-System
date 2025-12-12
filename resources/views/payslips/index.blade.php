@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,7 +32,7 @@
                        id="payslips-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>Employee</th>
                         <th>Month</th>
                         <th>Gross/Commission</th>
@@ -41,7 +41,7 @@
                         <th>Paid</th>
                         <th>Outstanding</th>
                         <th>Added By</th>
-                        <th>Action</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -53,7 +53,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('payslips.create')
 @endsection
@@ -127,7 +127,7 @@
                 '                                        <option value="Overtime Allowance">Overtime Allowance</option>\n' +
                 '                                    </select></td>' +
                 '<td> <input type="number"  name="addAllowance[' + i + '][allowance_amount]" placeholder="Enter amount" class="form-control"/></td>' +
-                '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td>' +
+                '<td><button type="button" class="btn btn-danger remove-tr">{{ __('invoices.remove') }}</button></td>' +
                 '</tr>');
         });
 
@@ -142,7 +142,7 @@
                 ' <option value="Tax">Tax</option>' +
                 '</select></td>' +
                 '<td> <input type="number"  name="addDeduction[' + x + '][deduction_amount]" placeholder="Enter amount" class="form-control"/></td>' +
-                '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td>' +
+                '<td><button type="button" class="btn btn-danger remove-tr">{{ __('invoices.remove') }}</button></td>' +
                 '</tr>');
         });
 

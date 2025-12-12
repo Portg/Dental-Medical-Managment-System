@@ -31,7 +31,7 @@
                                                 <td>Phone No:</td>
                                             </tr>
                                             <tr>
-                                                <td>Email</td>
+                                                <td>{{ __('common.email') }}</td>
                                             </tr>
                                         </table>
 

@@ -25,14 +25,14 @@
                        id="leave-requests_table">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>Employee</th>
                         <th>Request Date</th>
                         <th>Leave Type</th>
-                        <th>Start Date</th>
+                        <th>{{ __('common.start_date') }}</th>
                         <th>Duration</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        <th>{{ __('common.status') }}</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -44,7 +44,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @endsection
 @section('js')

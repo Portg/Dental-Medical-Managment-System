@@ -24,7 +24,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="AddDeposit()"> Add New <i
+                                   onclick="AddDeposit()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -37,11 +37,11 @@
 
                         <th> #</th>
                         <th>Payment Date</th>
-                        <th>Amount</th>
+                        <th>{{ __('common.amount') }}</th>
                         <th>Payment Method</th>
                         <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -71,7 +71,7 @@
                         <th>Invoice No</th>
                         <th>patient</th>
                         <th>Payment Date</th>
-                        <th>Amount</th>
+                        <th>{{ __('common.amount') }}</th>
                         <th>Added By</th>
                     </tr>
                     </thead>

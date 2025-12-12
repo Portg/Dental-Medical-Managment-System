@@ -36,8 +36,8 @@
                         <table class="table table-bordered" id="AllowancesTable">
                             <tr>
                                 <th class="text-primary">Allowance</th>
-                                <th class="text-primary">Amount</th>
-                                <th class="text-primary">Action</th>
+                                <th class="text-primary">{{ __('common.amount') }}</th>
+                                <th class="text-primary">{{ __('common.action') }}</th>
                             </tr>
                             <tr>
                                 <td>
@@ -73,8 +73,8 @@
                         <table class="table table-bordered" id="DeductionsTable">
                             <tr>
                                 <th class="text-primary">Deduction</th>
-                                <th class="text-primary">Amount</th>
-                                <th class="text-primary">Action</th>
+                                <th class="text-primary">{{ __('common.amount') }}</th>
+                                <th class="text-primary">{{ __('common.action') }}</th>
                             </tr>
                             <tr>
                                 <td>
@@ -102,8 +102,8 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn purple" id="btn-save" onclick="save_data()">Save changes</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn purple" id="btn-save" onclick="save_data()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

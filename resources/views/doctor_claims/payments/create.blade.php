@@ -23,7 +23,7 @@
                                class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Amount </label>
+                        <label class="text-primary">{{ __('common.amount') }} </label>
                         <input type="text" name="amount" id="amount" placeholder="enter amount here"
                                class="form-control">
                     </div>
@@ -35,7 +35,7 @@
                 <button type="button" class="btn btn-primary" id="btn-save" onclick="save_payment_record()">Save
                     changes
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

@@ -31,8 +31,8 @@
                         <th>Unit price</th>
                         <th>Total Amount</th>
                         <th>Procedure Doctor</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -66,11 +66,11 @@
 
                         <th> #</th>
                         <th>Payment Date</th>
-                        <th>Amount</th>
+                        <th>{{ __('common.amount') }}</th>
                         <th>Payment Method</th>
                         <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>

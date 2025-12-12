@@ -28,14 +28,14 @@
                         <div class="form-group">
                             <label class="control-label col-md-3"> Patient Name</label>
                             <div class="col-md-9">
-                                <input name="name" readonly="" placeholder="Name" class="form-control" type="text">
+                                <input name="name" readonly="" placeholder="{{ __('common.name') }}" class="form-control" type="text">
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label class="control-label col-md-3">Email Address</label>
                             <div class="col-md-9">
-                                <input name="email" placeholder="Email" autocomplete="off" class="form-control"
+                                <input name="email" placeholder="{{ __('common.email') }}" autocomplete="off" class="form-control"
                                        type="email" required="">
                             </div>
                         </div>
@@ -52,7 +52,7 @@
             <div class="modal-footer">
                 <button type="button" id="btn-share" onclick="sendQuotation()" class="btn btn-primary">Share Quotation
                 </button>
-                <button type="button" class="btn btn-danger" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">{{ __('common.cancel') }}</button>
             </div>
         </div>
     </div>

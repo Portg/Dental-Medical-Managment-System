@@ -44,7 +44,7 @@
                                         <label class="control-label col-md-3">payment Method</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option>All</option>
+                                                <option>{{ __('common.all') }}</option>
                                                 <option value="Cash">Insurance</option>
                                                 <option value="Credit">Credit</option>
                                             </select>
@@ -55,14 +55,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{ __('common.start_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{ __('common.end_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -78,7 +78,7 @@
                                             <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
                                                 Invoices
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{ __('common.clear') }}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -114,7 +114,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @endsection
 @section('js')

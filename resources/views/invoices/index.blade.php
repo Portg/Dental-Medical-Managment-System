@@ -39,16 +39,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Period</label>
+                                        <label class="control-label col-md-3">{{ __('common.period') }}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option>All</option>
-                                                <option value="Today">Today</option>
-                                                <option value="Yesterday">Yesterday</option>
-                                                <option value="This week">This week</option>
-                                                <option value="Last week">Last week</option>
-                                                <option value="This Month">This Month</option>
-                                                <option value="Last Month">Last Month</option>
+                                                <option>{{ __('common.all') }}</option>
+                                                <option value="Today">{{ __('common.today') }}</option>
+                                                <option value="Yesterday">{{ __('common.yesterday') }}</option>
+                                                <option value="This week">{{ __('common.this_week') }}</option>
+                                                <option value="Last week">{{ __('common.last_week') }}</option>
+                                                <option value="This Month">{{ __('common.this_month') }}</option>
+                                                <option value="Last Month">{{ __('common.last_month') }}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -57,14 +57,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{ __('common.start_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{ __('common.end_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -80,7 +80,7 @@
                                             <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
                                                 Invoices
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{ __('common.clear') }}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -96,7 +96,7 @@
                     <tr>
                         <th>#</th>
                         <th>Invoice No</th>
-                        <th>Date</th>
+                        <th>{{ __('common.date') }}</th>
                         <th>Customer</th>
                         <th>Total Amount</th>
                         <th>Paid Amount</th>
@@ -115,7 +115,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('invoices.payment.create')
 @include('invoices.share_invoice')

@@ -31,11 +31,11 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>Time</th>
                         <th>Surname</th>
                         <th>Othername</th>
-                        <th>Amount</th>
+                        <th>{{ __('common.amount') }}</th>
                         <th>Added By</th>
                     </tr>
                     </thead>
@@ -49,7 +49,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('patients.create')
 @endsection

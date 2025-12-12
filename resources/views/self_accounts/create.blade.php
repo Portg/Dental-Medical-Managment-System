@@ -26,11 +26,11 @@
                         <input type="text" name="phone_no" placeholder="" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Email <span class="text-danger">(Optional)</span></label>
+                        <label class="text-primary">{{ __('common.email') }} <span class="text-danger">(Optional)</span></label>
                         <input type="text" name="email" placeholder="" class="form-control">
                     </div>
                     <div class="form-group hidden">
-                        <label class="text-primary">Address <span class="text-danger">Optional</span></label>
+                        <label class="text-primary">{{ __('common.address') }} <span class="text-danger">Optional</span></label>
                         <input type="text" name="address" placeholder="" class="form-control">
                     </div>
                 </form>
@@ -38,8 +38,8 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">Save changes</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

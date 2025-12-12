@@ -61,7 +61,7 @@
 
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary">Email<span
+                                            <label class="control-label col-md-3 text-primary">{{ __('common.email') }}<span
                                                         class="text-danger">
                                                    (Optional)
                                                 </span></label>
@@ -101,7 +101,7 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary">Address <span
+                                            <label class="control-label col-md-3 text-primary">{{ __('common.address') }} <span
                                                         class="text-danger">
                                                 </span></label>
                                             <div class="col-md-9">
@@ -196,8 +196,8 @@
 
             </div>
             <div class="modal-footer">
-                <button type="button" id="btnSave" class="btn green" onclick="save_data()">Save changes</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" id="btnSave" class="btn green" onclick="save_data()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

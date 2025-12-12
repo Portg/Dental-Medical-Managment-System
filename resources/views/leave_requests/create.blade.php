@@ -23,7 +23,7 @@
                                 style="width: 100%;"></select>
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Start Date </label>
+                        <label class="text-primary">{{ __('common.start_date') }} </label>
                         <input type="text" name="start_date" placeholder="yyy-mm-dd" id="datepicker"
                                class="form-control">
                     </div>
@@ -37,8 +37,8 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">Save changes</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

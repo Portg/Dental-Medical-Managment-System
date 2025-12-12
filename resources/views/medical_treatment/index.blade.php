@@ -111,8 +111,8 @@
                                                             <th>Clinical Notes</th>
                                                             <th>Treatment</th>
                                                             <th>Added By</th>
-                                                            <th>Edit</th>
-                                                            <th>Delete</th>
+                                                            <th>{{ __('common.edit') }}</th>
+                                                            <th>{{ __('common.delete') }}</th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>
@@ -157,8 +157,8 @@
                                                             <th>Drug</th>
                                                             <th>Quantity</th>
                                                             <th>Directions</th>
-                                                            <th>Edit</th>
-                                                            <th>Delete</th>
+                                                            <th>{{ __('common.edit') }}</th>
+                                                            <th>{{ __('common.delete') }}</th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>
@@ -187,9 +187,9 @@
                                                             <th> #</th>
                                                             <th>Procedure</th>
                                                             <th>Tooth Numbers</th>
-                                                            <th>Amount</th>
-                                                            <th>Edit</th>
-                                                            <th>Delete</th>
+                                                            <th>{{ __('common.amount') }}</th>
+                                                            <th>{{ __('common.edit') }}</th>
+                                                            <th>{{ __('common.delete') }}</th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>
@@ -227,8 +227,8 @@
                                                 <th>Illness</th>
                                                 <th>status</th>
                                                 <th>Created At</th>
-                                                <th>Edit</th>
-                                                <th>Delete</th>
+                                                <th>{{ __('common.edit') }}</th>
+                                                <th>{{ __('common.delete') }}</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -263,8 +263,8 @@
                                                 <th>#</th>
                                                 <th>Allergies</th>
                                                 <th>Created At</th>
-                                                <th>Edit</th>
-                                                <th>Delete</th>
+                                                <th>{{ __('common.edit') }}</th>
+                                                <th>{{ __('common.delete') }}</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -286,7 +286,7 @@
 
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('medical_history.chronic_diseases.create')
 @include('medical_history.allergies.create')

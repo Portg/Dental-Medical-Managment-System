@@ -26,7 +26,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -45,8 +45,8 @@
                         <th>unit Price</th>
                         <th>Total Amount</th>
                         <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>

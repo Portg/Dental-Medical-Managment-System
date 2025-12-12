@@ -73,7 +73,7 @@
                 <tr>
                     <th>Payment Date</th>
                     <th>Payment method</th>
-                    <th class="text-alignment">Amount</th>
+                    <th class="text-alignment">{{ __('common.amount') }}</th>
                 </tr>
                 </thead>
                 <tbody>

@@ -28,9 +28,9 @@
                     <tr>
                         <th> #</th>
                         <th>Payment Date</th>
-                        <th>Amount</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.amount') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -45,7 +45,7 @@
 
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('doctor_claims.payments.create')
 @endsection

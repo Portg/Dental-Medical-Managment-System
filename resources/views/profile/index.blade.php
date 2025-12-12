@@ -79,7 +79,7 @@
                                         </div>
 
                                         <div class="form-group">
-                                            <label class="control-label">Email</label>
+                                            <label class="control-label">{{ __('common.email') }}</label>
                                             <input type="text" name="email" placeholder="Enter Email address"
                                                    class="form-control" value="{{ $user->email }}"/>
                                         </div>
@@ -101,7 +101,7 @@
                                         </div>
                                         <div class="margiv-top-10">
                                             <a href="#" onclick="Update_Biodata();" class="btn green"> Save Changes </a>
-                                            <a href="javascript:;" class="btn default"> Cancel </a>
+                                            <a href="javascript:;" class="btn default"> {{ __('common.cancel') }} </a>
                                         </div>
                                     </form>
                                 </div>
@@ -128,7 +128,7 @@
                                        <span class="fileinput-exists"> Change </span>
                                        <input type="file" name="avatar"> </span>
                                                     <a href="javascript:;" class="btn default fileinput-exists"
-                                                       data-dismiss="fileinput"> Remove </a>
+                                                       data-dismiss="fileinput"> {{ __('invoices.remove') }} </a>
                                                 </div>
                                             </div>
 
@@ -136,7 +136,7 @@
                                         <div class="margin-top-10">
                                             <input type="submit" value="Upload profile" class="btn btn-primary">
                                             {{--                                            <a href="#" class="btn green"> upload image </a>--}}
-                                            <a href="javascript:;" class="btn default"> Cancel </a>
+                                            <a href="javascript:;" class="btn default"> {{ __('common.cancel') }} </a>
                                         </div>
                                     </form>
                                 </div>
@@ -168,7 +168,7 @@
                                         <div class="margin-top-10">
                                             <a href="#" onclick="Change_Password();" class="btn green"> Change
                                                 Password </a>
-                                            <a href="javascript:;" class="btn default"> Cancel </a>
+                                            <a href="javascript:;" class="btn default"> {{ __('common.cancel') }} </a>
                                         </div>
                                     </form>
                                 </div>
@@ -182,7 +182,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @endsection
 @section('js')

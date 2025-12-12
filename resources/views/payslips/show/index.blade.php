@@ -18,7 +18,7 @@
                     <span class="caption-subject bold uppercase">Allowances</span>
                     &nbsp; &nbsp; &nbsp
                     <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_allowance()"> Add New <i
+                       onclick="Add_new_allowance()"> {{ __('common.add_new') }} <i
                                 class="fa fa-plus"></i> </a>
                 </div>
             </div>
@@ -29,10 +29,10 @@
                         <th> #</th>
                         <th>Added At</th>
                         <th>Allowance</th>
-                        <th>Amount</th>
+                        <th>{{ __('common.amount') }}</th>
                         <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -50,7 +50,7 @@
                     <span class="caption-subject font-dark bold uppercase">Deductions</span>
                     &nbsp; &nbsp
                     <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_deduction()"> Add New <i
+                       onclick="Add_new_deduction()"> {{ __('common.add_new') }} <i
                                 class="fa fa-plus"></i> </a>
                 </div>
                 <div class="actions">
@@ -69,10 +69,10 @@
                         <th> #</th>
                         <th>Added At</th>
                         <th>Deduction</th>
-                        <th>Amount</th>
+                        <th>{{ __('common.amount') }}</th>
                         <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>

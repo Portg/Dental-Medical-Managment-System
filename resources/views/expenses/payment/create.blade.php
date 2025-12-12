@@ -30,7 +30,7 @@
                         <input type="radio" name="payment_method" value="Bank Wire Transfer"> Bank Wire Transfer<br>
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Amount </label>
+                        <label class="text-primary">{{ __('common.amount') }} </label>
                         <input type="number" name="amount" placeholder="Enter amount" class="form-control">
                     </div>
                     <div class="form-group">
@@ -50,7 +50,7 @@
                 <button type="button" class="btn btn-primary" id="btnSave" onclick="save_payment_record()">Save
                     Record
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

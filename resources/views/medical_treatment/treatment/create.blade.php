@@ -112,7 +112,7 @@
                 <button type="button" class="btn btn-primary" id="btn-treatment" onclick="save_treatment()">Save
                     changes
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

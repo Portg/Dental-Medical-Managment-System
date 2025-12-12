@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                         class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,14 +32,14 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('common.date') }}</th>
                         <th>Surname</th>
                         <th>Other Name</th>
                         <th>Cash Rate(%)</th>
                         <th>Insurance Rate(%)</th>
                         <th>status</th>
-                        <th>Action</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -51,7 +51,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('claim_rates.create')
 @include('claim_rates.new_claim')

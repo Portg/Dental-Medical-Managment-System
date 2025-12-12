@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,16 +32,16 @@
                        id="users_table">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>Surname</th>
                         <th>Othername</th>
-                        <th>Email</th>
+                        <th>{{ __('common.email') }}</th>
                         <th>Phone Number</th>
                         <th>Role</th>
                         <th>Branch</th>
                         <th>Is Doctor</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -53,7 +53,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('users.create')
 @endsection

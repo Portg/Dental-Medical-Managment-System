@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="note note-success hidden">
-        <p class="text-black-50"><a href="{{ url('profile') }}" class="text-primary">My Profile</a>
+        <p class="text-black-50"><a href="{{ url('profile') }}" class="text-primary">{{ __('common.my_profile') }}</a>
             / {{ Auth::User()->surname." ".Auth::User()->othername }}
             <span class="text-primary">[ {{  Auth::User()->UserRole->name }}]</span>
 {{--            / <span> {{ Auth::User()->branch->name }}</span>--}}
@@ -19,7 +19,7 @@
                         <span data-counter="counterup"
                               data-value="{{ $today_appointments }}">{{ $today_appointments }}</span>
                     </div>
-                    <div class="desc"> Today's Appointments</div>
+                    <div class="desc"> {{ __('common.today_appointments') }}</div>
                 </div>
             </a>
         </div>
@@ -33,7 +33,7 @@
                         <span data-counter="counterup"
                               data-value="{{ number_format($today_cash_amount) }}">{{ number_format($today_cash_amount) }}</span>
                     </div>
-                    <div class="desc"> Today's Cash (Amount)</div>
+                    <div class="desc"> {{ __('common.today_cash') }}</div>
                 </div>
             </a>
         </div>
@@ -47,7 +47,7 @@
                         <span data-counter="counterup"
                               data-value="{{ number_format($today_Insurance_amount) }}">{{ number_format($today_Insurance_amount)  }}</span>
                     </div>
-                    <div class="desc"> Today's Insurance (Amount)</div>
+                    <div class="desc"> {{ __('common.today_insurance') }}</div>
                 </div>
             </a>
         </div>
@@ -62,7 +62,7 @@
                         <span data-counter="counterup"
                               data-value="{{ number_format($today_expense_amount) }}">{{ number_format($today_expense_amount) }}</span>
                     </div>
-                    <div class="desc">Today's Expenses (Amount)</div>
+                    <div class="desc">{{ __('common.today_expenses') }}</div>
                 </div>
             </a>
         </div>

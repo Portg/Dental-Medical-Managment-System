@@ -30,7 +30,7 @@
                     <thead>
                     <tr>
                         <th> #</th>
-                        <th>Date</th>
+                        <th>{{ __('common.date') }}</th>
                         <th>Clinical Notes</th>
                         <th>Treatment</th>
                         <th>Doctor</th>
@@ -63,9 +63,9 @@
                         <th> #</th>
                         <th>surgery</th>
                         <th>surgery date</th>
-                        <th>Notes</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.notes') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -95,9 +95,9 @@
 
                         <th> #</th>
                         <th>Illness</th>
-                        <th>Status</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.status') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -131,8 +131,8 @@
                         <th>Drug</th>
                         <th>Reaction</th>
                         <th>status</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -179,7 +179,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('medical_history.surgery.create')
 @include('medical_history.chronic_diseases.create')

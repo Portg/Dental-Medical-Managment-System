@@ -30,12 +30,12 @@
                     <table class="table table-bordered" id="purchasesTable">
                         <tr>
                             <th class="text-primary">Item</th>
-                             <th class="text-primary">Description</th>
+                             <th class="text-primary">{{ __('common.description') }}</th>
                             <th class="text-primary">Expense Category</th>
                             <th class="text-primary">Quantity</th>
                             <th class="text-primary">Unit Price</th>
                             <th class="text-primary">Total Amount</th>
-                            <th class="text-primary">Action</th>
+                            <th class="text-primary">{{ __('common.action') }}</th>
                         </tr>
                         <tr>
                             <td>
@@ -84,7 +84,7 @@
                 <button type="button" class="btn btn-success" id="btn-save" onclick="save_purchase()">Save
                     Purchase
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

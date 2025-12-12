@@ -19,7 +19,7 @@
                     <span class="caption-subject bold uppercase">Expense Items</span>
                     &nbsp; &nbsp; &nbsp
                     <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_item()"> Add New <i
+                       onclick="Add_new_item()"> {{ __('common.add_new') }} <i
                                 class="fa fa-plus"></i> </a>
                 </div>
             </div>
@@ -29,13 +29,13 @@
                     <tr>
                         <th> #</th>
                         <th>Item</th>
-                        <th>Description</th>
+                        <th>{{ __('common.description') }}</th>
                         <th>Quantity</th>
                         <th>Unit price</th>
                         <th>Total Amount</th>
                         <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -68,11 +68,11 @@
                         <th> #</th>
                         <th>Payment Date</th>
                         <th>Payment Account</th>
-                        <th>Amount</th>
+                        <th>{{ __('common.amount') }}</th>
                         <th>Payment Method</th>
                         <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>

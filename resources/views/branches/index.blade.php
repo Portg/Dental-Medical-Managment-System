@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,13 +32,13 @@
                        id="branches_table">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>Added Date</th>
-                        <th>Name</th>
+                        <th>{{ __('common.name') }}</th>
                         <th>Added By</th>
-                        <th>Status</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.status') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -50,7 +50,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('branches.create')
 @endsection

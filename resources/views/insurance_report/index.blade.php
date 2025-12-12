@@ -40,7 +40,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="sr-only" for="exampleInputPassword42">End Date</label>
+                            <label class="sr-only" for="exampleInputPassword42">{{ __('common.end_date') }}</label>
                             <div class="input-icon">
                                 <i class="fa fa-calendar"></i>
                                 <input type="date" name="end_date" id="end_date"
@@ -57,8 +57,8 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('common.date') }}</th>
                         <th>Insurance Company</th>
                         <th>Invoice No</th>
                         <th>Customer</th>
@@ -75,7 +75,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('insurance_companies.create')
 @endsection

@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'appointments' => '预约',
+    'appointments_mgt' => '预约管理',
+    'appointment_no' => '预约号',
+    'appointment_date' => '预约日期',
+    'appointment_time' => '预约时间',
+    'appointment_category' => '预约类别',
+    'appointment_status' => '预约状态',
+    'appointment_calender' => '预约日历',
+    'appointments_calender' => '预约日历',
+    'patient' => '患者',
+    'doctor' => '医生',
+    'visit_information' => '就诊信息',
+    'invoice_status' => '发票状态',
+    'filter_appointments' => '筛选预约',
+    'enter_appointment_no' => '输入预约号',
+    'choose_patient' => '选择患者',
+    'choose_doctor' => '选择医生',
+    'walk_in' => '即时就诊',
+    'reactivate_appointment' => '重新激活预约',
+    're_activate_appointment' => '重新激活预约',
+    'reschedule_appointment' => '重新安排预约',
+    'delete_appointment_warning' => '您将无法恢复此预约！',
+    'export_appointments' => '导出预约',
+];

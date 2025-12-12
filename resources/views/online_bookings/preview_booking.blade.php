@@ -20,7 +20,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label>Name <span>*</span></label>
+                                <label>{{ __('common.name') }} <span>*</span></label>
                                 <input type="text" class="form-control" name="full_name" placeholder="Full Name">
                             </div>
                             <div class="form-group">
@@ -28,7 +28,7 @@
                                 <input type="text" class="form-control" name="phone_number" placeholder="Phone Number">
                             </div>
                             <div class="form-group">
-                                <label>Email <span>*</span></label>
+                                <label>{{ __('common.email') }} <span>*</span></label>
                                 <input type="text" class="form-control" name="email"
                                        placeholder="Email Address">
                             </div>
@@ -77,7 +77,7 @@
                         Booking
                     </button>
                 </div>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

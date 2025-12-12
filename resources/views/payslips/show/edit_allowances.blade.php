@@ -27,7 +27,7 @@
                         <input type="radio" name="allowance" value="Travelling Allowance"> Travelling Allowance<br>
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Amount </label>
+                        <label class="text-primary">{{ __('common.amount') }} </label>
                         <input type="number" name="amount" placeholder="enter amount here" class="form-control">
                     </div>
 
@@ -39,7 +39,7 @@
                 <button type="button" class="btn btn-primary" id="btn-allowance" onclick="record_allowances()">Save
                     Record
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

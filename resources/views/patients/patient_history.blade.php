@@ -12,7 +12,7 @@
                 <h3 class="text-primary noResultsText">Patient Has no Treatment History</h3>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

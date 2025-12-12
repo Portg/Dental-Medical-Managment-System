@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,14 +32,14 @@
                        id="leave-requests_table">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>Request Date</th>
                         <th>Leave Type</th>
-                        <th>Start Date</th>
+                        <th>{{ __('common.start_date') }}</th>
                         <th>Duration</th>
-                        <th>Status</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.status') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -51,7 +51,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('leave_requests.create')
 @endsection

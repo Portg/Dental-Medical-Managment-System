@@ -64,7 +64,7 @@
                                                                         </div>
                                                                         <div class="list-datetime">
                                                                             <a href="#"
-                                                                               onclick="editRecord('{{ $item->id }}')">Edit</a>
+                                                                               onclick="editRecord('{{ $item->id }}')">{{ __('common.edit') }}</a>
                                                                         </div>
                                                                         <div class="list-item-content">
                                                                             <h3 class="uppercase">
@@ -74,7 +74,7 @@
                                                                         </div>
                                                                     </li>
                                                                 @endforeach
-                                                                <a href="">Add New </a>
+                                                                <a href="">{{ __('common.add_new') }} </a>
 
                                                             </ul>
                                                         </div>
@@ -95,7 +95,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('charts_of_accounts.create')
 @endsection

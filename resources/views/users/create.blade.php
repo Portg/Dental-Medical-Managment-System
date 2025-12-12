@@ -29,7 +29,7 @@
                                 <input type="text" name="othername" placeholder="Enter other name" class="form-control">
                             </div>
                             <div class="form-group">
-                                <label class="text-primary">Email </label>
+                                <label class="text-primary">{{ __('common.email') }} </label>
                                 <input type="text" name="email" placeholder="email address" class="form-control">
                             </div>
                             <div class="form-group">
@@ -85,8 +85,8 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">Save changes</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

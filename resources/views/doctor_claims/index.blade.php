@@ -28,8 +28,8 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('common.date') }}</th>
                         <th>Patient</th>
                         <th>Doctor</th>
                         <th>Treatment Amount</th>
@@ -38,7 +38,7 @@
                         <th>Total Claim Amount</th>
                         <th>Payment Balance</th>
                         <th>status</th>
-                        <th>Action</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -50,7 +50,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('doctor_claims.create')
 @include('doctor_claims.payments.create')

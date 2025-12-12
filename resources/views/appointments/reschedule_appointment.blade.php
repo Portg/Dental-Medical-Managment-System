@@ -39,9 +39,9 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="BtnSave" onclick="save_scheduler()">Save changes
+                <button type="button" class="btn btn-primary" id="BtnSave" onclick="save_scheduler()">{{ __('common.save_changes') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>
