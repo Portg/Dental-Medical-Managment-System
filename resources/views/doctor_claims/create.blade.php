@@ -19,18 +19,18 @@
                     <input type="hidden" id="id" name="id">
                     <div class="form-group">
                         <label class="">Treatment Amount</label>
-                        <input type="number" id="claim_amount" class="form-control" readonly placeholder="Enter amount"
+                        <input type="number" id="claim_amount" class="form-control" readonly placeholder="{{ __('placeholders.enter_amount') }}"
                                name="claim_amount"/>
                     </div>
                     <div class="form-group">
                         <label class="">Insurance Amount</label>
-                        <input type="number" id="insurance_amount" class="form-control" placeholder="Enter amount"
+                        <input type="number" id="insurance_amount" class="form-control" placeholder="{{ __('placeholders.enter_amount') }}"
                                name="insurance_amount"/>
                     </div>
 
                     <div class="form-group">
                         <label class="">Cash Amount</label>
-                        <input type="number" id="cash_amount" class="form-control" placeholder="Enter amount"
+                        <input type="number" id="cash_amount" class="form-control" placeholder="{{ __('placeholders.enter_amount') }}"
                                name="cash_amount"/>
                     </div>
 

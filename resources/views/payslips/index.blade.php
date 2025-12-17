@@ -126,7 +126,7 @@
                 '                                        <option value="Travelling Allowance">Travelling Allowance</option>\n' +
                 '                                        <option value="Overtime Allowance">Overtime Allowance</option>\n' +
                 '                                    </select></td>' +
-                '<td> <input type="number"  name="addAllowance[' + i + '][allowance_amount]" placeholder="Enter amount" class="form-control"/></td>' +
+                '<td> <input type="number"  name="addAllowance[' + i + '][allowance_amount]" placeholder="{{ __('placeholders.enter_amount') }}" class="form-control"/></td>' +
                 '<td><button type="button" class="btn btn-danger remove-tr">{{ __('invoices.remove') }}</button></td>' +
                 '</tr>');
         });
@@ -141,7 +141,7 @@
                 ' <option value="Loan">Loan</option>\n' +
                 ' <option value="Tax">Tax</option>' +
                 '</select></td>' +
-                '<td> <input type="number"  name="addDeduction[' + x + '][deduction_amount]" placeholder="Enter amount" class="form-control"/></td>' +
+                '<td> <input type="number"  name="addDeduction[' + x + '][deduction_amount]" placeholder="{{ __('placeholders.enter_amount') }}" class="form-control"/></td>' +
                 '<td><button type="button" class="btn btn-danger remove-tr">{{ __('invoices.remove') }}</button></td>' +
                 '</tr>');
         });

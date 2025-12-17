@@ -24,7 +24,7 @@
                     </div>
                     <div class="form-group">
                         <label class="text-primary">{{ __('common.start_date') }} </label>
-                        <input type="text" name="start_date" placeholder="yyy-mm-dd" id="datepicker"
+                        <input type="text" name="start_date" placeholder="{{ __('datepickers.format_date') }}" id="datepicker"
                                class="form-control">
                     </div>
                     <div class="form-group">

@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Appointment Form </h4>
+                <h4 class="modal-title">{{ __('appointments.appointment_form') }}</h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -18,41 +18,41 @@
                     @csrf
                     <input type="hidden" id="id" name="id">
                     <div class="form-group">
-                        <label class="text-primary">Patient</label>
+                        <label class="text-primary">{{ __('appointments.patient') }}</label>
                         <select id="patient" name="patient_id" class="form-control" style="width: 100%;"></select>
                     </div>
 
                     <div class="form-group">
-                        <label class="text-primary"> Doctor </label>
+                        <label class="text-primary">{{ __('appointments.doctor') }}</label>
                         <select id="doctor" name="doctor_id" class="form-control" style="width: 100%;"></select>
                     </div>
                     <div class="form-group" id="visit_info_section">
-                        <label class="text-primary"> Visit Information </label><br>
-                        <input type="radio" value="walk_in" name="visit_information"> Walk In<br>
-                        <input type="radio" value="appointment" name="visit_information"> Appointment<br>
+                        <label class="text-primary">{{ __('appointments.visit_information') }}</label><br>
+                        <input type="radio" value="walk_in" name="visit_information"> {{ __('appointments.walk_in') }}<br>
+                        <input type="radio" value="appointment" name="visit_information"> {{ __('appointments.appointment') }}<br>
                     </div>
                     <div class="appointment_section">
                         <div class="form-group">
-                            <label class="text-primary">Appointment Date </label>
-                            <input class="form-control appointment_date" placeholder="yyyy-mm-dd" type="text"
+                            <label class="text-primary">{{ __('appointments.appointment_date') }}</label>
+                            <input class="form-control appointment_date" placeholder="{{ __('datepickers.format_date') }}" type="text"
                                    id="datepicker"
                                    name="appointment_date">
                         </div>
                         <div class="form-group">
-                            <label class="text-primary">Appointment Time </label>
-                            <input class="form-control" id="appointment_time" data-format="hh:mm A" placeholder="HH:mm"
+                            <label class="text-primary">{{ __('appointments.appointment_time') }}</label>
+                            <input class="form-control" id="appointment_time" data-format="hh:mm A" placeholder="{{ __('datepickers.format_time') }}"
                                    type="text" name="appointment_time">
                         </div>
                     </div>
 
                     <div class="form-group hidden">
-                        <label class="text-primary">General Notes(Optional) </label>
+                        <label class="text-primary">{{ __('appointments.general_notes_optional') }}</label>
                         <textarea class="form-control" rows="5" name="notes"
-                                  placeholder="Enter general notes here (if any)"></textarea>
+                                  placeholder="{{ __('placeholders.enter_notes') }}"></textarea>
                     </div>
 
                     <div class="form-group hidden">
-                        <label class="text-primary">Appointment status </label>
+                        <label class="text-primary">{{ __('appointments.appointment_status') }}</label>
                         <input type="text" id="appointment_status" name="appointment_status">
                     </div>
                     {{--         reactivated appointment check status             --}}

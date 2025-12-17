@@ -24,4 +24,8 @@ return [
     'reschedule_appointment' => 'Reschedule Appointment',
     'delete_appointment_warning' => 'Your will not be able to recover this Appointment!',
     'export_appointments' => 'Export Appointments',
+    'appointment_form' => 'Appointment Form',
+    'appointment' => 'Appointment',
+    'general_notes' => 'General Notes',
+    'general_notes_optional' => 'General Notes (Optional)',
 ];

@@ -25,7 +25,7 @@
                     </div>
                     <div class="form-group">
                         <label class="text-primary">{{ __('common.amount') }} </label>
-                        <input type="number" name="amount" placeholder="enter amount here" class="form-control">
+                        <input type="number" name="amount" placeholder="{{ __('placeholders.enter_amount_here') }}" class="form-control">
                     </div>
 
                 </form>

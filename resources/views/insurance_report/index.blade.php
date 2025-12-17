@@ -35,7 +35,7 @@
                             <div class="input-icon">
                                 <i class="fa fa-calendar"></i>
                                 <input type="date" name="start_date" id="start_date"
-                                       class="form-control datepicker-autoclose" placeholder="Please select start date">
+                                       class="form-control datepicker-autoclose" placeholder="{{ __('datepickers.placeholder_start_date') }}">
                                 <div class="help-block"></div>
                             </div>
                         </div>
@@ -45,7 +45,7 @@
                                 <i class="fa fa-calendar"></i>
                                 <input type="date" name="end_date" id="end_date"
                                        class="form-control datepicker-autoclose" --}}
-                                       placeholder="Please select end date">
+                                       placeholder="{{ __('datepickers.placeholder_end_date') }}">
                                 <div class="help-block"></div>
                             </div>
                         </div>

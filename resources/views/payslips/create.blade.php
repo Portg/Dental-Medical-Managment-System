@@ -24,7 +24,7 @@
                     </div>
                     <div class="form-group">
                         <label class="text-primary">Payslip Month</label>
-                        <input type="text" name="payslip_month" placeholder="yyyy-mm" id="monthsOnly"
+                        <input type="text" name="payslip_month" placeholder="{{ __('datepickers.format_month') }}" id="monthsOnly"
                                class="form-control">
                     </div>
                     <div class="form-group">
@@ -53,7 +53,7 @@
                                 <td>
                                     <input type="number" class="form-control"
                                            name="addAllowance[0][allowance_amount]"
-                                           placeholder="Enter amount"/>
+                                           placeholder="{{ __('placeholders.enter_amount') }}"/>
                                 </td>
                                 <td>
                                     <button type="button" name="add" id="add_allowance" class="btn btn-info">Add More
@@ -86,7 +86,7 @@
                                 <td>
                                     <input type="number" class="form-control"
                                            name="addDeduction[0][deduction_amount]"
-                                           placeholder="Enter amount"/>
+                                           placeholder="{{ __('placeholders.enter_amount') }}"/>
                                 </td>
                                 <td>
                                     <button type="button" name="add" id="add_deduction" class="btn btn-success">Add

@@ -23,7 +23,7 @@
                     </div>
                     <div class="form-group">
                         <label class="text-primary">Date of the year </label>
-                        <input type="text" name="holiday_date" placeholder="yyy-mm-dd" class="form-control"
+                        <input type="text" name="holiday_date" placeholder="{{ __('datepickers.format_date') }}" class="form-control"
                                id="datepicker">
                     </div>
                     <div class="form-group">

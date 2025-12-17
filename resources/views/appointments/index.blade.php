@@ -182,6 +182,13 @@
     <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/reschedule_appointment.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
+        // Translation variables for JavaScript
+        const translations = {
+            choosePatient: "{{ __('appointments.choose_patient') }}",
+            chooseDoctor: "{{ __('appointments.choose_doctor') }}",
+            selectProcedure: "{{ __('placeholders.select_procedure') }}",
+            procedureDoneBy: "{{ __('placeholders.select_procedure_by') }}"
+        };
 
         function default_todays_data() {
             // initially load today's date filtered data
@@ -287,7 +294,7 @@
 
         //filter patients
         $('#patient').select2({
-            placeholder: "Choose patient",
+            placeholder: translations.choosePatient,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-patient',
@@ -309,7 +316,7 @@
 
         //filter doctor
         $('#doctor').select2({
-            placeholder: "Choose doctor",
+            placeholder: translations.chooseDoctor,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-doctor',
@@ -332,7 +339,7 @@
         //invoice filter doctors
 
         $('#doctor_id').select2({
-            placeholder: "Procedure done by..",
+            placeholder: translations.procedureDoneBy,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-doctor',
@@ -567,7 +574,7 @@
         });
         //filter Procedures
         $('#service').select2({
-            placeholder: "Select Procedure",
+            placeholder: translations.selectProcedure,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-medical-service',
@@ -664,7 +671,7 @@
 
             //append procedure doctor
             $('#doctor_id_append' + i).select2({
-                placeholder: "Procedure done by..",
+                placeholder: translations.procedureDoneBy,
                 minimumInputLength: 2,
                 ajax: {
                     url: '/search-doctor',
@@ -686,7 +693,7 @@
 
 
             $('#service_append' + i).select2({
-                placeholder: "select procedure",
+                placeholder: translations.selectProcedure,
                 minimumInputLength: 2,
                 ajax: {
                     url: '/search-medical-service',

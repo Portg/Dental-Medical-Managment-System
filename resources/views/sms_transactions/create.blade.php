@@ -19,7 +19,7 @@
                     <input type="hidden" id="id" name="id">
                     <div class="form-group">
                         <label class="text-primary">Credit Amount </label>
-                        <input type="text" name="name" placeholder="Enter amount" class="form-control">
+                        <input type="text" name="name" placeholder="{{ __('placeholders.enter_amount') }}" class="form-control">
                     </div>
                 </form>
 

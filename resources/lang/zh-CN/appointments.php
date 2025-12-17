@@ -24,4 +24,8 @@ return [
     'reschedule_appointment' => '重新安排预约',
     'delete_appointment_warning' => '您将无法恢复此预约！',
     'export_appointments' => '导出预约',
+    'appointment_form' => '预约表单',
+    'appointment' => '预约',
+    'general_notes' => '一般备注',
+    'general_notes_optional' => '一般备注（可选）',
 ];

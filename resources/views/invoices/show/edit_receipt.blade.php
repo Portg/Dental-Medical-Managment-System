@@ -24,7 +24,7 @@
                     </div>
                     <div class="form-group">
                         <label class="text-primary">{{ __('common.amount') }} </label>
-                        <input type="text" name="amount" placeholder="enter amount here" class="form-control">
+                        <input type="text" name="amount" placeholder="{{ __('placeholders.enter_amount_here') }}" class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="text-primary">Payment Method </label><br>

@@ -19,12 +19,12 @@
                     <input type="hidden" id="self_account_id" name="self_account_id">
                     <div class="form-group">
                         <label class="text-primary">Payment Date </label>
-                        <input type="text" name="payment_date" placeholder="yyy-mm-dd" id="datepicker"
+                        <input type="text" name="payment_date" placeholder="{{ __('datepickers.format_date') }}" id="datepicker"
                                class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="text-primary">{{ __('common.amount') }} </label>
-                        <input type="text" name="amount" placeholder="enter amount here" class="form-control">
+                        <input type="text" name="amount" placeholder="{{ __('placeholders.enter_amount_here') }}" class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="text-primary">Payment Method </label><br>

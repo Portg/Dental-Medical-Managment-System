@@ -19,12 +19,12 @@
                     <input type="hidden" id="claim_id" name="claim_id">
                     <div class="form-group">
                         <label class="text-primary">Payment Date </label>
-                        <input type="text" name="payment_date" id="datepicker" placeholder="yyy-mm-dd"
+                        <input type="text" name="payment_date" id="datepicker" placeholder="{{ __('datepickers.format_date') }}"
                                class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="text-primary">{{ __('common.amount') }} </label>
-                        <input type="text" name="amount" id="amount" placeholder="enter amount here"
+                        <input type="text" name="amount" id="amount" placeholder="{{ __('placeholders.enter_amount_here') }}"
                                class="form-control">
                     </div>
                 </form>

@@ -133,6 +133,12 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
+        // Translation variables for JavaScript
+        const translations = {
+            choosePatient: "{{ __('appointments.choose_patient') }}",
+            selectProcedure: "{{ __('placeholders.select_procedure') }}"
+        };
+
         function default_todays_data() {
             // initially load today's date filtered data
             $('.start_date').val(todaysDate());
@@ -217,7 +223,7 @@
 
         //filter patients
         $('#patient').select2({
-            placeholder: "Choose patient",
+            placeholder: translations.choosePatient,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-patient',
@@ -255,7 +261,7 @@
                 '<td><button type="button" class="btn btn-danger remove-tr">{{ __('invoices.remove') }}</button></td></tr>');
 
             $('#service_append' + i).select2({
-                placeholder: "select procedure",
+                placeholder: translations.selectProcedure,
                 minimumInputLength: 2,
                 ajax: {
                     url: '/search-medical-service',
@@ -296,7 +302,7 @@
 
         //filter Procedures
         $('#service').select2({
-            placeholder: "Select Procedure",
+            placeholder: translations.selectProcedure,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-medical-service',

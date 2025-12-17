@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title">Patient Form</h4>
+                <h4 class="modal-title">{{ __('patients.patient_form') }}</h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -25,7 +25,7 @@
 
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Surname</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.surname') }}</label>
                                             <div class="col-md-9">
                                                 <input type="text" name="surname" class="form-control">
                                             </div>
@@ -33,7 +33,7 @@
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Other Name</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.other_name') }}</label>
                                             <div class="col-md-9">
                                                 <input type="text" name="othername" class="form-control">
                                             </div>
@@ -42,18 +42,18 @@
 
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Gender</label><br>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.gender') }}</label><br>
                                             <div class="col-md-9">
-                                                <input type="radio" name="gender" value="Male"> Male<br>
-                                                <input type="radio" name="gender" value="Female"> Female<br>
+                                                <input type="radio" name="gender" value="Male"> {{ __('patients.male') }}<br>
+                                                <input type="radio" name="gender" value="Female"> {{ __('patients.female') }}<br>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Data of Birth</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.date_of_birth') }}</label>
                                             <div class="col-md-9">
-                                                <input type="text" name="dob" placeholder="yyyy-mm-dd"
+                                                <input type="text" name="dob" placeholder="{{ __('datepickers.format_date') }}"
                                                        class="form-control" id="datepicker">
                                             </div>
                                         </div>
@@ -63,7 +63,7 @@
                                         <div class="form-group">
                                             <label class="control-label col-md-3 text-primary">{{ __('common.email') }}<span
                                                         class="text-danger">
-                                                   (Optional)
+                                                   {{ __('placeholders.optional') }}
                                                 </span></label>
                                             <div class="col-md-9">
                                                 <input type="text" name="email" placeholder="" class="form-control">
@@ -72,7 +72,7 @@
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Phone No</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.phone_no') }}</label>
                                             <div class="col-md-9">
                                                 <input type="text" id="telephone" name="telephone" class="form-control">
                                             </div>
@@ -83,9 +83,8 @@
 
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Alternative Phone
-                                                No: <span class="text-danger">
-                                                (Optional)
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.alternative_phone_no') }}<span class="text-danger">
+                                                {{ __('placeholders.optional') }}
                                                 </span></label>
                                             <div class="col-md-9">
                                                 <input type="text" name="alternative_no" class="form-control">
@@ -112,9 +111,9 @@
 
                                     <div class="col-md-12 hidden">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary">National Id <span
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.national_id') }}<span
                                                         class="text-danger">
-                                                (Optional)
+                                                {{ __('placeholders.optional') }}
                                                 </span></label>
                                             <div class="col-md-9">
                                                 <input type="text" name="nin" class="form-control">
@@ -123,8 +122,7 @@
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Profession / place of
-                                                work</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.profession') }}</label>
                                             <div class="col-md-9">
                                                 <input type="text" name="profession" class="form-control">
                                             </div>
@@ -133,7 +131,7 @@
 
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Next Of Kin</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.next_of_kin') }}</label>
                                             <div class="col-md-9">
                                                 <input type="text" name="next_of_kin" class="form-control">
                                             </div>
@@ -142,8 +140,7 @@
 
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Next Of Kin (Phone
-                                                No)</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.next_of_kin_phone_no') }}</label>
                                             <div class="col-md-9">
                                                 <input type="text" name="next_of_kin_no" class="form-control">
                                             </div>
@@ -153,9 +150,8 @@
 
                                     <div class="col-md-12 hidden">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary"> Next Of Kin
-                                                Address <span class="text-danger">
-                                                   (Optional)
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.next_of_kin_address') }}<span class="text-danger">
+                                                   {{ __('placeholders.optional') }}
                                                 </span></label>
                                             <div class="col-md-9">
                                                 <input type="text" name="next_of_kin_address" class="form-control">
@@ -165,19 +161,17 @@
 
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary">Patient Has Medical
-                                                Insurance</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.has_medical_insurance') }}</label>
                                             <div class="col-md-9">
                                                 <input type="radio" id="has_insurance" name="has_insurance" value="Yes">
-                                                Yes<br>
-                                                <input type="radio" id="" name="has_insurance" value="No"> No<br>
+                                                {{ __('patients.yes') }}<br>
+                                                <input type="radio" id="" name="has_insurance" value="No"> {{ __('patients.no') }}<br>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-md-12 insurance_company">
                                         <div class="form-group">
-                                            <label class="control-label col-md-3 text-primary">Medical Insurance
-                                                Company</label>
+                                            <label class="control-label col-md-3 text-primary">{{ __('patients.medical_insurance_company') }}</label>
                                             <div class="col-md-9">
                                                 <select id="company" name="insurance_company_id" class="form-control"
                                                         style="width: 100%;"></select>

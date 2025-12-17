@@ -26,7 +26,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="text-primary">Payment Month</label>
-                                <input type="text" name="advance_month" placeholder="yyyy-mm" id="monthsOnly"
+                                <input type="text" name="advance_month" placeholder="{{ __('datepickers.format_month') }}" id="monthsOnly"
                                        class="form-control">
                             </div>
                             <div class="form-group">
@@ -39,12 +39,12 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="text-primary">{{ __('common.amount') }}</label>
-                                <input type="number" name="amount" placeholder="Enter amount" class="form-control">
+                                <input type="number" name="amount" placeholder="{{ __('placeholders.enter_amount') }}" class="form-control">
                             </div>
 
                             <div class="form-group">
                                 <label class="text-primary">payment Date</label>
-                                <input type="text" name="payment_date" placeholder="yyyy-mm-dd" id="datepicker"
+                                <input type="text" name="payment_date" placeholder="{{ __('datepickers.format_date') }}" id="datepicker"
                                        class="form-control">
                             </div>
 

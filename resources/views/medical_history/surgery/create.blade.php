@@ -25,7 +25,7 @@
 
                     <div class="form-group">
                         <label class="text-primary">Surgery Date </label>
-                        <input type="text" id="datepicker" placeholder="yyyy-mm-dd" name="surgery_date" class="form-control">
+                        <input type="text" id="datepicker" placeholder="{{ __('datepickers.format_date') }}" name="surgery_date" class="form-control">
                     </div>
 
                     <div class="form-group">

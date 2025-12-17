@@ -19,7 +19,7 @@
                     <input type="hidden" id="payment_id" name="id">
                     <div class="form-group">
                         <label class="text-primary">Payment Date </label>
-                        <input type="text" placeholder="YYYY-mm-dd" name="payment_date" id="datepicker2"
+                        <input type="text" placeholder="{{ __('datepickers.format_date') }}" name="payment_date" id="datepicker2"
                                class="form-control">
                     </div>
                     <div class="form-group">
@@ -31,7 +31,7 @@
                     </div>
                     <div class="form-group">
                         <label class="text-primary">{{ __('common.amount') }} </label>
-                        <input type="number" name="amount" placeholder="enter amount here" class="form-control">
+                        <input type="number" name="amount" placeholder="{{ __('placeholders.enter_amount_here') }}" class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="text-primary">Payment Account </label><br>

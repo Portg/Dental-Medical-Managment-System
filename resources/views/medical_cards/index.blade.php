@@ -86,6 +86,11 @@
 
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
+        // Translation variables for JavaScript
+        const translations = {
+            choosePatient: "{{ __('appointments.choose_patient') }}"
+        };
+
         $(function () {
 
             let table = $('#sample_1').DataTable({
@@ -130,7 +135,7 @@
 
         //filter patients
         $('#patient').select2({
-            placeholder: "Choose patient",
+            placeholder: translations.choosePatient,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-patient',

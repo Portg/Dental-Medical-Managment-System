@@ -19,7 +19,7 @@
                     <input type="hidden" name="id" id="id">
                     <div class="form-group">
                         <label class="text-primary">Purchase Date </label>
-                        <input type="text" name="purchase_date" id="datepicker" placeholder="yyy-mm-dd"
+                        <input type="text" name="purchase_date" id="datepicker" placeholder="{{ __('datepickers.format_date') }}"
                                class="form-control">
                     </div>
                     <div class="form-group">

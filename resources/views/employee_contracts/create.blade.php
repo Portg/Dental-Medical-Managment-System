@@ -32,7 +32,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="text-primary">Contract Start Date</label>
-                                <input type="text" name="start_date" placeholder="yyyy-mm-dd" id="datepicker"
+                                <input type="text" name="start_date" placeholder="{{ __('datepickers.format_date') }}" id="datepicker"
                                        class="form-control">
                             </div>
                             <div class="form-group">
@@ -57,7 +57,7 @@
                             </div>
                             <div class="form-group gross_section">
                                 <label class="text-primary">Gross Salary</label>
-                                <input type="number" name="gross_salary" placeholder="Enter amount"
+                                <input type="number" name="gross_salary" placeholder="{{ __('placeholders.enter_amount') }}"
                                        class="form-control">
                             </div>
                             <div class="form-group commission_section">

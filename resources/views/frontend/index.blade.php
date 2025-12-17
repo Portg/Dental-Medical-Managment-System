@@ -124,7 +124,7 @@
                 <div class="form-group">
                     <label>Preferred appointment Date <span>*</span></label>
                     <input type="text" class="form-control" readonly id="datepicker" name="appointment_date"
-                           placeholder="yyyy-mm-dd">
+                           placeholder="{{ __('datepickers.format_date') }}">
                 </div>
                 <div class="form-group">
                     <label>Preferred appointment Time <span>*</span></label>
