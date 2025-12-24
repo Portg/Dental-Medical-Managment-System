@@ -208,6 +208,11 @@ class PatientController extends Controller
             'othername' => 'required',
             'gender' => 'required',
             'has_insurance' => 'required'
+        ], [
+            'surname.required' => __('validation.required', ['attribute' => __('patients.form.surname')]),
+            'othername.required' => __('validation.required', ['attribute' => __('patients.form.other_name')]),
+            'gender.required' => __('validation.required', ['attribute' => __('patients.form.gender')]),
+            'has_insurance.required' => __('validation.required', ['attribute' => __('patients.form.has_insurance')]),
         ])->validate();
 //        return  Patient::PatientNumber();
 
@@ -231,9 +236,9 @@ class PatientController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Patient has been added successfully', 'status' => true]);
+            return response()->json(['message' => __('common.messages.record_saved'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('common.messages.operation_failed'), 'status' => false]);
     }
 
     /**
@@ -311,7 +316,7 @@ class PatientController extends Controller
         if ($status) {
             return response()->json(['message' => 'Patient has been updated successfully', 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('common.messages.operation_failed'), 'status' => false]);
 
     }
 
@@ -327,7 +332,7 @@ class PatientController extends Controller
         if ($status) {
             return response()->json(['message' => 'Patient has been deleted successfully', 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('common.messages.operation_failed'), 'status' => false]);
 
     }
 
