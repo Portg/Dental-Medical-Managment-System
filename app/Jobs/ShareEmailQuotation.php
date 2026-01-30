@@ -46,7 +46,10 @@ class ShareEmailQuotation implements ShouldQueue
         $pdf = PDF::loadView('quotations.print_quotation', $this->data)->setPaper('a4');
         $email_to = $this->email;
         if ($this->message == null) {
-            $this->message = 'Thank for letting us serve you at '.env('CompanyName',null).', Please find the attached copy of the Quotation;';
+            $this->message = __('emails.thank_you_message', [
+                'company_name' => env('CompanyName', null),
+                'document_type' => __('emails.quotation_attached')
+            ]);
         }
 
         $other_data['user_info'] = array(
@@ -61,7 +64,7 @@ class ShareEmailQuotation implements ShouldQueue
         Mail::send('emails.quotation', $other_data, function ($message) use ($pdf, $email_to) {
             $message->from(env('CompanyNoReplyEmail',null));
             $message->to($email_to);
-            $message->subject(env('CompanyName',null).' Quotation');
+            $message->subject(env('CompanyName',null) . ' - ' . __('emails.quotation_subject'));
             $message->attachData($pdf->output(), date("Y-m-d H:i:s") . 'quotation.pdf');
         });
         if (!Mail::failures()) {

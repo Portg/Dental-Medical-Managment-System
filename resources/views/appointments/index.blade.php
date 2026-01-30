@@ -11,11 +11,10 @@
                     <ul class="nav nav-pills">
 
                         <li class="active" id="appointments_tab_link">
-                            <a href="#appointments_tab" data-toggle="tab" aria-expanded="true">Appointments</a>
+                            <a href="#appointments_tab" data-toggle="tab" aria-expanded="true">{{ __('appointment.appointments') }}</a>
                         </li>
                         <li class="" id="appointment_calender_tab_link">
-                            <a href="#appointment_calender_tab" data-toggle="tab" aria-expanded="false">Appointments
-                                Calender
+                            <a href="#appointment_calender_tab" data-toggle="tab" aria-expanded="false">{{ __('appointment.appointments_calender') }}
                             </a>
                         </li>
 
@@ -27,7 +26,7 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
                                         <div class="caption font-dark">
-                                            <span class="caption-subject"> Appointments Mgt</span>
+                                            <span class="caption-subject"> {{ __('appointment.appointment_mgt') }}</span>
                                         </div>
                                     </div>
                                     <div class="portlet-body">
@@ -36,107 +35,95 @@
                                                 <div class="col-md-6">
                                                     <div class="btn-group">
                                                         <a class="btn blue btn-outline sbold" href="#"
-                                                           onclick="createRecord()"> Add New <i
-                                                                    class="fa fa-plus"></i> </a>
+                                                           onclick="createRecord()"> {{ __('appointment.add_appointment')}}</a>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="btn-group pull-right">
                                                         <a href="{{ url('export-appointments') }}" class="text-danger">
-                                                            <i class="icon-cloud-download"></i> Download Excel Report
+                                                            <i class="icon-cloud-download"></i> {{ __('common.download_excel_report') }}
                                                         </a>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <br>
-                                        <div class="col-md-12">
-
-                                            <form action="#" class="form-horizontal">
-                                                <div class="form-body">
-
-                                                    <div class="row">
-                                                        <div class="col-md-6">
-                                                            <div class="form-group">
-                                                                <label class="control-label col-md-3">Appointment
-                                                                    No</label>
-                                                                <div class="col-md-9">
-                                                                    <input type="text" class="form-control"
-                                                                           placeholder="Enter appointment No"
-                                                                           name="appointment_no"
-                                                                           id="appointment_no_filter">
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <div class="form-group">
-                                                                <label class="control-label col-md-3">Period</label>
-                                                                <div class="col-md-9">
-                                                                    <select class="form-control" id="period_selector">
-                                                                        <option>All</option>
-                                                                        <option value="Today">Today</option>
-                                                                        <option value="Yesterday">Yesterday</option>
-                                                                        <option value="This week">This week</option>
-                                                                        <option value="Last week">Last week</option>
-                                                                        <option value="This Month">This Month</option>
-                                                                        <option value="Last Month">Last Month</option>
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-md-6">
-                                                            <div class="form-group">
-                                                                <label class="control-label col-md-3">Start Date</label>
-                                                                <div class="col-md-9">
-                                                                    <input type="text" class="form-control start_date">
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <div class="form-group">
-                                                                <label class="control-label col-md-3">End Date</label>
-                                                                <div class="col-md-9">
-                                                                    <input type="text" class="form-control end_date">
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                        {{-- Search and Filter Area - Design spec: compact layout, auto-search with 300ms debounce --}}
+                                        <div class="row" style="margin-bottom: 15px;">
+                                            {{-- Quick Search --}}
+                                            <div class="col-md-4">
+                                                <div class="input-group">
+                                                    <span class="input-group-addon"><i class="icon-magnifier"></i></span>
+                                                    <input type="text" class="form-control" id="quickSearch"
+                                                           placeholder="{{ __('appointment.quick_search_placeholder') }}">
                                                 </div>
-                                                <div class="form-actions">
-                                                    <div class="row">
-                                                        <div class="col-md-6">
-                                                            <div class="row">
-                                                                <div class="col-md-offset-3 col-md-9">
-                                                                    <button type="button" id="customFilterBtn"
-                                                                            class="btn purple-intense">Filter
-                                                                        Appointments
-                                                                    </button>
-                                                                    <button type="button" class="btn default">Clear
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-6"></div>
-                                                    </div>
+                                            </div>
+                                            {{-- Period Selector --}}
+                                            <div class="col-md-3">
+                                                <select class="form-control" id="period_selector">
+                                                    <option value="">{{__('datetime.time_periods.all')}}</option>
+                                                    <option value="Today">{{__('datetime.time_periods.today')}}</option>
+                                                    <option value="Yesterday">{{__('datetime.time_periods.yesterday')}}</option>
+                                                    <option value="This week">{{__('datetime.time_periods.this_week')}}</option>
+                                                    <option value="Last week">{{__('datetime.time_periods.last_week')}}</option>
+                                                    <option value="This Month">{{__('datetime.time_periods.this_month')}}</option>
+                                                    <option value="Last Month">{{__('datetime.time_periods.last_month')}}</option>
+                                                </select>
+                                            </div>
+                                            {{-- Date Range with connector --}}
+                                            <div class="col-md-4">
+                                                <div class="date-range-wrapper">
+                                                    <input type="text" class="form-control start_date" placeholder="{{__('datetime.date_range.start_date')}}" style="flex: 1;">
+                                                    <span class="date-separator">{{__('datetime.date_range.to')}}</span>
+                                                    <input type="text" class="form-control end_date" placeholder="{{__('datetime.date_range.end_date')}}" style="flex: 1;">
+                                                    <button type="button" class="btn btn-default" id="toggleAdvancedFilter" title="{{ __('common.advanced_filter') }}">
+                                                        <i class="icon-equalizer"></i>
+                                                    </button>
                                                 </div>
-                                            </form>
+                                            </div>
                                         </div>
-                                        <br>
+
+                                        {{-- Advanced Filters (Collapsible) --}}
+                                        <div class="row" id="advancedFilters" style="display: none; margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+                                            <div class="col-md-4">
+                                                <label>{{ __('appointment.appointment_no') }}</label>
+                                                <input type="text" class="form-control"
+                                                       placeholder="{{ __('appointment.enter_appointment_no') }}"
+                                                       name="appointment_no"
+                                                       id="appointment_no_filter">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label>{{ __('appointment.doctor') }}</label>
+                                                <select class="form-control" id="filter_doctor">
+                                                    <option value="">{{ __('common.all') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label>{{ __('appointment.invoice_status') }}</label>
+                                                <select class="form-control" id="filter_invoice_status">
+                                                    <option value="">{{ __('common.all') }}</option>
+                                                    <option value="pending">{{ __('common.pending') }}</option>
+                                                    <option value="invoiced">{{ __('appointment.invoiced') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-12" style="margin-top: 10px;">
+                                                <button type="button" class="btn btn-sm btn-default" id="clearFilters">
+                                                    {{ __('common.reset') }}
+                                                </button>
+                                            </div>
+                                        </div>
                                         <table class="table table-striped table-bordered table-hover table-checkable order-column"
                                                id="appointments-table">
                                             <thead>
                                             <tr>
-                                                <th>ID</th>
-                                                <th>Appointment Date</th>
-                                                <th>Appointment Time</th>
-                                                <th>Patient</th>
-                                                <th>Doctor</th>
-                                                <th>Appointment Category</th>
-                                                <th>Invoice status</th>
-                                                <th>Action</th>
+                                                <th>{{ __('common.id') }}</th>
+                                                <th>{{ __('appointment.appointment_date') }}</th>
+                                                <th>{{ __('appointment.appointment_time') }}</th>
+                                                <th>{{ __('appointment.patient') }}</th>
+                                                <th>{{ __('appointment.doctor') }}</th>
+                                                <th>{{ __('appointment.appointment_category') }}</th>
+                                                <th>{{ __('appointment.invoice_status') }}</th>
+                                                <th>{{ __('common.action') }}</th>
                                             </thead>
                                             <tbody>
 
@@ -154,7 +141,7 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
                                         <div class="caption font-dark">
-                                            <span class="caption-subject"> Appointments mgt/ Calender</span>
+                                            <span class="caption-subject"> {{__('appointment.appointment_mgt')}}/ {{__('appointment.appointments_calender')}}</span>
                                         </div>
                                     </div>
                                     <div class="portlet-body">
@@ -173,7 +160,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('appointments.create')
 @include('appointments.invoices.create')
@@ -185,6 +172,32 @@
     <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/reschedule_appointment.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
+        // Load page-specific translations
+        LanguageManager.loadAllFromPHP({
+            'appointment': @json(__('appointment')),
+            'datetime': @json(__('datetime'))
+        });
+
+        // Translation variables for JavaScript
+        const translations = {
+            choosePatient: "{{ __('appointment.choose_patient') }}",
+            chooseDoctor: "{{ __('appointment.choose_doctor') }}",
+            selectProcedure: "{{ __('appointment.select_procedure') }}",
+            procedureDoneBy: "{{ __('appointment.procedure_done_by') }}"
+        };
+
+        // Debounce helper function (design spec: 300ms debounce for auto-search)
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
 
         function default_todays_data() {
             // initially load today's date filtered data
@@ -193,6 +206,7 @@
             $("#period_selector").val('Today');
         }
 
+        // Period selector with auto-apply
         $('#period_selector').on('change', function () {
             switch (this.value) {
                 case'Today':
@@ -217,36 +231,63 @@
                 case'Last Month':
                     lastMonth();
                     break;
+                default:
+                    // All - clear dates
+                    $('.start_date').val('');
+                    $('.end_date').val('');
+                    break;
             }
+            // Auto-apply filter on change
+            $('#appointments-table').DataTable().draw(true);
+        });
+
+        // Toggle advanced filters
+        $('#toggleAdvancedFilter').on('click', function() {
+            $('#advancedFilters').slideToggle(200);
+            $(this).toggleClass('active');
+        });
+
+        // Clear all filters
+        $('#clearFilters').on('click', function() {
+            $('#quickSearch').val('');
+            $('#appointment_no_filter').val('');
+            $('#filter_doctor').val('');
+            $('#filter_invoice_status').val('');
+            $('#period_selector').val('');
+            $('.start_date').val('');
+            $('.end_date').val('');
+            $('#appointments-table').DataTable().draw(true);
         });
 
 
         let services_arry = [];
+        var table; // Declare table variable in outer scope
+
         $(function () {
             //hide appointment date time inputs
             $('.appointment_section').hide();
 
             default_todays_data();  //filter  date
-            var table = $('#appointments-table').DataTable({
+            table = $('#appointments-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),  // 使用当前语言配置
                 ajax: {
                     url: "{{ url('/appointments/') }}",
                     data: function (d) {
                         d.start_date = $('.start_date').val();
                         d.end_date = $('.end_date').val();
                         d.appointment_no = $('#appointment_no_filter').val();
+                        d.quick_search = $('#quickSearch').val();
+                        d.filter_doctor = $('#filter_doctor').val();
+                        d.filter_invoice_status = $('#filter_invoice_status').val();
                         d.search = $('input[type="search"]').val();
                     }
                 },
-                dom: 'Bfrtip',
+                dom: 'Brtip', // Removed 'f' (default search box) since we have custom search
                 buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
+                    buttons: []
                 },
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex'},
@@ -260,37 +301,51 @@
                 ]
             });
 
+            // Quick search with 300ms debounce (design spec: INT-001)
+            var debouncedSearch = debounce(function() {
+                table.draw(true);
+            }, 300);
+            $('#quickSearch').on('keyup', debouncedSearch);
 
-        });
+            // Appointment No filter with debounce
+            $('#appointment_no_filter').on('keyup', debouncedSearch);
 
-        $('#customFilterBtn').click(function () {
-            $('#appointments-table').DataTable().draw(true);
+            // Auto-apply other filters on change
+            $('#filter_doctor, #filter_invoice_status').on('change', function() {
+                table.draw(true);
+            });
+
+            // Date change also triggers filter
+            $('.start_date, .end_date').on('change', function() {
+                table.draw(true);
+            });
         });
 
         function createRecord() {
-            $("#appointment-form")[0].reset();
-            $('#id').val(''); ///always reset hidden form fields
-            $('#appointment-modal').modal('show');
-            //still set the current time and date even on the walkin
-            $('.appointment_date').val(todaysDate());
-            $('#appointment_time').val(currentTimeSelect());
-
-            //reset the patient information
-            $('#patient').val([]).trigger('change');
-            $("#patient").select2("val", "");
-
-            $('#doctor').val([]).trigger('change');
-            $("#doctor").select2("val", "");
-
-
-            $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save changes');
+            // Use new drawer-based appointment form (design spec F-APT-001)
+            if (typeof openAppointmentDrawer === 'function') {
+                openAppointmentDrawer({
+                    date: todaysDate()
+                });
+            } else {
+                // Fallback to old modal if drawer not available
+                $("#appointment-form")[0].reset();
+                $('#id').val('');
+                $('#appointment-modal').modal('show');
+                $('.appointment_date').val(todaysDate());
+                $('#appointment_time').val(currentTimeSelect());
+                $('#patient').val([]).trigger('change');
+                $('#doctor').val([]).trigger('change');
+                $('#btn-save').attr('disabled', false);
+                $('#btn-save').text("{{ __('common.save_record') }}");
+            }
         }
 
 
         //filter patients
         $('#patient').select2({
-            placeholder: "Choose patient",
+            language: '{{ app()->getLocale() }}',
+            placeholder: translations.choosePatient,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-patient',
@@ -301,7 +356,6 @@
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };
@@ -312,7 +366,8 @@
 
         //filter doctor
         $('#doctor').select2({
-            placeholder: "Choose doctor",
+            language: '{{ app()->getLocale() }}',
+            placeholder: translations.chooseDoctor,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-doctor',
@@ -335,7 +390,8 @@
         //invoice filter doctors
 
         $('#doctor_id').select2({
-            placeholder: "Procedure done by..",
+            language: '{{ app()->getLocale() }}',
+            placeholder: translations.procedureDoneBy,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-doctor',
@@ -346,7 +402,6 @@
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };
@@ -359,7 +414,7 @@
         function save_data() {
             //check save method
             var id = $('#id').val();
-            if (id == "") {
+            if (id === "") {
                 save_new_record();
             } else {
                 update_record();
@@ -369,7 +424,7 @@
         function save_new_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text("{{ __('common.processing') }}");
             $.ajax({
                 type: 'POST',
                 data: $('#appointment-form').serialize(),
@@ -386,7 +441,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save changes');
+                    $('#btn-save').text("{{ __('common.save_record') }}");
                     $('#appointment-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -398,51 +453,146 @@
         }
 
         function editRecord(id) {
-            $("#appointment-form")[0].reset();
-            $('#id').val(''); ///always reset hidden form fields
-            $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save changes');
-            $.LoadingOverlay("show");
-            $.ajax({
-                type: 'get',
-                url: "appointments/" + id + "/edit",
-                success: function (data) {
-                    console.log(data);
-                    $('#id').val(id);
-                    let patient_data = {
-                        id: data.patient_id,
-                        text: data.surname + " " + data.othername
-                    };
-                    let newOption = new Option(patient_data.text, patient_data.id, true, true);
-                    $('#patient').append(newOption).trigger('change');
+            // Use new drawer-based appointment form (design spec F-APT-001)
+            if (typeof openAppointmentDrawer === 'function') {
+                $.LoadingOverlay("show");
+                $.ajax({
+                    type: 'get',
+                    url: "appointments/" + id + "/edit",
+                    success: function (data) {
+                        $.LoadingOverlay("hide");
+                        // Open drawer and populate with edit data
+                        openAppointmentDrawer();
 
-                    let doctor_data = {
-                        id: data.doctor_id,
-                        text: data.d_surname + " " + data.d_othername
-                    };
-                    let newOption2 = new Option(doctor_data.text, doctor_data.id, true, true);
-                    $('#doctor').append(newOption2).trigger('change');
-                    $('input[name^="visit_information"][value="' + data.visit_information + '"').prop('checked', true);
-                    $('[name="notes"]').val(data.notes);
-                    $('#appointment_status').val(data.status);
-                    $('.appointment_date').val(data.start_date);
-                    $('#appointment_time').val(data.start_time);
+                        // Set appointment ID for update
+                        $('#appointment_id').val(id);
+                        $('#drawer-title').text("{{ __('appointment.edit_appointment') }}");
 
-                    $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
-                    $('#appointment-modal').modal('show');
+                        // Populate patient
+                        let patient_data = {
+                            id: data.patient_id,
+                            text: data.surname + " " + data.othername
+                        };
+                        let patientOption = new Option(patient_data.text, patient_data.id, true, true);
+                        $('#drawer_patient').append(patientOption).trigger('change');
 
-                },
-                error: function (request, status, error) {
-                    $.LoadingOverlay("hide");
-                }
-            });
+                        // Show patient info if available
+                        if (typeof showPatientInfoCard === 'function' && data.patient) {
+                            showPatientInfoCard(data.patient);
+                        }
+
+                        // Populate doctor
+                        let doctor_data = {
+                            id: data.doctor_id,
+                            text: data.d_surname + " " + data.d_othername
+                        };
+                        let doctorOption = new Option(doctor_data.text, doctor_data.id, true, true);
+                        $('#drawer_doctor').append(doctorOption).trigger('change');
+
+                        // Populate date and time
+                        $('#appointment_date').val(data.start_date);
+                        if (typeof updateWeekday === 'function') {
+                            updateWeekday(data.start_date);
+                        }
+                        $('#appointment_time').val(data.start_time);
+
+                        // Populate other fields
+                        $('[name="notes"]').val(data.notes);
+                        if (data.appointment_type) {
+                            $('input[name="appointment_type"][value="' + data.appointment_type + '"]').prop('checked', true);
+                        }
+                        if (data.duration_minutes) {
+                            $('#duration_minutes').val(data.duration_minutes);
+                        }
+                        if (data.chair_id) {
+                            // Load chair option
+                            $.ajax({
+                                url: '/api/chairs',
+                                success: function(chairs) {
+                                    chairs.forEach(function(chair) {
+                                        if (chair.id == data.chair_id) {
+                                            let chairOption = new Option(chair.text, chair.id, true, true);
+                                            $('#drawer_chair').append(chairOption).trigger('change');
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        if (data.service_id) {
+                            // Load service option
+                            $.ajax({
+                                url: '/search-medical-service?id=' + data.service_id,
+                                success: function(services) {
+                                    if (services && services.length > 0) {
+                                        let serviceOption = new Option(services[0].text, services[0].id, true, true);
+                                        $('#drawer_service').append(serviceOption).trigger('change');
+                                    }
+                                }
+                            });
+                        }
+
+                        // Load time slots after doctor is set
+                        setTimeout(function() {
+                            if (typeof loadTimeSlots === 'function') {
+                                loadTimeSlots();
+                                // Highlight selected time after slots load
+                                setTimeout(function() {
+                                    var timeStr = data.start_time;
+                                    if (timeStr) {
+                                        // Convert to HH:mm format
+                                        var timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+                                        if (timeParts) {
+                                            var formattedTime = timeParts[1].padStart(2, '0') + ':' + timeParts[2];
+                                            $('.time-slot').each(function() {
+                                                if ($(this).text().trim().startsWith(formattedTime)) {
+                                                    $(this).addClass('selected');
+                                                }
+                                            });
+                                        }
+                                    }
+                                }, 500);
+                            }
+                        }, 100);
+                    },
+                    error: function (request, status, error) {
+                        $.LoadingOverlay("hide");
+                        toastr.error("{{ __('messages.error_occurred') }}");
+                    }
+                });
+            } else {
+                // Fallback to old modal
+                $("#appointment-form")[0].reset();
+                $('#id').val('');
+                $('#btn-save').attr('disabled', false);
+                $('#btn-save').text("{{ __('common.update_record') }}");
+                $.LoadingOverlay("show");
+                $.ajax({
+                    type: 'get',
+                    url: "appointments/" + id + "/edit",
+                    success: function (data) {
+                        $('#id').val(id);
+                        let patient_data = { id: data.patient_id, text: data.surname + " " + data.othername };
+                        $('#patient').append(new Option(patient_data.text, patient_data.id, true, true)).trigger('change');
+                        let doctor_data = { id: data.doctor_id, text: data.d_surname + " " + data.d_othername };
+                        $('#doctor').append(new Option(doctor_data.text, doctor_data.id, true, true)).trigger('change');
+                        $('input[name^="visit_information"][value="' + data.visit_information + '"').prop('checked', true);
+                        $('[name="notes"]').val(data.notes);
+                        $('#appointment_status').val(data.status);
+                        $('.appointment_date').val(data.start_date);
+                        $('#appointment_time').val(data.start_time);
+                        $.LoadingOverlay("hide");
+                        $('#btn-save').text("{{ __('common.update_record') }}");
+                        $('#appointment-modal').modal('show');
+                    },
+                    error: function () { $.LoadingOverlay("hide"); }
+                });
+            }
         }
 
         function update_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text("{{ __('common.updating') }}");
             $.ajax({
                 type: 'PUT',
                 data: $('#appointment-form').serialize(),
@@ -459,7 +609,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save changes');
+                    $('#btn-save').text("{{ __('common.save_record') }}");
                     $('#appointment-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -475,7 +625,7 @@
             $("#appointment-form")[0].reset()
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('.modal-title').text("Re-Activate Appointment")
+            $('.modal-title').text("{{ __('appointment.re_activate_appointment') }}");
             $.LoadingOverlay("show");
             $.ajax({
                 type: 'get',
@@ -503,7 +653,7 @@
                     // $('#visit_info_section').hide();
                     $('#reactivated_appointment').val("yes")
                     $.LoadingOverlay("hide");
-                    $('#btn-save').text('Reactivate Appointment')
+                    $('#btn-save').text("{{ __('appointment.reactivate_appointment') }}")
                     $('#appointment-modal').modal('show');
 
                 },
@@ -515,13 +665,14 @@
 
 
         function deleteRecord(id) {
+            var sweetAlertLang = LanguageManager.getSweetAlertLang();
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Appointment!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('appointment.delete_appointment_warning')}}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -557,7 +708,7 @@
         function RecordPayment(id) {
             $("#New-invoice-form")[0].reset();
             $('#btnSave').attr('disabled', false);
-            $('#btnSave').text('Generate Invoice');
+            $('#btnSave').text("{{ __('appointment.generate_invoice') }}");
 
             $('#invoicing_appointment_id').val(id);
             $('#New-invoice-modal').modal('show');
@@ -570,7 +721,8 @@
         });
         //filter Procedures
         $('#service').select2({
-            placeholder: "Select Procedure",
+            language: '{{ app()->getLocale() }}',
+            placeholder: translations.selectProcedure,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-medical-service',
@@ -581,7 +733,6 @@
                     };
                 },
                 processResults: function (data) {
-                    // console.log(data);
                     return {
                         results: data
                     };
@@ -654,20 +805,21 @@
             $("#InvoicesTable").append('<tr>' +
                 '<td><select id="service_append' + i + '" name="addmore[' + i + '][medical_service_id]" class="form-control"\n' +
                 '                                        style="width: 100%;border: 1px solid #a29e9e;"></select></td>' +
-                '<td> <input type="text" name="addmore[' + i + '][tooth_no]" placeholder="Enter tooth number"\n' +
+                '<td> <input type="text" name="addmore[' + i + '][tooth_no]" placeholder="' + "{{ __('appointment.enter_tooth_number') }}" + '"\n' +
                 '                                       class="form-control"/></td>' +
-                '<td> <input type="number" onkeyup="QTYKeyChange(' + i + ')" id="procedure_qty' + i + '" name="addmore[' + i + '][qty]" placeholder="Enter qty"\n' +
+                '<td> <input type="number" onkeyup="QTYKeyChange(' + i + ')" id="procedure_qty' + i + '" name="addmore[' + i + '][qty]" placeholder="' + "{{ __('appointment.enter_qty') }}" + '"\n' +
                 '                                       class="form-control"/></td>' +
-                '<td> <input type="number" onkeyup="PriceKeyChange(' + i + ')"  id="procedure_price' + i + '" name="addmore[' + i + '][price]" placeholder="Enter unit price"\n' +
+                '<td> <input type="number" onkeyup="PriceKeyChange(' + i + ')"  id="procedure_price' + i + '" name="addmore[' + i + '][price]" placeholder="' + "{{ __('appointment.enter_unit_price') }}" + '"\n' +
                 '                                       class="form-control"/></td>' +
                 '<td> <input type="text"  id="total_amount' + i + '"  class="form-control" readonly/></td>' +
                 '<td><select id="doctor_id_append' + i + '" name="addmore[' + i + '][doctor_id]" class="form-control"\n' +
                 '                                        style="width: 100%;border: 1px solid #a29e9e;"></select></td>' +
-                '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td></tr>');
+                '<td><button type="button" class="btn btn-danger remove-tr">' + "{{ __('common.delete') }}" + '</button></td></tr>');
 
             //append procedure doctor
             $('#doctor_id_append' + i).select2({
-                placeholder: "Procedure done by..",
+                language: '{{ app()->getLocale() }}',
+                placeholder: translations.procedureDoneBy,
                 minimumInputLength: 2,
                 ajax: {
                     url: '/search-doctor',
@@ -689,7 +841,8 @@
 
 
             $('#service_append' + i).select2({
-                placeholder: "select procedure",
+                language: '{{ app()->getLocale() }}',
+                placeholder: translations.selectProcedure,
                 minimumInputLength: 2,
                 ajax: {
                     url: '/search-medical-service',
@@ -700,7 +853,6 @@
                         };
                     },
                     processResults: function (data) {
-                        // console.log(data);
                         return {
                             results: data
                         };
@@ -745,7 +897,7 @@
         function save_invoice() {
             $.LoadingOverlay("show");
             $('#btnSave').attr('disabled', true);
-            $('#btnSave').text('processing...');
+            $('#btnSave').text("{{ __('common.processing') }}");
             $.ajax({
                 type: 'POST',
                 data: $('#New-invoice-form').serialize(),
@@ -763,7 +915,7 @@
                     $.LoadingOverlay("hide");
                     $('#New-invoice-modal').modal('show');
                     $('#btnSave').attr('disabled', false);
-                    $('#btnSave').text('Generate Invoice');
+                    $('#btnSave').text("{{ __('appointment.generate_invoice') }}");
 
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -780,7 +932,7 @@
 
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
 
                 setTimeout(function () {

@@ -11,8 +11,8 @@
     }
 </style>
 <div class="note note-success">
-    <p class="text-black-50"><a href="{{ url('doctor-appointments')}}" class="text-primary">View Appointments
-        </a> / Medical History
+    <p class="text-black-50"><a href="{{ url('doctor-appointments')}}" class="text-primary">{{ __('medical_history.view_appointments') }}
+        </a> / {{ __('medical_history.page_title') }}
         / @if(isset($patient)) {{ $patient->surname." ".$patient->othername  }}  @endif </p>
 </div>
 <input type="hidden" id="global_patient_id" value="{{ $patient->id }}">
@@ -21,7 +21,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold uppercase">Treatment History</span>
+                    <span class="caption-subject bold uppercase">{{ __('medical_history.treatment_history') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -30,10 +30,10 @@
                     <thead>
                     <tr>
                         <th> #</th>
-                        <th>Date</th>
-                        <th>Clinical Notes</th>
-                        <th>Treatment</th>
-                        <th>Doctor</th>
+                        <th>{{ __('medical_history.date') }}</th>
+                        <th>{{ __('medical_history.clinical_notes') }}</th>
+                        <th>{{ __('medical_history.treatment') }}</th>
+                        <th>{{ __('medical_history.doctor') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -48,10 +48,10 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold uppercase">Surgical History</span>
+                    <span class="caption-subject bold uppercase">{{ __('medical_history.surgical_history') }}</span>
                     <a class="btn  blue btn-outline btn-circle btn-sm" href="#"
                        onclick="AddSurgery({{ $patient->id  }})">
-                        Add Surgery
+                        {{ __('medical_history.add_surgery') }}
                     </a>
                 </div>
             </div>
@@ -61,11 +61,11 @@
                     <thead>
                     <tr>
                         <th> #</th>
-                        <th>surgery</th>
-                        <th>surgery date</th>
-                        <th>Notes</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('medical_history.surgery') }}</th>
+                        <th>{{ __('medical_history.surgery_date') }}</th>
+                        <th>{{ __('medical_history.notes') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -80,10 +80,10 @@
         <div class="portlet light portlet-fit bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject font-dark bold uppercase">Chronic diseases</span>
+                    <span class="caption-subject font-dark bold uppercase">{{ __('medical_history.chronic_diseases') }}</span>
                     <a class="btn dark btn-outline btn-circle btn-sm" href="#"
                        onclick="AddIllness({{ $patient->id  }})">
-                        Add Illness
+                        {{ __('medical_history.add_illness') }}
                     </a>
                 </div>
             </div>
@@ -94,10 +94,10 @@
                     <tr>
 
                         <th> #</th>
-                        <th>Illness</th>
-                        <th>Status</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('medical_history.illness') }}</th>
+                        <th>{{ __('medical_history.status') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -114,10 +114,10 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold uppercase">Drug Allergies</span>
+                    <span class="caption-subject bold uppercase">{{ __('medical_history.drug_allergies') }}</span>
                     <a class="btn  blue btn-outline btn-circle btn-sm" href="#"
                        onclick="AddAllergy({{ $patient->id  }})">
-                        Add Allergies
+                        {{ __('medical_history.add_allergies') }}
                     </a>
                 </div>
             </div>
@@ -128,11 +128,11 @@
                     <thead>
                     <tr>
                         <th>#</th>
-                        <th>Drug</th>
-                        <th>Reaction</th>
-                        <th>status</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('medical_history.drug') }}</th>
+                        <th>{{ __('medical_history.reaction') }}</th>
+                        <th>{{ __('medical_history.status') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -145,7 +145,7 @@
         <div class="portlet light portlet-fit bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject font-dark bold uppercase">Medical cards</span>
+                    <span class="caption-subject font-dark bold uppercase">{{ __('medical_history.medical_cards') }}</span>
                 </div>
                 <div class="actions">
                     <div class="btn-group">
@@ -179,7 +179,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('medical_history.surgery.create')
 @include('medical_history.chronic_diseases.create')

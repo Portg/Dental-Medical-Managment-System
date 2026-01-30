@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Quotation Item Form </h4>
+                <h4 class="modal-title"> {{ __('quotations.quotation_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -20,26 +20,26 @@
                     <input type="hidden" id="quotation_id" name="quotation_id">
 
                     <div class="form-group">
-                        <label class="text-primary">Procedure </label>
+                        <label class="text-primary">{{ __('quotations.procedure') }} </label>
                         <select id="medical_service_id" name="medical_service_id" class="form-control"
                                 style="width: 100%;"></select>
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Tooth Numbers </label>
-                        <input type="text" name="tooth_no" placeholder="Enter tooth no" class="form-control">
+                        <label class="text-primary">{{ __('quotations.tooth_numbers') }} </label>
+                        <input type="text" name="tooth_no" placeholder="{{ __('quotations.enter_tooth_no') }}" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Qty </label>
-                        <input type="text" name="qty" id="procedure_qty" placeholder="Enter qty here"
+                        <label class="text-primary">{{ __('quotations.qty') }} </label>
+                        <input type="text" name="qty" id="procedure_qty" placeholder="{{ __('quotations.enter_qty') }}"
                                class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Unit Price </label>
-                        <input type="text" name="price" id="procedure_price" placeholder="Enter price here"
+                        <label class="text-primary">{{ __('quotations.unit_price') }} </label>
+                        <input type="text" name="price" id="procedure_price" placeholder="{{ __('quotations.enter_price') }}"
                                class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Total Amount </label>
+                        <label class="text-primary">{{ __('quotations.total_amount') }} </label>
                         <input type="text" name="total_amount" id="total_amount" readonly
                                class="form-control">
                     </div>
@@ -48,10 +48,8 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">Save
-                    changes
-                </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">{{ __('quotations.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('quotations.close') }}</button>
             </div>
         </div>
     </div>

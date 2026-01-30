@@ -32,7 +32,7 @@ class PaySlipController extends Controller
                 ->leftJoin('users', 'users.id', 'pay_slips.employee_id')
                 ->leftJoin('employee_contracts', 'employee_contracts.id', 'pay_slips.employee_contract_id')
                 ->whereNull('pay_slips.deleted_at')
-                ->select('pay_slips.*', 'payroll_type', 'gross_salary', 'commission_percentage', 'users.surname', 'users.othername')
+                ->select('pay_slips.*', 'employee_contracts.payroll_type', 'employee_contracts.gross_salary', 'employee_contracts.commission_percentage', 'users.surname', 'users.othername')
                 ->orderBy('pay_slips.id', 'desc')
                 ->get();
 
@@ -47,7 +47,7 @@ class PaySlipController extends Controller
                     return $row->surname . " " . $row->othername;
                 })
                 ->addColumn('basic_salary', function ($row) {
-                    $wage = $this->CalculateWage($row);
+                    $wage = $this->calculateWage($row);
                     return '<span class="text-primary">' . number_format($wage) . '</span>';
                 })
                 ->addColumn('total_advances', function ($row) {
@@ -66,7 +66,7 @@ class PaySlipController extends Controller
                     $deductions = $this->employeeDeductions($row);
                     $allowance = $this->employeeAllowances($row);
                     $advances = $this->employeeAdvances($row);
-                    $wage = $this->CalculateWage($row);
+                    $wage = $this->calculateWage($row);
                     $balance = ($allowance + $wage) - ($deductions + $advances);
                     return '<span class="text-primary">' . number_format($balance) . '</span>';
                 })
@@ -75,15 +75,15 @@ class PaySlipController extends Controller
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> Action
+                                aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <li>
-                                <a href="' . url('payslips/' . $row->id) . '"> Preview </a>
+                                <a href="' . url('payslips/' . $row->id) . '"> ' . __('common.preview') . ' </a>
                             </li>
                               <li>
-                                <a href="#" onclick="deleteRecord(' . $row->id . ')"> Delete </a>
+                                <a href="#" onclick="deleteRecord(' . $row->id . ')"> ' . __('common.delete') . ' </a>
                             </li>
                         </ul>
                     </div>
@@ -138,7 +138,7 @@ class PaySlipController extends Controller
         //get employee contract
         $employee = EmployeeContract::where(['employee_id' => $request->employee, 'status' => 'Active'])->first();
         if ($employee == null) {
-            return response()->json(['message' => 'Employee does not have a contract, please first add the employee contract', 'status' => false]);
+            return response()->json(['message' => __('payslips.employee_no_contract'), 'status' => false]);
         }
 
         $payslip = PaySlip::create([
@@ -172,10 +172,10 @@ class PaySlipController extends Controller
                     ]);
                 }
             }
-            return response()->json(['message' => 'Payslip has been generated successfully', 'status' => true]);
+            return response()->json(['message' => __('payslips.payslip_generated_successfully'), 'status' => true]);
         }
 
-        return response()->json(['message' => 'Oops an error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -223,15 +223,16 @@ class PaySlipController extends Controller
      * Remove the specified resource from storage.
      *
      * @param $id
-     * @return void
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
      */
     public function destroy($id)
     {
         $success = PaySlip::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse('Payslip has been deleted successfully', $success);
+        return FunctionsHelper::messageResponse(__('payslips.payslip_deleted_successfully'), $success);
     }
 
-    private function CalculateWage($row)
+    private function calculateWage($row)
     {
         //check payroll type
         if ($row->payroll_type == "Salary") {
@@ -264,5 +265,20 @@ class PaySlipController extends Controller
         //get the commission
         $commission = ($commission_percentage / 100) * $total_amount;
         return $commission;
+    }
+
+    public function individualPaySlip(Request $request)
+    {
+        $data['employee'] = DB::table('pay_slips')
+            ->join('users', 'users.id', 'pay_slips.employee_id')
+            ->where('pay_slips.id', $request->pay_slip_id)
+            ->select('pay_slips.*', 'users.surname', 'users.othername')
+            ->first();
+        $data['pay_slip_id'] = $request->pay_slip_id;
+
+        return view('payslips.individual_payslips');
+
+//        $pdf = \PDF::loadView('payslips.individual_payslips', $data);
+//        return $pdf->stream('medium', array("attachment" => false))->header('Content-Type', 'application/pdf');
     }
 }

@@ -30,7 +30,7 @@ class DebtorsReportController extends Controller
         if ($request->ajax()) {
             $data = DB::table('invoice_items')
                 ->whereNull('invoice_items.deleted_at')
-                ->select('invoice_items.invoice_id', DB::raw('sum(invoice_items.price*invoice_items.qty) as invoice_amount'))
+                ->select('invoice_items.invoice_id', DB::raw('sum(invoice_items.amount*invoice_items.qty) as invoice_amount'))
                 ->groupBy('invoice_items.invoice_id')
                 ->get();
             foreach ($data as $item) {
@@ -75,7 +75,7 @@ class DebtorsReportController extends Controller
         $output_array = [];
         $data = DB::table('invoice_items')
             ->whereNull('invoice_items.deleted_at')
-            ->select('invoice_items.invoice_id', DB::raw('sum(invoice_items.price*invoice_items.qty) as invoice_amount'))
+            ->select('invoice_items.invoice_id', DB::raw('sum(invoice_items.amount*invoice_items.qty) as invoice_amount'))
             ->groupBy('invoice_items.invoice_id')
             ->get();
         foreach ($data as $item) {

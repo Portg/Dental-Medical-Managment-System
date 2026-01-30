@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\InvoiceItem;
 use App\InvoicePayment;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 
@@ -13,7 +15,9 @@ class InsuranceReportsController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @return Response
+     * @throws Exception
      */
     public function index(Request $request)
     {
@@ -69,7 +73,7 @@ class InsuranceReportsController extends Controller
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . ' </a>';
                     return $btn;
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
@@ -142,5 +146,22 @@ class InsuranceReportsController extends Controller
     public function destroy($id)
     {
         //
+    }
+
+    /**
+     * Claim the specified payment.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function claims(Request $request)
+    {
+        $payment = InvoicePayment::find($request->invoice_id);
+        $payment->is_claimed = 1;
+        $status = $payment->save();
+        if ($status) {
+            return response()->json(['message' => __('insurance_reports.data_loaded_successfully'), 'status' => true]);
+        }
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 }

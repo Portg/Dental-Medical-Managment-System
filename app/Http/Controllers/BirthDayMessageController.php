@@ -47,11 +47,11 @@ class BirthDayMessageController extends Controller
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     }
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
 
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
@@ -80,12 +80,14 @@ class BirthDayMessageController extends Controller
     {
         Validator::make($request->all(), [
             'message' => 'required'
+        ], [
+            'message.required' => __('validation.custom.message.required')
         ])->validate();
         $success = BirthDayMessage::create([
             'message' => $request->message,
             '_who_added' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("Message has been added successfully", $success);
+        return FunctionsHelper::messageResponse(__("messages.message_added_successfully"), $success);
     }
 
     /**
@@ -122,12 +124,14 @@ class BirthDayMessageController extends Controller
     {
         Validator::make($request->all(), [
             'message' => 'required'
+        ], [
+            'message.required' => __('validation.custom.message.required')
         ])->validate();
         $success = BirthDayMessage::where('id', $id)->update([
             'message' => $request->message,
             '_who_added' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("Message has been updated successfully", $success);
+        return FunctionsHelper::messageResponse(__("messages.message_updated_successfully"), $success);
     }
 
     /**
@@ -139,6 +143,6 @@ class BirthDayMessageController extends Controller
     public function destroy($id)
     {
         $success = BirthDayMessage::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse("Message has been deleted successfully", $success);
+        return FunctionsHelper::messageResponse(__("messages.message_deleted_successfully"), $success);
     }
 }

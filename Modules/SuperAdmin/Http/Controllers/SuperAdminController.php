@@ -13,10 +13,12 @@ use App\InvoicePayment;
 use App\Notifications\UserRegistrationNotification;
 use App\Patient;
 use App\User;
+use FontLib\Table\Type\name;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 
 use Notification;
@@ -28,31 +30,6 @@ class SuperAdminController extends Controller
      */
     public function index()
     {
-
-
-//        $details = [
-//
-//            'greeting' => 'Hi Artisan',
-//
-//            'body' => 'This is my first notification from ItSolutionStuff.com',
-//
-//            'thanks' => 'Thank you for using ItSolutionStuff.com tuto!',
-//
-//            'actionText' => 'View My Site',
-//
-//            'actionURL' => url('/'),
-//
-//            'order_id' => 101
-//
-//        ];
-
-
-
-//
-//
-//        $user = User::where('id', 10)->first();
-//        return Notification::send($user, new UserRegistrationNotification($details));
-
 
         $data['today_appointments'] = Appointment::where('start_date', '=', date('Y-m-d'))->count();
 
@@ -109,13 +86,14 @@ class SuperAdminController extends Controller
         $monthlyCashFlows = new MonthlyCashFlows;
         //cash data
         $monthlyCashFlows->labels($cashFlows_labels);
-        $monthlyCashFlows->dataset('Daily Cash Payments', 'line', $cashFlows_data)->options([
+        $monthlyCashFlows->dataset(
+            __('report.daily_cash_payments'), 'line', $cashFlows_data)->options([
             'fill' => false
         ]);
 
         //insurance data
         $monthlyCashFlows->labels($InsuranceFlows_labels);
-        $monthlyCashFlows->dataset('Daily Insurance Payments', 'line', $InsuranceFlows_data)->options([
+        $monthlyCashFlows->dataset(__('report.daily_insurance_payments'), 'line', $InsuranceFlows_data)->options([
 //            'backgroundColor' => '#DBF2F2',
         ]);
 
@@ -142,7 +120,7 @@ class SuperAdminController extends Controller
         $monthlyExpenses = new MonthlyExpensesChart;
 
         $monthlyExpenses->labels($labels);
-        $monthlyExpenses->dataset('Daily Expenses', 'line', $expense_data)->options([
+        $monthlyExpenses->dataset(__('report.daily_expenses'), 'line', $expense_data)->options([
             'backgroundColor' => '#DBF2F2'
         ]);
         return $monthlyExpenses;
@@ -164,8 +142,8 @@ class SuperAdminController extends Controller
             ->sum('amount');
         $monthlyOverRollIncomeChart = new MonthlyOverRollIncomeChart;
 
-        $monthlyOverRollIncomeChart->labels(['Cash', 'Insurance']);
-        $monthlyOverRollIncomeChart->dataset('Over Roll ', 'pie', [$monthly_cash, $monthly_insurance])->options([
+        $monthlyOverRollIncomeChart->labels([__('report.cash'), __('report.insurance')]);
+        $monthlyOverRollIncomeChart->dataset(__('report.over_roll'), 'pie', [$monthly_cash, $monthly_insurance])->options([
             'backgroundColor' => ['#3598DC', '#78CC66']
         ]);
 
@@ -187,8 +165,8 @@ class SuperAdminController extends Controller
             ->sum('amount');
         $monthlyOverRollIncomeExpenseChart = new MonthlyOverRollIncomeExpenseChart;
 
-        $monthlyOverRollIncomeExpenseChart->labels(['Income', 'Expenditure']);
-        $monthlyOverRollIncomeExpenseChart->dataset('Over Roll ', 'doughnut', [$monthly_income, $monthly_expenses])->options([
+        $monthlyOverRollIncomeExpenseChart->labels([__('report.income'), __('report.expenditure')]);
+        $monthlyOverRollIncomeExpenseChart->dataset(__('report.over_roll'), 'doughnut', [$monthly_income, $monthly_expenses])->options([
             'backgroundColor' => ['rgba(233, 180, 195, 0.86)', 'rgba(215, 201, 15, 0.73)']
         ]);
 

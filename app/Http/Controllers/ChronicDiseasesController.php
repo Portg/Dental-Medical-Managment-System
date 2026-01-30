@@ -28,19 +28,18 @@ class ChronicDiseasesController extends Controller
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == "Active") {
-                        $btn = '<span class="label label-sm label-danger"> ' . $row->status . ' </span>';
+                        $btn = '<span class="label label-sm label-danger"> ' . __('common.active') . ' </span>';
                     } else {
-                        $btn = '<span class="label label-sm label-success"> ' . $row->status . ' </span>';
+                        $btn = '<span class="label label-sm label-success"> ' . __('common.inactive') . ' </span>';
                     }
                     return $btn;
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editIllness(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editIllness(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
-                    $btn = '<a href="#" onclick="deleteIllness(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteIllness(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
@@ -69,6 +68,9 @@ class ChronicDiseasesController extends Controller
         Validator::make($request->all(), [
             'disease' => 'required',
             'status' => 'required'
+        ], [
+            'disease.required' => __('validation.custom.disease.required'),
+            'status.required' => __('validation.custom.status.required')
         ])->validate();
         $status = ChronicDisease::create([
             'disease' => $request->disease,
@@ -77,9 +79,9 @@ class ChronicDiseasesController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Chronic Disease has been captured successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.chronic_disease_added_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
 
     /**
@@ -117,6 +119,9 @@ class ChronicDiseasesController extends Controller
         Validator::make($request->all(), [
             'disease' => 'required',
             'status' => 'required'
+        ], [
+            'disease.required' => __('validation.custom.disease.required'),
+            'status.required' => __('validation.custom.status.required')
         ])->validate();
         $status = ChronicDisease::where('id', $id)->update([
             'disease' => $request->disease,
@@ -124,9 +129,9 @@ class ChronicDiseasesController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Chronic Disease has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.chronic_disease_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
 
     }
 
@@ -140,9 +145,9 @@ class ChronicDiseasesController extends Controller
     {
         $status = ChronicDisease::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Chronic Disease has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.chronic_disease_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
 
     }
 }

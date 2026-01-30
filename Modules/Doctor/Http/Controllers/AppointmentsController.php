@@ -6,6 +6,7 @@ use App\Appointment;
 use App\DoctorClaim;
 use App\Http\Helper\FunctionsHelper;
 use App\Invoice;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -21,7 +22,7 @@ class AppointmentsController extends Controller
      * Display a listing of the resource.
      * @param Request $request
      * @return Response
-     * @throws \Exception
+     * @throws Exception
      */
     public function index(Request $request)
     {
@@ -69,12 +70,12 @@ class AppointmentsController extends Controller
                 })
                 ->addColumn('Medical_History', function ($row) {
                     //medical history goes with the patient ID
-                    $btn = '<a href="' . url('medical-history/' . $row->patient_id) . '"  class="btn btn-info">Medical History</a>';
+                    $btn = '<a href="' . url('medical-history/' . $row->patient_id) . '"  class="btn btn-info">' . __('medical_treatment.medical_history') . '</a>';
                     return $btn;
                 })
                 ->addColumn('treatment', function ($row) {
                     //use the appointment ID
-                    $btn = '<a href="' . url('medical-treatment/' . $row->id) . '"  class="btn btn-info">Treatment</a>';
+                    $btn = '<a href="' . url('medical-treatment/' . $row->id) . '"  class="btn btn-info">' . __('medical_treatment.treatment') . '</a>';
                     return $btn;
                 })
                 ->addColumn('doctor_claim', function ($row) {
@@ -82,9 +83,9 @@ class AppointmentsController extends Controller
                     $claim = DoctorClaim::where('appointment_id', $row->id)->first();
                     $btn = '';
                     if ($claim == "") {
-                        $btn = '<a href="#" onclick="CreateClaim(' . $row->id . ')"  class="btn green-meadow">Create Claim</a>';
+                        $btn = '<a href="#" onclick="CreateClaim(' . $row->id . ')"  class="btn green-meadow">' . __('doctor_claims.create_claim') . '</a>';
                     } else {
-                        $btn = '<span class="text-primary">Claim already generated</span>';
+                        $btn = '<span class="text-primary">' . __('doctor_claims.claim_already_generated') . '</span>';
                     }
                     return $btn;
                 })
@@ -153,9 +154,9 @@ class AppointmentsController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Appointment has been created successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.appointment_created_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
 
     }
 
@@ -206,9 +207,9 @@ class AppointmentsController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Appointment has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.appointment_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
 
     }
 
@@ -220,7 +221,7 @@ class AppointmentsController extends Controller
         ])->validate();
         //now update the appointment as done
         $success = Appointment::where('id', $request->appointment_id)->update(['status' => $request->appointment_status]);
-        return FunctionsHelper::messageResponse("Appointment has been save as " . $request->appointment_status, $success);
+        return FunctionsHelper::messageResponse(__('messages.appointment_status_updated', ['status' => $request->appointment_status]), $success);
     }
 
 
@@ -234,9 +235,9 @@ class AppointmentsController extends Controller
     {
         $status = Appointment::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Appointment has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.appointment_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
 
 
     }

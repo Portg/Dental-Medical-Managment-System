@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Surgery Form </h4>
+                <h4 class="modal-title"> {{ __('medical_history.surgery_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -19,17 +19,17 @@
                     <input type="hidden" id="surgery_id" name="surgery_id">
                     <input type="hidden" id="patient_id" name="patient_id">
                     <div class="form-group">
-                        <label class="text-primary">Surgery </label>
-                        <input type="text" name="surgery" placeholder="Enter Surgery" class="form-control">
+                        <label class="text-primary">{{ __('medical_history.surgery') }} </label>
+                        <input type="text" name="surgery" placeholder="{{ __('medical_history.enter_surgery') }}" class="form-control">
                     </div>
 
                     <div class="form-group">
-                        <label class="text-primary">Surgery Date </label>
+                        <label class="text-primary">{{ __('medical_history.surgery_date') }} </label>
                         <input type="text" id="datepicker" placeholder="yyyy-mm-dd" name="surgery_date" class="form-control">
                     </div>
 
                     <div class="form-group">
-                        <label class="text-primary">Notes (optional) </label>
+                        <label class="text-primary">{{ __('medical_history.notes_optional') }} </label>
                         <textarea class="form-control" name="description" rows="8"></textarea>
                     </div>
                 </form>
@@ -37,10 +37,9 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-surgery" onclick="save_surgery()">Save
-                    changes
+                <button type="button" class="btn btn-primary" id="btn-surgery" onclick="save_surgery()">{{ __('common.save_changes') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

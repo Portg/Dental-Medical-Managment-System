@@ -15,7 +15,7 @@ class InvoicingReportsController extends Controller
     protected $payment_methods = [];
 
 
-    public function InvoicePaymentReport(Request $request)
+    public function invoicePaymentReport(Request $request)
     {
         if ($request->ajax()) {
             if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
@@ -57,7 +57,7 @@ class InvoicingReportsController extends Controller
         return view('reports.invoice_payments_report')->with($data);
     }
 
-    public function ExportInvoicePayments(Request $request)
+    public function exportInvoicePayments(Request $request)
     {
         $queryBuilder = DB::table('invoice_payments')
             ->leftJoin('insurance_companies', 'insurance_companies.id', 'invoice_payments.insurance_company_id')
@@ -140,7 +140,7 @@ class InvoicingReportsController extends Controller
 
     }
 
-    public function TodaysCash(Request $request)
+    public function todaysCash(Request $request)
     {
 
         if ($request->ajax()) {
@@ -171,7 +171,7 @@ class InvoicingReportsController extends Controller
     }
 
 
-    public function TodaysExpenses(Request $request)
+    public function todaysExpenses(Request $request)
     {
 
         if ($request->ajax()) {
@@ -197,7 +197,7 @@ class InvoicingReportsController extends Controller
         return view('reports.daily_expenses');
     }
 
-    public function TodaysInsurance(Request $request)
+    public function todaysInsurance(Request $request)
     {
 
         if ($request->ajax()) {

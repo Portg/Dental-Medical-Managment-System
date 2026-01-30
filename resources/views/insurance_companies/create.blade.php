@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Insurance company Form </h4>
+                <h4 class="modal-title"> {{ __('insurance_companies.insurance_company_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -18,15 +18,15 @@
                     @csrf
                     <input type="hidden" id="id" name="id">
                     <div class="form-group">
-                        <label class="text-primary">Company Name </label>
-                        <input type="text" name="name" placeholder="Enter name" class="form-control">
+                        <label class="text-primary">{{ __('insurance_companies.company_name') }}</label>
+                        <input type="text" name="name" placeholder="{{ __('insurance_companies.enter_company_name') }}" class="form-control">
                     </div>
                     <div class="form-group hidden">
-                        <label class="text-primary">Email </label>
-                        <input type="text" name="email" placeholder="" class="form-control">
+                        <label class="text-primary">{{ __('insurance_companies.email') }} </label>
+                        <input type="text" name="email" placeholder="{{ __('insurance_companies.enter_email') }}" class="form-control">
                     </div>
                     <div class="form-group hidden">
-                        <label class="text-primary">Phone No: </label>
+                        <label class="text-primary">{{ __('insurance_companies.phone_no') }} </label>
                         <input type="text" name="phone_no" placeholder="" class="form-control">
                     </div>
                 </form>
@@ -34,8 +34,8 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">Save changes</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

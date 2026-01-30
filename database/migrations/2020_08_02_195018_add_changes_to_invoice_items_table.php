@@ -16,7 +16,11 @@ class AddChangesToInvoiceItemsTable extends Migration
         Schema::table('invoice_items', function (Blueprint $table) {
             $table->double('qty')->nullable()->after('id');
 
-            $table->bigInteger('doctor_id')->unsigned()->nullable()->after('tooth_no');
+            if (Schema::hasColumn('invoice_items', 'tooth_no')) {
+                $table->bigInteger('doctor_id')->unsigned()->nullable()->after('tooth_no');
+            } else {
+                $table->bigInteger('doctor_id')->unsigned()->nullable();
+            }
             $table->foreign('doctor_id')->references('id')->on('users');
         });
     }

@@ -36,12 +36,12 @@ class ExpenseCategoryController extends Controller
                     return $row->ExpenseAccount->name;
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
@@ -73,7 +73,7 @@ class ExpenseCategoryController extends Controller
         echo json_encode($data);
     }
 
-    public function SearchCategory(Request $request)
+    public function searchCategory(Request $request)
     {
         $data = [];
         $name = $request->q;
@@ -112,6 +112,9 @@ class ExpenseCategoryController extends Controller
         Validator::make($request->all(), [
             'name' => 'required',
             'expense_account' => 'required'
+        ], [
+            'name.required' => __('validation.attributes.name') . ' ' . __('validation.required'),
+            'expense_account.required' => __('validation.attributes.expense_account') . ' ' . __('validation.required')
         ])->validate();
         $status = ExpenseCategory::create([
             'name' => $request->name,
@@ -119,9 +122,9 @@ class ExpenseCategoryController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Expense category has been added successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_categories.added_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -161,6 +164,9 @@ class ExpenseCategoryController extends Controller
         Validator::make($request->all(), [
             'name' => 'required',
             'expense_account' => 'required'
+        ], [
+            'name.required' => __('validation.attributes.name') . ' ' . __('validation.required'),
+            'expense_account.required' => __('validation.attributes.expense_account') . ' ' . __('validation.required')
         ])->validate();
         $status = ExpenseCategory::where('id', $id)->update([
             'name' => $request->name,
@@ -168,9 +174,9 @@ class ExpenseCategoryController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Expense category has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_categories.updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
 
     }
@@ -185,9 +191,9 @@ class ExpenseCategoryController extends Controller
     {
         $status = ExpenseCategory::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Expense category has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_categories.deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 }

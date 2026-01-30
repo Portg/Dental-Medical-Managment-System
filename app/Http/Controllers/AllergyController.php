@@ -31,18 +31,18 @@ class AllergyController extends Controller
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == "Active") {
-                        $btn = '<span class="label label-sm label-danger"> ' . $row->status . ' </span>';
+                        $btn = '<span class="label label-sm label-danger"> ' . __('common.active') . ' </span>';
                     } else {
-                        $btn = '<span class="label label-sm label-success"> ' . $row->status . ' </span>';
+                        $btn = '<span class="label label-sm label-success"> ' . __('common.inactive') . ' </span>';
                     }
                     return $btn;
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editAllergy(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editAllergy(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    $btn = '<a href="#" onclick="deleteAllergy(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteAllergy(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
@@ -70,6 +70,8 @@ class AllergyController extends Controller
     {
         Validator::make($request->all(), [
             'body_reaction' => 'required'
+        ], [
+            'body_reaction.required' => __('validation.custom.body_reaction.required')
         ])->validate();
         $status = Allergy::create([
             'body_reaction' => $request->body_reaction,
@@ -77,9 +79,9 @@ class AllergyController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Patient Allergy has been captured successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_history.allergy_captured_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
     /**
@@ -116,15 +118,17 @@ class AllergyController extends Controller
     {
         Validator::make($request->all(), [
             'body_reaction' => 'required'
+        ], [
+            'body_reaction.required' => __('validation.custom.body_reaction.required')
         ])->validate();
         $status = Allergy::where('id', $id)->update([
             'body_reaction' => $request->body_reaction,
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Patient Allergy has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_history.allergy_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -138,9 +142,9 @@ class AllergyController extends Controller
     {
         $status = Allergy::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Patient Allergy has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_history.allergy_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 }

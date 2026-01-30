@@ -51,18 +51,18 @@ class MedicalServiceController extends Controller
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->deleted_at != null) {
-                        return '<span class="text-danger">Inactive</span>';
+                        return '<span class="text-danger">' . __('common.inactive') . '</span>';
                     } else {
-                        return '<span class="text-primary">Active</span>';
+                        return '<span class="text-primary">' . __('common.active') . '</span>';
                     }
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     }
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
 
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
@@ -71,7 +71,7 @@ class MedicalServiceController extends Controller
         return view('clinical_services.index');
     }
 
-    public function ServicesArray(Request $request)
+    public function servicesArray(Request $request)
     {
 
         $result = MedicalService::select('name')->get();
@@ -128,9 +128,9 @@ class MedicalServiceController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Service has been added successfully', 'status' => true]);
+            return response()->json(['message' => __('clinical_services.clinical_services_added_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
 
     /**
@@ -175,9 +175,9 @@ class MedicalServiceController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Service has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('clinical_services.clinical_services_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
 
     }
 
@@ -192,11 +192,10 @@ class MedicalServiceController extends Controller
 
         $status = MedicalService::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Service has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('clinical_services.clinical_services_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
 
     }
-
 
 }

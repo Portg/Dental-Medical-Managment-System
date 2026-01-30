@@ -48,7 +48,7 @@ class BookAppointmentController extends Controller
             'email' => $request->email,
             'message' => $request->message
         ]);
-        return FunctionsHelper::messageResponse("Your appointment request has been sent successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.booking_request_sent_successfully'), $success);
 
     }
 

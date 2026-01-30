@@ -30,12 +30,11 @@ class SurgeriesController extends Controller
                     return $row->addedBy->othername;
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editSurgery(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editSurgery(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
-                    $btn = '<a href="#" onclick="deleteSurgery(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteSurgery(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
@@ -65,6 +64,10 @@ class SurgeriesController extends Controller
             'patient_id' => 'required',
             'surgery' => 'required',
             'surgery_date' => 'required'
+        ], [
+            'patient_id.required' => __('validation.custom.patient_id.required'),
+            'surgery.required' => __('validation.custom.surgery.required'),
+            'surgery_date.required' => __('validation.custom.surgery_date.required')
         ])->validate();
         $status = Surgery::create([
             'surgery' => $request->surgery,
@@ -74,9 +77,9 @@ class SurgeriesController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Surgery has been added successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_history.surgery_added_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
 
     /**
@@ -114,6 +117,9 @@ class SurgeriesController extends Controller
         Validator::make($request->all(), [
             'surgery' => 'required',
             'surgery_date' => 'required'
+        ], [
+            'surgery.required' => __('validation.custom.surgery.required'),
+            'surgery_date.required' => __('validation.custom.surgery_date.required')
         ])->validate();
         $status = Surgery::where('id', $id)->update([
             'surgery' => $request->surgery,
@@ -122,9 +128,9 @@ class SurgeriesController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Surgery has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_history.surgery_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
 
     }
 
@@ -138,8 +144,8 @@ class SurgeriesController extends Controller
     {
         $status = Surgery::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Surgery has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_history.surgery_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
 }

@@ -19,7 +19,8 @@ class CreateBranchesTable extends Migration
 
             $table->enum('is_active', ['true', 'false'])->default('true');
 
-            $table->bigInteger('_who_added')->unsigned();
+            // 改为可空
+            $table->bigInteger('_who_added')->unsigned()->nullable();
             $table->foreign('_who_added')->references('id')->on('users');
             $table->timestamps();
             $table->softDeletes();

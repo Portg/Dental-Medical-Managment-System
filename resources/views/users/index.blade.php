@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> User mgt/ Users</span>
+                    <span class="caption-subject">{{ __('menu.user_management') }} / {{ __('users.list') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,16 +32,16 @@
                        id="users_table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Surname</th>
-                        <th>Othername</th>
-                        <th>Email</th>
-                        <th>Phone Number</th>
-                        <th>Role</th>
-                        <th>Branch</th>
-                        <th>Is Doctor</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('users.surname') }}</th>
+                        <th>{{ __('users.othername') }}</th>
+                        <th>{{ __('users.email') }}</th>
+                        <th>{{ __('users.phone_no') }}</th>
+                        <th>{{ __('users.role') }}</th>
+                        <th>{{ __('users.branch') }}</th>
+                        <th>{{ __('users.is_doctor') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -53,7 +53,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('users.create')
 @endsection
@@ -65,11 +65,16 @@
             $('#branch_block').hide();
         });
         $(function () {
+            // Load page-specific translations
+            LanguageManager.loadAllFromPHP({
+                'users': @json(__('users'))
+            });
 
             var table = $('#users_table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/users/') }}",
                     data: function (d) {
@@ -106,14 +111,15 @@
             $("#users-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('save record');
+            $('#btn-save').text('{{ __("common.save_record") }}');
             $('#users-modal').modal('show');
         }
 
 
         //filter roles
         $('#role').select2({
-            placeholder: "Choose role...",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('users.select_role') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-role',
@@ -142,7 +148,8 @@
 
         //filter branches
         $('#branch_id').select2({
-            placeholder: "Choose Branch...",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('users.choose_branch') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-branch',
@@ -175,7 +182,7 @@
         function save_new_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#users-form').serialize(),
@@ -192,7 +199,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('save record');
+                    $('#btn-save').text('{{ __("common.save_record") }}');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
                         $('.alert-danger').show();
@@ -243,7 +250,7 @@
 
 
                     $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#users-modal').modal('show');
 
                 },
@@ -257,7 +264,7 @@
             $.LoadingOverlay("show");
 
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#users-form').serialize(),
@@ -274,7 +281,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Update record');
+                    $('#btn-save').text('{{ __("common.update_record") }}');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
                         $('.alert-danger').show();
@@ -286,12 +293,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this User!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('users.delete_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -324,7 +331,7 @@
 
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#users_table').dataTable();
                 oTable.fnDraw(false);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Holiday;
 use App\Http\Helper\FunctionsHelper;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -38,11 +39,11 @@ class HolidayController extends Controller
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     }
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
                 ->make(true);
@@ -74,6 +75,10 @@ class HolidayController extends Controller
                 'name' => 'required',
                 'holiday_date' => 'required',
                 'repeat_date' => 'required'
+            ], [
+                'name.required' => __('validation.attributes.holiday_name') . ' ' . __('validation.required'),
+                'holiday_date.required' => __('validation.attributes.holiday_date') . ' ' . __('validation.required'),
+                'repeat_date.required' => __('validation.attributes.repeat_date') . ' ' . __('validation.required'),
             ])->validate();
 
         $success = Holiday::create(
@@ -83,7 +88,7 @@ class HolidayController extends Controller
                 'repeat_date' => $request->repeat_date,
                 '_who_added' => Auth::User()->id
             ]);
-        return FunctionsHelper::messageResponse("Holiday has been added successfully", $success);
+        return FunctionsHelper::messageResponse(__('holidays.added_successfully'), $success);
     }
 
     /**
@@ -101,7 +106,7 @@ class HolidayController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param $id
-     * @return void
+     * @return \Illuminate\Http\JsonResponse
      */
     public function edit($id)
     {
@@ -123,6 +128,10 @@ class HolidayController extends Controller
                 'name' => 'required',
                 'holiday_date' => 'required',
                 'repeat_date' => 'required'
+            ], [
+                'name.required' => __('validation.attributes.holiday_name') . ' ' . __('validation.required'),
+                'holiday_date.required' => __('validation.attributes.holiday_date') . ' ' . __('validation.required'),
+                'repeat_date.required' => __('validation.attributes.repeat_date') . ' ' . __('validation.required'),
             ])->validate();
 
         $success = Holiday::where('id', $id)->update(
@@ -132,18 +141,19 @@ class HolidayController extends Controller
                 'repeat_date' => $request->repeat_date,
                 '_who_added' => Auth::User()->id
             ]);
-        return FunctionsHelper::messageResponse("Holiday has been updated successfully", $success);
+        return FunctionsHelper::messageResponse(__('holidays.updated_successfully'), $success);
     }
 
     /**
      * Remove the specified resource from storage.
      *
      * @param $id
-     * @return \Illuminate\Http\Response
+     * @return Response
+     * @throws \Exception
      */
     public function destroy($id)
     {
         $success = Holiday::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse("Holiday has been deleted successfully", $success);
+        return FunctionsHelper::messageResponse(__('holidays.deleted_successfully'), $success);
     }
 }

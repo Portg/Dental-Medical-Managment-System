@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Payroll Mgt/ Individual Payslips</span>
+                    <span class="caption-subject"> {{ __('payslips.payroll_management') }}/ {{ __('payslips.individual_payslips') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -30,13 +30,13 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Payslip Month</th>
-                        <th>Basic Salary</th>
-                        <th>Total Advances</th>
-                        <th>Total Allowance</th>
-                        <th>Total Deductions</th>
-                        <th>Due Balance</th>
+                        <th>{{ __('payslips.id') }}</th>
+                        <th>{{ __('payslips.payslip_month') }}</th>
+                        <th>{{ __('payslips.basic_salary') }}</th>
+                        <th>{{ __('payslips.total_advances') }}</th>
+                        <th>{{ __('payslips.total_allowances') }}</th>
+                        <th>{{ __('payslips.total_deductions') }}</th>
+                        <th>{{ __('payslips.due_balance') }}</th>
                     </thead>
                     <tbody>
 
@@ -48,7 +48,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('payslips.loading') }}</span>
 </div>
 @include('payslips.create')
 @endsection
@@ -57,10 +57,12 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
         $(function () {
+
             let table = $('#sample_1').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/individual-payslips/') }}",
                     data: function (d) {
@@ -69,8 +71,8 @@
                 dom: 'Bfrtip',
                 buttons: {
                     buttons: [
-                        {extend: 'pdfHtml5', className: 'pdfButton'},
-                        {extend: 'excelHtml5', className: 'excelButton'},
+                        // {extend: 'pdfHtml5', className: 'pdfButton'},
+                        // {extend: 'excelHtml5', className: 'excelButton'},
 
                     ]
                 },

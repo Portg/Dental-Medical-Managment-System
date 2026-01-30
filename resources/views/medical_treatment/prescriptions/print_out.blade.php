@@ -7,9 +7,9 @@
              <table width="100%">
             <tr>
                 <td align="left">
-                    <span>Prescribed By: {{ $prescribed_by->surname." ".$prescribed_by->othername}}<br>
+                    <span>{{ __('medical_treatment.prescribed_by') }}: {{ $prescribed_by->surname." ".$prescribed_by->othername}}<br>
                     </span>
- 
+
                 </td>
                 <td align="center">
                 </td>
@@ -21,13 +21,13 @@
         </table>
         </div>
         <div class="col-xs-4">
-            <h3>Medical Prescriptions</h3>
+            <h3>{{ __('medical_treatment.medical_prescriptions') }}</h3>
             <table width="100%">
                 <thead>
                 <tr>
-                    <th>Drug</th>
-                    <th>mg/ml</th>
-                    <th>Directions</th>
+                    <th>{{ __('medical_treatment.drug') }}</th>
+                    <th>{{ __('medical_treatment.mg_ml') }}</th>
+                    <th>{{ __('medical_treatment.directions') }}</th>
                 </tr>
                 </thead>
                 <tbody>

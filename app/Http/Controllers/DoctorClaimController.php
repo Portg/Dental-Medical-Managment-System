@@ -64,7 +64,7 @@ class DoctorClaimController extends Controller
                     $remaining_balance = $claims_amount - $paid_amount;
                     $action_balance = '';
                     if ($remaining_balance > 0) {
-                        $action_balance = "<br>(<a href=\"#\" class=\"text-danger\" onclick=\"record_payment('" . $row->id . "','" . $remaining_balance . "')\">Make Payment</a>)";
+                        $action_balance = "<br>(<a href=\"#\" class=\"text-danger\" onclick=\"record_payment('" . $row->id . "','" . $remaining_balance . "')\">" . __('doctor_claims.make_payment') . "</a>)";
                     }
                     return '<span class="text-primary">' . number_format($remaining_balance) . '</span>' . $action_balance;
                 })
@@ -73,12 +73,12 @@ class DoctorClaimController extends Controller
                     $claim = '';
                     if ($row->status == "Pending") {
                         $claim = " <a href=\"#\" onclick=\"Approve_Claim('" . $row->id . "','" . $row->claim_amount .
-                            "')\">Approve Claim </a>";
+                            "')\"> " . __('doctor_claims.approve_claim') . " </a>";
 
                     } else {
                         $action = '
                              <li>
-                                <a  href="#" onclick="editRecord(' . $row->id . ')"> Edit Claim </a>
+                                <a  href="#" onclick="editRecord(' . $row->id . ')"> ' . __('doctor_claims.edit_claim') . '  </a>
                             </li>
                         ';
                     }
@@ -86,7 +86,7 @@ class DoctorClaimController extends Controller
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> Action
+                                aria-expanded="false"> ' . __('common.action') . ' 
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
@@ -95,7 +95,7 @@ class DoctorClaimController extends Controller
                             </li>
                               ' . $action . '
                                 <li>
-                                <a  href="' . url('/claims-payment/' . $row->id) . '"> View Payment </a>
+                                <a  href="' . url('/claims-payment/' . $row->id) . '"> ' . __('doctor_claims.view_payment') . ' </a>
                             </li>
                         </ul>
                     </div>
@@ -117,8 +117,7 @@ class DoctorClaimController extends Controller
         //cash claim
         $cash = $this->cash_claim($row->cash_amount, $row->_who_added);
         // over all total amount
-        $total_amount = $insurance + $cash;
-        return $total_amount;
+        return $insurance + $cash;
     }
 
 
@@ -166,9 +165,9 @@ class DoctorClaimController extends Controller
             'approved_by' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Doctor claim has been approved successfully', 'status' => true]);
+            return response()->json(['message' => __('doctor_claims.claim_approved_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' =>  __('messages.error_occurred_later'), 'status' => false]);
     }
 
     /**
@@ -214,9 +213,9 @@ class DoctorClaimController extends Controller
             'approved_by' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Doctor claim has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('doctor_claims.claim_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -226,8 +225,12 @@ class DoctorClaimController extends Controller
      * @param \App\DoctorClaim $doctorClaim
      * @return \Illuminate\Http\Response
      */
-    public function destroy(DoctorClaim $doctorClaim)
+    public function destroy($id)
     {
-        //
+        $status = DoctorClaim::where('id', $id)->delete();
+        if ($status) {
+            return response()->json(['message' => __('doctor_claims.claim_deleted_successfully'), 'status' => true]);
+        }
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
 }

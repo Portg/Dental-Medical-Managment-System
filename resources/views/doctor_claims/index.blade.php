@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Payroll Management /Claims</span>
+                    <span class="caption-subject">{{ __('doctor_claims.title') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -28,17 +28,17 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Patient</th>
-                        <th>Doctor</th>
-                        <th>Treatment Amount</th>
-                        <th>Insurance Claim</th>
-                        <th>cash Claim</th>
-                        <th>Total Claim Amount</th>
-                        <th>Payment Balance</th>
-                        <th>status</th>
-                        <th>Action</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('doctor_claims.date') }}</th>
+                        <th>{{ __('doctor_claims.patient') }}</th>
+                        <th>{{ __('doctor_claims.doctor') }}</th>
+                        <th>{{ __('doctor_claims.treatment_amount') }}</th>
+                        <th>{{ __('doctor_claims.insurance_claim') }}</th>
+                        <th>{{ __('doctor_claims.cash_claim') }}</th>
+                        <th>{{ __('doctor_claims.total_claim_amount') }}</th>
+                        <th>{{ __('doctor_claims.payment_balance') }}</th>
+                        <th>{{ __('common.status') }}</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -50,7 +50,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('doctor_claims.loading') }}</span>
 </div>
 @include('doctor_claims.create')
 @include('doctor_claims.payments.create')
@@ -66,6 +66,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/doctor-claims/') }}",
                     data: function (d) {
@@ -107,7 +108,7 @@
             $('#insurance_amount').val(0);
             $('#cash_amount').val(0);
 
-            $('#btn-save').text('Save changes');
+            $('#btn-save').text('{{ __("common.save_changes") }}');
             $('#claims-modal').modal('show');
         }
 
@@ -120,11 +121,11 @@
                 var cash = $('#cash_amount').val();
                 var amount = Number(insurance) + Number(cash);
 
-                if (amount == $('#claim_amount').val()) {
+                if (amount === $('#claim_amount').val()) {
                     save_new_record();
                 } else {
                     $('#claims-modal').modal('hide');
-                    swal('Alert message !', 'Total insurance & Cash Amounts are not matching with the treatment amount');
+                    swal('{{ __("common.alert") }}', '{{ __("doctor_claims.amounts_not_matching") }}');
                 }
 
             } else {
@@ -135,7 +136,7 @@
         function save_new_record() {
            $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }});
             $.ajax({
                 type: 'POST',
                 data: $('#claims-form').serialize(),
@@ -153,7 +154,7 @@
                 error: function (request, status, error) {
                    $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#rate-modal').modal('show');
 
                     json = $.parseJSON(request.responseText);
@@ -182,7 +183,7 @@
                     $('[name="cash_amount"]').val(data.cash_amount);
                     $('[name="claim_amount"]').val(data.claim_amount);
                    $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#claims-modal').modal('show');
 
                 },
@@ -195,7 +196,7 @@
         function update_record() {
            $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#claims-form').serialize(),
@@ -222,12 +223,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Claim!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('doctor_claims.delete_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -265,14 +266,14 @@
             $('#btn-save').attr('disabled', false);
             $('#claim_id').val(id);
             $('#amount').val(amount);
-            $('#btn-save').text('Save changes');
+            $('#btn-save').text('{{ __("common.save_changes") }}');
             $('#payment-modal').modal('show');
         }
 
         function save_payment_record() {
            $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#payment-form').serialize(),
@@ -290,7 +291,7 @@
                 error: function (request, status, error) {
                    $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#payment-modal').modal('show');
 
                     json = $.parseJSON(request.responseText);
@@ -307,7 +308,7 @@
             if (status) {
                 let oTable = $('#sample_1').dataTable();
                 oTable.fnDraw(false);
-                swal("Alert!", message, status);
+                swal("{{ __('common.alert') }}", message, status);
             }
         }
     </script>

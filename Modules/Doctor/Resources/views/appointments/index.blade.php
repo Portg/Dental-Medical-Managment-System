@@ -11,12 +11,10 @@
                     <ul class="nav nav-pills">
 
                         <li class="active" id="appointments_tab_link">
-                            <a href="#appointments_tab" data-toggle="tab" aria-expanded="true">Appointments</a>
+                            <a href="#appointments_tab" data-toggle="tab" aria-expanded="true">{{ __('appointment.appointments') }}</a>
                         </li>
                         <li class="" id="appointment_calender_tab_link">
-                            <a href="#appointment_calender_tab" data-toggle="tab" aria-expanded="false">Appointments
-                                Calender
-                            </a>
+                            <a href="#appointment_calender_tab" data-toggle="tab" aria-expanded="false">{{ __('appointment.appointment_calendar') }}</a>
                         </li>
 
 
@@ -27,7 +25,7 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
                                         <div class="caption font-dark">
-                                            <span class="caption-subject"> Appointments Mgt/ Doctor Appointments</span>
+                                            <span class="caption-subject">{{ __('appointment.appointment_mgt') }}</span>
                                         </div>
                                     </div>
                                     <div class="portlet-body">
@@ -59,11 +57,10 @@
                                                     <div class="row">
                                                         <div class="col-md-6">
                                                             <div class="form-group">
-                                                                <label class="control-label col-md-3">Appointment
-                                                                    No</label>
+                                                                <label class="control-label col-md-3">{{ __('appointment.appointment_no') }}</label>
                                                                 <div class="col-md-9">
                                                                     <input type="text" class="form-control"
-                                                                           placeholder="Enter appointment No"
+                                                                           placeholder="{{ __('appointment.enter_appointment_no') }}"
                                                                            name="appointment_no"
                                                                            id="appointment_no_filter">
                                                                 </div>
@@ -71,16 +68,16 @@
                                                         </div>
                                                         <div class="col-md-6">
                                                             <div class="form-group">
-                                                                <label class="control-label col-md-3">Period</label>
+                                                                <label class="control-label col-md-3">{{ __('datetime.period') }}</label>
                                                                 <div class="col-md-9">
                                                                     <select class="form-control" id="period_selector">
-                                                                        <option>All</option>
-                                                                        <option value="Today">Today</option>
-                                                                        <option value="Yesterday">Yesterday</option>
-                                                                        <option value="This week">This week</option>
-                                                                        <option value="Last week">Last week</option>
-                                                                        <option value="This Month">This Month</option>
-                                                                        <option value="Last Month">Last Month</option>
+                                                                        <option>{{ __('common.all') }}</option>
+                                                                        <option value="Today">{{ __('datetime.today') }}</option>
+                                                                        <option value="Yesterday">{{ __('datetime.yesterday') }}</option>
+                                                                        <option value="This week">{{ __('datetime.this_week') }}</option>
+                                                                        <option value="Last week">{{ __('datetime.last_week') }}</option>
+                                                                        <option value="This Month">{{ __('datetime.this_month') }}</option>
+                                                                        <option value="Last Month">{{ __('datetime.last_month') }}</option>
                                                                     </select>
                                                                 </div>
                                                             </div>
@@ -89,7 +86,7 @@
                                                     <div class="row">
                                                         <div class="col-md-6">
                                                             <div class="form-group">
-                                                                <label class="control-label col-md-3">Start Date</label>
+                                                                <label class="control-label col-md-3">{{ __('datetime.date_range.start_date') }}</label>
                                                                 <div class="col-md-9">
                                                                     <input type="text" class="form-control start_date">
                                                                 </div>
@@ -97,7 +94,7 @@
                                                         </div>
                                                         <div class="col-md-6">
                                                             <div class="form-group">
-                                                                <label class="control-label col-md-3">End Date</label>
+                                                                <label class="control-label col-md-3">{{ __('datetime.date_range.end_date') }}</label>
                                                                 <div class="col-md-9">
                                                                     <input type="text" class="form-control end_date">
                                                                 </div>
@@ -111,10 +108,9 @@
                                                             <div class="row">
                                                                 <div class="col-md-offset-3 col-md-9">
                                                                     <button type="button" id="customFilterBtn"
-                                                                            class="btn purple-intense">Filter
-                                                                        Appointments
+                                                                            class="btn purple-intense">{{ __('appointment.filter_appointments') }}
                                                                     </button>
-                                                                    <button type="button" class="btn default">Clear
+                                                                    <button type="button" class="btn default">{{ __('common.clear') }}
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -129,12 +125,12 @@
                                                id="doctor-appointments-table">
                                             <thead>
                                             <tr>
-                                                <th>ID</th>
-                                                <th>Appointment No</th>
-                                                <th>Appointment Date</th>
-                                                <th>Appointment Time</th>
-                                                <th>Patient</th>
-                                                <th>Treatment</th>
+                                                <th>{{ __('common.id') }}</th>
+                                                <th>{{ __('appointment.appointment_no') }}</th>
+                                                <th>{{ __('appointment.appointment_date') }}</th>
+                                                <th>{{ __('appointment.appointment_time') }}</th>
+                                                <th>{{ __('patient.patient') }}</th>
+                                                <th>{{ __('medical_treatment.treatment') }}</th>
                                             </thead>
                                             <tbody>
 
@@ -151,7 +147,7 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
                                         <div class="caption font-dark">
-                                            <span class="caption-subject"> Appointments mgt/ Calender</span>
+                                            <span class="caption-subject">{{ __('appointment.appointment_calendar') }}</span>
                                         </div>
                                     </div>
                                     <div class="portlet-body">
@@ -169,7 +165,7 @@
 
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('doctor::appointments.create_claim')
 @endsection
@@ -178,7 +174,10 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
-
+        // Load page-specific translations
+        LanguageManager.loadAllFromPHP({
+            'appointment': @json(__('appointment'))
+        });
 
         function default_todays_data() {
             // initially load today's date filtered data
@@ -222,6 +221,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/doctor-appointments/') }}",
                     data: function (d) {
@@ -274,7 +274,7 @@
                     if (data.status) {
                         alert_dialog(data.message, "success");
                     } else {
-                        swal("Warning!", data.message);
+                        swal("{{ __('common.warning') }}", data.message);
                     }
                 },
                 error: function (request, status, error) {
@@ -294,7 +294,7 @@
             if (status) {
                 let oTable = $('#doctor-appointments-table').dataTable();
                 oTable.fnDraw(false);
-                swal("Alert!", message, status);
+                swal("{{ __('common.alert') }}", message, status);
             }
         }
 

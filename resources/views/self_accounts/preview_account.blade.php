@@ -4,7 +4,7 @@
     @include('layouts.page_loader')
 @endsection
 <div class="note note-success">
-    <p class="text-black-50"><a href="{{ url('self-accounts')}}" class="text-primary">View Self Accounts </a> /
+    <p class="text-black-50"><a href="{{ url('self-accounts')}}" class="text-primary">{{ __('self_accounts.view_self_accounts') }} </a> /
         @if(isset($account_info))  {{ $account_info->account_holder." / ".$account_info->account_no  }} @endif
     </p>
 </div>
@@ -15,7 +15,7 @@
         <div class="portlet light portlet-fit bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject font-dark bold uppercase">Self Account Deposits</span>
+                    <span class="caption-subject font-dark bold uppercase">{{ __('self_accounts.self_account_deposits') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -24,7 +24,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="AddDeposit()"> Add New <i
+                                   onclick="AddDeposit()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -36,12 +36,12 @@
                     <tr>
 
                         <th> #</th>
-                        <th>Payment Date</th>
-                        <th>Amount</th>
-                        <th>Payment Method</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('deposits.payment_date') }}</th>
+                        <th>{{ __('common.amount') }}</th>
+                        <th>{{ __('deposits.payment_method') }}</th>
+                        <th>{{ __('self_accounts.added_by') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -55,7 +55,7 @@
         <div class="portlet light portlet-fit bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject font-dark bold uppercase">Self Account Bill Payments</span>
+                    <span class="caption-subject font-dark bold uppercase">{{ __('self_accounts.self_account_bill_payments') }}</span>
                 </div>
                 <div class="actions">
 
@@ -68,11 +68,11 @@
                     <tr>
 
                         <th> #</th>
-                        <th>Invoice No</th>
-                        <th>patient</th>
-                        <th>Payment Date</th>
-                        <th>Amount</th>
-                        <th>Added By</th>
+                        <th>{{ __('self_accounts.invoice_no') }}</th>
+                        <th>{{ __('self_accounts.patient') }}</th>
+                        <th>{{ __('deposits.payment_date') }}</th>
+                        <th>{{ __('common.amount') }}</th>
+                        <th>{{ __('self_accounts.added_by') }}</th>
                     </tr>
                     </thead>
                     <tbody>

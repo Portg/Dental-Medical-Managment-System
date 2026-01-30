@@ -42,12 +42,12 @@ class SelfAccountDepositController extends Controller
                     return number_format($row->amount);
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editDeposit(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editDeposit(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deleteDeposit(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteDeposit(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
@@ -86,10 +86,10 @@ class SelfAccountDepositController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Money has been deposited successfully on the self account',
+            return response()->json(['message' => __('deposits.deposit_success'),
                 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurried please try again later',
+        return response()->json(['message' => __('messages.error_try_again'),
             'status' => false]);
     }
 
@@ -137,10 +137,10 @@ class SelfAccountDepositController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Record has been updated successfully',
+            return response()->json(['message' => __('messages.record_updated'),
                 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurried please try again later',
+        return response()->json(['message' => __('messages.error_try_again'),
             'status' => false]);
     }
 
@@ -154,10 +154,10 @@ class SelfAccountDepositController extends Controller
     {
         $status = SelfAccountDeposit::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Record has been deleted successfully',
+            return response()->json(['message' => __('messages.record_deleted'),
                 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurried please try again later',
+        return response()->json(['message' => __('messages.error_try_again'),
             'status' => false]);
     }
 }

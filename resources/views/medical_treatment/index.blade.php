@@ -9,7 +9,7 @@
 <div class="note note-success">
     <div class="row">
         <div class="col-md-6">
-            <p class="text-black-50"><a href="{{ url('appointments')}}" class="text-primary">View Appointments
+            <p class="text-black-50"><a href="{{ url('appointments')}}" class="text-primary">{{ __('medical_treatment.view_appointments') }}
                 </a> / @if(isset($patient)) {{ $patient->surname." ".$patient->othername }} ({{ $patient->patient_no
                 }}) @endif
             </p>
@@ -19,13 +19,13 @@
                 <form action="#" id="appointment-status-form" autocomplete="off">
                     @csrf
                     <select name="appointment_status">
-                        <option value="null">select appointment action</option>
-                        <option value="Treatment Complete">Treatment Complete</option>
-                        <option value="Treatment Incomplete">Treatment Incomplete</option>
+                        <option value="null">{{ __('medical_treatment.select_appointment_action') }}</option>
+                        <option value="Treatment Complete">{{ __('medical_treatment.treatment_complete') }}</option>
+                        <option value="Treatment Incomplete">{{ __('medical_treatment.treatment_incomplete') }}</option>
                     </select>
                     <input type="hidden" name="appointment_id" value="{{ $appointment_id }}">
                     <button type="button" class="btn-sm btn-primary" id="btn-appointment-status"
-                            onclick="save_appointment_status();">save
+                            onclick="save_appointment_status();">{{ __('medical_treatment.save') }}
                     </button>
                 </form>
             </div>
@@ -42,14 +42,14 @@
                 <div class="tabbable-line">
                     <ul class="nav nav-tabs ">
                         <li class="active" id="dental_tab_link">
-                            <a href="#dental_tab" data-toggle="tab"> Dental Treatment </a>
+                            <a href="#dental_tab" data-toggle="tab"> {{ __('medical_treatment.dental_treatment') }} </a>
                         </li>
 
                         <li id="chronic_diseases_tab_link">
-                            <a href="#chronic_diseases_tab" data-toggle="tab"> Medical History </a>
+                            <a href="#chronic_diseases_tab" data-toggle="tab"> {{ __('medical_treatment.medical_history') }} </a>
                         </li>
                         <li id="allergies_tab_link">
-                            <a href="#allergies_tab" data-toggle="tab"> ALLERGIES </a>
+                            <a href="#allergies_tab" data-toggle="tab"> {{ __('medical_treatment.allergies') }} </a>
                         </li>
                     </ul>
                     <div class="tab-content">
@@ -58,20 +58,17 @@
                                 <ul class="nav nav-pills">
 
                                     <li class="active" id="dental_charting_tab_link">
-                                        <a href="#dental_charting_tab" data-toggle="tab" aria-expanded="true">Dental
-                                            Charting</a>
+                                        <a href="#dental_charting_tab" data-toggle="tab" aria-expanded="true">{{ __('medical_treatment.dental_charting') }}</a>
                                     </li>
                                     <li class="" id="dental_notes_tab_link">
-                                        <a href="#dental_notes_tab" data-toggle="tab" aria-expanded="false">Dental
-                                            Notes</a>
+                                        <a href="#dental_notes_tab" data-toggle="tab" aria-expanded="false">{{ __('medical_treatment.dental_notes') }}</a>
                                     </li>
                                     <li class="" id="prescriptions_tab_link">
-                                        <a href="#prescriptions_tab" data-toggle="tab" aria-expanded="false">Prescriptions
+                                        <a href="#prescriptions_tab" data-toggle="tab" aria-expanded="false">{{ __('medical_treatment.prescriptions') }}
                                         </a>
                                     </li>
                                     <li class=" hidden" id="dental_billing_tab_link">
-                                        <a href="#dental_billing_tab" data-toggle="tab" aria-expanded="false">Dental
-                                            Billing</a>
+                                        <a href="#dental_billing_tab" data-toggle="tab" aria-expanded="false">{{ __('medical_treatment.dental_billing') }}</a>
                                     </li>
 
 
@@ -99,7 +96,7 @@
 
                                                     <a class="btn  blue btn-outline btn-circle btn-sm" href="#"
                                                        onclick="AddTreatment({{ $appointment_id  }})">
-                                                        Add Clinical Notes
+                                                        {{ __('medical_treatment.add_clinical_notes') }}
                                                     </a>
                                                 </div>
                                                 <div class="portlet-body">
@@ -107,12 +104,12 @@
                                                         <thead>
                                                         <tr>
                                                             <th> #</th>
-                                                            <th>Created At</th>
-                                                            <th>Clinical Notes</th>
-                                                            <th>Treatment</th>
-                                                            <th>Added By</th>
-                                                            <th>Edit</th>
-                                                            <th>Delete</th>
+                                                            <th>{{ __('medical_treatment.created_at') }}</th>
+                                                            <th>{{ __('medical_treatment.clinical_notes') }}</th>
+                                                            <th>{{ __('medical_treatment.treatment') }}</th>
+                                                            <th>{{ __('medical_treatment.added_by') }}</th>
+                                                            <th>{{ __('common.edit') }}</th>
+                                                            <th>{{ __('common.delete') }}</th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>
@@ -129,12 +126,12 @@
                                                 <div class="portlet-title">
 
                                                     <div class="caption">
-                                                        <span class="caption-subject font-dark bold uppercase">Prescription</span>
+                                                        <span class="caption-subject font-dark bold uppercase">{{ __('medical_treatment.prescription') }}</span>
                                                         &nbsp; &nbsp; &nbsp; <a
                                                                 class="btn  blue btn-outline btn-circle btn-sm"
                                                                 href="#"
                                                                 onclick="AddPrescription({{ $appointment_id  }})">
-                                                            Add Prescription
+                                                            {{ __('medical_treatment.add_prescription') }}
                                                         </a>
                                                     </div>
                                                     <div class="actions">
@@ -143,7 +140,7 @@
                                                             <a href="{{ url('print-prescription/'.$appointment_id) }}"
                                                                class="btn grey-salsa btn-sm"
                                                                target="_blank"> <i
-                                                                        class="fa fa-print"></i>Print Prescription</a>
+                                                                        class="fa fa-print"></i>{{ __('medical_treatment.print_prescription') }}</a>
 
                                                         </div>
                                                     </div>
@@ -154,11 +151,11 @@
                                                         <thead>
                                                         <tr>
                                                             <th> #</th>
-                                                            <th>Drug</th>
-                                                            <th>Quantity</th>
-                                                            <th>Directions</th>
-                                                            <th>Edit</th>
-                                                            <th>Delete</th>
+                                                            <th>{{ __('medical_treatment.drug') }}</th>
+                                                            <th>{{ __('medical_treatment.quantity') }}</th>
+                                                            <th>{{ __('medical_treatment.directions') }}</th>
+                                                            <th>{{ __('common.edit') }}</th>
+                                                            <th>{{ __('common.delete') }}</th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>
@@ -176,7 +173,7 @@
 
                                                     <a class="btn blue btn-outline btn-circle btn-sm" href="#"
                                                        onclick="AddInvoice({{ $appointment_id  }})">
-                                                        Create Invoice
+                                                        {{ __('medical_treatment.create_invoice') }}
                                                     </a>
                                                 </div>
                                                 <div class="portlet-body">
@@ -185,11 +182,11 @@
                                                         <thead>
                                                         <tr>
                                                             <th> #</th>
-                                                            <th>Procedure</th>
-                                                            <th>Tooth Numbers</th>
-                                                            <th>Amount</th>
-                                                            <th>Edit</th>
-                                                            <th>Delete</th>
+                                                            <th>{{ __('medical_treatment.procedure') }}</th>
+                                                            <th>{{ __('medical_treatment.tooth_numbers') }}</th>
+                                                            <th>{{ __('medical_treatment.amount') }}</th>
+                                                            <th>{{ __('common.edit') }}</th>
+                                                            <th>{{ __('common.delete') }}</th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>
@@ -215,7 +212,7 @@
                                                /** @var TYPE_NAME $patient */
                                                echo $patient->id;
                                            } ?>)">
-                                            Add Illness
+                                            {{ __('medical_treatment.add_illness') }}
                                         </a>
                                     </div>
                                     <div class="portlet-body">
@@ -224,11 +221,11 @@
                                             <thead>
                                             <tr>
                                                 <th> #</th>
-                                                <th>Illness</th>
-                                                <th>status</th>
-                                                <th>Created At</th>
-                                                <th>Edit</th>
-                                                <th>Delete</th>
+                                                <th>{{ __('medical_treatment.illness') }}</th>
+                                                <th>{{ __('medical_treatment.status') }}</th>
+                                                <th>{{ __('medical_treatment.created_at') }}</th>
+                                                <th>{{ __('common.edit') }}</th>
+                                                <th>{{ __('common.delete') }}</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -252,7 +249,7 @@
                                                /** @var TYPE_NAME $patient */
                                                echo $patient->id;
                                            } ?>)">
-                                            Add Allergies
+                                            {{ __('medical_treatment.add_allergies') }}
                                         </a>
                                     </div>
                                     <div class="portlet-body">
@@ -261,10 +258,10 @@
                                             <thead>
                                             <tr>
                                                 <th>#</th>
-                                                <th>Allergies</th>
-                                                <th>Created At</th>
-                                                <th>Edit</th>
-                                                <th>Delete</th>
+                                                <th>{{ __('medical_treatment.allergies') }}</th>
+                                                <th>{{ __('medical_treatment.created_at') }}</th>
+                                                <th>{{ __('common.edit') }}</th>
+                                                <th>{{ __('common.delete') }}</th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -286,7 +283,7 @@
 
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('medical_history.chronic_diseases.create')
 @include('medical_history.allergies.create')
@@ -331,25 +328,25 @@
         //save appointment status
         function save_appointment_status() {
             swal({
-                    title: "Are you sure,you want to save this action?",
+                    title: "{{ __('medical_treatment.are_you_sure_save') }}",
                     // text: "This record was deleted before by the user",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn green-meadow",
-                    confirmButtonText: "Yes, save !",
+                    confirmButtonText: "{{ __('medical_treatment.yes_save') }}",
                     closeOnConfirm: false
                 },
                 function () {
                     $.LoadingOverlay("show");
                     $('#btn-appointment-status').attr('disabled', true);
-                    $('#btn-appointment-status').text('processing...');
+                    $('#btn-appointment-status').text('{{ __('common.processing') }}');
                     $.ajax({
                         type: 'POST',
                         data: $('#appointment-status-form').serialize(),
                         url: "/appointment-status",
                         success: function (data) {
                             $.LoadingOverlay("hide");
-                            swal("Alert!", data.message, "success");
+                            swal("{{ __('common.alert') }}", data.message, "success");
                             setTimeout(function () {
                                 location.replace('/doctor-appointments');
                             }, 1900);
@@ -357,7 +354,7 @@
                         error: function (error) {
                             $.LoadingOverlay("hide");
                             $('#btn-appointment-status').attr('disabled', false);
-                            $('#btn-appointment-status').text('save');
+                            $('#btn-appointment-status').text('{{ __('common.save') }}');
                         }
                     });
                 });

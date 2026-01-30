@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Medical Insurance/ Companies</span>
+                    <span class="caption-subject">{{ __('insurance_companies.title') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,13 +32,13 @@
                        id="company_table">
                     <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Added Date</th>
-                        <th>Name</th>
-                        <th>Added By</th>
-                        <th>status</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('insurance_companies.added_date') }}</th>
+                        <th>{{ __('insurance_companies.name') }}</th>
+                        <th>{{ __('insurance_companies.added_by') }}</th>
+                        <th>{{ __('common.status') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -50,7 +50,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('insurance_companies.create')
 @endsection
@@ -64,6 +64,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language : LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/insurance-companies/') }}",
                     data: function (d) {
@@ -97,14 +98,14 @@
             $("#company-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save Changes');
+            $('#btn-save').text('{{ __("common.save_changes") }}');
             $('#company-modal').modal('show');
         }
 
         function save_data() {
             //check save method
             var id = $('#id').val();
-            if (id == "") {
+            if (id === "") {
                 save_new_record();
             } else {
                 update_record();
@@ -114,7 +115,7 @@
         function save_new_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#company-form').serialize(),
@@ -131,7 +132,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save Changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#company-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -157,7 +158,7 @@
                     $('[name="email"]').val(data.email);
                     $('[name="phone_no"]').val(data.phone_no);
                     $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#company-modal').modal('show');
 
                 },
@@ -170,7 +171,7 @@
         function update_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#company-form').serialize(),
@@ -187,7 +188,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save Changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#company-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -200,12 +201,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Insurance company!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('insurance_companies.delete_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -236,16 +237,13 @@
 
         }
 
-
-
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#company_table').dataTable();
                 oTable.fnDraw(false);
             }
         }
-
 
     </script>
 @endsection

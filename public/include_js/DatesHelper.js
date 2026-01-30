@@ -12,7 +12,7 @@ function YesterdaysDate() {
 function thisWeek() {
     let dt = new Date(); // current date of week
     let currentWeekDay = dt.getDay();
-    let lessDays = currentWeekDay == 0 ? 7 : currentWeekDay - 1;
+    let lessDays = currentWeekDay === 0 ? 7 : currentWeekDay - 1;
     let wkStart = new Date(new Date(dt).setDate(dt.getDate() - lessDays));
     return formatDate(wkStart); //this weeks start date
     // var wkEnd = new Date(new Date(wkStart).setDate(wkStart.getDate() + 6)); // this weeks end date
@@ -30,8 +30,8 @@ function lastWeek() {
 
 function thisMonth() {
     let date = new Date();
-    let startDate = new Date(date.getFullYear(), date.getMonth(), 1);// start date of this month
-    return startDate;
+    // start date of this month
+    return new Date(date.getFullYear(), date.getMonth(), 1);
     // var lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 

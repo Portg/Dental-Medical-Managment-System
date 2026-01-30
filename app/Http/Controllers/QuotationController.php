@@ -86,18 +86,18 @@ class QuotationController extends Controller
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> Action
+                                aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <li>
-                                <a href="' . url('quotations/' . $row->id) . '"> View </a>
+                                <a href="' . url('quotations/' . $row->id) . '"> ' . __('common.view') . ' </a>
                             </li>
                              <li>
-                                <a target="_blank" href="' . url('print-quotation/' . $row->id) . '"  > Print </a>
+                                <a target="_blank" href="' . url('print-quotation/' . $row->id) . '"  > ' . __('common.print') . ' </a>
                             </li>
                               <li>
-                                <a href="#" onclick="shareQuotationView(' . $row->id . ')"  > Share Quotation </a>
+                                <a href="#" onclick="shareQuotationView(' . $row->id . ')"  > ' . __('common.share_quotation') . ' </a>
                             </li>
                         </ul>
                     </div>
@@ -130,6 +130,8 @@ class QuotationController extends Controller
     {
         Validator::make($request->all(), [
             'patient_id' => 'required'
+        ], [
+            'patient_id.required' => __('validation.custom.patient_id.required')
         ])->validate();
 
         $quotation_ = Quotation::create([
@@ -150,10 +152,10 @@ class QuotationController extends Controller
                     '_who_added' => Auth::User()->id,
                 ]);
             }
-            return response()->json(['message' => 'Quotation has been created successfully', 'status' => true]);
+            return response()->json(['message' => __('invoices.quotation_created_successfully'), 'status' => true]);
         }
 
-        return response()->json(['message' => 'Oops an error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -203,7 +205,7 @@ class QuotationController extends Controller
 
     }
 
-    public function QuotationShareDetails(Request $request, $quotation_id)
+    public function quotationShareDetails(Request $request, $quotation_id)
     {
         $quotations = DB::table('quotations')
             ->join('patients', 'patients.id', 'quotations.patient_id')
@@ -216,7 +218,7 @@ class QuotationController extends Controller
         return response()->json($quotations);
     }
 
-    public function SendQuotation(Request $request)
+    public function sendQuotation(Request $request)
     {
         Validator::make($request->all(), [
             'quotation_id' => 'required',
@@ -238,7 +240,7 @@ class QuotationController extends Controller
             ->get();
 
         dispatch(new ShareEmailQuotation($data, $request->email, $request->message));
-        return response()->json(['message' => 'Quotation has been shared successfully', 'status' => true]);
+        return response()->json(['message' => __('emails.quotation_sent_successfully'), 'status' => true]);
     }
 
 

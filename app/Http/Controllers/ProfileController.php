@@ -23,7 +23,7 @@ class ProfileController extends Controller
     }
 
     //update user bio data info
-    public function Update_Bio(Request $request)
+    public function update_Bio(Request $request)
     {
         Validator::make($request->all(), [
             'surname' => 'required|string',
@@ -41,13 +41,13 @@ class ProfileController extends Controller
                 'nin' => $request->national_id,
             ]);
         if ($user) {
-            return response()->json(['message' => 'Your profile has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.profile_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Error has occurred,please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
 
-    public function Update_Avatar(Request $request)
+    public function update_Avatar(Request $request)
     {
         Validator::make($request->all(), [
             'avatar' => ['required', 'mimes:jpeg,bmp,png,jpg'],
@@ -67,23 +67,22 @@ class ProfileController extends Controller
 
     }
 
-    public function ChangePassword(Request $request)
+    public function changePassword(Request $request)
     {
         Validator::make($request->only('old_password', 'new_password', 'confirm_password'), [
             'old_password' => 'required|string|min:6',
             'new_password' => 'required|string|min:6|different:old_password',
             'confirm_password' => 'required_with:new_password|same:new_password|string|min:6',
         ], [
-            'confirm_password.required_with' => 'Confirm password is required.'
+            'confirm_password.required_with' => __('validation.required_with', ['attribute' => __('users.confirm_password')])
         ])->validate();
 
         //now update password
         $user = User::where('id', Auth::User()->id)->update(['password' => Hash::make($request->new_password)]);
         if ($user) {
-            return response()->json(['message' => 'Your password has been changed successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.password_changed_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops an error has occuried please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
-
 
 }

@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Purchases Form </h4>
+                <h4 class="modal-title"> {{ __('expenses.purchases_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -18,38 +18,38 @@
                     @csrf
                     <input type="hidden" name="id" id="id">
                     <div class="form-group">
-                        <label class="text-primary">Purchase Date </label>
-                        <input type="text" name="purchase_date" id="datepicker" placeholder="yyy-mm-dd"
+                        <label class="text-primary">{{ __('expenses.purchase_date') }} </label>
+                        <input type="text" name="purchase_date" id="datepicker" placeholder="{{ __('datetime.format_date') }}
                                class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Supplier Name </label>
-                        <input type="text" name="supplier" id="supplier" placeholder="Enter supplier name"
+                        <label class="text-primary">{{ __('expenses.supplier_name') }}</label>
+                        <input type="text" name="supplier" id="supplier" placeholder="{{ __('expenses.enter_supplier_name') }}"
                                class="form-control">
                     </div>
                     <table class="table table-bordered" id="purchasesTable">
                         <tr>
-                            <th class="text-primary">Item</th>
-                             <th class="text-primary">Description</th>
-                            <th class="text-primary">Expense Category</th>
-                            <th class="text-primary">Quantity</th>
-                            <th class="text-primary">Unit Price</th>
-                            <th class="text-primary">Total Amount</th>
-                            <th class="text-primary">Action</th>
+                            <th class="text-primary">{{ __('expenses.item') }}</th>
+                            <th class="text-primary">{{ __('expenses.description') }}</th>
+                            <th class="text-primary">{{ __('expenses.expense_category') }}</th>
+                            <th class="text-primary">{{ __('expenses.quantity') }}</th>
+                            <th class="text-primary">{{ __('expenses.unit_price') }}</th>
+                            <th class="text-primary">{{ __('expenses.total_amount') }}</th>
+                            <th class="text-primary">{{ __('common.action') }}</th>
                         </tr>
                         <tr>
                             <td>
                                 <input type="text" id="item" class="form-control" name="addmore[0][item]"
-                                       placeholder="Enter item"/>
+                                       placeholder="{{ __('expenses.item') }}"/>
                             </td>
                              <td>
                                 <input type="text" id="description" class="form-control" name="addmore[0][description]"
-                                       placeholder="Enter description (optional)"/>
+                                       placeholder="{{ __('expenses.enter_description') }}"/>
                             </td>
                             <td>
                                 <select id="select2-single-input-group-sm"
                                         class="form-control select2 expense_categories" name="addmore[0][expense_category]">
-                                    <option value="null">Choose Expense Category</option>
+                                    <option value="null">{{ __('expenses.choose_expense_category') }}</option>
                                     @foreach($chart_of_accts as $cat)
                                         <option value="{{$cat->id}}">{{$cat->name}}</option>
                                     @endforeach
@@ -57,19 +57,19 @@
                             </td>
                             <td>
                                 <input type="number" id="qty" class="form-control" name="addmore[0][qty]"
-                                       placeholder="Enter Quantity"/>
+                                       placeholder="{{ __('expenses.enter_quantity') }}"/>
                             </td>
                             <td>
                                 <input type="number" id="price-single-unit" class="form-control"
                                        name="addmore[0][price]"
-                                       placeholder="Enter unit price"/>
+                                       placeholder="{{ __('expenses.enter_unit_price') }}"/>
                             </td>
                             <td>
                                 <input type="text" id="total_amount" class="form-control"
-                                       placeholder="Total amount" readonly/>
+                                       placeholder="{{ __('expenses.enter_total_amount') }}" readonly/>
                             </td>
                             <td>
-                                <button type="button" name="add" id="add" class="btn btn-info">Add More</button>
+                                <button type="button" name="add" id="add" class="btn btn-info">{{ __('common.add') }}</button>
                             </td>
                         </tr>
 
@@ -81,10 +81,9 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-success" id="btn-save" onclick="save_purchase()">Save
-                    Purchase
+                <button type="button" class="btn btn-success" id="btn-save" onclick="save_purchase()">{{ __('expenses.save_purchase') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

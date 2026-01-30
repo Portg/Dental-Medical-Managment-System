@@ -4,9 +4,9 @@
     @include('layouts.page_loader')
 @endsection
 <div class="note note-success">
-    <p class="text-black-50"><a href="{{ url('expenses')}}" class="text-primary">View Expenses </a>
-        /@if(isset($purchase_details)) {{ $purchase_details->supplier_name }} / Expense
-        No: {{ $purchase_details->purchase_no }} Date:
+    <p class="text-black-50"><a href="{{ url('expenses')}}" class="text-primary">{{ __('expense_items.view_expenses') }}</a>
+        /@if(isset($purchase_details)) {{ $purchase_details->supplier_name }} / {{ __('expense_items.expense_no') }}
+        : {{ $purchase_details->purchase_no }} {{ __('expense_items.payment_date') }}:
         ({{ \Carbon\Carbon::parse($purchase_details->purchase_date)->format('d/m/Y')}}) @endif
     </p>
 </div>
@@ -16,10 +16,10 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold uppercase">Expense Items</span>
+                    <span class="caption-subject bold uppercase">{{ __('expense_items.title') }}</span>
                     &nbsp; &nbsp; &nbsp
                     <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_item()"> Add New <i
+                       onclick="Add_new_item()"> {{ __('common.add_new') }}  <i
                                 class="fa fa-plus"></i> </a>
                 </div>
             </div>
@@ -27,15 +27,15 @@
                 <table class="table table-hover" id="expense_items_table">
                     <thead>
                     <tr>
-                        <th> #</th>
-                        <th>Item</th>
-                        <th>Description</th>
-                        <th>Quantity</th>
-                        <th>Unit price</th>
-                        <th>Total Amount</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('expense_items.hash') }}</th>
+                        <th>{{ __('expense_items.item') }}</th>
+                        <th>{{ __('expense_items.description') }}</th>
+                        <th>{{ __('expense_items.quantity') }}</th>
+                        <th>{{ __('expense_items.unit_price') }}</th>
+                        <th>{{ __('expense_items.total_amount') }}</th>
+                        <th>{{ __('expense_items.added_by') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -50,7 +50,7 @@
         <div class="portlet light portlet-fit bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject font-dark bold uppercase">Expense Payments</span>
+                    <span class="caption-subject font-dark bold uppercase">{{ __('expense_items.expense_payments') }}</span>
                 </div>
                 <div class="actions">
                     <div class="btn-group btn-group-devided">
@@ -65,14 +65,14 @@
                     <thead>
                     <tr>
 
-                        <th> #</th>
-                        <th>Payment Date</th>
-                        <th>Payment Account</th>
-                        <th>Amount</th>
-                        <th>Payment Method</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('expense_items.hash') }}</th>
+                        <th>{{ __('expense_items.payment_date') }}</th>
+                        <th>{{ __('expense_items.payment_account') }}</th>
+                        <th>{{ __('expense_items.amount') }}</th>
+                        <th>{{ __('expense_items.payment_method') }}</th>
+                        <th>{{ __('expense_items.added_by') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>

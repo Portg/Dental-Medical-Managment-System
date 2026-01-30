@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <meta http-equiv="content-type" content="text/html;charset=UTF-8"/>
 <head>
     <meta charset="utf-8"/>
@@ -28,7 +28,7 @@
           type="text/css"/>
     <link href="{{ asset('backend/assets/global/css/plugins.min.css') }}" rel="stylesheet" type="text/css"/>
     <link href="{{ asset('backend/assets/pages/css/login-5.min.css') }}" rel="stylesheet" type="text/css"/>
-    <link rel="shortcut icon" href="favicon.ico"/>
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 </head>
 
 
@@ -50,7 +50,7 @@
                     </div>
                     <div class="col-xs-7 bs-reset">
                         <div class="login-copyright text-right">
-                            <p>Powered by Thrust-devs</p>
+                            <p>{{ __('common.powered_by_company') }}</p>
                         </div>
                     </div>
                 </div>

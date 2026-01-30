@@ -26,7 +26,6 @@ class ExpensePaymentController extends Controller
 
             $data = ExpensePayment::where('expense_id', $expense_id)->OrderBy('updated_at', 'DESC')->get();
 
-
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -41,22 +40,23 @@ class ExpensePaymentController extends Controller
                     return $row->AddedBy->othername;
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editPaymentRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editPaymentRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deletePaymentRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deletePaymentRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
                 ->make(true);
         }
+        return view('expense_items.index', compact('expense_id'));
     }
 
     //show modal for updating the payment balance
 
-    public function Supplier_balance($purchase_id)
+    public function supplier_balance($purchase_id)
     {
         $invoice_amount = ExpenseItem::where('expense_id', $purchase_id)->sum(DB::raw('qty * price'));
 
@@ -91,6 +91,11 @@ class ExpensePaymentController extends Controller
             'amount' => 'required',
             'payment_method' => 'required',
             'payment_account' => 'required'
+        ], [
+            'payment_date.required' => __('validation.attributes.payment_date') . ' ' . __('validation.required'),
+            'amount.required' => __('validation.attributes.amount') . ' ' . __('validation.required'),
+            'payment_method.required' => __('validation.attributes.payment_method') . ' ' . __('validation.required'),
+            'payment_account.required' => __('validation.attributes.payment_account') . ' ' . __('validation.required'),
         ])->validate();
 
         $status = ExpensePayment::create([
@@ -102,9 +107,9 @@ class ExpensePaymentController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Payment has been captured successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_items.payments.payment_captured_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
     /**
@@ -144,6 +149,11 @@ class ExpensePaymentController extends Controller
             'amount' => 'required',
             'payment_method' => 'required',
             'payment_account' => 'required'
+        ], [
+            'payment_date.required' => __('validation.attributes.payment_date') . ' ' . __('validation.required'),
+            'amount.required' => __('validation.attributes.amount') . ' ' . __('validation.required'),
+            'payment_method.required' => __('validation.attributes.payment_method') . ' ' . __('validation.required'),
+            'payment_account.required' => __('validation.attributes.payment_account') . ' ' . __('validation.required'),
         ])->validate();
 
         $status = ExpensePayment::where('id', $id)->update([
@@ -154,9 +164,9 @@ class ExpensePaymentController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Payment has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_items.payments.payment_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -170,9 +180,9 @@ class ExpensePaymentController extends Controller
     {
         $status = ExpensePayment::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Payment has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_items.payments.payment_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 }

@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class AccountingEquation extends Model
 {
-    public function Categories()
+    public function categories()
     {
-        return $this->hasMany('App\ChartOfAccountCategory');
+        return $this->hasMany(ChartOfAccountCategory::class, 'accounting_equation_id');
     }
 }

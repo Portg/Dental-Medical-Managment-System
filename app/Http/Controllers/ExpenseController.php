@@ -33,7 +33,6 @@ class ExpenseController extends Controller
     {
         if ($request->ajax()) {
 
-
             if (!empty($_GET['search'])) {
                 $data = DB::table('expenses')
                     ->join('suppliers', 'suppliers.id', 'expenses.supplier_id')
@@ -64,7 +63,6 @@ class ExpenseController extends Controller
                     ->get();
             }
 
-
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -86,7 +84,7 @@ class ExpenseController extends Controller
                         return '<span class="text-primary">' . number_format($this->PurchaseBalance($row->id)) . '</span>';
                     }
                     return number_format($this->PurchaseBalance($row->id)) . '<br>
-                    <a href="#" onclick="RecordPayment(' . $row->id . ')" class="text-primary">Record a payment</a> ';
+                    <a href="#" onclick="RecordPayment(' . $row->id . ')" class="text-primary">' . __('expenses.record_payment') . '</a> ';
                 })
                 ->addColumn('added_by', function ($row) {
                     return $row->othername;
@@ -100,10 +98,10 @@ class ExpenseController extends Controller
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <li>
-                                <a href="' . url('expenses/' . $row->id) . '"> View Purchase</a>
+                                <a href="' . url('expenses/' . $row->id) . '"> ' . __('expenses.view_purchase') . '</a>
                             </li>
                              <li>
-                                <a  href="#"  onclick="deleteRecord(' . $row->id . ')" > Delete </a>
+                                <a  href="#"  onclick="deleteRecord(' . $row->id . ')" > ' . __('common.delete') . '  </a>
                             </li>
                         </ul>
                     </div>
@@ -157,6 +155,9 @@ class ExpenseController extends Controller
         Validator::make($request->all(), [
             'purchase_date' => 'required',
             'supplier' => 'required'
+        ], [
+            'purchase_date.required' => __('validation.attributes.purchase_date') . ' ' . __('validation.required'),
+            'supplier.required' => __('validation.attributes.supplier_name') . ' ' . __('validation.required'),
         ])->validate();
         //check if the supplier already exists or create new new
 
@@ -185,10 +186,10 @@ class ExpenseController extends Controller
                     '_who_added' => Auth::User()->id
                 ]);
             }
-            return response()->json(['message' => 'Expense has been captured successfully', 'status' => true]);
+            return response()->json(['message' => __('expenses.added_successfully'), 'status' => true]);
         }
 
-        return response()->json(['message' => 'Oops an error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
     /**
@@ -224,8 +225,7 @@ class ExpenseController extends Controller
 
         $amount_paid = ExpensePayment::where('expense_id', $purchase_id)->sum('amount');
         //remaining balance
-        $balance = $invoice_amount - $amount_paid;
-        return $balance;
+        return $invoice_amount - $amount_paid;
     }
 
 
@@ -327,9 +327,9 @@ class ExpenseController extends Controller
     {
         $status = Expense::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Expense has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('expenses.deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
     private function createOrGetSupplier($supplier)

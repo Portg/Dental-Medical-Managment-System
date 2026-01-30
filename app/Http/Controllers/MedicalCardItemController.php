@@ -82,10 +82,10 @@ class MedicalCardItemController extends Controller
     {
         $status = MedicalCardItem::where('id', $id)->delete();
         if ($status) {
-            return Response()->json(["message" => 'Card Has been deleted successfully', "status" => true
+            return Response()->json(["message" => __('messages.medical_card_deleted_successfully'), "status" => true
             ]);
         }
-        return Response()->json(["message" => 'Oops an error has occurred please try again later', "status" => true]);
+        return Response()->json(["message" => __('messages.error_try_again'), "status" => false]);
 
     }
 }

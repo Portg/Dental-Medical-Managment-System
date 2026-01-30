@@ -35,7 +35,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Medical History / Cards</span>
+                    <span class="caption-subject">{{ __('medical_cards.medical_history') }} / {{ __('medical_cards.cards') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -44,7 +44,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                         class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -59,13 +59,13 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Patient</th>
-                        <th>Card Type</th>
-                        <th>Added By</th>
-                        <th>View Cards</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('common.date') }}</th>
+                        <th>{{ __('medical_cards.patient') }}</th>
+                        <th>{{ __('medical_cards.card_type') }}</th>
+                        <th>{{ __('medical_cards.added_by') }}</th>
+                        <th>{{ __('medical_cards.view_cards') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                         <th><button type="button" name="bulk_delete" id="bulk_delete" class="btn btn-danger btn-xs"><i class="glyphicon glyphicon-remove"></i></button></th>
                     </thead>
                     <tbody>
@@ -78,7 +78,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('medical_cards.create')
 @endsection
@@ -88,10 +88,16 @@
     <script type="text/javascript">
         $(function () {
 
+            // 批量加载
+            LanguageManager.loadAllFromPHP({
+                'patient': @json(__('patient')),
+                'medical': @json(__('medical'))
+            });
             let table = $('#sample_1').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language : LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/medical-cards/') }}",
                     data: function (d) {
@@ -130,7 +136,8 @@
 
         //filter patients
         $('#patient').select2({
-            placeholder: "Choose patient",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{__('patient.choose_patient')}}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-patient',
@@ -141,7 +148,6 @@
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };
@@ -153,7 +159,7 @@
         function save_data() {
             //check save method
             var id = $('#id').val();
-            if (id == "") {
+            if (id === "") {
                 save_new_record();
             } else {
                 update_record();
@@ -163,7 +169,7 @@
         function save_new_record() {
            $.LoadingOverlay("show");
             $('#btnSave').attr('disabled', true);
-            $('#btnSave').text('processing...');
+            $('#btnSave').text('{{ __("common.processing") }}');
             let form = $('#card-form')[0];
             let formData = new FormData(form);
 
@@ -201,7 +207,6 @@
                 type: 'get',
                 url: "medical-cards/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     $('[name="name"]').val(data.name);
                     let patient_data = {
@@ -212,7 +217,7 @@
                     $('#patient').append(newOption).trigger('change');
 
                    $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#card-modal').modal('show');
 
                 },
@@ -226,7 +231,7 @@
            $.LoadingOverlay("show");
 
             $('#btnSave').attr('disabled', true);
-            $('#btnSave').text('Updating...');
+            $('#btnSave').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#category-form').serialize(),
@@ -253,18 +258,17 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this card!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('medical_cards.cannot_recover_card') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
-
                     var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
-                   $.LoadingOverlay("show");
+                    $.LoadingOverlay("show");
                     $.ajax({
                         type: 'delete',
                         data: {
@@ -302,7 +306,7 @@
 
         $(document).on('click', '#bulk_delete', function(){
             var id = [];
-            if(confirm("Are you sure you want to Delete this data?"))
+            if(confirm("{{ __('common.are_you_sure') }}"))
             {
                 $('.student_checkbox:checked').each(function(){
                     id.push($(this).val());
@@ -322,13 +326,13 @@
                 }
                 else
                 {
-                    alert("Please select atleast one checkbox");
+                    alert("{{ __('common.please_select_checkbox') }}");
                 }
             }
         });
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#sample_1').dataTable();
                 oTable.fnDraw(false);
@@ -338,8 +342,3 @@
 
     </script>
 @endsection
-
-
-
-
-

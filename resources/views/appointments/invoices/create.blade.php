@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Invoice Form </h4>
+                <h4 class="modal-title">{{ __('invoices.invoice_form') }}</h4>
             </div>
             <div class="modal-body">
 
@@ -13,13 +13,13 @@
                     <input type="hidden" name="appointment_id" id="invoicing_appointment_id">
                     <table class="table table-bordered" id="InvoicesTable">
                         <tr>
-                            <th class="text-primary">Procedure</th>
-                            <th class="text-primary">Tooth Numbers<span class="text-danger">(optional)</span></th>
-                            <th class="text-primary">Qty</th>
-                            <th class="text-primary">Unit price</th>
-                            <th class="text-primary">Total Amount</th>
-                            <th class="text-primary">Choose Doctor</th>
-                            <th class="text-primary">Action</th>
+                            <th class="text-primary">{{ __('invoices.procedure') }}</th>
+                            <th class="text-primary">{{ __('invoices.tooth_numbers') }}<span class="text-danger">({{ __('common.optional') }})</span></th>
+                            <th class="text-primary">{{ __('invoices.quantity') }}</th>
+                            <th class="text-primary">{{ __('invoices.unit_price') }}</th>
+                            <th class="text-primary">{{ __('invoices.total_amount') }}</th>
+                            <th class="text-primary">{{ __('invoices.choose_doctor') }}</th>
+                            <th class="text-primary">{{ __('common.action') }}</th>
                         </tr>
                         <tr>
                             <td>
@@ -29,15 +29,15 @@
                             </td>
                             <td>
                                 <input type="text" class="form-control" name="addmore[0][tooth_no]"
-                                       placeholder="Enter Tooth No"/>
+                                       placeholder="{{ __('invoices.enter_tooth_no') }}"/>
                             </td>
                             <td>
                                 <input type="number" id="procedure_qty" class="form-control" name="addmore[0][qty]"
-                                       placeholder="Enter qty"/>
+                                       placeholder="{{ __('invoices.enter_quantity') }}"/>
                             </td>
                             <td>
                                 <input type="number" id="procedure_price" class="form-control" name="addmore[0][price]"
-                                       placeholder="Enter unit price"/>
+                                       placeholder="{{ __('invoices.enter_unit_price') }}"/>
                             </td>
                             <td>
                                 <input type="text" id="total_amount" class="form-control" readonly/>
@@ -48,7 +48,7 @@
                                         style="width: 100%;"></select>
                             </td>
                             <td>
-                                <button type="button" name="add" id="addInvoiceItem" class="btn btn-info">Add More
+                                <button type="button" name="add" id="addInvoiceItem" class="btn btn-info">{{ __('invoices.add_more') }}
                                 </button>
                             </td>
                         </tr>
@@ -61,9 +61,9 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-success" id="btnSave" onclick="save_invoice()">Generate Invoice
+                <button type="button" class="btn btn-success" id="btnSave" onclick="save_invoice()">{{ __('invoices.generate_invoice') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

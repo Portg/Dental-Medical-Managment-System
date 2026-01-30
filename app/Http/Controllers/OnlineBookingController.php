@@ -68,11 +68,11 @@ class OnlineBookingController extends Controller
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->status == "Rejected") {
-                        $btn = '<span class="label label-sm label-danger"> ' . $row->status . ' </span>';
+                        $btn = '<span class="label label-sm label-danger"> ' . __('common.rejected') . ' </span>';
                     } else if ($row->status == "Waiting") {
-                        $btn = '<span class="label label-sm label-info"> ' . $row->status . ' </span>';
+                        $btn = '<span class="label label-sm label-info"> ' . __('common.waiting') . ' </span>';
                     } else {
-                        $btn = '<span class="label label-sm label-success"> ' . $row->status . ' </span>';
+                        $btn = '<span class="label label-sm label-success"> ' . __('common.approved') . ' </span>';
                     }
                     return $btn;
                 })
@@ -80,12 +80,12 @@ class OnlineBookingController extends Controller
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> Action
+                                aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <li>
-                                <a href="#" onclick="ViewMessage(' . $row->id . ')"> View Message </a>
+                                <a href="#" onclick="ViewMessage(' . $row->id . ')"> ' . __('online_bookings.view_message') . ' </a>
                             </li>
                         </ul>
                     </div>
@@ -149,7 +149,7 @@ class OnlineBookingController extends Controller
 
     protected function formResponse()
     {
-        return response()->json(['message' => 'Thank you, Your appointment request has been submitted successfully']);
+        return response()->json(['message' => __('online_bookings.appointment_submitted_success')]);
     }
 
     /**
@@ -206,13 +206,18 @@ class OnlineBookingController extends Controller
                 $status = $this->generateAppointment($request, $patient_id);
                 if ($status) {
                     //now generate the message to send to the patient
-                    $message = 'Hello, ' . $request->full_name . " Your appointment at ".env('CompanyName',null)." has been scheduled for " . $request->appointment_date . " at " . $request->appointment_time;
+                    $message = __('sms.appointment_scheduled', [
+                        'name' => $request->full_name,
+                        'company' => env('CompanyName', null),
+                        'date' => $request->appointment_date,
+                        'time' => $request->appointment_time
+                    ]);
                     //sms/email to the patient
                     if ($request->phone_number != null) {
                         $sendJob = new SendAppointmentSms($request->phone_number, $message,"Appointment");
                         $this->dispatch($sendJob);
                     }
-                    return FunctionsHelper::messageResponse("Appointment booking has been approved successfully",
+                    return FunctionsHelper::messageResponse(__('messages.booking_approved_successfully'),
                         $status);
                 }
             }
@@ -272,6 +277,6 @@ class OnlineBookingController extends Controller
     public function destroy($id) //use delete to reject the booking
     {
         $reject = OnlineBooking::where('id', $id)->update(['status' => 'Rejected']);
-        return FunctionsHelper::messageResponse("Booking has been rejected successfully", $reject);
+        return FunctionsHelper::messageResponse(__('messages.booking_rejected_successfully'), $reject);
     }
 }

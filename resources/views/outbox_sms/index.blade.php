@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> SMS Manager/ Outbox </span>
+                    <span class="caption-subject"> {{ __('sms.sms_manager_outbox') }} </span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -22,7 +22,7 @@
                         <div class="col-md-6">
                             <div class="btn-group pull-right">
                                 <a href="{{ url('export-sms-report') }}" class="text-danger">
-                                    <i class="icon-cloud-download"></i> Download Excel Report </a>
+                                    <i class="icon-cloud-download"></i> {{ __('sms.download_excel_report') }} </a>
                             </div>
                         </div>
                     </div>
@@ -39,16 +39,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Period</label>
+                                        <label class="control-label col-md-3">{{ __('sms.period') }}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option>All</option>
-                                                <option value="Today">Today</option>
-                                                <option value="Yesterday">Yesterday</option>
-                                                <option value="This week">This week</option>
-                                                <option value="Last week">Last week</option>
-                                                <option value="This Month">This Month</option>
-                                                <option value="Last Month">Last Month</option>
+                                                <option>{{ __('sms.all') }}</option>
+                                                <option value="Today">{{ __('sms.today') }}</option>
+                                                <option value="Yesterday">{{ __('sms.yesterday') }}</option>
+                                                <option value="This week">{{ __('sms.this_week') }}</option>
+                                                <option value="Last week">{{ __('sms.last_week') }}</option>
+                                                <option value="This Month">{{ __('sms.this_month') }}</option>
+                                                <option value="Last Month">{{ __('sms.last_month') }}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -57,14 +57,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{ __('sms.start_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{ __('sms.end_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -77,10 +77,9 @@
                                 <div class="col-md-6">
                                     <div class="row">
                                         <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
-                                                SMS
+                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('sms.filter_sms') }}
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{ __('sms.clear') }}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -94,13 +93,13 @@
                        id="sms-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Sent Date</th>
-                        <th>Phone No</th>
-                        <th>Message</th>
-                        <th>Message Type</th>
-                        <th>Message Price (UGX)</th>
-                        <th>Message Status</th>
+                        <th>{{ __('sms.id') }}</th>
+                        <th>{{ __('sms.sent_date') }}</th>
+                        <th>{{ __('sms.phone_no') }}</th>
+                        <th>{{ __('sms.message') }}</th>
+                        <th>{{ __('sms.message_type') }}</th>
+                        <th>{{ __('sms.message_price') }}</th>
+                        <th>{{ __('sms.message_status') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -113,7 +112,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('sms.loading') }}</span>
 </div>
 @endsection
 @section('js')
@@ -163,6 +162,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/outbox-sms/') }}",
                     data: function (d) {
@@ -197,7 +197,7 @@
         });
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('sms.alert') }}", message, status);
             if (status) {
                 let oTable = $('#sms-table').dataTable();
                 oTable.fnDraw(false);

@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Payroll Mgt/ Employee Payslips</span>
+                    <span class="caption-subject"> {{ __('payslips.payroll_management') }}/ {{ __('payslips.page_title') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('payslips.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,16 +32,16 @@
                        id="payslips-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Employee</th>
-                        <th>Month</th>
-                        <th>Gross/Commission</th>
-                        <th>Allowance</th>
-                        <th>Deductions</th>
-                        <th>Paid</th>
-                        <th>Outstanding</th>
-                        <th>Added By</th>
-                        <th>Action</th>
+                        <th>{{ __('payslips.id') }}</th>
+                        <th>{{ __('payslips.employee') }}</th>
+                        <th>{{ __('payslips.month') }}</th>
+                        <th>{{ __('payslips.gross_commission') }}</th>
+                        <th>{{ __('payslips.allowance') }}</th>
+                        <th>{{ __('payslips.deductions') }}</th>
+                        <th>{{ __('payslips.paid') }}</th>
+                        <th>{{ __('payslips.outstanding') }}</th>
+                        <th>{{ __('payslips.added_by') }}</th>
+                        <th>{{ __('payslips.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -53,7 +53,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('payslips.loading') }}</span>
 </div>
 @include('payslips.create')
 @endsection
@@ -62,11 +62,15 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
         $(function () {
+            LanguageManager.loadAllFromPHP({
+                'payslips': @json(__('payslips'))
+            });
 
             let table = $('#payslips-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/payslips/') }}",
                     data: function (d) {
@@ -101,7 +105,7 @@
             $("#scale-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save changes');
+            $('#btn-save').text('{{ __("common.save_changes") }}');
             $('#scale-modal').modal('show');
         }
 
@@ -119,15 +123,15 @@
             $("#AllowancesTable").append(
                 '<tr>' +
                 '<td>  <select class="form-control" name="addAllowance[' + i + '][allowance]">\n' +
-                '                                        <option value="House Rent Allowance">House Rent Allowance</option>\n' +
-                '                                        <option value="Medical Allowance">Medical Allowance</option>\n' +
-                '                                        <option value="Bonus">Bonus</option>\n' +
-                '                                        <option value="Dearness Allowance">Dearness Allowance</option>\n' +
-                '                                        <option value="Travelling Allowance">Travelling Allowance</option>\n' +
-                '                                        <option value="Overtime Allowance">Overtime Allowance</option>\n' +
+                '                                        <option value="House Rent Allowance">{{ __("allowances.house_rent") }}</option>\n' +
+                '                                        <option value="Medical Allowance">{{ __("allowances.medical") }}</option>\n' +
+                '                                        <option value="Bonus">{{ __("allowances.bonus") }}</option>\n' +
+                '                                        <option value="Dearness Allowance">{{ __("allowances.dearness") }}</option>\n' +
+                '                                        <option value="Travelling Allowance">{{ __("allowances.travelling") }}</option>\n' +
+                '                                        <option value="Overtime Allowance">{{ __("allowances.overtime") }}</option>\n' +
                 '                                    </select></td>' +
-                '<td> <input type="number"  name="addAllowance[' + i + '][allowance_amount]" placeholder="Enter amount" class="form-control"/></td>' +
-                '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td>' +
+                '<td> <input type="number"  name="addAllowance[' + i + '][allowance_amount]" placeholder="{{ __("common.enter_amount") }}" class="form-control"/></td>' +
+                '<td><button type="button" class="btn btn-danger remove-tr">{{ __("common.remove") }}</button></td>' +
                 '</tr>');
         });
 
@@ -138,18 +142,19 @@
             $("#DeductionsTable").append(
                 '<tr>' +
                 '<td>  <select class="form-control" name="addDeduction[' + x + '][deduction]">\n' +
-                ' <option value="Loan">Loan</option>\n' +
-                ' <option value="Tax">Tax</option>' +
+                ' <option value="Loan">{{ __("deductions.loan") }}</option>\n' +
+                ' <option value="Tax">{{ __("deductions.tax") }}</option>' +
                 '</select></td>' +
-                '<td> <input type="number"  name="addDeduction[' + x + '][deduction_amount]" placeholder="Enter amount" class="form-control"/></td>' +
-                '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td>' +
+                '<td> <input type="number"  name="addDeduction[' + x + '][deduction_amount]" placeholder="{{ __("common.enter_amount") }}" class="form-control"/></td>' +
+                '<td><button type="button" class="btn btn-danger remove-tr">{{ __("common.remove") }}</button></td>' +
                 '</tr>');
         });
 
 
         //filter employee
         $('#employee').select2({
-            placeholder: "Choose employee...",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('payslips.choose_employee') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-employee',
@@ -216,7 +221,7 @@
         function save_new_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#scale-form').serialize(),
@@ -234,7 +239,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#scale-modal').modal('show');
 
                     json = $.parseJSON(request.responseText);
@@ -267,7 +272,7 @@
                     let newOption = new Option(employee_data.text, employee_data.id, true, true);
                     $('#employee').append(newOption).trigger('change');
                     $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#scale-modal').modal('show');
 
                 },
@@ -280,7 +285,7 @@
         function update_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#scale-form').serialize(),
@@ -307,12 +312,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this payslip!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('payslips.delete_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -345,7 +350,7 @@
 
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#payslips-table').dataTable();
                 oTable.fnDraw(false);

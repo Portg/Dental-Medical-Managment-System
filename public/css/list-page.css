@@ -1,0 +1,386 @@
+/**
+* List Page Unified Styles – Medical System Enhanced
+* Based on Healthcare UX Best Practices
+* Color scheme: Purple Theme (#1A237E)
+*/
+
+/* ==========================================================================
+   L0: Breadcrumb
+   ========================================================================== */
+.breadcrumb-l0 {
+    font-size: 13px;
+}
+
+.breadcrumb-l0 a {
+    color: #1A237E;
+    text-decoration: none;
+}
+
+.breadcrumb-l0 a:hover {
+    color: #0D1452;
+    text-decoration: underline;
+}
+
+.breadcrumb-l0 .current {
+    color: #909399;
+}
+
+/* ==========================================================================
+   L1: Page Header
+   ========================================================================== */
+.page-header-l1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 56px;
+    margin-bottom: 16px;
+}
+
+.page-header-l1 .page-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #303133;
+    margin: 0;
+}
+
+.page-header-l1 .page-subtitle {
+    font-size: 13px;
+    color: #909399;
+    margin-top: 4px;
+}
+
+.page-header-l1 .header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.page-header-l1 .btn {
+    border-radius: 6px;
+    height: 36px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   L2: Filter Area
+   ========================================================================== */
+.filter-area-l2 {
+    background: #f5f7fa;
+    border: 1px solid #ebeef5;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.filter-area-l2 .filter-row {
+    margin-bottom: 12px;
+}
+
+.filter-area-l2 .filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.filter-area-l2 .filter-label {
+    font-size: 12px;
+    color: #606266;
+    margin-bottom: 4px;
+}
+
+.filter-area-l2 .form-control,
+.filter-area-l2 .btn {
+    height: 34px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+/* Search Input */
+.search-input-wrapper {
+    position: relative;
+}
+
+.search-input-wrapper .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #909399;
+}
+
+.search-input-wrapper input {
+    padding-left: 32px;
+}
+
+/* Advanced Filter */
+.advanced-filter-toggle {
+    margin-top: 8px;
+    text-align: right;
+}
+
+.advanced-filter-toggle a,
+.advanced-filter-toggle .btn-link,
+.advanced-filter-toggle .advanced-filter-btn,
+.advanced-filter-toggle button.btn-link,
+#toggleAdvancedFilters {
+    font-size: 13px;
+    color: #1A237E !important;
+    text-decoration: none;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.advanced-filter-toggle a:hover,
+.advanced-filter-toggle .btn-link:hover,
+.advanced-filter-toggle .advanced-filter-btn:hover,
+.advanced-filter-toggle button.btn-link:hover,
+#toggleAdvancedFilters:hover {
+    color: #0D1452 !important;
+    text-decoration: underline;
+    background: transparent !important;
+}
+
+/* ==========================================================================
+   L3: Data Table
+   ========================================================================== */
+.list-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+/* Table Header - Sticky + Styles */
+.list-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fafafa;
+    border-bottom: 1px solid #ebeef5;
+    padding: 14px 12px;
+    font-weight: 500;
+    font-size: 13px;
+    color: #606266;
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* Table Body */
+.list-table tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #ebeef5;
+    font-size: 14px;
+    color: #303133;
+    vertical-align: middle;
+}
+
+/* Hover + Selected */
+.list-table tbody tr:hover {
+    background: #f5f7fa;
+}
+
+.list-table tbody tr.is-selected {
+    background: #E8EAF6;
+}
+
+/* Zebra Rows */
+.list-table tbody tr:nth-child(even) {
+    background: #fcfcfd;
+}
+
+/* Action Column */
+.list-table th:last-child,
+.list-table td:last-child {
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Checkbox Column */
+.list-table .col-checkbox {
+    width: 40px;
+    text-align: center;
+}
+
+/* Monospace */
+.list-table .mono-text {
+    font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* Table Action Buttons - Purple Theme */
+.list-table .btn-info,
+.list-table .btn-primary,
+.list-table .btn.blue,
+.btn.blue {
+    background: #1A237E !important;
+    border-color: #1A237E !important;
+    color: #fff !important;
+}
+
+.list-table .btn-info:hover,
+.list-table .btn-primary:hover,
+.list-table .btn.blue:hover,
+.btn.blue:hover {
+    background: #0D1452 !important;
+    border-color: #0D1452 !important;
+}
+
+/* ==========================================================================
+   Status Colors
+   ========================================================================== */
+.status-active {
+    color: #67c23a;
+}
+
+.status-inactive {
+    color: #909399;
+}
+
+.status-warning {
+    color: #e6a23c;
+}
+
+.status-danger {
+    color: #f56c6c;
+}
+
+.status-risk {
+    color: #f56c6c;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   Badge
+   ========================================================================== */
+.list-table .badge {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+}
+
+/* ==========================================================================
+   L4: Empty State
+   ========================================================================== */
+.empty-state-container {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    background: #fff;
+}
+
+.empty-state-container .empty-icon {
+    font-size: 64px;
+    color: #dcdfe6;
+    margin-bottom: 16px;
+}
+
+.empty-state-container .empty-title {
+    font-size: 16px;
+    color: #303133;
+    margin-bottom: 8px;
+}
+
+.empty-state-container .empty-desc {
+    font-size: 14px;
+    color: #909399;
+    margin-bottom: 16px;
+}
+
+/* ==========================================================================
+   DataTables - Purple Theme
+   ========================================================================== */
+.dataTables_info {
+    font-size: 13px;
+    color: #606266;
+}
+
+.dataTables_paginate {
+    margin-top: 16px;
+}
+
+/* Pagination - Purple Theme */
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: #1A237E !important;
+    border-color: #1A237E !important;
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #E8EAF6 !important;
+    border-color: #E0E0E0 !important;
+    color: #1A237E !important;
+}
+
+/* ==========================================================================
+   Date Range Filter
+   ========================================================================== */
+.date-range-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-range-row .date-input {
+    flex: 1;
+}
+
+.date-range-row .date-separator {
+    color: #606266;
+    font-size: 13px;
+    flex-shrink: 0;
+    padding: 0 4px;
+}
+
+/* ==========================================================================
+   Utility
+   ========================================================================== */
+.filter-actions {
+    padding-top: 18px;
+}
+
+/* Action button spacing */
+.list-table .btn + .btn {
+    margin-left: 8px;
+}
+
+/* Focus accessibility - Purple Theme */
+.filter-area-l2 input:focus,
+.filter-area-l2 select:focus,
+.filter-area-l2 button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.15);
+}
+
+/* Links in list page - Purple Theme */
+.list-table a {
+    color: #1A237E;
+}
+
+.list-table a:hover {
+    color: #0D1452;
+}
+
+/* ==========================================================================
+   Loading Spinner
+   ========================================================================== */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #909399;
+}
+
+.loading .icon-refresh {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

@@ -1,0 +1,1396 @@
+/**
+ * 牙科门诊管理系统 - 专业医疗主题
+ * 设计原则：专业、稳定、克制、长期使用友好
+ * ============================================================================
+ */
+
+:root {
+    --theme-primary: #1A237E;
+    --theme-primary-dark: #0D1452;
+    --theme-secondary: #37474F;
+    --theme-accent: #3949AB;
+    --theme-text: #424242;
+    --theme-text-light: #757575;
+    --theme-border: #E0E0E0;
+    --theme-bg: #FAFAFA;
+}
+
+/* ============================================================================
+   字体加载优化 - 使用 font-display: swap 避免 FOIT (Flash of Invisible Text)
+   ============================================================================ */
+
+/* Simple Line Icons - 覆盖原有定义添加 font-display */
+@font-face {
+    font-family: 'Simple-Line-Icons';
+    src: url('../backend/assets/global/plugins/simple-line-icons/fonts/Simple-Line-Icons.eot');
+    src: url('../backend/assets/global/plugins/simple-line-icons/fonts/Simple-Line-Icons.eot?#iefix') format('embedded-opentype'),
+         url('../backend/assets/global/plugins/simple-line-icons/fonts/Simple-Line-Icons.woff') format('woff'),
+         url('../backend/assets/global/plugins/simple-line-icons/fonts/Simple-Line-Icons.ttf') format('truetype'),
+         url('../backend/assets/global/plugins/simple-line-icons/fonts/Simple-Line-Icons.svg#Simple-Line-Icons') format('svg');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Font Awesome 5 - 覆盖原有定义添加 font-display */
+@font-face {
+    font-family: 'Font Awesome 5 Free';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../backend/assets/global/plugins/font-awesome/webfonts/fa-regular-400.eot');
+    src: url('../backend/assets/global/plugins/font-awesome/webfonts/fa-regular-400.eot?#iefix') format('embedded-opentype'),
+         url('../backend/assets/global/plugins/font-awesome/webfonts/fa-regular-400.woff2') format('woff2'),
+         url('../backend/assets/global/plugins/font-awesome/webfonts/fa-regular-400.woff') format('woff'),
+         url('../backend/assets/global/plugins/font-awesome/webfonts/fa-regular-400.ttf') format('truetype'),
+         url('../backend/assets/global/plugins/font-awesome/webfonts/fa-regular-400.svg#fontawesome') format('svg');
+}
+
+@font-face {
+    font-family: 'Font Awesome 5 Free';
+    font-style: normal;
+    font-weight: 900;
+    font-display: swap;
+    src: url('../backend/assets/global/plugins/font-awesome/webfonts/fa-solid-900.eot');
+    src: url('../backend/assets/global/plugins/font-awesome/webfonts/fa-solid-900.eot?#iefix') format('embedded-opentype'),
+         url('../backend/assets/global/plugins/font-awesome/webfonts/fa-solid-900.woff2') format('woff2'),
+         url('../backend/assets/global/plugins/font-awesome/webfonts/fa-solid-900.woff') format('woff'),
+         url('../backend/assets/global/plugins/font-awesome/webfonts/fa-solid-900.ttf') format('truetype'),
+         url('../backend/assets/global/plugins/font-awesome/webfonts/fa-solid-900.svg#fontawesome') format('svg');
+}
+
+/* ============================================================================
+   Layout4 Sidebar Navigation - Purple Theme
+   ============================================================================ */
+
+/* Top Header Bar */
+.page-header.navbar,
+.page-header.navbar .page-header-inner,
+.page-header.navbar .page-top {
+    background: #1A237E !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+.page-header.navbar {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+}
+
+/* Logo Area */
+.page-header.navbar .page-logo {
+    background: #0D1452 !important;
+    border-right: none !important;
+}
+
+.page-header.navbar .page-logo a {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+}
+
+.page-header.navbar .page-logo img.logo-default {
+    height: 65px !important;
+    width: auto !important;
+    margin-top: 5px !important;
+    border-radius: 4px !important;
+}
+
+/* Sidebar Toggler */
+.page-header.navbar .page-logo .menu-toggler,
+.page-header.navbar .menu-toggler.responsive-toggler {
+    color: rgba(255,255,255,0.7) !important;
+}
+
+.page-header.navbar .page-logo .menu-toggler span,
+.page-header.navbar .menu-toggler.responsive-toggler span {
+    background: rgba(255,255,255,0.8) !important;
+}
+
+/* Responsive header overrides */
+@media (max-width:991px) {
+    .page-header.navbar,
+    .page-header.navbar .page-header-inner,
+    .page-header.navbar .page-top {
+        background: #1A237E !important;
+        border-bottom: none !important;
+    }
+}
+@media (max-width:767px) {
+    .page-header.navbar,
+    .page-header.navbar .page-top {
+        background: #1A237E !important;
+        border-bottom: none !important;
+    }
+}
+
+/* Top Menu */
+.page-header.navbar .top-menu .nav > li > a {
+    color: rgba(255,255,255,0.75) !important;
+}
+
+.page-header.navbar .top-menu .nav > li > a:hover,
+.page-header.navbar .top-menu .nav > li.open > a {
+    color: #FFFFFF !important;
+    background: rgba(255,255,255,0.1) !important;
+}
+
+.page-header.navbar .top-menu .nav > li > a > i {
+    color: rgba(255,255,255,0.75) !important;
+}
+
+.page-header.navbar .top-menu .nav > li > a:hover > i,
+.page-header.navbar .top-menu .nav > li.open > a > i {
+    color: #FFFFFF !important;
+}
+
+/* User avatar */
+.page-header.navbar .top-menu .nav > li.dropdown-user > a img {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 50% !important;
+    border: 2px solid rgba(255,255,255,0.3) !important;
+}
+
+.page-header.navbar .top-menu .nav > li.dropdown-user > a .username {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+.page-header.navbar .top-menu .nav > li.dropdown-user > a .fa-angle-down {
+    color: rgba(255,255,255,0.6) !important;
+}
+
+/* Top menu dropdowns */
+.page-header.navbar .top-menu .nav > li > .dropdown-menu {
+    border: 1px solid #E0E0E0 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.page-header.navbar .top-menu .nav > li > .dropdown-menu > li > a {
+    color: #424242 !important;
+    font-size: 13px !important;
+}
+
+.page-header.navbar .top-menu .nav > li > .dropdown-menu > li > a:hover {
+    background: #F5F5F5 !important;
+    color: #1A237E !important;
+}
+
+.page-header.navbar .top-menu .nav > li > .dropdown-menu > li > a > i {
+    color: #757575 !important;
+}
+
+.page-header.navbar .top-menu .nav > li.dropdown-extended .dropdown-menu > li.external {
+    background: #F5F5F5 !important;
+}
+
+.page-header.navbar .top-menu .nav > li.dropdown-extended .dropdown-menu > li.external > h3 {
+    color: #616161 !important;
+}
+
+.page-header.navbar .top-menu .nav > li.dropdown-extended .dropdown-menu .dropdown-menu-list > li > a {
+    border-bottom: 1px solid #F0F0F0 !important;
+    color: #424242 !important;
+}
+
+.page-header.navbar .top-menu .nav > li.dropdown-extended .dropdown-menu .dropdown-menu-list > li > a:hover {
+    background: #F5F5F5 !important;
+}
+
+/* ============================================================================
+   Sidebar - Purple Theme
+   ============================================================================ */
+
+.page-sidebar {
+    background: #1A237E !important;
+}
+
+/* Fixed sidebar: fill viewport height with scrollable overflow */
+.page-sidebar-fixed .page-sidebar {
+    bottom: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover {
+    background: #1A237E !important;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2) !important;
+}
+
+/* Sidebar Menu Items
+   NOTE: Selectors prefixed with .page-sidebar to beat Layout4 default theme specificity */
+.page-sidebar .page-sidebar-menu > li > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > a {
+    color: rgba(255,255,255,0.75) !important;
+    font-size: 13px !important;
+    padding: 10px 15px !important;
+    border: none !important;
+    border-top: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.page-sidebar .page-sidebar-menu > li > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > a > i {
+    color: rgba(255,255,255,0.6) !important;
+    font-size: 16px !important;
+}
+
+.page-sidebar .page-sidebar-menu > li > a > i[class*="icon-"],
+.page-sidebar .page-sidebar-menu > li > a > i[class^="icon-"],
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > a > i[class*="icon-"],
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > a > i[class^="icon-"] {
+    color: rgba(255,255,255,0.6) !important;
+}
+
+.page-sidebar .page-sidebar-menu > li > a > .title {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+.page-sidebar .page-sidebar-menu > li > a > .arrow:before,
+.page-sidebar .page-sidebar-menu > li > a > .arrow.open:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > a > .arrow:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > a > .arrow.open:before {
+    color: rgba(255,255,255,0.5) !important;
+}
+
+/* Hover state */
+.page-sidebar .page-sidebar-menu > li:hover > a,
+.page-sidebar .page-sidebar-menu > li.open > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li:hover > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.open > a {
+    background: rgba(255,255,255,0.1) !important;
+    color: #FFFFFF !important;
+}
+
+.page-sidebar .page-sidebar-menu > li:hover > a > i,
+.page-sidebar .page-sidebar-menu > li.open > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li:hover > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.open > a > i {
+    color: rgba(255,255,255,0.9) !important;
+}
+
+.page-sidebar .page-sidebar-menu > li:hover > a > .title,
+.page-sidebar .page-sidebar-menu > li.open > a > .title {
+    color: #FFFFFF !important;
+}
+
+/* Active state */
+.page-sidebar .page-sidebar-menu > li.active > a,
+.page-sidebar .page-sidebar-menu > li.active.open > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.active > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.active.open > a {
+    background: rgba(255,255,255,0.15) !important;
+    color: #FFFFFF !important;
+    border-left: 3px solid #FFFFFF !important;
+    margin-left: 0 !important;
+}
+
+.page-sidebar .page-sidebar-menu > li.active > a:hover,
+.page-sidebar .page-sidebar-menu > li.active.open > a:hover,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.active > a:hover,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.active.open > a:hover {
+    background: rgba(255,255,255,0.15) !important;
+}
+
+.page-sidebar .page-sidebar-menu > li.active > a > i,
+.page-sidebar .page-sidebar-menu > li.active.open > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.active > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.active.open > a > i {
+    color: #FFFFFF !important;
+}
+
+.page-sidebar .page-sidebar-menu > li.active > a > .title {
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+}
+
+.page-sidebar .page-sidebar-menu > li.active > a > .arrow:before,
+.page-sidebar .page-sidebar-menu > li.active > a > .arrow.open:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.active > a > .arrow:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li.active > a > .arrow.open:before {
+    color: #FFFFFF !important;
+}
+
+/* Sub-menu */
+.page-sidebar .page-sidebar-menu > li > .sub-menu,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > .sub-menu,
+.page-sidebar-closed .page-sidebar .page-sidebar-menu:hover .sub-menu {
+    background: rgba(0,0,0,0.15) !important;
+}
+
+.page-sidebar .page-sidebar-menu .sub-menu > li > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li > a {
+    color: rgba(255,255,255,0.65) !important;
+    font-size: 13px !important;
+    padding: 8px 15px 8px 40px !important;
+    border-bottom: none !important;
+    transition: all 0.15s ease !important;
+}
+
+.page-sidebar .page-sidebar-menu .sub-menu > li > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li > a > i {
+    color: rgba(255,255,255,0.45) !important;
+    font-size: 14px !important;
+    margin-right: 5px !important;
+}
+
+.page-sidebar .page-sidebar-menu .sub-menu > li > a > i[class*="icon-"],
+.page-sidebar .page-sidebar-menu .sub-menu > li > a > i[class^="icon-"],
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li > a > i[class*="icon-"],
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li > a > i[class^="icon-"] {
+    color: rgba(255,255,255,0.45) !important;
+}
+
+.page-sidebar .page-sidebar-menu .sub-menu > li:hover > a,
+.page-sidebar .page-sidebar-menu .sub-menu > li.open > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li:hover > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li.open > a {
+    color: #FFFFFF !important;
+    background: rgba(255,255,255,0.05) !important;
+}
+
+.page-sidebar .page-sidebar-menu .sub-menu > li:hover > a > i,
+.page-sidebar .page-sidebar-menu .sub-menu > li.open > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li:hover > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li.open > a > i {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+/* Active sub-menu item */
+.page-sidebar .page-sidebar-menu .sub-menu > li.active > a,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li.active > a {
+    color: #FFFFFF !important;
+    background: rgba(255,255,255,0.1) !important;
+}
+
+.page-sidebar .page-sidebar-menu .sub-menu > li.active > a > i,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu .sub-menu > li.active > a > i {
+    color: #FFFFFF !important;
+}
+
+/* Sub-menu arrow colors */
+.page-sidebar .page-sidebar-menu li > a > .arrow:before,
+.page-sidebar .page-sidebar-menu li > a > .arrow.open:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu li > a > .arrow:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu li > a > .arrow.open:before {
+    color: rgba(255,255,255,0.5) !important;
+}
+
+.page-sidebar .page-sidebar-menu li.active > a > .arrow:before,
+.page-sidebar .page-sidebar-menu li.active > a > .arrow.open:before,
+.page-sidebar .page-sidebar-menu li:hover > a > .arrow:before,
+.page-sidebar .page-sidebar-menu li:hover > a > .arrow.open:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu li.active > a > .arrow:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu li.active > a > .arrow.open:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu li:hover > a > .arrow:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu li:hover > a > .arrow.open:before {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+/* ---- Sidebar Closed (Collapsed) State: Popup Submenu ---- */
+
+/* Parent menu item expands on hover — dark background */
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover {
+    background: #1A237E !important;
+}
+
+/* Parent link in expanded hover state */
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > a {
+    background: #1A237E !important;
+    color: #FFFFFF !important;
+}
+
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > a > i {
+    color: rgba(255,255,255,0.8) !important;
+}
+
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > a > .title {
+    color: #FFFFFF !important;
+}
+
+/* Popup submenu container — dark background with shadow */
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu {
+    background: #1A237E !important;
+    box-shadow: 4px 4px 12px rgba(0,0,0,0.25) !important;
+    border: none !important;
+}
+
+/* Override default theme white background on hover sub-menu */
+.page-sidebar-closed .page-sidebar .page-sidebar-menu:hover .sub-menu,
+.page-sidebar-closed .page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu:hover .sub-menu {
+    background: #0D1452 !important;
+}
+
+/* Popup submenu links */
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu > li > a {
+    color: rgba(255,255,255,0.75) !important;
+    background: transparent !important;
+    border-bottom: none !important;
+}
+
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu > li > a > i {
+    color: rgba(255,255,255,0.5) !important;
+}
+
+/* Popup submenu link hover */
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu > li:hover > a,
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu > li.open > a {
+    color: #FFFFFF !important;
+    background: rgba(255,255,255,0.1) !important;
+}
+
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu > li:hover > a > i,
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu > li.open > a > i {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+/* Popup submenu active item */
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu > li.active > a {
+    color: #FFFFFF !important;
+    background: rgba(255,255,255,0.15) !important;
+}
+
+.page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu > li.active > a > i {
+    color: #FFFFFF !important;
+}
+
+/* Responsive: remove white border-top between sidebar items */
+@media (max-width:991px) {
+    .page-sidebar .page-sidebar-menu > li > a,
+    .page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > a {
+        border-top: none !important;
+    }
+}
+
+/* Sidebar toggler */
+.page-sidebar .sidebar-toggler {
+    background: rgba(0,0,0,0.2) !important;
+}
+
+/* Sidebar search wrapper (brand area) */
+.page-sidebar-menu > li.sidebar-search-wrapper {
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    margin-bottom: 5px !important;
+}
+
+/* Header search form */
+.header-search-form {
+    padding: 10px 15px;
+    min-width: 280px;
+}
+.header-search-form .input-group {
+    width: 100%;
+}
+.header-search-form .form-control {
+    border-radius: 4px 0 0 4px;
+    height: 36px;
+}
+.header-search-form .btn {
+    border-radius: 0 4px 4px 0;
+    height: 36px;
+}
+
+/* ============================================================================
+   按钮样式 - 专业克制，无渐变
+   ============================================================================ */
+
+.btn-primary {
+    background: #1A237E !important;
+    border: 1px solid #1A237E !important;
+    box-shadow: none !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active {
+    background: #0D1452 !important;
+    border-color: #0D1452 !important;
+    box-shadow: none !important;
+}
+
+.btn-info {
+    background: #3949AB !important;
+    border: 1px solid #3949AB !important;
+    box-shadow: none !important;
+}
+
+.btn-info:hover,
+.btn-info:focus {
+    background: #303F9F !important;
+    border-color: #303F9F !important;
+}
+
+.btn-default {
+    background: #FFFFFF !important;
+    border: 1px solid #BDBDBD !important;
+    color: #424242 !important;
+}
+
+.btn-default:hover,
+.btn-default:focus {
+    background: #F5F5F5 !important;
+    border-color: #9E9E9E !important;
+}
+
+/* Metronic .btn.blue - 统一为紫色主题 */
+.btn.blue {
+    background: #1A237E !important;
+    border: 1px solid #1A237E !important;
+    color: #FFFFFF !important;
+    box-shadow: none !important;
+}
+
+.btn.blue:hover,
+.btn.blue:focus,
+.btn.blue:active,
+.btn.blue.active {
+    background: #0D1452 !important;
+    border-color: #0D1452 !important;
+}
+
+.btn.blue .dropdown-toggle {
+    background: #1A237E !important;
+    border-color: #1A237E !important;
+}
+
+/* .btn-link 链接按钮 */
+.btn-link {
+    color: #1A237E !important;
+}
+
+.btn-link:hover,
+.btn-link:focus {
+    color: #0D1452 !important;
+}
+
+/* ============================================================================
+   模态框 - 简洁专业
+   ============================================================================ */
+
+.modal-header {
+    background: #1A237E;
+    color: #FFFFFF;
+    border-bottom: none;
+    padding: 12px 15px;
+}
+
+.modal-header .modal-title {
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.modal-header .close {
+    color: #FFFFFF;
+    opacity: 0.7;
+    text-shadow: none;
+}
+
+.modal-header .close:hover {
+    opacity: 1;
+    color: #FFFFFF;
+}
+
+/* ============================================================================
+   表格 - 通用样式（不含 .list-table，由 list-page.css 定义）
+   ============================================================================ */
+
+.table:not(.list-table) > thead > tr > th {
+    background: #F5F5F5;
+    color: #424242;
+    border-bottom: 1px solid #E0E0E0;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.table-hover:not(.list-table) > tbody > tr:hover {
+    background-color: #FAFAFA;
+}
+
+/* ============================================================================
+   DataTables 分页
+   ============================================================================ */
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover,
+.dataTables_paginate .paginate_button.current,
+.dataTables_paginate .paginate_button.current:hover,
+.pagination > .active > a,
+.pagination > .active > a:hover,
+.pagination > .active > a:focus,
+.pagination > .active > span,
+.pagination > .active > span:hover,
+.pagination > .active > span:focus {
+    background: #1A237E !important;
+    background-color: #1A237E !important;
+    border-color: #1A237E !important;
+    color: #FFFFFF !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+.dataTables_paginate .paginate_button:hover,
+.pagination > li > a:hover,
+.pagination > li > a:focus {
+    background: #E8EAF6 !important;
+    border-color: #E0E0E0 !important;
+    color: #1A237E !important;
+}
+
+/* ============================================================================
+   Portlet 卡片
+   ============================================================================ */
+
+.portlet > .portlet-title > .caption {
+    color: #424242;
+    font-weight: 500;
+}
+
+.portlet > .portlet-title > .caption > i {
+    color: #757575;
+}
+
+.portlet > .portlet-title {
+    border-bottom: 1px solid #E0E0E0;
+}
+
+/* ============================================================================
+   表单控件
+   ============================================================================ */
+
+.form-control:focus {
+    border-color: #1A237E;
+    box-shadow: none;
+}
+
+/* ============================================================================
+   Select2
+   ============================================================================ */
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #1A237E !important;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #1A237E !important;
+}
+
+/* ============================================================================
+   标签和徽章
+   ============================================================================ */
+
+.label-primary,
+.badge-primary {
+    background: #1A237E;
+}
+
+.label-info,
+.badge-info {
+    background: #3949AB;
+}
+
+/* ============================================================================
+   Datepicker
+   ============================================================================ */
+
+.datepicker table tr td.active,
+.datepicker table tr td.active:hover,
+.datepicker table tr td.active.highlighted {
+    background: #1A237E !important;
+    border-color: #1A237E !important;
+}
+
+.datepicker table tr td.today {
+    background: #E8EAF6 !important;
+    color: #1A237E !important;
+}
+
+/* ============================================================================
+   SweetAlert
+   ============================================================================ */
+
+.sweet-alert button.confirm {
+    background: #1A237E !important;
+}
+
+.sweet-alert button.confirm:hover {
+    background: #0D1452 !important;
+}
+
+/* ============================================================================
+   Toastr
+   ============================================================================ */
+
+.toast-info {
+    background: #3949AB !important;
+}
+
+/* ============================================================================
+   链接颜色
+   ============================================================================ */
+
+a {
+    color: #1A237E;
+}
+
+a:hover,
+a:focus {
+    color: #0D1452;
+}
+
+/* 页面底部 - 见文件末尾统一定义 */
+
+/* ============================================================================
+   滚动条样式
+   ============================================================================ */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #F5F5F5;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #BDBDBD;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #9E9E9E;
+}
+
+/* ============================================================================
+   进度条
+   ============================================================================ */
+
+.progress-bar {
+    background: #1A237E;
+}
+
+/* ============================================================================
+   警告框
+   ============================================================================ */
+
+.alert-info {
+    border-left: 3px solid #1A237E;
+}
+
+/* ============================================================================
+   FullCalendar 日历
+   ============================================================================ */
+
+.fc-event {
+    background: #3949AB !important;
+    border-color: #1A237E !important;
+}
+
+.fc-today {
+    background: #E8EAF6 !important;
+}
+
+/* ============================================================================
+   仪表盘统计卡片 - 保持功能性颜色区分
+   ============================================================================ */
+
+.dashboard-stat.purple,
+.dashboard-stat2.purple {
+    background: #1A237E !important;
+}
+
+/* ============================================================================
+   表单分区
+   ============================================================================ */
+
+.form-section-header {
+    background: #F5F5F5;
+    border-bottom: 1px solid #E0E0E0;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+.form-section-header:hover {
+    background: #EEEEEE;
+}
+
+.form-section-title {
+    color: #424242;
+    font-weight: 500;
+    margin: 0;
+}
+
+.form-section-title i {
+    color: #757575;
+    margin-right: 8px;
+}
+
+.age-display {
+    background: #F5F5F5;
+    border: 1px solid #E0E0E0;
+    color: #424242;
+    padding: 4px 10px;
+    border-radius: 2px;
+    font-size: 13px;
+}
+
+/* ============================================================================
+   牙位图配色
+   ============================================================================ */
+
+.tooth-normal {
+    fill: #FFFFFF;
+    stroke: #424242;
+}
+
+.tooth-filled {
+    fill: #1A237E;
+    stroke: #0D1452;
+}
+
+.tooth-decay {
+    fill: #FFEBEE;
+    stroke: #C62828;
+}
+
+.tooth-missing {
+    fill: #F5F5F5;
+    stroke: #999999;
+    stroke-dasharray: 3,3;
+}
+
+/* ============================================================================
+   Loading Overlay
+   ============================================================================ */
+
+.loadingoverlay {
+    background: rgba(255,255,255,0.9) !important;
+}
+
+/* ============================================================================
+   面包屑导航 - 清晰标识当前位置
+   ============================================================================ */
+
+.page-head {
+    background: #FAFAFA !important;
+    padding: 12px 0 !important;
+    margin: 0 !important;
+    border-bottom: 1px solid #E8E8E8 !important;
+    min-height: auto !important;
+}
+
+.page-head .container {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* 面包屑样式 - 首页图标 / 一级菜单 / 当前功能 */
+.page-breadcrumb {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0 !important;
+    margin: 0 !important;
+    padding: 12px 0 !important;
+    list-style: none !important;
+    font-size: 14px !important;
+}
+
+.page-breadcrumb li {
+    display: flex !important;
+    align-items: center !important;
+    color: #757575 !important;
+}
+
+.page-breadcrumb li a {
+    color: #616161 !important;
+    text-decoration: none !important;
+    transition: color 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 4px 0 !important;
+}
+
+.page-breadcrumb li a:hover {
+    color: #1A237E !important;
+}
+
+/* 首页图标 */
+.page-breadcrumb li.home-icon a {
+    color: #9E9E9E !important;
+    font-size: 16px !important;
+}
+
+.page-breadcrumb li.home-icon a:hover {
+    color: #1A237E !important;
+}
+
+.page-breadcrumb li a i {
+    font-size: 16px !important;
+}
+
+/* 分隔符 */
+.page-breadcrumb li.separator {
+    color: #BDBDBD !important;
+    font-size: 13px !important;
+    padding: 0 10px !important;
+}
+
+.page-breadcrumb li.separator::before {
+    content: '/' !important;
+}
+
+/* 当前页面 */
+.page-breadcrumb li.current {
+    color: #1A237E !important;
+    font-weight: 600 !important;
+}
+
+.page-head .page-title {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.page-head .page-title h4,
+.page-head h4 {
+    color: #616161 !important;
+    font-size: 13px !important;
+    font-weight: normal !important;
+    margin: 0 !important;
+    line-height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.page-head h4 a {
+    color: #424242 !important;
+    text-decoration: none !important;
+}
+
+.page-head h4 a:hover {
+    color: #1A237E !important;
+}
+
+.page-head h4 .separator {
+    color: #BDBDBD !important;
+}
+
+/* 页面内容区域 - 减少顶部间距 */
+.page-content {
+    padding-top: 15px !important;
+}
+
+.page-content-inner {
+    margin-top: 0 !important;
+}
+
+/* ============================================================================
+   滚动到顶部按钮
+   ============================================================================ */
+
+.scroll-to-top > i {
+    color: #757575;
+}
+
+.scroll-to-top:hover > i {
+    color: #424242;
+}
+
+/* ============================================================================
+   搜索框样式优化 - 确保图标正确显示
+   ============================================================================ */
+
+.input-group .input-group-addon {
+    background: #F5F5F5 !important;
+    border: 1px solid #E0E0E0 !important;
+    border-right: none !important;
+    color: #757575 !important;
+    padding: 6px 12px !important;
+    border-radius: 4px 0 0 4px !important;
+}
+
+.input-group .input-group-addon i {
+    font-size: 14px !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+    width: 14px !important;
+    text-align: center !important;
+}
+
+/* 使用 Simple Line Icons 替代 Font Awesome search */
+.input-group .input-group-addon i.fa-search::before,
+.input-group .input-group-addon i.fa.fa-search::before {
+    font-family: 'simple-line-icons' !important;
+    content: '\e090' !important;
+}
+
+.input-group .form-control {
+    border-left: none !important;
+    border-radius: 0 4px 4px 0 !important;
+}
+
+.input-group .form-control:focus {
+    border-color: #1A237E !important;
+    box-shadow: none !important;
+}
+
+.input-group .form-control:focus + .input-group-addon,
+.input-group:focus-within .input-group-addon {
+    border-color: #1A237E !important;
+    color: #1A237E !important;
+}
+
+/* ============================================================================
+   日期范围筛选区优化 - 添加「至」连接符
+   ============================================================================ */
+
+.date-range-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.date-range-wrapper .date-separator {
+    color: #757575 !important;
+    font-size: 13px !important;
+    padding: 0 4px !important;
+    flex-shrink: 0 !important;
+}
+
+/* 筛选区域样式 */
+.filter-area {
+    background: #FAFAFA !important;
+    padding: 16px !important;
+    margin: 16px 0 !important;
+    border-radius: 8px !important;
+    border: 1px solid #EEEEEE !important;
+}
+
+.filter-area .row {
+    margin-left: -8px !important;
+    margin-right: -8px !important;
+}
+
+.filter-area .row > [class*="col-"] {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+
+/* 高级筛选按钮样式 */
+.filter-area .btn-default {
+    background: #FFFFFF !important;
+    border: 1px solid #E0E0E0 !important;
+    color: #616161 !important;
+}
+
+.filter-area .btn-default:hover {
+    background: #F5F5F5 !important;
+    border-color: #BDBDBD !important;
+    color: #424242 !important;
+}
+
+.filter-area .btn-default.active {
+    background: #E8EAF6 !important;
+    border-color: #3949AB !important;
+    color: #1A237E !important;
+}
+
+/* ============================================================================
+   操作按钮对齐优化 - 工具栏
+   ============================================================================ */
+
+.table-toolbar {
+    margin-bottom: 16px !important;
+    padding-bottom: 16px !important;
+    border-bottom: 1px solid #EEEEEE !important;
+}
+
+.table-toolbar .row {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+}
+
+.table-toolbar .btn-group {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.table-toolbar .pull-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    float: none !important;
+    margin-left: auto !important;
+}
+
+/* 按钮组样式统一 */
+.table-toolbar .btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    border-radius: 4px !important;
+}
+
+.table-toolbar .btn i {
+    font-size: 14px !important;
+}
+
+/* 主操作按钮 */
+.table-toolbar .btn-primary,
+.table-toolbar .btn.blue {
+    background: #1A237E !important;
+    border-color: #1A237E !important;
+    color: #FFFFFF !important;
+}
+
+.table-toolbar .btn-primary:hover,
+.table-toolbar .btn.blue:hover {
+    background: #0D1452 !important;
+    border-color: #0D1452 !important;
+}
+
+/* 次要操作按钮 */
+.table-toolbar .btn-default,
+.table-toolbar .btn-sm {
+    background: #FFFFFF !important;
+    border: 1px solid #E0E0E0 !important;
+    color: #616161 !important;
+}
+
+.table-toolbar .btn-default:hover,
+.table-toolbar .btn-sm:hover {
+    background: #F5F5F5 !important;
+    border-color: #BDBDBD !important;
+    color: #424242 !important;
+}
+
+/* 下载/导出链接样式 */
+.table-toolbar a.text-danger,
+.table-toolbar .text-danger {
+    color: #1A237E !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 13px !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+}
+
+.table-toolbar a.text-danger:hover {
+    background: #E8EAF6 !important;
+    color: #0D1452 !important;
+}
+
+/* ============================================================================
+   空状态设计优化
+   ============================================================================ */
+
+.empty-state,
+.noResultsText,
+.no-data-message {
+    text-align: center !important;
+    padding: 48px 24px !important;
+    color: #9E9E9E !important;
+}
+
+.empty-state i,
+.noResultsText i,
+.no-data-message i {
+    font-size: 48px !important;
+    color: #E0E0E0 !important;
+    margin-bottom: 16px !important;
+    display: block !important;
+}
+
+.empty-state p,
+.noResultsText p,
+.no-data-message p {
+    font-size: 14px !important;
+    color: #757575 !important;
+    margin: 0 !important;
+}
+
+.empty-state .empty-title {
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: #616161 !important;
+    margin-bottom: 8px !important;
+}
+
+.empty-state .empty-description {
+    font-size: 13px !important;
+    color: #9E9E9E !important;
+    max-width: 300px !important;
+    margin: 0 auto !important;
+}
+
+.empty-state .btn {
+    margin-top: 20px !important;
+}
+
+/* DataTables 空状态 */
+.dataTables_wrapper .dataTables_empty,
+.dataTable tbody td.dataTables_empty {
+    padding: 48px 24px !important;
+    color: #757575 !important;
+    font-size: 14px !important;
+    text-align: center !important;
+    background: #FAFAFA !important;
+}
+
+/* ============================================================================
+   卡片间距优化
+   ============================================================================ */
+
+.portlet {
+    margin-bottom: 20px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+}
+
+.portlet.light {
+    background: #FFFFFF !important;
+}
+
+.portlet.light.bordered {
+    border: 1px solid #E8E8E8 !important;
+}
+
+.portlet > .portlet-title {
+    padding: 12px 16px !important;
+    min-height: auto !important;
+    border-bottom: 1px solid #EEEEEE !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.portlet > .portlet-title > .caption {
+    padding: 0 !important;
+}
+
+.portlet > .portlet-title > .caption .caption-subject {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #424242 !important;
+}
+
+.portlet > .portlet-body {
+    padding: 16px !important;
+}
+
+/* 嵌套卡片样式 */
+.portlet .portlet {
+    margin-bottom: 16px !important;
+    box-shadow: none !important;
+    border: 1px solid #EEEEEE !important;
+}
+
+/* Tab 内的卡片 */
+.tab-content .portlet {
+    margin-bottom: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.tab-content .portlet > .portlet-title {
+    padding: 12px 0 !important;
+    border-bottom: 1px solid #EEEEEE !important;
+}
+
+.tab-content .portlet > .portlet-body {
+    padding: 16px 0 !important;
+}
+
+/* ============================================================================
+   页脚样式优化
+   ============================================================================ */
+
+.page-footer {
+    background: #ffffff !important;
+    color: rgba(255,255,255,0.7) !important;
+    padding: 16px 0 !important;
+    font-size: 13px !important;
+    margin-top: 24px !important;
+}
+
+.page-footer .container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+}
+
+.page-footer a {
+    color: rgba(255,255,255,0.85) !important;
+    text-decoration: none !important;
+    transition: color 0.2s ease !important;
+}
+
+.page-footer a:hover {
+    color: #FFFFFF !important;
+}
+
+/* ============================================================================
+   表单控件优化
+   ============================================================================ */
+
+.form-control {
+    border-radius: 4px !important;
+    border: 1px solid #E0E0E0 !important;
+    height: 36px !important;
+    font-size: 13px !important;
+    padding: 6px 12px !important;
+}
+
+.form-control:focus {
+    border-color: #1A237E !important;
+    box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.1) !important;
+}
+
+/* Select2 优化 */
+.select2-container--default .select2-selection--single {
+    height: 36px !important;
+    border: 1px solid #E0E0E0 !important;
+    border-radius: 4px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 34px !important;
+    padding-left: 12px !important;
+    color: #424242 !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 34px !important;
+}
+
+/* ============================================================================
+   Nav Pills / Tabs 优化
+   ============================================================================ */
+
+.nav-pills > li > a {
+    border-radius: 4px !important;
+    color: #616161 !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+}
+
+.nav-pills > li > a:hover {
+    background: #F5F5F5 !important;
+    color: #424242 !important;
+}
+
+.nav-pills > li.active > a,
+.nav-pills > li.active > a:hover,
+.nav-pills > li.active > a:focus {
+    background: #1A237E !important;
+    color: #FFFFFF !important;
+}

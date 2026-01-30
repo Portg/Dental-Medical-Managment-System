@@ -1,0 +1,470 @@
+/**
+ * Form Modal Unified Styles - Medical System
+ * Based on Element Plus & Healthcare UX Best Practices
+ * Design spec reference: F-PAT-001
+ */
+
+/* ==========================================================================
+   Modal Base Styles
+   ========================================================================== */
+
+/* Standard modal width */
+.modal-form .modal-dialog {
+    width: 700px;
+    max-width: 95%;
+}
+
+/* Small modal width */
+.modal-form-sm .modal-dialog {
+    width: 500px;
+    max-width: 95%;
+}
+
+/* Large modal width */
+.modal-form-lg .modal-dialog {
+    width: 900px;
+    max-width: 95%;
+}
+
+/* Modal header styling */
+.modal-form .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e8e8e8;
+    background: linear-gradient(to bottom, #fff, #fafafa);
+}
+
+.modal-form .modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Modal body with scroll */
+.modal-form .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Modal footer styling */
+.modal-form .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e8e8e8;
+    text-align: right;
+    background: #fafafa;
+}
+
+.modal-form .modal-footer .btn {
+    min-width: 80px;
+    margin-left: 8px;
+}
+
+.modal-form .modal-footer .btn-default {
+    float: left;
+    margin-left: 0;
+}
+
+/* ==========================================================================
+   Form Section - Collapsible Card Style
+   ========================================================================== */
+
+.form-section {
+    margin-bottom: 24px;
+    border: 1px solid #e8e8e8;
+    border-radius: 6px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: linear-gradient(to bottom, #fafafa, #f5f5f5);
+    border-bottom: 1px solid #e8e8e8;
+    cursor: pointer;
+    user-select: none;
+}
+
+.form-section-header:hover {
+    background: linear-gradient(to bottom, #f5f5f5, #f0f0f0);
+}
+
+.form-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.form-section-title i {
+    margin-right: 8px;
+    color: #4472C4;
+    width: 16px;
+}
+
+.form-section-title .section-hint {
+    font-weight: normal;
+    color: #999;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.form-section-toggle {
+    color: #999;
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.form-section-toggle.collapsed {
+    transform: rotate(-90deg);
+}
+
+.form-section-body {
+    padding: 16px;
+}
+
+.form-section.collapsed .form-section-body {
+    display: none;
+}
+
+/* ==========================================================================
+   Form Fields
+   ========================================================================== */
+
+/* Form row spacing */
+.form-row {
+    margin-bottom: 16px;
+}
+
+.form-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Required field asterisk */
+.required-asterisk {
+    color: #E74C3C;
+    margin-right: 4px;
+    font-weight: bold;
+}
+
+/* Label styling - right aligned */
+.modal-form .form-group {
+    margin-bottom: 0;
+}
+
+.modal-form .control-label {
+    text-align: right;
+    padding-top: 7px;
+    font-weight: 500;
+    color: #555;
+}
+
+/* Input styling - modern look */
+.modal-form .form-control {
+    border-radius: 4px;
+    border: 1px solid #d9d9d9;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.modal-form .form-control:focus {
+    border-color: #4472C4;
+    box-shadow: 0 0 0 2px rgba(68, 114, 196, 0.1);
+}
+
+/* Validation states */
+.modal-form .form-control.is-valid {
+    border-color: #52c41a;
+}
+
+.modal-form .form-control.is-invalid {
+    border-color: #E74C3C;
+}
+
+.validation-message {
+    font-size: 12px;
+    margin-top: 4px;
+    display: none;
+}
+
+.validation-message.error {
+    color: #E74C3C;
+    display: block;
+}
+
+.validation-message.success {
+    color: #52c41a;
+}
+
+/* ==========================================================================
+   Form Components
+   ========================================================================== */
+
+/* Radio button styling */
+.modal-form .radio-inline {
+    margin-right: 16px;
+    padding-left: 0;
+}
+
+.modal-form .radio-inline input[type="radio"] {
+    margin-right: 4px;
+}
+
+/* Checkbox styling */
+.modal-form .checkbox-inline {
+    margin-right: 16px;
+    padding-left: 0;
+}
+
+.modal-form .checkbox-inline input[type="checkbox"] {
+    margin-right: 4px;
+}
+
+/* Checkbox group */
+.checkbox-group {
+    padding-top: 7px;
+}
+
+.checkbox-group .checkbox-inline {
+    margin-bottom: 8px;
+}
+
+/* ==========================================================================
+   Special Components
+   ========================================================================== */
+
+/* Age display badge */
+.age-display {
+    display: inline-block;
+    padding: 2px 8px;
+    margin-left: 8px;
+    background: #e6f7ff;
+    border: 1px solid #91d5ff;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #1890ff;
+    vertical-align: middle;
+}
+
+/* Hint text */
+.field-hint {
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+}
+
+/* Warning box */
+.warning-box {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    color: #856404;
+}
+
+.warning-box i {
+    margin-right: 6px;
+}
+
+/* Info box */
+.info-box {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #e6f7ff;
+    border: 1px solid #91d5ff;
+    border-radius: 4px;
+    color: #1890ff;
+}
+
+.info-box i {
+    margin-right: 6px;
+}
+
+/* ==========================================================================
+   Alert Styling
+   ========================================================================== */
+
+.modal-form .alert-danger {
+    margin-bottom: 16px;
+    border-radius: 4px;
+}
+
+.modal-form .alert-danger ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+/* ==========================================================================
+   Select2 Adjustments
+   ========================================================================== */
+
+.modal-form .select2-container--default .select2-selection--single {
+    height: 34px;
+    border-radius: 4px;
+    border: 1px solid #d9d9d9;
+}
+
+.modal-form .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 32px;
+}
+
+.modal-form .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 32px;
+}
+
+.modal-form .select2-container--default .select2-selection--multiple {
+    border-radius: 4px;
+    border: 1px solid #d9d9d9;
+    min-height: 34px;
+}
+
+.modal-form .select2-container--default.select2-container--focus .select2-selection--single,
+.modal-form .select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #4472C4;
+    box-shadow: 0 0 0 2px rgba(68, 114, 196, 0.1);
+}
+
+/* ==========================================================================
+   Responsive Adjustments
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .modal-form .modal-dialog,
+    .modal-form-sm .modal-dialog,
+    .modal-form-lg .modal-dialog {
+        width: 95%;
+        margin: 10px auto;
+    }
+
+    .modal-form .control-label {
+        text-align: left;
+        padding-top: 0;
+        margin-bottom: 4px;
+    }
+
+    .form-section-body {
+        padding: 12px;
+    }
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+/* Flex input with addon */
+.input-with-addon {
+    display: flex;
+    align-items: center;
+}
+
+.input-with-addon .form-control {
+    flex: 1;
+}
+
+/* Hidden fields container (for gender-based visibility etc.) */
+.conditional-fields {
+    display: none;
+}
+
+.conditional-fields.show {
+    display: block;
+}
+
+/* ==========================================================================
+   International Telephone Input (intl-tel-input)
+   ========================================================================== */
+
+/* Container width */
+.modal-form .iti {
+    width: 100%;
+}
+
+/* Input styling to match form-control */
+.modal-form .iti input,
+.modal-form .iti input[type="text"],
+.modal-form .iti input[type="tel"] {
+    width: 100% !important;
+    height: 34px;
+    padding: 6px 12px;
+    padding-left: 60px !important; /* Space for flag + dropdown arrow */
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    box-shadow: none;
+    transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
+}
+
+/* Focus state - match system theme color */
+.modal-form .iti input:focus,
+.modal-form .iti input[type="text"]:focus,
+.modal-form .iti input[type="tel"]:focus {
+    border-color: #4472C4;
+    outline: 0;
+    box-shadow: 0 0 0 2px rgba(68, 114, 196, 0.1);
+}
+
+/* Valid state */
+.modal-form .iti input.is-valid {
+    border-color: #52c41a;
+}
+
+.modal-form .iti input.is-valid:focus {
+    border-color: #52c41a;
+    box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.1);
+}
+
+/* Invalid state */
+.modal-form .iti input.is-invalid {
+    border-color: #E74C3C;
+}
+
+.modal-form .iti input.is-invalid:focus {
+    border-color: #E74C3C;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+}
+
+/* Flag container styling */
+.modal-form .iti__flag-container {
+    padding: 1px;
+}
+
+.modal-form .iti__selected-flag {
+    padding: 0 10px 0 10px;
+    border-radius: 3px 0 0 3px;
+    background-color: #f5f5f5;
+    border-right: 1px solid #d9d9d9;
+}
+
+/* Hover state for flag container */
+.modal-form .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag {
+    background-color: #e8e8e8;
+}
+
+/* Country list dropdown */
+.modal-form .iti__country-list {
+    border-radius: 4px;
+    box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12),
+                0 6px 16px 0 rgba(0, 0, 0, 0.08),
+                0 9px 28px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #d9d9d9;
+}
+
+.modal-form .iti__country.iti__highlight {
+    background-color: #e6f7ff;
+}
+
+/* Placeholder color */
+.modal-form .iti input::placeholder {
+    color: #bfbfbf;
+}

@@ -38,18 +38,18 @@ class BranchController extends Controller
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->deleted_at != null) {
-                        return '<span class="text-danger">Inactive</span>';
+                        return '<span class="text-danger">' . __('branches.inactive') . '</span>';
                     } else {
-                        return '<span class="text-primary">Active</span>';
+                        return '<span class="text-primary">' . __('branches.active') . '</span>';
                     }
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     }
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
                 ->make(true);
@@ -95,7 +95,7 @@ class BranchController extends Controller
     {
         Validator::make($request->all(), ['name' => 'required'])->validate();
         $success = Branch::create(['name' => $request->name, '_who_added' => Auth::User()->id]);
-        return FunctionsHelper::messageResponse("Branch has been added successfully", $success);
+        return FunctionsHelper::messageResponse(__('branches.branch_added_successfully'), $success);
     }
 
     /**
@@ -134,7 +134,7 @@ class BranchController extends Controller
             'name' => 'required'
         ])->validate();
         $success = Branch::where('id', $id)->update(['name' => $request->name, '_who_added' => Auth::User()->id]);
-        return FunctionsHelper::messageResponse("Branch has been updated successfully", $success);
+        return FunctionsHelper::messageResponse(__('branches.branch_updated_successfully'), $success);
     }
 
     /**
@@ -146,7 +146,7 @@ class BranchController extends Controller
     public function destroy($id)
     {
         $success = Branch::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse("Branch has been deleted successfully", $success);
+        return FunctionsHelper::messageResponse(__('branches.branch_deleted_successfully'), $success);
     }
 
 

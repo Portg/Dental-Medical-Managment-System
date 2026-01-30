@@ -28,7 +28,7 @@ class ProceduresReportController extends Controller
                     ->where('medical_services.name', 'like', '%' . $request->get('search') . '%')
                     ->whereBetween(DB::raw('DATE_FORMAT(invoice_items.created_at, \'%Y-%m-%d\')'), array
                     ($request->start_date, $request->end_date))
-                    ->select('medical_services.name', DB::raw('sum(invoice_items.price*invoice_items.qty) as procedure_income'))
+                    ->select('medical_services.name', DB::raw('sum(invoice_items.amount*invoice_items.qty) as procedure_income'))
                     ->groupBy('invoice_items.medical_service_id')
                     ->orderBy('procedure_income', 'DESC')
                     ->get();
@@ -40,7 +40,7 @@ class ProceduresReportController extends Controller
                     ->whereNull('invoice_items.deleted_at')
                     ->whereBetween(DB::raw('DATE_FORMAT(invoice_items.created_at, \'%Y-%m-%d\')'), array
                     ($request->start_date, $request->end_date))
-                    ->select('medical_services.name', DB::raw('sum(invoice_items.price*invoice_items.qty) as procedure_income'))
+                    ->select('medical_services.name', DB::raw('sum(invoice_items.amount*invoice_items.qty) as procedure_income'))
                     ->groupBy('invoice_items.medical_service_id')
                     ->orderBy('procedure_income', 'DESC')
                     ->get();
@@ -71,7 +71,7 @@ class ProceduresReportController extends Controller
                 ->whereBetween(DB::raw('DATE_FORMAT(invoice_items.created_at, \'%Y-%m-%d\')'),
                     array($request->session()->get('from'),
                         $request->session()->get('to')))
-                ->select('medical_services.name', DB::raw('sum(invoice_items.price*invoice_items.qty) as procedure_income'))
+                ->select('medical_services.name', DB::raw('sum(invoice_items.amount*invoice_items.qty) as procedure_income'))
                 ->groupBy('invoice_items.medical_service_id')
                 ->orderBy('procedure_income', 'DESC')
                 ->get();

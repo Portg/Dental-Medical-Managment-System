@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Self Account Deposit Form</h4>
+                <h4 class="modal-title"> {{ __('deposits.deposit_form') }}</h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -18,29 +18,28 @@
                     <input type="hidden" id="deposit_id" name="deposit_id">
                     <input type="hidden" id="self_account_id" name="self_account_id">
                     <div class="form-group">
-                        <label class="text-primary">Payment Date </label>
-                        <input type="text" name="payment_date" placeholder="yyy-mm-dd" id="datepicker"
+                        <label class="text-primary">{{ __('deposits.payment_date') }} </label>
+                        <input type="text" name="payment_date" placeholder="yyyy-mm-dd" id="datepicker"
                                class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Amount </label>
-                        <input type="text" name="amount" placeholder="enter amount here" class="form-control">
+                        <label class="text-primary">{{ __('common.amount') }} </label>
+                        <input type="text" name="amount" placeholder="{{ __('deposits.enter_amount') }}" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Payment Method </label><br>
-                        <input type="radio" name="payment_method" value="Cash">Cash<br>
-                        <input type="radio" name="payment_method" value="Mobile Money">Mobile Money<br>
-                        <input type="radio" name="payment_method" value="Cheque">Cheque<br>
+                        <label class="text-primary">{{ __('deposits.payment_method') }} </label><br>
+                        <input type="radio" name="payment_method" value="Cash">{{ __('deposits.cash') }}<br>
+                        <input type="radio" name="payment_method" value="Mobile Money">{{ __('deposits.mobile_money') }}<br>
+                        <input type="radio" name="payment_method" value="Cheque">{{ __('deposits.cheque') }}<br>
                     </div>
                 </form>
 
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-deposit" onclick="save_deposit()">Save
-                    changes
+                <button type="button" class="btn btn-primary" id="btn-deposit" onclick="save_deposit()">{{ __('common.save_changes') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

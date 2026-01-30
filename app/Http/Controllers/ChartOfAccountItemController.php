@@ -50,7 +50,7 @@ class ChartOfAccountItemController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($success) {
-            return FunctionsHelper::messageResponse("Chart account has been added successfully", $success);
+            return FunctionsHelper::messageResponse(__('charts_of_accounts.chart_of_accounts_added_successfully'), $success);
         }
     }
 
@@ -103,7 +103,7 @@ class ChartOfAccountItemController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($success) {
-            return FunctionsHelper::messageResponse("Chart account has been updated successfully", $success);
+            return FunctionsHelper::messageResponse(__('charts_of_accounts.chart_of_accounts_updated_successfully'), $success);
         }
     }
 

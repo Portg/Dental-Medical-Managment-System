@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Quotation Form </h4>
+                <h4 class="modal-title"> {{ __('quotations.quotation_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -17,19 +17,19 @@
 
                     @csrf
                     <div class="form-group">
-                        <label class="text-primary">Patient</label>
+                        <label class="text-primary">{{ __('quotations.patient') }}</label>
                         <select id="patient" name="patient_id" class="form-control" style="width: 100%;"></select>
                     </div>
                     <br>
 
                     <table class="table table-bordered" id="QuotationItemsTable">
                         <tr>
-                            <th class="text-primary">Procedure</th>
-                            <th class="text-primary">Tooth Numbers<span class="text-danger">Optional</span></th>
-                            <th class="text-primary">Qty</th>
-                            <th class="text-primary">Unit Price</th>
-                            <th class="text-primary">Total Amount</th>
-                            <th class="text-primary">Action</th>
+                            <th class="text-primary">{{ __('quotations.procedure') }}</th>
+                            <th class="text-primary">{{ __('quotations.tooth_numbers') }}<span class="text-danger">{{ __('quotations.optional') }}</span></th>
+                            <th class="text-primary">{{ __('quotations.qty') }}</th>
+                            <th class="text-primary">{{ __('quotations.unit_price') }}</th>
+                            <th class="text-primary">{{ __('quotations.total_amount') }}</th>
+                            <th class="text-primary">{{ __('quotations.action') }}</th>
                         </tr>
                         <tr>
                             <td>
@@ -38,22 +38,22 @@
                             </td>
                             <td>
                                 <input type="text" class="form-control" name="addmore[0][tooth_no]"
-                                       placeholder="Enter tooth no"/>
+                                       placeholder="{{ __('quotations.enter_tooth_no') }}"/>
                             </td>
                             <td>
                                 <input type="number" id="procedure_qty" class="form-control" name="addmore[0][qty]"
-                                       placeholder="Enter qty"/>
+                                       placeholder="{{ __('quotations.enter_qty') }}"/>
                             </td>
                             <td>
                                 <input type="number" id="procedure_price" class="form-control" name="addmore[0][price]"
-                                       placeholder="Enter price"/>
+                                       placeholder="{{ __('quotations.enter_price') }}"/>
                             </td>
                             <td>
                                 <input type="text" readonly="" id="total_amount" class="form-control"
                                        placeholder=""/>
                             </td>
                             <td>
-                                <button type="button" name="add" id="addQuotationItem" class="btn btn-info">Add More
+                                <button type="button" name="add" id="addQuotationItem" class="btn btn-info">{{ __('quotations.add_more') }}
                                 </button>
                             </td>
                         </tr>
@@ -66,9 +66,9 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-success" id="btnSave" onclick="save_quotation()">Generate Quotation
+                <button type="button" class="btn btn-success" id="btnSave" onclick="save_quotation()">{{ __('quotations.generate_quotation') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('quotations.close') }}</button>
             </div>
         </div>
     </div>

@@ -69,8 +69,8 @@ return [
     |
     */
 
-    'timezone' => 'Africa/Kampala',
-
+//    'timezone' => 'Africa/Kampala',
+    'timezone' => 'Asia/Shanghai',
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
@@ -82,7 +82,7 @@ return [
     |
     */
 
-    'locale' => 'en',
+    'locale' => 'zh-CN',
 
     /*
     |--------------------------------------------------------------------------
@@ -108,7 +108,12 @@ return [
     |
     */
 
-    'faker_locale' => 'en_US',
+    'faker_locale' => 'zh-CN',
+
+    'available_locales' => [
+        'en' => '英语',
+        'zh-CN' => '简体中文',
+    ],  // 支持的语言列表
 
     /*
     |--------------------------------------------------------------------------

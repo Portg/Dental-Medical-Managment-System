@@ -37,16 +37,11 @@ class TreatmentController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editTreatment(' . $row->id . ')" class="btn btn-primary">Edit</a>';
-                    return $btn;
-                })
-                ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editTreatment(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editTreatment(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
-                    $btn = '<a href="#" onclick="deleteTreatment(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteTreatment(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
@@ -54,7 +49,7 @@ class TreatmentController extends Controller
         }
     }
 
-    public function TreatmentHistory(Request $request, $patient_id)
+    public function treatmentHistory(Request $request, $patient_id)
     {
         if ($request->ajax()) {
 
@@ -96,6 +91,9 @@ class TreatmentController extends Controller
         Validator::make($request->all(), [
             'clinical_notes' => 'required',
             'treatment' => 'required'
+        ], [
+            'clinical_notes.required' => __('validation.custom.clinical_notes.required'),
+            'treatment.required' => __('validation.custom.treatment.required')
         ])->validate();
         $status = Treatment::create([
             'clinical_notes' => $request->clinical_notes,
@@ -105,9 +103,9 @@ class TreatmentController extends Controller
         ]);
 
         if ($status) {
-            return response()->json(['message' => 'treatment has been captured successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_treatment.treatment_captured_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
 
     /**
@@ -146,6 +144,10 @@ class TreatmentController extends Controller
             'clinical_notes' => 'required',
             'treatment' => 'required',
             'appointment_id' => 'required'
+        ], [
+            'clinical_notes.required' => __('validation.custom.clinical_notes.required'),
+            'treatment.required' => __('validation.custom.treatment.required'),
+            'appointment_id.required' => __('validation.custom.appointment_id.required')
         ])->validate();
         $status = Treatment::where('id', $id)->update([
             'clinical_notes' => $request->clinical_notes,
@@ -154,9 +156,9 @@ class TreatmentController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'treatment has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_treatment.treatment_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
 
     }
 
@@ -170,9 +172,9 @@ class TreatmentController extends Controller
     {
         $status = Treatment::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'treatment has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('medical_treatment.treatment_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
 
     }
 }

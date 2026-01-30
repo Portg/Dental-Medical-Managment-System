@@ -12,11 +12,22 @@ return [
     | has failed, such as for an invalid token or invalid new password.
     |
     */
-
+    // password reset related
     'reset' => 'Your password has been reset!',
     'sent' => 'We have e-mailed your password reset link!',
     'token' => 'This password reset token is invalid.',
     'user' => "We can't find a user with that e-mail address.",
     'throttled' => 'Please wait before retrying.',
+
+    // confirm password related
+    'confirm_password' => 'Confirm Password',
+    'confirm_password_description' => 'Please confirm your password before continuing.',
+    'password_confirmation' => 'Password Confirmation',
+
+    // reset password form
+    'reset_password' => 'Reset Password',
+    'email_address' => 'Email Address',
+    'send_password_reset_link' => 'Send Password Reset Link',
+    'forgot_password' => 'Forgot Your Password?',
 
 ];

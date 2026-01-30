@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background circle with theme primary color -->
+  <circle cx="32" cy="32" r="30" fill="#1A237E"/>
+
+  <!-- Tooth icon - simplified professional design -->
+  <path d="M32 12c-4.5 0-8.5 1.5-11 4-2.5 2.5-3.5 6-3 10 .5 4 1.5 8 3 12 1.5 4 3 8 4.5 11 1 2 2.5 3 4 3h5c1.5 0 3-1 4-3 1.5-3 3-7 4.5-11 1.5-4 2.5-8 3-12 .5-4-.5-7.5-3-10-2.5-2.5-6.5-4-11-4z" fill="#FFFFFF"/>
+
+  <!-- Tooth root details -->
+  <path d="M28 38c0 2-1 6-2 10-.5 2 .5 3 2 3h2c1 0 1.5-1 1.5-2 .5-3 .5-6 .5-8" fill="none" stroke="#E8EAF6" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M36 38c0 2 1 6 2 10 .5 2-.5 3-2 3h-2c-1 0-1.5-1-1.5-2-.5-3-.5-6-.5-8" fill="none" stroke="#E8EAF6" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Highlight on tooth -->
+  <ellipse cx="27" cy="22" rx="3" ry="4" fill="#E8EAF6" opacity="0.5"/>
+</svg>

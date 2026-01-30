@@ -62,7 +62,7 @@ class FunctionsHelper
         if ($success) {
             return response()->json(['message' => $message, 'status' => true]);
         }
-        return response()->json(['message' => 'Oops and error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
     }
 
 

@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Leave Mgt / Holidays</span>
+                    <span class="caption-subject">{{ __('holidays.title') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,14 +32,14 @@
                        id="holidays_table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Added Date</th>
-                        <th>Holiday Name</th>
-                        <th>Date of the Year</th>
-                        <th>Repeat Every Year</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('holidays.added_date') }}</th>
+                        <th>{{ __('holidays.holiday_name') }}</th>
+                        <th>{{ __('holidays.date_of_the_year') }}</th>
+                        <th>{{ __('holidays.repeat_every_year') }}</th>
+                        <th>{{ __('holidays.added_by') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -51,7 +51,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('holidays.create')
 @endsection
@@ -65,6 +65,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/holidays/') }}",
                     data: function (d) {
@@ -95,14 +96,14 @@
             $("#holidays-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('save record');
+            $('#btn-save').text('{{ __("common.save_record") }}');
             $('#holidays-modal').modal('show');
         }
 
         function save_data() {
             //check save method
             var id = $('#id').val();
-            if (id == "") {
+            if (id === "") {
                 save_new_record();
             } else {
                 update_record();
@@ -112,7 +113,7 @@
         function save_new_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#holidays-form').serialize(),
@@ -129,7 +130,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('save record');
+                    $('#btn-save').text('{{ __("common.save_record") }}');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
                         $('.alert-danger').show();
@@ -148,14 +149,13 @@
                 type: 'get',
                 url: "holidays/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     $('[name="name"]').val(data.name);
                     $('[name="holiday_date"]').val(data.holiday_date);
                     $('input[name^="repeat_date"][value="' + data.repeat_date + '"').prop('checked', true);
 
                     $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#holidays-modal').modal('show');
 
                 },
@@ -169,7 +169,7 @@
             $.LoadingOverlay("show");
 
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("holidays.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#holidays-form').serialize(),
@@ -186,7 +186,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Update record');
+                    $('#btn-save').text('{{ __("common.update_record") }}');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
                         $('.alert-danger').show();
@@ -198,12 +198,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Holiday!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('holidays.delete_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -234,17 +234,13 @@
 
         }
 
-
-
-
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#holidays_table').dataTable();
                 oTable.fnDraw(false);
             }
         }
-
 
     </script>
 @endsection

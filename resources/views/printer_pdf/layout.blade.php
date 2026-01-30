@@ -40,9 +40,9 @@
             <tr>
                 <td align="left" style="width: 40%;">
                     <p class="header_text">{{env("CompanyAddress",null)}}<br>
-                        Tel: {{env("companyMobile",null)}}; {{env("companyMobileOther",null)}} <br>
-                        Email:{{env("companyInfoEmail",null)}}
-                        Tin No: {{ env("companyTinNo",null)}}
+                        {{ __('print.tel') }}: {{env("companyMobile",null)}}; {{env("companyMobileOther",null)}} <br>
+                        {{ __('print.email') }}:{{env("companyInfoEmail",null)}}
+                        {{ __('print.tin_no') }}: {{ env("companyTinNo",null)}}
                     </p>
 
                 </td>
@@ -52,8 +52,8 @@
                 <td align="right" style="width: 40%;">
                     <p class="header_text">
                        {{ env("MainDoctorName",null)}}<br>
-                        Tel {{env("mainDoctorContacts",null)}}
-                        Email:{{ env("companyOfficalEmail",null)}}
+                        {{ __('print.tel') }} {{env("mainDoctorContacts",null)}}
+                        {{ __('print.email') }}:{{ env("companyOfficalEmail",null)}}
 
                     </p>
                 </td>
@@ -68,9 +68,9 @@
 <footer class="footer">
     <div class="footer_text">
 {{--        <br><br><br>--}}
-        <center style="font-size: 13px;font-weight: bold;"><span>Your Smile Our Smile</span><br>
-            Please contact us for more information about payment options.<br>
-            Thank you for your business.
+        <center style="font-size: 13px;font-weight: bold;"><span>{{ __('print.company_slogan') }}</span><br>
+            {{ __('print.payment_info_message') }}<br>
+            {{ __('print.thank_you_business') }}
         </center>
         <hr>
     </div>

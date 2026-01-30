@@ -7,6 +7,7 @@ use App\DentalChart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\Facades\DataTables;
 
 class DentalChartController extends Controller
 {
@@ -15,8 +16,49 @@ class DentalChartController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
+        if ($request->ajax()) {
+            // Get patients with dental chart records
+            $data = DB::table('dental_charts')
+                ->join('appointments', 'dental_charts.appointment_id', '=', 'appointments.id')
+                ->join('patients', 'appointments.patient_id', '=', 'patients.id')
+                ->whereNull('dental_charts.deleted_at')
+                ->whereNull('patients.deleted_at')
+                ->select(
+                    'patients.id as patient_id',
+                    'patients.patient_no',
+                    DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                    DB::raw('COUNT(dental_charts.id) as tooth_count'),
+                    DB::raw('MAX(dental_charts.updated_at) as last_updated')
+                )
+                ->groupBy('patients.id', 'patients.patient_no', 'patients.surname', 'patients.othername')
+                ->orderBy('last_updated', 'desc');
+
+            return DataTables::of($data)
+                ->addIndexColumn()
+                ->editColumn('last_updated', function($row) {
+                    return $row->last_updated ? date('Y-m-d H:i', strtotime($row->last_updated)) : '-';
+                })
+                ->addColumn('action', function($row) {
+                    // Find the latest appointment for this patient
+                    $latestAppointment = DB::table('appointments')
+                        ->where('patient_id', $row->patient_id)
+                        ->whereNull('deleted_at')
+                        ->orderBy('id', 'desc')
+                        ->first();
+
+                    if ($latestAppointment) {
+                        return '<a href="' . url('medical-treatment/' . $latestAppointment->id) . '" class="btn btn-sm btn-primary">
+                            <i class="fa fa-eye"></i> ' . __('odontogram.view_chart') . '
+                        </a>';
+                    }
+                    return '<span class="text-muted">' . __('odontogram.no_chart_data') . '</span>';
+                })
+                ->rawColumns(['action'])
+                ->make(true);
+        }
+
         return view('dental_chart.index');
     }
 
@@ -74,7 +116,7 @@ class DentalChartController extends Controller
         }
 
 
-        return response()->json(['message' => 'dental Chart changes have been captured successfully', 'success' =>
+        return response()->json(['message' => __('odontogram.chart_saved_success'), 'success' =>
             true]);
 //        if ($delete_old_chart) {
 //

@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Medical Insurance / Reports / Claims</span>
+                    <span class="caption-subject"> {{ __('insurance_reports.title') }} </span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -31,25 +31,25 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="sr-only" for="exampleInputEmail22">start Date</label>
+                            <label class="sr-only" for="exampleInputEmail22">{{ __('datetime.date_range.start_date') }}</label>
                             <div class="input-icon">
                                 <i class="fa fa-calendar"></i>
                                 <input type="date" name="start_date" id="start_date"
-                                       class="form-control datepicker-autoclose" placeholder="Please select start date">
+                                       class="form-control datepicker-autoclose" placeholder="{{ __('datetime.placeholder_start_date') }}">
                                 <div class="help-block"></div>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="sr-only" for="exampleInputPassword42">End Date</label>
+                            <label class="sr-only" for="exampleInputPassword42">{{__('datetime.date_range.end_date')}}</label>
                             <div class="input-icon">
                                 <i class="fa fa-calendar"></i>
                                 <input type="date" name="end_date" id="end_date"
-                                       class="form-control datepicker-autoclose" --}}
-                                       placeholder="Please select end date">
+                                       class="form-control datepicker-autoclose"
+                                       placeholder="{{ __('datetime.placeholder_end_date') }}">
                                 <div class="help-block"></div>
                             </div>
                         </div>
-                        <button type="button" id="btnFiterSubmitSearch" class="btn green-meadow">Filter Data</button>
+                        <button type="button" id="btnFiterSubmitSearch" class="btn green-meadow">{{ __('insurance_reports.filter_data') }}</button>
                     </form>
                 </div>
                 <br>
@@ -57,13 +57,13 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Insurance Company</th>
-                        <th>Invoice No</th>
-                        <th>Customer</th>
-                        <th>Procedure</th>
-                        <th>Fees</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('insurance_reports.date') }}</th>
+                        <th>{{ __('insurance_reports.insurance_company') }}</th>
+                        <th>{{ __('insurance_reports.invoice_no') }}</th>
+                        <th>{{ __('insurance_reports.customer') }}</th>
+                        <th>{{ __('insurance_reports.procedure') }}</th>
+                        <th>{{ __('insurance_reports.fees') }}</th>
                     </thead>
                     <tbody>
 
@@ -75,20 +75,24 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('insurance_companies.create')
 @endsection
 @section('js')
 
-      <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
         $(function () {
-
+            // 批量加载
+            LanguageManager.loadAllFromPHP({
+                'insurance_report' : @json(__('insurance_reports'))
+            });
             var table = $('#sample_1').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/insurance-reports/') }}",
                     data: function (d) {
@@ -100,8 +104,8 @@
                 dom: 'Bfrtip',
                 buttons: {
                     buttons: [
-                        {extend: 'pdfHtml5', className: 'pdfButton'},
-                        {extend: 'excelHtml5', className: 'excelButton'},
+                        // {extend: 'pdfHtml5', className: 'pdfButton'},
+                        // {extend: 'excelHtml5', className: 'excelButton'},
 
                     ]
                 },
@@ -123,7 +127,8 @@
         });
         //filter insurance companies
         $('#company').select2({
-            placeholder: "Choose insurance company...",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('insurance_reports.choose_insurance_company') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-insurance-company',
@@ -134,7 +139,6 @@
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };
@@ -144,7 +148,7 @@
         });
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
 
             setTimeout(function () {
                 location.reload();

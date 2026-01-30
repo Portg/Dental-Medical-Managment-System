@@ -45,10 +45,10 @@ class LeaveRequestApprovalController extends Controller
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <li>
-                                <a href="#" onclick="approveRequest(' . $row->id . ')"> Approve Leave </a>
+                                <a href="#" onclick="approveRequest(' . $row->id . ')"> ' . __('leaves.leave_requests_approval.approve_leave') . ' </a>
                             </li>
                              <li>
-                                <a href="#" onclick="rejectRequest(' . $row->id . ')" > Reject Leave </a>
+                                <a href="#" onclick="rejectRequest(' . $row->id . ')" > ' . __('leaves.leave_requests_approval.reject_leave') . ' </a>
                             </li>
                         </ul>
                     </div>
@@ -69,7 +69,7 @@ class LeaveRequestApprovalController extends Controller
             'status' => 'Approved',
             '_approved_by' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("You have successfully approved this leave request.", $success);
+        return FunctionsHelper::messageResponse(__('leaves.leave_requests_approval.approved_successfully'), $success);
     }
 
     public function rejectRequest($id)
@@ -79,7 +79,7 @@ class LeaveRequestApprovalController extends Controller
             'status' => 'Rejected',
             '_approved_by' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("You have successfully rejected this leave request", $success);
+        return FunctionsHelper::messageResponse(__('leaves.leave_requests_approval.rejected_successfully'), $success);
     }
 
 }

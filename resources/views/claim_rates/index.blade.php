@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Doctor /Claim Rates</span>
+                    <span class="caption-subject">{{ __('claim_rates.title') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                         class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,14 +32,14 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Surname</th>
-                        <th>Other Name</th>
-                        <th>Cash Rate(%)</th>
-                        <th>Insurance Rate(%)</th>
-                        <th>status</th>
-                        <th>Action</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('claim_rates.date') }}</th>
+                        <th>{{ __('claim_rates.surname') }}</th>
+                        <th>{{ __('claim_rates.other_name') }}</th>
+                        <th>{{ __('claim_rates.cash_rate') }}</th>
+                        <th>{{ __('claim_rates.insurance_rate') }}</th>
+                        <th>{{ __('claim_rates.status') }}</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -51,7 +51,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('claim_rates.create')
 @include('claim_rates.new_claim')
@@ -62,10 +62,17 @@
     <script type="text/javascript">
         $(function () {
 
+            // Translation variables for JavaScript
+            const translations = {
+                chooseDoctor: "{{ __('common.choose_doctor') }}",
+                are_you_sure : "{{ __('common.are_you_sure') }}",
+                yes_delete_it : "{{ __('common.yes_delete_it') }}",
+            };
             let table = $('#sample_1').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/claim-rates/') }}",
                     data: function (d) {
@@ -74,8 +81,8 @@
                 dom: 'Bfrtip',
                 buttons: {
                     buttons: [
-                        {extend: 'pdfHtml5', className: 'pdfButton'},
-                        {extend: 'excelHtml5', className: 'excelButton'},
+                        // {extend: 'pdfHtml5', className: 'pdfButton'},
+                        // {extend: 'excelHtml5', className: 'excelButton'},
 
                     ]
                 },
@@ -98,13 +105,14 @@
             $("#rate-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save changes');
+            $('#btn-save').text('{{ __("common.save_changes") }}');
             $('#rate-modal').modal('show');
         }
 
         //filter doctor
         $('#doctor').select2({
-            placeholder: "Choose doctor...",
+            language: '{{ app()->getLocale() }}',
+            placeholder: translations.chooseDoctor,
             minimumInputLength: 2,
             ajax: {
                 url: '/search-doctor',
@@ -115,7 +123,6 @@
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };
@@ -128,7 +135,7 @@
         function save_data() {
             //check save method
             var id = $('#id').val();
-            if (id == "") {
+            if (id === "") {
                 save_new_record();
             } else {
                 update_record();
@@ -138,7 +145,7 @@
         function save_new_record() {
            $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#rate-form').serialize(),
@@ -156,7 +163,7 @@
                 error: function (request, status, error) {
                    $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#rate-modal').modal('show');
 
                     json = $.parseJSON(request.responseText);
@@ -177,7 +184,6 @@
                 type: 'get',
                 url: "claim-rates/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     $('[name="insurance_rate"]').val(data.insurance_rate);
                     $('[name="cash_rate"]').val(data.cash_rate);
@@ -188,7 +194,7 @@
                     let newOption = new Option(doctor_data.text, doctor_data.id, true, true);
                     $('#doctor').append(newOption).trigger('change');
                    $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}');
                     $('#rate-modal').modal('show');
 
                 },
@@ -201,7 +207,7 @@
         function update_record() {
            $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#rate-form').serialize(),
@@ -228,12 +234,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Doctor Claim Rate!",
+                    title: translations.are_you_sure,
+                    text: "{{ __('claim_rates.delete_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: translations.yes_delete_it,
                     closeOnConfirm: false
                 },
                 function () {
@@ -267,17 +273,17 @@
 
         function newClaim(doctor_id, othername) {
             $("#new-claim-form")[0].reset();
-            $('.renew_title').text(othername + " New claim Rate");
+            $('.renew_title').text(othername + " {{ __('claim_rates.new_claim_rate') }}");
             $('#doctor_id').val(doctor_id);
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save changes');
+            $('#btn-save').text('{{ __("common.save_changes") }}');
             $('#new-claim-modal').modal('show');
         }
 
         function save_new_rate() {
            $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#new-claim-form').serialize(),
@@ -295,7 +301,7 @@
                 error: function (request, status, error) {
                    $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#new-claim-modal').modal('show');
 
                     json = $.parseJSON(request.responseText);
@@ -308,7 +314,7 @@
         }
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#sample_1').dataTable();
                 oTable.fnDraw(false);
@@ -318,8 +324,3 @@
 
     </script>
 @endsection
-
-
-
-
-

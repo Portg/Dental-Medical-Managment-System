@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Today's Expense Report</span>
+                    <span class="caption-subject"> {{ __('report.todays_expense_report') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -31,11 +31,11 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Time</th>
-                        <th>Name</th>
-                        <th>Amount</th>
-                        <th>Added By</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('common.time') }}</th>
+                        <th>{{ __('common.name') }}</th>
+                        <th>{{ __('common.amount') }}</th>
+                        <th>{{ __('report.added_by') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -48,7 +48,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('patients.create')
 @endsection
@@ -57,7 +57,9 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
         $(function () {
+
             var table = $('#sample_1').DataTable({
+                language: LanguageManager.getDataTableLang(),
                 destroy: true,
                 processing: true,
                 serverSide: true,

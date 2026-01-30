@@ -5,7 +5,7 @@
 @endsection
 
 <div class="note note-success">
-    <p class="text-black-50"><a href="{{ url('doctor-claims')}}" class="text-primary">View Claims
+    <p class="text-black-50"><a href="{{ url('doctor-claims')}}" class="text-primary">{{ __('doctor_claim.payments.view_claims') }}
         </a> / @if(isset($doctor)) {{ $doctor->surname." ".$doctor->othername }} ) @endif
     </p>
 </div>
@@ -17,7 +17,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold uppercase">Claim /Payment details</span>
+                    <span class="caption-subject bold uppercase">{{ __('doctor_claim.payments.title') }}</span>
                     &nbsp; &nbsp; &nbsp;
 
                 </div>
@@ -26,11 +26,11 @@
                 <table class="table table-hover" id="sample_1">
                     <thead>
                     <tr>
-                        <th> #</th>
-                        <th>Payment Date</th>
-                        <th>Amount</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('doctor_claim.payments.hash') }}</th>
+                        <th>{{ __('doctor_claim.payments.payment_date') }}</th>
+                        <th>{{ __('doctor_claim.payments.amount') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -45,7 +45,7 @@
 
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('doctor_claims.payments.create')
 @endsection
@@ -59,6 +59,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "/claims-payment/" + $('#global_claim_id').val(),
                     data: function (d) {
@@ -87,7 +88,7 @@
 
         function editRecord(id) {
             save = false;
-           $.LoadingOverlay("show");
+            $.LoadingOverlay("show");
             $("#payment-form")[0].reset();
             $('#btn-save').attr('disabled', false);
             $.ajax({
@@ -100,7 +101,7 @@
                     $('[name="amount"]').val(data.amount);
 
                    $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#payment-modal').modal('show');
 
                 },
@@ -114,7 +115,7 @@
         function save_payment_record() {
            $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}.');
             $.ajax({
                 type: 'PUT',
                 data: $('#payment-form').serialize(),
@@ -141,18 +142,18 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Claim payment!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('doctor_claim.payments.delete_payment_confirm') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
 
                     var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
-                   $.LoadingOverlay("show");
+                    $.LoadingOverlay("show");
                     $.ajax({
                         type: 'delete',
                         data: {
@@ -183,7 +184,7 @@
             if (status) {
                 let oTable = $('#sample_1').dataTable();
                 oTable.fnDraw(false);
-                swal("Alert!", message, status);
+                swal("{{ __('common.alert') }}", message, status);
             }
         }
     </script>

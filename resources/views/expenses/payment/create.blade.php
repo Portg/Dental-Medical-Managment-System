@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Record a payment for this Expense </h4>
+                <h4 class="modal-title"> {{ __('expense_items.payments.title') }}</h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -18,25 +18,25 @@
                     @csrf
                     <input type="hidden" id="expense_id" name="expense_id">
                     <div class="form-group">
-                        <label class="text-primary">Payment Date </label>
-                        <input type="text" placeholder="yyy-mm-dd" name="payment_date" id="datepicker2"
+                        <label class="text-primary">{{ __('expense_items.payment_date') }}</label>
+                        <input type="text" placeholder="{{ __('datetime.format_date') }}" name="payment_date" id="datepicker2"
                                class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Payment Method </label><br>
-                        <input type="radio" name="payment_method" value="Cash"> Cash<br>
-                        <input type="radio" name="payment_method" value="Mobile Money"> Mobile Money<br>
-                        <input type="radio" name="payment_method" value="Cheque"> Cheque<br>
-                        <input type="radio" name="payment_method" value="Bank Wire Transfer"> Bank Wire Transfer<br>
+                        <label class="text-primary">{{ __('expense_items.payment_method') }}</label><br>
+                        <input type="radio" name="payment_method" value="Cash"> {{ __('expense_items.payments.cash') }}<br>
+                        <input type="radio" name="payment_method" value="Mobile Money"> {{ __('expense_items.payments.mobile_money') }}<br>
+                        <input type="radio" name="payment_method" value="Cheque"> {{ __('expense_items.payments.cheque') }}<br>
+                        <input type="radio" name="payment_method" value="Bank Wire Transfer"> {{ __('expense_items.payments.bank_wire_transfer') }}<br>
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Amount </label>
-                        <input type="number" name="amount" placeholder="Enter amount" class="form-control">
+                        <label class="text-primary">{{ __('expense_items.amount') }} </label>
+                        <input type="number" name="amount" placeholder="{{ __('expense_items.enter_amount_here') }}" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Payment Account </label><br>
+                        <label class="text-primary">{{ __('expense_items.payment_account') }} </label><br>
                         <select class="form-control" name="payment_account">
-                            <option value="">Choose payment account</option>
+                            <option value="">{{ __('expense_items.payments.choose_payment_account') }}</option>
                             @foreach($payment_accts as $acct)
                                 <option value="{{ $acct->id }}">{{ $acct->name }}</option>
                             @endforeach
@@ -47,10 +47,9 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btnSave" onclick="save_payment_record()">Save
-                    Record
+                <button type="button" class="btn btn-primary" id="btnSave" onclick="save_payment_record()">{{ __('common.save_record') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

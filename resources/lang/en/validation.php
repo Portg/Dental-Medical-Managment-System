@@ -133,6 +133,137 @@ return [
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],
+        // Common field validations
+        'name' => [
+            'required' => 'The name field is required.',
+        ],
+        'amount' => [
+            'required' => 'The amount field is required.',
+            'numeric' => 'The amount must be a number.',
+        ],
+        'date' => [
+            'required' => 'The date field is required.',
+        ],
+        'email' => [
+            'required' => 'The email field is required.',
+            'email' => 'Please enter a valid email address.',
+        ],
+        'phone' => [
+            'required' => 'The phone number is required.',
+        ],
+        // Accounting validations
+        'accounting_equation_id' => [
+            'required' => 'Please select an accounting equation.',
+        ],
+        // Salary validations
+        'deduction' => [
+            'required' => 'The deduction type is required.',
+        ],
+        'allowance' => [
+            'required' => 'The allowance type is required.',
+        ],
+        // Medical validations
+        'body_reaction' => [
+            'required' => 'Please describe the body reaction.',
+        ],
+        'patient_id' => [
+            'required' => 'Please select a patient.',
+        ],
+        'doctor_id' => [
+            'required' => 'Please select a doctor.',
+        ],
+        // Appointment validations
+        'appointment_date' => [
+            'required' => 'The appointment date is required.',
+        ],
+        'appointment_time' => [
+            'required' => 'The appointment time is required.',
+        ],
+        // Invoice validations
+        'invoice_no' => [
+            'required' => 'The invoice number is required.',
+        ],
+        'payment_method' => [
+            'required' => 'Please select a payment method.',
+        ],
+        // Expense validations
+        'expense_category_id' => [
+            'required' => 'Please select an expense category.',
+        ],
+        'description' => [
+            'required' => 'The description is required.',
+        ],
+        // User validations
+        'password' => [
+            'required' => 'The password is required.',
+            'min' => 'The password must be at least :min characters.',
+            'confirmed' => 'The password confirmation does not match.',
+        ],
+        'role_id' => [
+            'required' => 'Please select a role.',
+        ],
+        'branch_id' => [
+            'required' => 'Please select a branch.',
+        ],
+        // Chronic disease validations
+        'disease' => [
+            'required' => 'The disease field is required.',
+        ],
+        'status' => [
+            'required' => 'The status field is required.',
+        ],
+        // Surgery validations
+        'surgery' => [
+            'required' => 'The surgery field is required.',
+        ],
+        'surgery_date' => [
+            'required' => 'The surgery date is required.',
+        ],
+        // Treatment validations
+        'clinical_notes' => [
+            'required' => 'The clinical notes are required.',
+        ],
+        'treatment' => [
+            'required' => 'The treatment field is required.',
+        ],
+        'appointment_id' => [
+            'required' => 'Please select an appointment.',
+        ],
+        // Accounting validations
+        'sort_by' => [
+            'required' => 'The sort order is required.',
+            'integer' => 'The sort order must be an integer.',
+        ],
+        // Leave type validations
+        'max_days' => [
+            'required' => 'The maximum days is required.',
+        ],
+        // Message validations
+        'message' => [
+            'required' => 'The message field is required.',
+        ],
+        // Medical case validations
+        'title' => [
+            'required' => 'The title field is required.',
+        ],
+        'case_date' => [
+            'required' => 'The case date is required.',
+        ],
+        'diagnosis_name' => [
+            'required' => 'The diagnosis name is required.',
+        ],
+        'diagnosis_date' => [
+            'required' => 'The diagnosis date is required.',
+        ],
+        'note_date' => [
+            'required' => 'The note date is required.',
+        ],
+        'plan_name' => [
+            'required' => 'The plan name is required.',
+        ],
+        'recorded_at' => [
+            'required' => 'The recording time is required.',
+        ],
     ],
 
     /*
@@ -145,7 +276,101 @@ return [
     | of "email". This simply helps us make our message more expressive.
     |
     */
+    // Custom attribute names
+    'attributes' => [
+        // Patient information
+        'surname' => 'Surname',
+        'othername' => 'Other Name',
+        'gender' => 'Gender',
+        'dob' => 'Date of Birth',
+        'phone_no' => 'Phone Number',
+        'alternative_no' => 'Alternative Phone',
+        'address' => 'Address',
+        'nin' => 'National ID',
+        'profession' => 'Profession',
+        'next_of_kin' => 'Next of Kin',
+        'next_of_kin_no' => 'Next of Kin Phone',
+        'next_of_kin_address' => 'Next of Kin Address',
+        'has_insurance' => 'Has Insurance',
+        'insurance_company_id' => 'Insurance Company',
 
-    'attributes' => [],
+        // User information
+        'username' => 'Username',
+        'password' => 'Password',
+        'email' => 'Email Address',
+        'role_id' => 'Role',
+        'branch_id' => 'Branch',
+
+        // Employee contracts
+        'employee' => 'Employee',
+        'contract_type' => 'Contract Type',
+        'start_date' => 'Start Date',
+        'end_date' => 'End Date',
+        'contract_length' => 'Contract Length',
+        'contract_period' => 'Contract Period',
+        'payroll_type' => 'Payroll Type',
+        'gross_salary' => 'Gross Salary',
+        'commission_percentage' => 'Commission Percentage',
+
+        // Expense related
+        'name' => 'Name',
+        'expense_account' => 'Expense Account',
+        'expense_category_id' => 'Expense Category',
+        'item' => 'Item',
+        'qty' => 'Quantity',
+        'price' => 'Price',
+        'amount' => 'Amount',
+        'description' => 'Description',
+
+        // Payment related
+        'payment_date' => 'Payment Date',
+        'payment_method' => 'Payment Method',
+        'payment_account' => 'Payment Account',
+
+        // Purchase related
+        'purchase_date' => 'Purchase Date',
+        'supplier_name' => 'Supplier Name',
+
+        // Holiday related
+        'holiday_name' => 'Holiday Name',
+        'holiday_date' => 'Holiday Date',
+        'repeat_date' => 'Repeat Date',
+        'leave_type' => 'Leave Type',
+        'duration' => 'Duration',
+        'max_days' => 'Maximum Days',
+
+        // Insurance related
+        'insurance_company_name' => 'Insurance Company Name',
+
+        // Invoice related
+        'invoice_id' => 'Invoice',
+        'invoice_no' => 'Invoice Number',
+
+        // Appointment related
+        'appointment_date' => 'Appointment Date',
+        'appointment_time' => 'Appointment Time',
+        'patient_id' => 'Patient',
+        'doctor_id' => 'Doctor',
+
+        // Medical related
+        'disease' => 'Disease',
+        'surgery' => 'Surgery',
+        'surgery_date' => 'Surgery Date',
+        'treatment' => 'Treatment',
+        'clinical_notes' => 'Clinical Notes',
+        'body_reaction' => 'Body Reaction',
+
+        // Accounting related
+        'accounting_equation_id' => 'Accounting Equation',
+        'sort_by' => 'Sort Order',
+
+        // Salary related
+        'deduction' => 'Deduction',
+        'allowance' => 'Allowance',
+
+        // Other
+        'status' => 'Status',
+        'message' => 'Message',
+    ],
 
 ];

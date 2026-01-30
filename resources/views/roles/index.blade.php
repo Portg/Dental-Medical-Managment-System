@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> User mgt/ Roles</span>
+                    <span class="caption-subject">{{ __('menu.user_management') }} / {{ __('roles.list') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                         class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,11 +32,11 @@
                        id="sample_1">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Name</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('common.date') }}</th>
+                        <th>{{ __('roles.name') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -48,7 +48,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('roles.create')
 @endsection
@@ -57,10 +57,14 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
         $(function () {
+            LanguageManager.loadAllFromPHP({
+                'roles': @json(__('roles'))
+            });
 
             var table = $('#sample_1').DataTable({
                 destroy: true,
                 processing: true,
+                language: LanguageManager.getDataTableLang(),
                 // serverSide: true,
                 ajax: {
                     url: "{{ url('/roles/') }}",
@@ -93,7 +97,7 @@
             $("#roles-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('save record');
+            $('#btn-save').text('{{ __("common.save_record") }}');
             $('#roles-modal').modal('show');
         }
 
@@ -110,7 +114,7 @@
         function save_new_record() {
            $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#roles-form').serialize(),
@@ -127,7 +131,7 @@
                 error: function (request, status, error) {
                    $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('save record');
+                    $('#btn-save').text('{{ __("common.save_record") }}');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
                         $('.alert-danger').show();
@@ -150,7 +154,7 @@
                     $('#id').val(id);
                     $('[name="name"]').val(data.name);
                    $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#roles-modal').modal('show');
 
                 },
@@ -164,7 +168,7 @@
            $.LoadingOverlay("show");
 
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#roles-form').serialize(),
@@ -181,7 +185,7 @@
                 error: function (request, status, error) {
                    $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Update record');
+                    $('#btn-save').text('{{ __("common.update_record") }}');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
                         $('.alert-danger').show();
@@ -193,12 +197,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Role!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('roles.delete_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -231,7 +235,7 @@
 
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
 
             setTimeout(function () {
                 location.reload();

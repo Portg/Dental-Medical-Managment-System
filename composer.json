@@ -25,7 +25,8 @@
         "owen-it/laravel-auditing": "^10.0",
         "spatie/laravel-backup": "^6.11",
         "thomasjohnkane/snooze": "^1.0",
-        "yajra/laravel-datatables-oracle": "^9.7"
+        "yajra/laravel-datatables-oracle": "^9.7",
+        "ext-json": "*"
     },
     "require-dev": {
         "facade/ignition": "^1.4",
@@ -37,7 +38,14 @@
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "kylekatarnls/update-helper": true,
+            "php-http/discovery": true,
+            "pestphp/pest-plugin": true,
+            "composer/installers": true
+        },
+        "platform-check": false
     },
     "extra": {
         "laravel": {

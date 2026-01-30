@@ -49,7 +49,10 @@ class ShareEmailInvoice implements ShouldQueue
 
         $email_to = $this->email;
         if ($this->message == null) {
-            $this->message = 'Thank for letting us serve you at '.env('CompanyName',null).', Please find the attached copy of the Invoice;';
+            $this->message =  __('emails.thank_you_message', [
+                'company_name' => env('CompanyName', null),
+                'document_type' => __('emails.invoice_attached')
+            ]);
         }
 
         $other_data['user_info'] = array(
@@ -63,7 +66,7 @@ class ShareEmailInvoice implements ShouldQueue
         Mail::send('emails.invoice', $other_data, function ($message) use ($pdf, $email_to) {
             $message->from(env('CompanyNoReplyEmail',null));
             $message->to($email_to);
-            $message->subject(env('CompanyName',null).' Invoice');
+            $message->subject(env('CompanyName',null). ' - ' . __('emails.invoice_subject'));
             $message->attachData($pdf->output(), date("Y-m-d H:i:s") . 'invoice.pdf');
         });
 

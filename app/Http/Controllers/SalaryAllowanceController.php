@@ -41,12 +41,12 @@ class SalaryAllowanceController extends Controller
                     return number_format($row->allowance_amount);
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editAllowanceRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editAllowanceRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deleteAllowanceRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteAllowanceRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['total_amount', 'editBtn', 'deleteBtn'])
@@ -76,6 +76,9 @@ class SalaryAllowanceController extends Controller
         Validator::make($request->all(), [
             'allowance' => 'required',
             'amount' => 'required'
+        ], [
+            'allowance.required' => __('validation.custom.allowance.required'),
+            'amount.required' => __('validation.custom.amount.required')
         ])->validate();
         $success = SalaryAllowance::create([
             'allowance' => $request->allowance,
@@ -83,7 +86,7 @@ class SalaryAllowanceController extends Controller
             'pay_slip_id' => $request->pay_slip_id,
             '_who_added' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("Employee allowance has been added successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.salary_allowance_added_successfully'), $success);
     }
 
     /**
@@ -121,6 +124,9 @@ class SalaryAllowanceController extends Controller
         Validator::make($request->all(), [
             'allowance' => 'required',
             'amount' => 'required'
+        ], [
+            'allowance.required' => __('validation.custom.allowance.required'),
+            'amount.required' => __('validation.custom.amount.required')
         ])->validate();
 
         $success = SalaryAllowance::where('id', $id)->update([
@@ -128,7 +134,7 @@ class SalaryAllowanceController extends Controller
             'allowance_amount' => $request->amount,
             '_who_added' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("Employee allowance has been updated successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.salary_allowance_updated_successfully'), $success);
 
     }
 
@@ -141,7 +147,7 @@ class SalaryAllowanceController extends Controller
     public function destroy($id)
     {
         $success = SalaryAllowance::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse("Employee Allowance has been deleted successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.salary_allowance_deleted_successfully'), $success);
 
     }
 }

@@ -13,6 +13,49 @@ use PDF;
 class PrescriptionController extends Controller
 {
     /**
+     * Display all prescriptions listing.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function listAll(Request $request)
+    {
+        if ($request->ajax()) {
+            $data = DB::table('prescriptions')
+                ->leftJoin('appointments', 'appointments.id', 'prescriptions.appointment_id')
+                ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
+                ->leftJoin('users', 'users.id', 'prescriptions._who_added')
+                ->whereNull('prescriptions.deleted_at')
+                ->whereNull('patients.deleted_at')
+                ->orderBy('prescriptions.created_at', 'desc')
+                ->select(
+                    'prescriptions.*',
+                    'patients.patient_no',
+                    DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by"),
+                    'appointments.id as appointment_id'
+                )
+                ->get();
+
+            return Datatables::of($data)
+                ->addIndexColumn()
+                ->addColumn('viewBtn', function ($row) {
+                    return '<a href="' . url('medical-treatment/' . $row->appointment_id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+                })
+                ->addColumn('editBtn', function ($row) {
+                    return '<a href="#" onclick="editPrescription(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+                })
+                ->addColumn('deleteBtn', function ($row) {
+                    return '<a href="#" onclick="deletePrescription(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+                })
+                ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn'])
+                ->make(true);
+        }
+
+        return view('prescriptions.index');
+    }
+
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
@@ -27,12 +70,12 @@ class PrescriptionController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editPrescription(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editPrescription(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deletePrescription(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deletePrescription(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
@@ -79,7 +122,7 @@ class PrescriptionController extends Controller
                 '_who_added' => Auth::User()->id,
             ]);
         }
-        return response()->json(['message' => 'Prescription has been added successfully', 'status' => true]);
+        return response()->json(['message' => __('messages.prescription_created_successfully'), 'status' => true]);
     }
 
     /**
@@ -93,7 +136,7 @@ class PrescriptionController extends Controller
         //
     }
 
-    public function PrintPrescription($appointment_id)
+    public function printPrescription($appointment_id)
     {
         $data['patient'] = DB::table('appointments')
             ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
@@ -140,9 +183,9 @@ class PrescriptionController extends Controller
             '_who_added' => Auth::User()->id,
         ]);
         if ($status) {
-            return response()->json(['message' => 'prescription has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.prescription_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
     /**
@@ -155,9 +198,9 @@ class PrescriptionController extends Controller
     {
         $status = Prescription::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'prescription has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('messages.prescription_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 }

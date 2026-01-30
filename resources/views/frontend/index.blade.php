@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <meta http-equiv="content-type" content="text/html;charset=UTF-8"/>
 <head>
     <meta charset="utf-8"/>
@@ -26,7 +26,7 @@
     <link href="{{ asset('backend/assets/global/plugins/bootstrap-timepicker/css/bootstrap-timepicker.min.css')}}"
           rel="stylesheet" type="text/css"/>
     <link rel="stylesheet" href="{{ asset('backend/assets/global/css/intlTelInput.css') }}" media="screen">
-    <link rel="shortcut icon" href="favicon.ico"/>
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
     <style>
         .login .content .form-title {
             color: #fff !important;
@@ -96,7 +96,7 @@
 
     <form class="appointment-form" action="#">
         @csrf
-        <h3 class="form-title font-green">APPOINTMENT BOOKING FORM</h3>
+        <h3 class="form-title font-green">{{ __('frontend.appointment_booking_form') }}</h3>
         <div class="alert alert-danger" style="display: none;">
             <ul>
                 @foreach ($errors->all() as $error)
@@ -105,7 +105,7 @@
             </ul>
         </div>
         <div class="form-group" style="display: none;">
-            <label for="faxonly">Fax Only
+            <label for="faxonly">{{ __('frontend.fax_only') }}
                 <input type="checkbox" name="contact_me_by_fax_only" value="1" style="display:none !important"
                        tabindex="-1" autocomplete="off">
             </label>
@@ -113,51 +113,51 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label>Name <span>*</span></label>
-                    <input type="text" class="form-control" name="full_name" placeholder="Full Name">
+                    <label>{{ __('frontend.full_name') }} <span>*</span></label>
+                    <input type="text" class="form-control" name="full_name" placeholder="{{ __('frontend.enter_full_name') }}">
                 </div>
                 <div class="form-group">
-                    <label>Phone Number <span>*</span></label><br>
+                    <label>{{ __('frontend.phone_number') }} <span>*</span></label><br>
                     <input type="text" id="telephone" name="telephone" class="form-control" style="width: 370px">
                     <input type="hidden" id="phone_number" name="phone_number" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label>Preferred appointment Date <span>*</span></label>
+                    <label>{{ __('frontend.preferred_appointment_date') }} <span>*</span></label>
                     <input type="text" class="form-control" readonly id="datepicker" name="appointment_date"
-                           placeholder="yyyy-mm-dd">
+                           placeholder="{{ __('datetime.format_date') }}">
                 </div>
                 <div class="form-group">
-                    <label>Preferred appointment Time <span>*</span></label>
+                    <label>{{ __('frontend.preferred_appointment_time') }} <span>*</span></label>
                     <input type="text" class="form-control" id="appointment_time" name="appointment_time"
-                           placeholder="Visit time">
+                           placeholder="{{ __('frontend.visit_time') }}">
                 </div>
 
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label>Email <span>*</span></label>
+                    <label>{{ __('frontend.email') }} <span>*</span></label>
                     <input type="text" class="form-control" name="email"
-                           placeholder="Email Address">
+                           placeholder="{{ __('frontend.email_address') }}">
                 </div>
                 <div class="form-group">
-                    <label>Have you ever visited {{ env('CompanyName',null)}} <span>*</span></label><br>
-                    <input type="radio" name="visit_history" value="Yes"> <span class="radio_">Yes</span><br>
-                    <input type="radio" name="visit_history" value="No"> <span class="radio_">No</span><br>
+                    <label>{{ __('frontend.have_you_ever_visited') }} {{ env('CompanyName',null)}} <span>*</span></label><br>
+                    <input type="radio" name="visit_history" value="Yes"> <span class="radio_">{{ __('frontend.yes') }}</span><br>
+                    <input type="radio" name="visit_history" value="No"> <span class="radio_">{{ __('frontend.no') }}</span><br>
                 </div>
                 <div class="form-group">
-                    <label>Do you have Medical Insurance <span class="text-danger">(Optional field)</span></label>
+                    <label>{{ __('frontend.do_you_have_medical_insurance') }} <span class="text-danger">({{ __('frontend.optional_field') }})</span></label>
                     <select class="form-control" name="insurance_provider">
-                        <option value="">select your insurance provider</option>
+                        <option value="">{{ __('frontend.select_your_insurance_provider') }}</option>
                         @foreach($insurance_providers as $provider)
                             <option value="{{ $provider->id }}">{{$provider->name}}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Reason for visit <span>*</span></label>
+                    <label>{{ __('frontend.reason_for_visit') }} <span>*</span></label>
                     <textarea class="form-control" name="visit_reason" rows="14"></textarea>
                 </div>
-                <button type="button" class="btn btn-primary" id="BookBtn" onclick="sendBooking()">Book Appointment
+                <button type="button" class="btn btn-primary" id="BookBtn" onclick="sendBooking()">{{ __('frontend.book_appointment') }}
                 </button>
             </div>
             <br>
@@ -187,7 +187,7 @@
     function sendBooking() {
         $.LoadingOverlay("show");
         $('#BookBtn').attr('disabled', true);
-        $('#BookBtn').text('processing...');
+        $('#BookBtn').text('{{ __("common.processing") }}');
         //update the country code phone number
         let number = iti.getNumber();
         $('#phone_number').val(number);
@@ -196,18 +196,17 @@
             data: $('.appointment-form').serialize(),
             url: "/request-appointment",
             success: function (data) {
-                console.log(data)
                 $.LoadingOverlay("hide");
                 $(".appointment-form")[0].reset();
                 $('#BookBtn').attr('disabled', false);
-                $('#BookBtn').text('Book Appointment');
+                $('#BookBtn').text('{{ __("frontend.book_appointment") }}');
 
-                swal("Alert!", data.message, "success");
+                swal("{{ __('common.alert') }}", data.message, "success");
             },
             error: function (request, status, error) {
                 $.LoadingOverlay("hide");
                 $('#BookBtn').attr('disabled', false);
-                $('#BookBtn').text('Book Appointment');
+                $('#BookBtn').text('{{ __("frontend.book_appointment") }}');
                 json = $.parseJSON(request.responseText);
                 $.each(json.errors, function (key, value) {
                     $('.alert-danger').show();
@@ -231,8 +230,9 @@
 
     });
     $('#datepicker').datepicker({
+        language: '{{ app()->getLocale() }}',
         autoclose: true,
-        todayHighlight: true,
+        todayHighlight: true
     });
     $('#appointment_time').timepicker();
 </script>

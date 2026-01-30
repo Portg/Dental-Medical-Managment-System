@@ -10,7 +10,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Billing /  Quotations</span>
+                    <span class="caption-subject"> {{ __('quotations.billing_quotations') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -19,7 +19,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('quotations.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -40,25 +40,25 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Quotation No</label>
+                                        <label class="control-label col-md-3">{{ __('quotations.quotation_no') }}</label>
                                         <div class="col-md-9">
-                                            <input type="text" class="form-control" placeholder="Enter Quotation No"
+                                            <input type="text" class="form-control" placeholder="{{ __('quotations.enter_quotation_no') }}"
                                                    name="quotation_no" id="quotation_no">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Period</label>
+                                        <label class="control-label col-md-3">{{ __('quotations.period') }}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option>All</option>
-                                                <option value="Today">Today</option>
-                                                <option value="Yesterday">Yesterday</option>
-                                                <option value="This week">This week</option>
-                                                <option value="Last week">Last week</option>
-                                                <option value="This Month">This Month</option>
-                                                <option value="Last Month">Last Month</option>
+                                                <option>{{ __('quotations.all') }}</option>
+                                                <option value="Today">{{ __('quotations.today') }}</option>
+                                                <option value="Yesterday">{{ __('quotations.yesterday') }}</option>
+                                                <option value="This week">{{ __('quotations.this_week') }}</option>
+                                                <option value="Last week">{{ __('quotations.last_week') }}</option>
+                                                <option value="This Month">{{ __('quotations.this_month') }}</option>
+                                                <option value="Last Month">{{ __('quotations.last_month') }}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -67,14 +67,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{ __('quotations.start_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{ __('quotations.end_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -87,10 +87,9 @@
                                 <div class="col-md-6">
                                     <div class="row">
                                         <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
-                                                Quotations
+                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('quotations.filter_quotations') }}
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{ __('quotations.clear') }}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -104,13 +103,13 @@
                        id="quotations-table">
                     <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Quotation No</th>
-                        <th>Date</th>
-                        <th>Customer</th>
-                        <th>Total Amount</th>
-                        <th>Added By</th>
-                        <th>Actions</th>
+                        <th>{{ __('quotations.hash') }}</th>
+                        <th>{{ __('quotations.quotation_no') }}</th>
+                        <th>{{ __('quotations.date') }}</th>
+                        <th>{{ __('quotations.customer') }}</th>
+                        <th>{{ __('quotations.total_amount') }}</th>
+                        <th>{{ __('quotations.added_by') }}</th>
+                        <th>{{ __('quotations.actions') }}</th>
                     </thead>
                     <tbody>
 
@@ -123,7 +122,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('quotations.loading') }}</span>
 </div>
 @include('quotations.create')
 @include('quotations.share_quotation')
@@ -168,11 +167,17 @@
         });
 
         $(function () {
+            // Load page-specific translations
+            LanguageManager.loadAllFromPHP({
+                'quotations': @json(__('quotations'))
+            });
+
             default_todays_data();  //filter  date
             var table = $('#quotations-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/quotations/') }}",
                     data: function (d) {
@@ -211,13 +216,14 @@
             $("#quotation-form")[0].reset();
             $('#quotation-modal').modal('show');
             $('#btnSave').attr('disabled', false);
-            $('#btnSave').text('Save changes');
+            $('#btnSave').text('{{ __("common.save_changes") }}');
         }
 
 
         //filter patients
         $('#patient').select2({
-            placeholder: "Choose patient",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('common.choose_patient') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-patient',
@@ -242,31 +248,48 @@
         $("#addQuotationItem").click(function () {
             ++i;
 
-            $("#QuotationItemsTable").append('<tr>' +
-                '<td><select id="service_append' + i + '" name="addmore[' + i + '][medical_service_id]" class="form-control"\n' +
-                '                                        style="width: 100%;border: 1px solid #a29e9e;"></select></td>' +
-                '<td> <input type="text" name="addmore[' + i + '][tooth_no]" placeholder="Enter tooth no"\n' +
-                '                                       class="form-control"/></td>' +
-                '<td> <input type="number" onkeyup="QTYKeyChange(' + i + ')" id="procedure_qty' + i + '" name="addmore[' + i + '][qty]" placeholder="Enter qty"\n' +
-                '                                       class="form-control"/></td>' +
-                '<td> <input type="number"  onkeyup="PriceKeyChange(' + i + ')"  id="procedure_price' + i + '" name="addmore[' + i + '][price]" placeholder="Enter price"\n' +
-                '                                       class="form-control"/></td>' +
-                '<td> <input type="text" readonly id="total_amount' + i + '"  class="form-control"/></td>' +
-                '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td></tr>');
+            // 关键：用 let 保存当前索引，避免闭包问题
+            let currentIndex = i;
 
-            $('#service_append' + i).select2({
-                placeholder: "select procedure",
+            $("#QuotationItemsTable").append(
+                '<tr>' +
+                '<td>' +
+                '<select id="service_append' + currentIndex + '" name="addmore[' + currentIndex + '][medical_service_id]" class="form-control" style="width: 100%;"></select>' +
+                '</td>' +
+                '<td>' +
+                '<input type="text" name="addmore[' + currentIndex + '][tooth_no]" placeholder="{{ __("common.enter_tooth_no") }}" class="form-control"/>' +
+                '</td>' +
+                '<td>' +
+                '<input type="number" onkeyup="QTYKeyChange(' + currentIndex + ')" id="procedure_qty' + currentIndex + '" name="addmore[' + currentIndex + '][qty]" placeholder="{{ __("common.enter_qty") }}" class="form-control"/>' +
+                '</td>' +
+                '<td>' +
+                '<input type="number" onkeyup="PriceKeyChange(' + currentIndex + ')" id="procedure_price' + currentIndex + '" name="addmore[' + currentIndex + '][price]" placeholder="{{ __("common.enter_price") }}" class="form-control"/>' +
+                '</td>' +
+                '<td>' +
+                '<input type="text" readonly id="total_amount' + currentIndex + '" class="form-control"/>' +
+                '</td>' +
+                '<td>' +
+                '<button type="button" class="btn btn-danger remove-tr">{{ __("common.remove") }}</button>' +
+                '</td>' +
+                '</tr>'
+            );
+
+            // 初始化 select2
+            $('#service_append' + currentIndex).select2({
+                language: '{{ app()->getLocale() }}',
+                placeholder: "{{ __('common.select_procedure') }}",
+                allowClear: true,
                 minimumInputLength: 2,
                 ajax: {
                     url: '/search-medical-service',
                     dataType: 'json',
+                    delay: 250,
                     data: function (params) {
                         return {
                             q: $.trim(params.term)
                         };
                     },
                     processResults: function (data) {
-                        // console.log(data);
                         return {
                             results: data
                         };
@@ -274,20 +297,33 @@
                     cache: true
                 }
             }).on("select2:select", function (e) {
+                // 使用 currentIndex 而不是 i
                 let price = e.params.data.price;
-                if (price != "" || price != 0) {
-                    $('#procedure_price' + i).val(price);
-                    $('#procedure_qty' + i).val(1);
-                    let amount = ($('#procedure_price' + i).val().replace(/,/g, "")) * $('#procedure_qty' + i).val();
-                    $('#total_amount' + i).val(structureMoney("" + amount));
+
+                if (price && price !== "" && price !== 0) {
+                    $('#procedure_price' + currentIndex).val(price);
+                    $('#procedure_qty' + currentIndex).val(1);
+                    calculateRowTotal(currentIndex);
                 } else {
-                    $('#procedure_price' + i).val('');
-                    $('#procedure_qty' + i).val('');
+                    $('#procedure_price' + currentIndex).val('');
+                    $('#procedure_qty' + currentIndex).val('');
+                    $('#total_amount' + currentIndex).val('');
                 }
-
             });
-
         });
+
+        // 计算单行总额
+        function calculateRowTotal(index) {
+            let qty = parseFloat($('#procedure_qty' + index).val()) || 0;
+            let price = parseFloat($('#procedure_price' + index).val().toString().replace(/,/g, "")) || 0;
+            let amount = qty * price;
+
+            if (amount > 0) {
+                $('#total_amount' + index).val(structureMoney(amount.toString()));
+            } else {
+                $('#total_amount' + index).val('');
+            }
+        }
         $(document).on('click', '.remove-tr', function () {
 
             $(this).parents('tr').remove();
@@ -296,7 +332,8 @@
 
         //filter Procedures
         $('#service').select2({
-            placeholder: "Select Procedure",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('common.select_procedure') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-medical-service',
@@ -370,7 +407,7 @@
         function save_quotation() {
             $.LoadingOverlay("show");
             $('#btnSave').attr('disabled', true);
-            $('#btnSave').text('processing...');
+            $('#btnSave').text('{{ __('messages.processing') }}');
             $.ajax({
                 type: 'POST',
                 data: $('#quotation-form').serialize(),
@@ -388,7 +425,7 @@
                     $.LoadingOverlay("hide");
                     $('#quotation-modal').modal('show');
                     $('#btnSave').attr('disabled', false);
-                    $('#btnSave').text('Generate quotation');
+                    $('#btnSave').text('{{ __('quotations.generate_quotation') }}');
 
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -404,7 +441,7 @@
             $.LoadingOverlay("show");
             $("#share-quotation-form")[0].reset();
             $('#btn-share').attr('disabled', false);
-            $('#btn-share').text('Share quotation');
+            $('#btn-share').text('{{ __('quotations.share_quotation') }}');
             $.ajax({
                 type: 'GET',
                 url: "/share-quotation-details/" + quotation_id,
@@ -430,7 +467,7 @@
         function sendQuotation() {
             $.LoadingOverlay("show");
             $('#btn-share').attr('disabled', true);
-            $('#btn-share').text('Processing....');
+            $('#btn-share').text('{{ __('messages.processing') }}');
             $.ajax({
                 type: 'POST',
                 data: $('#share-quotation-form').serialize(),
@@ -442,7 +479,7 @@
                 },
                 error: function (xhr, status, error) {
                     $('#btn-share').attr('disabled', false);
-                    $('#btn-share').text('Share quotation');
+                    $('#btn-share').text('{{ __('quotations.share_quotation') }}');
                     $('#share-quotation-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -460,7 +497,7 @@
         }
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('messages.info') }}", message, status);
             if (status) {
                 let oTable = $('#quotations-table').dataTable();
                 oTable.fnDraw(false);

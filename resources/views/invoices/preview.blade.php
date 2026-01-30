@@ -22,16 +22,16 @@
                                     <div class="col-md-4">
                                         <table>
                                             <tr>
-                                                <td><span style="font-size: 18px;">Invoice No:24434344</span></td>
+                                                <td><span style="font-size: 18px;">{{ __('invoices.invoice_no') }}:24434344</span></td>
                                             </tr>
                                             <tr>
-                                                <td><span style="font-size: 16px;">Customer: Namanya abert</span></td>
+                                                <td><span style="font-size: 16px;">{{ __('invoices.patient_name') }}: Namanya abert</span></td>
                                             </tr>
                                             <tr>
-                                                <td>Phone No:</td>
+                                                <td>{{ __('invoices.phone_no') }}:</td>
                                             </tr>
                                             <tr>
-                                                <td>Email</td>
+                                                <td>{{ __('invoices.email_address') }}</td>
                                             </tr>
                                         </table>
 
@@ -50,10 +50,10 @@
                                                 <td>{{env("CompanyAddress",null)}}</td>
                                             </tr>
                                             <tr>
-                                                <td>Phone No: {{env("companyMobile",null)}} / {{env("companyMobileOther",null)}}</td>
+                                                <td>{{ __('company.phone_no') }}: {{env("companyMobile",null)}} / {{env("companyMobileOther",null)}}</td>
                                             </tr>
                                             <tr>
-                                                <td>Email: {{ env("companyOfficalEmail",null)}}</td>
+                                                <td>{{ __('company.email_address') }}: {{ env("companyOfficalEmail",null)}}</td>
                                             </tr>
                                         </table>
                                     </div>
@@ -65,9 +65,9 @@
                                         <table class="table table-hover table-bordered">
                                             <thead>
                                             <tr>
-                                                <td>#</td>
-                                                <td>Procedure</td>
-                                                <td>Price</td>
+                                                <td>{{ __('invoices.hash') }}</td>
+                                                <td>{{ __('invoices.procedure') }}</td>
+                                                <td>{{ __('invoices.unit_price') }}</td>
                                             </tr>
                                             </thead>
 
@@ -93,12 +93,12 @@
                                         <div class="col-md-4">
                                             <table class="table table-hover table-bordered">
                                                 <tr>
-                                                    <td>Sub Total</td>
+                                                    <td>{{ __('invoices.sub_total') }}</td>
                                                     <td>:</td>
                                                     <td>{{ $total_amount}}</td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Total</td>
+                                                    <td>{{ __('invoices.total_price') }}</td>
                                                     <td>:</td>
                                                     <td>{{ $total_amount  }}</td>
                                                 </tr>

@@ -48,4 +48,20 @@ class User extends Authenticatable
     {
         return $this->belongsTo('App\Branch', 'branch_id');
     }
+
+    public function hasPermission($permissionSlug)
+    {
+        if (!$this->UserRole) {
+            return false;
+        }
+        return $this->UserRole->hasPermission($permissionSlug);
+    }
+
+    public function permissions()
+    {
+        if (!$this->UserRole) {
+            return collect([]);
+        }
+        return $this->UserRole->permissions;
+    }
 }

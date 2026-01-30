@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Expenses Mgt / Expenses</span>
+                    <span class="caption-subject">{{ __('expenses.title') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,14 +17,14 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="btn-group pull-right">
                                 <a href="{{ url('export-expenses') }}" class="text-danger">
-                                    <i class="icon-cloud-download"></i> Download Excel Report
+                                    <i class="icon-cloud-download"></i> {{ __('common.download_excel_report') }}
                                 </a>
                             </div>
                         </div>
@@ -42,16 +42,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Period</label>
+                                        <label class="control-label col-md-3">{{__('datetime.period')}}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option>All</option>
-                                                <option value="Today">Today</option>
-                                                <option value="Yesterday">Yesterday</option>
-                                                <option value="This week">This week</option>
-                                                <option value="Last week">Last week</option>
-                                                <option value="This Month">This Month</option>
-                                                <option value="Last Month">Last Month</option>
+                                                <option>{{__('datetime.time_periods.all')}}</option>
+                                                <option value="Today">{{__('datetime.time_periods.today')}}</option>
+                                                <option value="Yesterday">{{__('datetime.time_periods.yesterday')}}</option>
+                                                <option value="This week">{{__('datetime.time_periods.this_week')}}</option>
+                                                <option value="Last week">{{__('datetime.time_periods.last_week')}}</option>
+                                                <option value="This Month">{{__('datetime.time_periods.this_month')}}</option>
+                                                <option value="Last Month">{{__('datetime.time_periods.last_month')}}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -60,14 +60,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{__('datetime.date_range.start_date')}}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{__('datetime.date_range.end_date')}}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -80,10 +80,9 @@
                                 <div class="col-md-6">
                                     <div class="row">
                                         <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
-                                                Expenses
+                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{__('expenses.filter_expenses')}}
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{__('common.clear')}}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -97,15 +96,15 @@
                        id="expenses-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         {{--                        <th>Purchase No</th>--}}
-                        <th>Purchase Date</th>
-                        <th>Supplier</th>
-                        <th>Total Amount</th>
-                        <th>Paid Amount</th>
-                        <th>Outstanding</th>
-                        <th>Added By</th>
-                        <th>Action</th>
+                        <th>{{__('expenses.purchase_date')}}</th>
+                        <th>{{__('expenses.supplier_name')}}</th>
+                        <th>{{__('expenses.total_amount')}}</th>
+                        <th>{{__('expenses.paid_amount')}}</th>
+                        <th>{{__('expenses.outstanding')}}</th>
+                        <th>{{__('expenses.added_by')}}</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -117,7 +116,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{__('common.loading')}}</span>
 </div>
 @include('expenses.create')
 @include('expenses.payment.create')
@@ -127,6 +126,30 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
+        // Load page-specific translations
+        LanguageManager.loadAllFromPHP({
+            'expenses': @json(__('expenses'))
+        });
+
+        // Translation variables for JavaScript
+        const translations = {
+            itemPlaceHolder: "{{ __('expenses.enter_item') }}",
+            descriptionPlaceHolder: "{{ __('expenses.enter_description') }}",
+            qtyPlaceHolder: "{{ __('expenses.enter_quantity') }}",
+            unitPricePlaceHolder: "{{ __('expenses.enter_unit_price') }}",
+            totalAmountPlaceHolder: "{{ __('expenses.enter_total_amount') }}",
+            removeBtn: "{{ __('common.remove') }}",
+            // 新增缺失的翻译
+            chooseExpenseCategory: "{{ __('expenses.choose_expense_category') }}",
+            processing: "{{ __('common.processing') }}",
+            saveRecord: "{{ __('common.save_record') }}",
+            savePurchase: "{{ __('expenses.save_purchase') }}",
+            // swal对话框
+            confirmDelete: "{{ __('common.confirm_delete') }}",
+            deleteWarning: "{{ __('expenses.delete_warning') }}",
+            yesDelete: "{{ __('common.yes_delete') }}"
+        };
+
         function default_todays_data() {
             // initially load today's date filtered data
             $('.start_date').val(todaysDate());
@@ -170,6 +193,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/expenses/') }}",
                     data: function (d) {
@@ -236,19 +260,16 @@
                 });
             });
 
-
         });
-
 
         function createRecord() {
             $("#purchase-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('[name="purchase_date"]').val(todaysDate());
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save Purchase');
+            $('#btn-save').text('{{ __("common.save_record") }}');
             $('#purchase-modal').modal('show');
         }
-
 
         $(document).on('click', '.remove-tr', function () {
 
@@ -256,29 +277,32 @@
 
         });
 
+        const expenseOptions = `
+            <option value="">{{ __("expenses.choose_expense_category") }}</option>
+            @foreach ($chart_of_accts as $item_cat)
+            <option value="{{ $item_cat->id }}">{{ $item_cat->name }}</option>
+            @endforeach
+        `;
 
         let i = 0;
         $("#add").click(function () {
             ++i;
 
-            let value = '<select id="select2-single-input-group-sm" class="form-control select2" name="addmore[' + i + '][expense_category]"><?php
-                /** @var TYPE_NAME $chart_of_accts */
-                echo '<option value="">Choose Expense Category</option>';
-                foreach ($chart_of_accts as $item_cat) {
-                    echo '<option value="' . $item_cat->id . '">' . $item_cat->name . '</option>';
-                }
-                ?></select>';
+            let value = '<select id="select2-single-input-group-sm" class="form-control select2" name="addmore[' + i + '][expense_category]">' +
+                expenseOptions +
+                '</select>';
 
             $("#purchasesTable").append(
                 '<tr>' +
-                '<td> <input type="text"  id="item_append' + i + '" name="addmore[' + i + '][item]" placeholder="Enter item"class="form-control"/></td>' +
-                '<td> <input type="text"  id="description' + i + '" name="addmore[' + i + '][description]" placeholder="Enter description (optional)"class="form-control"/></td>' +
+                '<td><input type="text" id="item_append' + i + '" name="addmore[' + i + '][item]" placeholder="' + translations.itemPlaceHolder + '" class="form-control"/></td>' +
+                '<td><input type="text" id="description' + i + '" name="addmore[' + i + '][description]" placeholder="' + translations.descriptionPlaceHolder + '" class="form-control"/></td>' +
                 '<td>' + value + '</td>' +
-                '<td> <input type="number" id="qty' + i + '" name="addmore[' + i + '][qty]" placeholder="Enter Quantity" class="form-control"/></td>' +
-                '<td> <input type="number" id="price-single-unit' + i + '" name="addmore[' + i + '][price]" placeholder="Enter unit price" class="form-control"/></td>' +
-                '<td> <input type="text" id="total_amount' + i + '"  readonly placeholder="Total amount" class="form-control"/></td>' +
-                '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td>' +
-                '</tr>');
+                '<td><input type="number" id="qty' + i + '" name="addmore[' + i + '][qty]" placeholder="' + translations.qtyPlaceHolder + '" class="form-control"/></td>' +
+                '<td><input type="number" id="price-single-unit' + i + '" name="addmore[' + i + '][price]" placeholder="' + translations.unitPricePlaceHolder + '" class="form-control"/></td>' +
+                '<td><input type="text" id="total_amount' + i + '" readonly placeholder="' + translations.totalAmountPlaceHolder + '" class="form-control"/></td>' +
+                '<td><button type="button" class="btn btn-danger remove-tr">' + translations.removeBtn + '</button></td>' +
+                '</tr>'
+            );
 
             //also allow auto complete of the search of the expense items category
             $("#item_append" + i).typeahead({
@@ -295,7 +319,7 @@
             // console.log()
 
             {{--var a = [@foreach($data as $k => $info)--}}
-            {{--    '{{ $info }}',--}}
+            // {{--    '{{ $info }}',--}}
             {{--    @endforeach ]--}}
 
 
@@ -355,7 +379,7 @@
         function save_purchase() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('translations.processing');
             $.ajax({
                 type: 'POST',
                 data: $('#purchase-form').serialize(),
@@ -372,7 +396,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save Purchase');
+                    $('#btn-save').text('{{ __("expenses.save_purchase") }}');
                     $('#purchase-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -385,12 +409,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Expense!",
+                    title: LanguageManager.trans('messages.are_you_sure', "{{ __('messages.are_you_sure') }}"),
+                    text: LanguageManager.trans('messages.cannot_recover_expense', "{{ __('messages.cannot_recover_expense') }}"),
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: LanguageManager.trans('common.yes_delete_it', "{{ __('common.yes_delete_it') }}"),
                     closeOnConfirm: false
                 },
                 function () {
@@ -428,7 +452,7 @@
             $("#payment-form")[0].reset();
             $('#expense_id').val(''); ///always reset hidden form fields
             $('#btnSave').attr('disabled', false);
-            $('#btnSave').text('Save Record');
+            $('#btnSave').text('{{ __("common.save_record") }}');
 
             $.ajax({
                 type: 'get',
@@ -454,7 +478,7 @@
         function save_payment_record() {
             $.LoadingOverlay("show");
             $('#btnSave').attr('disabled', true);
-            $('#btnSave').text('processing...');
+            $('#btnSave').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#payment-form').serialize(),
@@ -471,7 +495,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btnSave').attr('disabled', false);
-                    $('#btnSave').text('Save Record');
+                    $('#btnSave').text('{{ __("common.save_record") }}');
                     $('#payment-modal').modal('show');
 
                     json = $.parseJSON(request.responseText);
@@ -484,7 +508,7 @@
         }
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal(LanguageManager.trans('common.alert', "{{ __('common.alert') }}"), message, status);
             if (status) {
                 let oTable = $('#expenses-table').dataTable();
                 oTable.fnDraw(false);

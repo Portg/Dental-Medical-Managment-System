@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Accounting Manager/ Self Accounts</span>
+                    <span class="caption-subject"> {{ __('self_accounts.accounting_manager_self_accounts') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('common.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,16 +32,16 @@
                        id="self-accounts-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Account No</th>
-                        <th>Account Name</th>
-                        <th>Phone No</th>
-                        <th>Email</th>
-                        <th>Account Balance</th>
-                        <th>added By</th>
-                        <th>status</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('self_accounts.account_no') }}</th>
+                        <th>{{ __('self_accounts.account_name') }}</th>
+                        <th>{{ __('self_accounts.phone_no') }}</th>
+                        <th>{{ __('common.email') }}</th>
+                        <th>{{ __('self_accounts.account_balance') }}</th>
+                        <th>{{ __('self_accounts.added_by') }}</th>
+                        <th>{{ __('common.status') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -53,7 +53,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('self_accounts.create')
 @endsection
@@ -67,6 +67,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/self-accounts/') }}",
                     data: function (d) {
@@ -98,7 +99,7 @@
             $("#company-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save Changes');
+            $('#btn-save').text('{{ __('common.save_changes') }}');
             $('#company-modal').modal('show');
         }
 
@@ -115,7 +116,7 @@
         function save_new_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __('common.processing') }}');
             $.ajax({
                 type: 'POST',
                 data: $('#company-form').serialize(),
@@ -132,7 +133,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save Changes');
+                    $('#btn-save').text('{{ __('common.save_changes') }}');
                     $('#company-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -159,7 +160,7 @@
                     $('[name="phone_no"]').val(data.holder_phone_no);
                     $('[name="address"]').val(data.holder_address);
                     $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __('common.update_record') }}')
                     $('#company-modal').modal('show');
 
                 },
@@ -172,7 +173,7 @@
         function update_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __('common.updating') }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#company-form').serialize(),
@@ -189,7 +190,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save Changes');
+                    $('#btn-save').text('{{ __('common.save_changes') }}');
                     $('#company-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -202,12 +203,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Account!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('self_accounts.confirm_delete_account') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -242,7 +243,7 @@
 
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#self-accounts-table').dataTable();
                 oTable.fnDraw(false);

@@ -16,8 +16,8 @@
         <table width="100%">
             <tr>
                 <td align="left">
-                    <span>Quotation No: {{ $quotation->quotation_no }} <br>
-                        Date: {{ $quotation->created_at }}<br>
+                    <span>{{ __('quotations.quotation_no') }}: {{ $quotation->quotation_no }} <br>
+                        {{ __('quotations.date') }}: {{ $quotation->created_at }}<br>
                     </span>
 
                 </td>
@@ -33,10 +33,10 @@
         <table width="100%">
             <thead>
             <tr>
-                <th style="  text-align: left">Transaction</th>
-                <th class="text-alignment">Qty</th>
-                <th class="text-alignment">Price</th>
-                <th class="text-alignment">Total Amount</th>
+                <th style="  text-align: left">{{ __('quotations.procedure') }}</th>
+                <th class="text-alignment">{{ __('quotations.qty') }}</th>
+                <th class="text-alignment">{{ __('quotations.price') }}</th>
+                <th class="text-alignment">{{ __('quotations.total_amount') }}</th>
             </tr>
             </thead>
             <tbody>
@@ -54,7 +54,7 @@
 
             </tbody>
             <tfoot>
-            <td class="standout">Total Amount</td>
+            <td class="standout">{{ __('quotations.total_amount') }}</td>
             <td></td>
             <td></td>
             <td class="standout text-alignment">{{ number_format($due_amount) }}</td>

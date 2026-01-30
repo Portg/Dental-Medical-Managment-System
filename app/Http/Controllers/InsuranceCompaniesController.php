@@ -40,19 +40,19 @@ class InsuranceCompaniesController extends Controller
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->deleted_at != null) {
-                        return '<span class="text-danger">Inactive</span>';
+                        return '<span class="text-danger">' . __('common.inactive') . '</span>';
                     } else {
-                        return '<span class="text-primary">Active</span>';
+                        return '<span class="text-primary">' . __('common.active') . '</span>';
                     }
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     }
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
 
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
@@ -81,6 +81,8 @@ class InsuranceCompaniesController extends Controller
     {
         Validator::make($request->all(), [
             'name' => 'required'
+        ], [
+            'name.required' => __('validation.attributes.insurance_company_name') . ' ' . __('validation.required'),
         ])->validate();
         $status = InsuranceCompany::create([
             'name' => $request->name,
@@ -89,9 +91,9 @@ class InsuranceCompaniesController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Insurance company has been added successfully', 'status' => true]);
+            return response()->json(['message' => __('insurance_companies.added_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -129,6 +131,8 @@ class InsuranceCompaniesController extends Controller
     {
         Validator::make($request->all(), [
             'name' => 'required'
+        ], [
+            'name.required' => __('validation.attributes.insurance_company_name') . ' ' . __('validation.required'),
         ])->validate();
         $status = InsuranceCompany::where('id', $id)->update([
             'name' => $request->name,
@@ -137,9 +141,9 @@ class InsuranceCompaniesController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Insurance company has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('insurance_companies.updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -171,11 +175,10 @@ class InsuranceCompaniesController extends Controller
     {
         $status = InsuranceCompany::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Insurance company has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('insurance_companies.deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
-
 
 }

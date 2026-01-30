@@ -5,7 +5,7 @@
 @endsection
 <div class="note note-success">
     <p class="text-black-50">
-        <a href="{{ url('invoices')}}" class="text-primary">Go Back to Invoices</a> /
+        <a href="{{ url('invoices')}}" class="text-primary">{{ __('invoices.go_back_to_invoices') }}</a> /
         @if(isset($patient)) {{ $patient->surname." ".$patient->othername  }} @endif
     </p>
 </div>
@@ -15,7 +15,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold uppercase">Invoice</span>
+                    <span class="caption-subject bold uppercase">{{ __('invoices.invoice') }}</span>
                     &nbsp; &nbsp; &nbsp
 
                 </div>
@@ -24,15 +24,14 @@
                 <table class="table table-hover" id="sample_2">
                     <thead>
                     <tr>
-                        <th> #</th>
-                        <th>Procedure</th>
-                        <th>Tooth Numbers</th>
-                        <th>Qty</th>
-                        <th>Unit price</th>
-                        <th>Total Amount</th>
-                        <th>Procedure Doctor</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('invoices.hash') }}</th>
+                        <th>{{ __('invoices.tooth_numbers') }}</th>
+                        <th>{{ __('invoices.quantity') }}</th>
+                        <th>{{ __('invoices.unit_price') }}</th>
+                        <th>{{ __('invoices.total_amount') }}</th>
+                        <th>{{ __('invoices.procedure_doctor') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -47,14 +46,14 @@
         <div class="portlet light portlet-fit bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject font-dark bold uppercase">Receipts</span>
+                    <span class="caption-subject font-dark bold uppercase">{{ __('invoices.receipts') }}</span>
                 </div>
                 <div class="actions">
                     <div class="btn-group btn-group-devided">
 
                         <a href="{{ url('print-receipt/'.$invoice_id) }}" class="btn grey-salsa btn-sm"
                            target="_blank"> <i
-                                    class="fa fa-print"></i>Print Receipt</a>
+                                    class="fa fa-print"></i>{{ __('print.print_receipt') }}</a>
                     </div>
                 </div>
             </div>
@@ -64,13 +63,14 @@
                     <thead>
                     <tr>
 
-                        <th> #</th>
-                        <th>Payment Date</th>
-                        <th>Amount</th>
-                        <th>Payment Method</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('invoices.hash') }}</th>
+                        <th>{{ __('invoices.payment_date') }}</th>
+                        <th>{{ __('invoices.amount') }}</th>
+                        <th>{{ __('invoices.payment_method') }}</th>
+                        <th>{{ __('invoices.added_by') }}</th>
+                        <th>{{ __('common.edit') }}</th>
+                        <th>{{ __('common.delete') }}</th>
+
                     </tr>
                     </thead>
                     <tbody>

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Channels\SmsNotifyChannel;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        // 共享语言数据到所有视图
+        View::share('availableLocales', config('app.available_locales'));
+        // 或者只共享到特定视图
+        View::composer('*', function ($view) {
+            $view->with('availableLocales', config('app.available_locales'));
+        });
     }
 }

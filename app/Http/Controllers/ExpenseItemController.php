@@ -45,12 +45,12 @@ class ExpenseItemController extends Controller
                     return '<span class="bold">' . number_format($row->qty * $row->price) . '</span>';
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editItemRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editItemRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deleteItemRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteItemRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['total_amount', 'editBtn', 'deleteBtn'])
@@ -82,6 +82,10 @@ class ExpenseItemController extends Controller
             'item' => 'required',
             'qty' => 'required',
             'price' => 'required'
+        ], [
+            'item.required' => __('validation.attributes.item') . ' ' . __('validation.required'),
+            'qty.required' => __('validation.attributes.qty') . ' ' . __('validation.required'),
+            'price.required' => __('validation.attributes.price') . ' ' . __('validation.required'),
         ])->validate();
         $item_category = $this->createOrGetExpenseCategory($request->item); // chech if the item category// exits or create new item category
 
@@ -93,9 +97,9 @@ class ExpenseItemController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Expense item has been added successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_items.added_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
 
@@ -152,6 +156,10 @@ class ExpenseItemController extends Controller
             'item' => 'required',
             'qty' => 'required',
             'price' => 'required'
+        ], [
+            'item.required' => __('validation.attributes.item') . ' ' . __('validation.required'),
+            'qty.required' => __('validation.attributes.qty') . ' ' . __('validation.required'),
+            'price.required' => __('validation.attributes.price') . ' ' . __('validation.required'),
         ])->validate();
 
         $item_category = $this->createOrGetExpenseCategory($request->item); // chech if the item category// exits or create new item category
@@ -163,9 +171,9 @@ class ExpenseItemController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Expense item has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_items.updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 
@@ -179,10 +187,8 @@ class ExpenseItemController extends Controller
     {
         $status = ExpenseItem::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Expense item has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('expense_items.deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred please try again later', 'status' => false]);
-
-
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 }

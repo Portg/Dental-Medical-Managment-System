@@ -67,12 +67,12 @@ class UsersController extends Controller
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     }
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
 
                 })
                 ->rawColumns(['is_doctor', 'editBtn', 'deleteBtn'])
@@ -84,23 +84,27 @@ class UsersController extends Controller
 
     public function filterDoctor(Request $request)
     {
-        $data = [];
-        $name = $request->q;
+        $search = $request->q;
 
-        if ($name) {
-            $search = $name;
-            $data = DB::table("users")
-                ->whereNull('users.deleted_at')
-                ->where('users.is_doctor', '=', 'Yes')
-                ->select('users.*')
-                ->get();
+        $query = DB::table("users")
+            ->whereNull('users.deleted_at')
+            ->where('users.is_doctor', '=', 'Yes');
 
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->surname . " " . $tag->othername];
-            }
-            return \Response::json($formatted_tags);
+        // Apply search filter if provided
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('users.surname', 'LIKE', "%{$search}%")
+                  ->orWhere('users.othername', 'LIKE', "%{$search}%");
+            });
         }
+
+        $data = $query->orderBy('surname')->limit(20)->get();
+
+        $formatted = [];
+        foreach ($data as $item) {
+            $formatted[] = ['id' => $item->id, 'text' => $item->surname . " " . $item->othername];
+        }
+        return \Response::json($formatted);
     }
 
     public function filterEmployees(Request $request)
@@ -161,7 +165,7 @@ class UsersController extends Controller
             'is_doctor' => $request->is_doctor,
             'password' => Hash::make($request->password),
         ]);
-        return FunctionsHelper::messageResponse("User has been registered successfully", $status);
+        return FunctionsHelper::messageResponse(__('messages.user_registered_successfully'), $status);
     }
 
     /**
@@ -213,7 +217,7 @@ class UsersController extends Controller
             'branch_id' => $request->branch_id,
             'nin' => $request->nin
         ]);
-        return FunctionsHelper::messageResponse("User has been updated successfully", $status);
+        return FunctionsHelper::messageResponse(__('messages.user_updated_successfully'), $status);
     }
 
     /**
@@ -225,7 +229,7 @@ class UsersController extends Controller
     public function destroy($id)
     {
         $status = User::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse("User has been deleted successfully", $status);
+        return FunctionsHelper::messageResponse(__('messages.user_deleted_successfully'), $status);
 
     }
 

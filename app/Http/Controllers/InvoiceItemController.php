@@ -45,11 +45,11 @@ class InvoiceItemController extends Controller
                     return $row->procedure_doctor->surname;
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editItem(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editItem(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    $btn = '<a href="#" onclick="deleteItem(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteItem(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
@@ -58,7 +58,7 @@ class InvoiceItemController extends Controller
     }
 
     //this applies on the doctor's invoicing dashboard
-    public function AppointmentInvoiceItems(Request $request, $appointment_id)
+    public function appointmentInvoiceItems(Request $request, $appointment_id)
     {
         if ($request->ajax()) {
 
@@ -80,11 +80,11 @@ class InvoiceItemController extends Controller
                     return number_format($row->amount);
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editItem(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editItem(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    $btn = '<a href="#" onclick="deleteItem(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteItem(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
@@ -167,9 +167,9 @@ class InvoiceItemController extends Controller
             ]
         );
         if ($status) {
-            return response()->json(['message' => 'Invoice Item has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('invoices.invoice_item_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
     /**
@@ -182,9 +182,9 @@ class InvoiceItemController extends Controller
     {
         $status = InvoiceItem::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Invoice Item has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('invoices.invoice_item_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
 
     }
 }

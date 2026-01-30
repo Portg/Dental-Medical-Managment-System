@@ -41,12 +41,12 @@ class SalaryDeductionController extends Controller
                     return number_format($row->deduction_amount);
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editDeductionRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                    $btn = '<a href="#" onclick="editDeductionRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deleteDeductionRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteDeductionRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['total_amount', 'editBtn', 'deleteBtn'])
@@ -76,6 +76,9 @@ class SalaryDeductionController extends Controller
         Validator::make($request->all(), [
             'deduction' => 'required',
             'amount' => 'required'
+        ], [
+            'deduction.required' => __('validation.custom.deduction.required'),
+            'amount.required' => __('validation.custom.amount.required')
         ])->validate();
         $success = SalaryDeduction::create([
             'deduction' => $request->deduction,
@@ -83,7 +86,7 @@ class SalaryDeductionController extends Controller
             'pay_slip_id' => $request->pay_slip_id,
             '_who_added' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("Employee salary deduction  has been added successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.salary_deduction_added_successfully'), $success);
 
     }
 
@@ -122,13 +125,16 @@ class SalaryDeductionController extends Controller
         Validator::make($request->all(), [
             'deduction' => 'required',
             'amount' => 'required'
+        ], [
+            'deduction.required' => __('validation.custom.deduction.required'),
+            'amount.required' => __('validation.custom.amount.required')
         ])->validate();
         $success = SalaryDeduction::where('id', $id)->update([
             'deduction' => $request->deduction,
             'deduction_amount' => $request->amount,
             '_who_added' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("Employee salary deduction  has been updated successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.salary_deduction_updated_successfully'), $success);
 
     }
 
@@ -141,6 +147,6 @@ class SalaryDeductionController extends Controller
     public function destroy($id)
     {
         $success = SalaryDeduction::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse("Employee salary deduction has been deleted successfully",$success);
+        return FunctionsHelper::messageResponse(__('messages.salary_deduction_deleted_successfully'), $success);
     }
 }

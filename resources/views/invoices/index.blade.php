@@ -10,7 +10,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Invoicing / Billing</span>
+                    <span class="caption-subject"> {{ __('invoices.title') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -23,7 +23,7 @@
                         <div class="col-md-6">
                             <div class="btn-group pull-right">
                                 <a href="{{ url('export-invoices-report') }}" class="text-danger">
-                                    <i class="icon-cloud-download"></i> Download Excel Report </a>
+                                    <i class="icon-cloud-download"></i> {{ __('common.download_excel_report') }}  </a>
                             </div>
                         </div>
                     </div>
@@ -39,16 +39,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Period</label>
+                                        <label class="control-label col-md-3">{{__('datetime.period')}}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option>All</option>
-                                                <option value="Today">Today</option>
-                                                <option value="Yesterday">Yesterday</option>
-                                                <option value="This week">This week</option>
-                                                <option value="Last week">Last week</option>
-                                                <option value="This Month">This Month</option>
-                                                <option value="Last Month">Last Month</option>
+                                                <option>{{__('datetime.time_periods.all')}}</option>
+                                                <option value="Today">{{__('datetime.time_periods.today')}}</option>
+                                                <option value="Yesterday">{{__('datetime.time_periods.yesterday')}}</option>
+                                                <option value="This week">{{__('datetime.time_periods.this_week')}}</option>
+                                                <option value="Last week">{{__('datetime.time_periods.last_week')}}</option>
+                                                <option value="This Month">{{__('datetime.time_periods.this_month')}}</option>
+                                                <option value="Last Month">{{__('datetime.time_periods.last_month')}}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -57,14 +57,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{__('datetime.date_range.start_date')}}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{__('datetime.date_range.end_date')}}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -77,10 +77,9 @@
                                 <div class="col-md-6">
                                     <div class="row">
                                         <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
-                                                Invoices
+                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('invoices.filter_invoices') }}
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{ __('common.clear') }}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -94,18 +93,17 @@
                        id="invoices-table">
                     <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Invoice No</th>
-                        <th>Date</th>
-                        <th>Customer</th>
-                        <th>Total Amount</th>
-                        <th>Paid Amount</th>
-                        <th>Outstanding</th>
-                        <th>Added By</th>
-                        <th>Actions</th>
+                        <th>{{ __('invoices.hash') }}</th>
+                        <th>{{ __('invoices.invoice_no') }}</th>
+                        <th>{{ __('invoices.date') }}</th>
+                        <th>{{ __('invoices.customer') }}</th>
+                        <th>{{ __('invoices.total_amount') }}</th>
+                        <th>{{ __('invoices.paid_amount') }}</th>
+                        <th>{{ __('invoices.outstanding') }}</th>
+                        <th>{{ __('invoices.added_by') }}</th>
+                        <th>{{ __('common.actions') }}</th>
                     </thead>
                     <tbody>
-
 
                     </tbody>
                 </table>
@@ -115,7 +113,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @include('invoices.payment.create')
 @include('invoices.share_invoice')
@@ -160,11 +158,16 @@
             }
         });
         $(function () {
+            // Load page-specific translations
+            LanguageManager.loadAllFromPHP({
+                'invoices': @json(__('invoices'))
+            });
             default_todays_data();  //filter  date
             var table = $('#invoices-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/invoices/') }}",
                     data: function (d) {
@@ -207,7 +210,7 @@
                 type: 'get',
                 url: "invoice-procedures/" + invoiceId,
                 success: function (data) {
-                    if (data.length != 0) {
+                    if (data.length !== 0) {
                         convertJsontoHtmlTable(data);
                     } else {
                         $('.noResultsText').show();
@@ -248,7 +251,8 @@
             for (let i = 0; i < tablecolumns.length; i++) {
                 //header
                 var th = document.createElement("th");
-                th.innerHTML = tablecolumns[i];
+                // 使用翻译函数处理列标题
+                th.innerHTML = getTranslatedColumnName(tablecolumns[i]);
                 tr.appendChild(th);
             }
 
@@ -267,6 +271,20 @@
             invoiceProceduresContainer.appendChild(invoiceProceduresTable);
         }
 
+        /**
+         * 列名国际化函数
+         * @param columnName
+         * @returns {*}
+         */
+        function getTranslatedColumnName(columnName) {
+            const translations = {
+                'name': "{{ __('invoices.procedure') }}",
+                'qty': "{{ __('invoices.quantity') }}",
+                'price': "{{ __('invoices.unit_price') }}",
+                'total': "{{ __('invoices.total_amount') }}"
+            };
+            return translations[columnName] || columnName;
+        }
 
         function print_invoice() {
             window.print();
@@ -292,7 +310,7 @@
             $("input[type=radio][name=payment_method]").on("change", function () {
                 let action = $("input[type=radio][name=payment_method]:checked").val();
 
-                if (action == "Self Account") {
+                if (action === "Self Account") {
                     //show the select
                     $('.self_account').show();
                     $('#self_account_id').next(".select2-container").show();
@@ -308,7 +326,7 @@
                     $('[name="account_name"]').val("");
                     $('[name="bank_name"]').val("");
 
-                } else if (action == "Insurance") {
+                } else if (action === "Insurance") {
                     //show the select
                     $('.insurance_company').show();
                     $('#company').next(".select2-container").show();
@@ -324,7 +342,7 @@
                     $('[name="account_name"]').val("");
                     $('[name="bank_name"]').val("");
 
-                } else if (action == "Cheque") {
+                } else if (action === "Cheque") {
                     //show the cheque payment fields
                     $('#cheque_payment').show();
 
@@ -367,7 +385,8 @@
 
         //filter self accounts
         $('#self_account_id').select2({
-            placeholder: "Choose self account...",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('invoices.choose_self_account') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-self-account',
@@ -389,7 +408,8 @@
 
         //filter insurance companies
         $('#company').select2({
-            placeholder: "Choose insurance company...",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('invoices.choose_insurance_company') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-insurance-company',
@@ -414,7 +434,7 @@
             $("#payment-form")[0].reset();
             $('#invoice_id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('save changes');
+            $('#btn-save').text('{{ __("common.save_changes") }}');
             $.ajax({
                 type: 'get',
                 url: "invoice-amount/" + id,
@@ -449,7 +469,7 @@
         function save_payment_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#payment-form').serialize(),
@@ -466,7 +486,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('save changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#payment-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -481,7 +501,7 @@
             $.LoadingOverlay("show");
             $("#share-invoice-form")[0].reset();
             $('#btn-share').attr('disabled', false);
-            $('#btn-share').text('Share Invoice');
+            $('#btn-share').text('{{ __("invoices.share_invoice") }}');
             $.ajax({
                 type: 'GET',
                 url: "/share-invoice-details/" + invoice_id,
@@ -493,7 +513,6 @@
                     $('[name="name"]').val(data.surname + " " + data.othername);
                     $('[name="email"]').val(data.email);
                     $('#share-invoice-modal').modal('show');
-
 
                 },
                 error: function (xhr, status, error) {
@@ -507,7 +526,7 @@
         function sendInvoice() {
             $.LoadingOverlay("show");
             $('#btn-share').attr('disabled', true);
-            $('#btn-share').text('Processing....');
+            $('#btn-share').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#share-invoice-form').serialize(),
@@ -519,7 +538,7 @@
                 },
                 error: function (xhr, status, error) {
                     $('#btn-share').attr('disabled', false);
-                    $('#btn-share').text('Share Invoice');
+                    $('#btn-share').text('{{ __("invoices.share_invoice") }}');
                     $('#share-invoice-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -532,14 +551,15 @@
         }
 
 
-        function deleteRecord(id) {
+        function deleteInvoice(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Appointment!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('invoices.confirm_delete_invoice') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
+                    cancelButtonText: "{{ __('common.cancel') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -547,11 +567,11 @@
                     var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
                     $.LoadingOverlay("show");
                     $.ajax({
-                        type: 'delete',
+                        type: 'DELETE',
                         data: {
                             _token: CSRF_TOKEN
                         },
-                        url: "appointments/" + id,
+                        url: "invoices/" + id,
                         success: function (data) {
                             if (data.status) {
                                 alert_dialog(data.message, "success");
@@ -562,7 +582,7 @@
                         },
                         error: function (request, status, error) {
                             $.LoadingOverlay("hide");
-
+                            alert_dialog("{{ __('messages.error_occurred') }}", "danger");
                         }
                     });
 
@@ -571,13 +591,12 @@
         }
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#invoices-table').dataTable();
                 oTable.fnDraw(false);
             }
         }
-
 
     </script>
 @endsection

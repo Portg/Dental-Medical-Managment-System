@@ -14,7 +14,11 @@ class AddExpenseCategoryIdToExpenseItemsTable extends Migration
     public function up()
     {
         Schema::table('expense_items', function (Blueprint $table) {
-            $table->bigInteger('expense_category_id')->unsigned()->nullable()->after('name');
+            if (Schema::hasColumn('expense_items', 'name')) {
+                $table->unsignedBigInteger('expense_category_id')->nullable()->after('name');
+            } else {
+                $table->unsignedBigInteger('expense_category_id')->nullable();
+            }
             $table->foreign('expense_category_id')->references('id')->on('expense_categories');
         });
     }

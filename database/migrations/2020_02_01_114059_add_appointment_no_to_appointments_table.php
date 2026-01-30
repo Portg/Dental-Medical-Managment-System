@@ -14,7 +14,9 @@ class AddAppointmentNoToAppointmentsTable extends Migration
     public function up()
     {
         Schema::table('appointments', function (Blueprint $table) {
-            $table->bigInteger('appointment_no')->unique()->nullable()->after('id');
+            if (!Schema::hasColumn('appointments', 'appointment_no')) {
+                $table->bigInteger('appointment_no')->unique()->nullable()->after('id');
+            }
         });
     }
 

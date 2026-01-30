@@ -37,11 +37,11 @@ class LeaveRequestController extends Controller
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     }
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
                 ->make(true);
@@ -71,6 +71,10 @@ class LeaveRequestController extends Controller
             'leave_type' => 'required',
             'start_date' => 'required',
             'duration' => 'required'
+        ], [
+            'leave_type.required' => __('validation.attributes.leaves.leave_type') . ' '. __('validation.required'),
+            'start_date.required' => __('validation.attributes.leaves.start_date') . ' '. __('validation.required'),
+            'duration.required' => __('validation.attributes.leaves.duration') . ' '.__('validation.required'),
         ])->validate();
 
         $success = leaveRequest::create([
@@ -79,7 +83,7 @@ class LeaveRequestController extends Controller
             'duration' => $request->duration,
             '_who_added' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("Your leave request has been sent successfully", $success);
+        return FunctionsHelper::messageResponse(__('leaves.leave_request.sent_successfully'), $success);
     }
 
     /**
@@ -123,6 +127,10 @@ class LeaveRequestController extends Controller
             'leave_type' => 'required',
             'start_date' => 'required',
             'duration' => 'required'
+        ], [
+            'leave_type.required' => __('validation.attributes.leaves.leave_type') . ' '. __('validation.required'),
+            'start_date.required' => __('validation.attributes.leaves.start_date') . ' '. __('validation.required'),
+            'duration.required' => __('validation.attributes.leaves.duration') . ' '.__('validation.required'),
         ])->validate();
 
         $success = leaveRequest::where('id', $id)->update([
@@ -131,7 +139,7 @@ class LeaveRequestController extends Controller
             'duration' => $request->duration,
             '_who_added' => Auth::User()->id
         ]);
-        return FunctionsHelper::messageResponse("Your leave request has been updated successfully", $success);
+        return FunctionsHelper::messageResponse(__('leaves.leave_request.updated_successfully'), $success);
 
     }
 
@@ -144,6 +152,6 @@ class LeaveRequestController extends Controller
     public function destroy($id)
     {
         $success = leaveRequest::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse("Leave Request has been deleted successfully", $success);
+        return FunctionsHelper::messageResponse(__('leaves.leave_request.deleted_successfully'), $success);
     }
 }

@@ -55,9 +55,9 @@ class EmployeeContractController extends Controller
                 })
                 ->addColumn('amount', function ($row) {
                     if ($row->payroll_type == "Salary") {
-                        return '<span class="text-primary">' . number_format($row->gross_salary) . '<br></span>Gross Salary';
+                        return '<span class="text-primary">' . number_format($row->gross_salary) . '<br></span>' . __('employee_contracts.salary');
                     } else if ($row->payroll_type == "Commission") {
-                        return '<span class="text-primary">' . number_format($row->commission_percentage) . '%<br></span>Commission';
+                        return '<span class="text-primary">' . number_format($row->commission_percentage) . '%<br></span>' . __('employee_contracts.commission');
                     }
 //                    return '<span class="text-primary">' . number_format("100000") . '</span>';
                 })
@@ -67,15 +67,15 @@ class EmployeeContractController extends Controller
                         $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> Action
+                                aria-expanded="false"> ' . __('common.action') . '  
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <li>
-                                <a href="#" onclick="editRecord(' . $row->id . ')"> Edit </a>
+                                <a href="#" onclick="editRecord(' . $row->id . ')"> ' . __('common.edit') . ' </a>
                             </li>
                               <li>
-                                <a href="#" onclick="deleteRecord(' . $row->id . ')"> Delete </a>
+                                <a href="#" onclick="deleteRecord(' . $row->id . ')"> ' . __('common.delete') . ' </a>
                             </li>
                         </ul>
                     </div>
@@ -114,7 +114,13 @@ class EmployeeContractController extends Controller
             'contract_length' => 'required',
             'contract_period' => 'required',
             'payroll_type' => 'required'
-
+        ], [
+            'employee.required' => __('validation.attributes.employee') . ' ' . __('validation.required'),
+            'contract_type.required' => __('validation.attributes.contract_type') . ' ' . __('validation.required'),
+            'start_date.required' => __('validation.attributes.start_date') . ' ' . __('validation.required'),
+            'contract_length.required' => __('validation.attributes.contract_length') . ' ' . __('validation.required'),
+            'contract_period.required' => __('validation.attributes.contract_period') . ' ' . __('validation.required'),
+            'payroll_type.required' => __('validation.attributes.payroll_type') . ' ' . __('validation.required'),
         ])->validate();
         //check if the employee already has a contract
         $this->hasContract($request->employee);
@@ -131,10 +137,10 @@ class EmployeeContractController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Employee contract  has been captured successfully',
+            return response()->json(['message' => __('employee_contracts.employee_contract_added_successfully'),
                 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred,please try again later',
+        return response()->json(['message' => __('messages.error_occurred_later'),
             'status' => false]);
     }
 
@@ -190,7 +196,13 @@ class EmployeeContractController extends Controller
             'contract_length' => 'required',
             'contract_period' => 'required',
             'payroll_type' => 'required'
-
+        ], [
+            'employee.required' => __('validation.attributes.employee') . ' ' . __('validation.required'),
+            'contract_type.required' => __('validation.attributes.contract_type') . ' ' . __('validation.required'),
+            'start_date.required' => __('validation.attributes.start_date') . ' ' . __('validation.required'),
+            'contract_length.required' => __('validation.attributes.contract_length') . ' ' . __('validation.required'),
+            'contract_period.required' => __('validation.attributes.contract_period') . ' ' . __('validation.required'),
+            'payroll_type.required' => __('validation.attributes.payroll_type') . ' ' . __('validation.required'),
         ])->validate();
 
         $status = EmployeeContract::where('id', $id)->update([
@@ -205,10 +217,10 @@ class EmployeeContractController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Employee contract  has been updated successfully',
+            return response()->json(['message' => __('employee_contracts.employee_contract_updated_successfully'),
                 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred,please try again later',
+        return response()->json(['message' => __('messages.error_occurred_later'),
             'status' => false]);
     }
 
@@ -222,10 +234,10 @@ class EmployeeContractController extends Controller
     {
         $status = EmployeeContract::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Employee contract  has been deleted successfully',
+            return response()->json(['message' => __('employee_contracts.employee_contract_deleted_successfully'),
                 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred,please try again later',
+        return response()->json(['message' => __('messages.error_occurred_later'),
             'status' => false]);
     }
 
@@ -235,6 +247,4 @@ class EmployeeContractController extends Controller
         $future_date = date('Y-m-d', strtotime($start_date . ' + ' . $total_days . ' days'));
         return $future_date;
     }
-
-
 }

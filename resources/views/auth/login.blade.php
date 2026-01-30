@@ -23,7 +23,7 @@
                 <div class="col-xs-6">
                     <input
                             class="form-control form-control-solid placeholder-no-fix form-group {{ $errors->has('email') ? ' is-invalid' : '' }}"
-                            type="text" autocomplete="off" placeholder="Email address" name="email"
+                            type="text" autocomplete="off" placeholder="{{ __('auth.email_address') }}" name="email"
                             value="{{ old('email') }}" required/>
 
 
@@ -31,7 +31,7 @@
                 <div class="col-xs-6">
                     <input
                             class="form-control form-control-solid placeholder-no-fix form-group {{ $errors->has('password') ? ' is-invalid' : '' }}"
-                            type="password" autocomplete="off" placeholder="Password" name="password" required/>
+                            type="password" autocomplete="off" placeholder="{{ __('auth.password') }}" name="password" required/>
 
                 </div>
             </div>
@@ -41,20 +41,20 @@
                 </div>
                 <div class="col-sm-8 text-right">
                     <div class="forgot-password">
-                        <a href="javascript:;" id="forget-password" class="forget-password">Forgot Password?</a>
+                        <a href="javascript:;" id="forget-password" class="forget-password">{{ __('auth.forgot_password') }}</a>
                     </div>
-                    <button class="btn btn-primary" type="submit">Sign In</button>
+                    <button class="btn btn-primary" type="submit">{{ __('auth.sign_in') }}</button>
                 </div>
             </div>
         </form>
         <!-- BEGIN FORGOT PASSWORD FORM -->
         <form method="POST" class="forget-form" action="{{ route('password.email') }}">
             @csrf
-            <h3 class="font-green">Forgot Password ?</h3>
-            <p> Enter your e-mail address below to reset your password. </p>
+            <h3 class="font-green">{{ __('auth.forgot_password_title') }}</h3>
+            <p>{{ __('auth.forgot_password_description') }}</p>
             <div class="form-group">
                 <input class="form-control placeholder-no-fix form-group" type="text" autocomplete="off"
-                       placeholder="Email" name="email" value="{{ old('email') }}" required/>
+                       placeholder="{{ __('auth.email_address') }}" name="email" value="{{ old('email') }}" required/>
                 @if ($errors->has('email'))
                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $errors->first('email') }}</strong>
@@ -62,8 +62,8 @@
                 @endif
             </div>
             <div class="form-actions">
-                <button type="button" id="back-btn" class="btn green btn-outline">Back</button>
-                <button type="submit" class="btn btn-success uppercase pull-right">Submit</button>
+                <button type="button" id="back-btn" class="btn green btn-outline">{{ __('common.back') }}</button>
+                <button type="submit" class="btn btn-success uppercase pull-right">{{ __('common.submit') }}</button>
             </div>
         </form>
         <!-- END FORGOT PASSWORD FORM -->

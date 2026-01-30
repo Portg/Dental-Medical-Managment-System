@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App;
+use App\Http\Helper\FunctionsHelper;
 use App\Invoice;
 use App\InvoiceItem;
 use App\InvoicePayment;
-use App\Patient;
+use App\MedicalService;
+use Excel;
+use Haruncpi\LaravelIdGenerator\IdGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 use PDF;
-use App;
-use App\MedicalService;
-use App\Http\Helper\FunctionsHelper;
-use Haruncpi\LaravelIdGenerator\IdGenerator;
-use ExcelReport;
-use Excel;
+use Yajra\DataTables\DataTables;
 
 class InvoiceController extends Controller
 {
@@ -109,29 +107,33 @@ class InvoiceController extends Controller
                         return number_format($this->InvoiceBalance($row->id));
                     }
                     return number_format($this->InvoiceBalance($row->id)) . '<br>
-                    <a href="#" onclick="record_payment(' . $row->id . ')" class="text-primary">Record a payment</a>
+                    <a href="#" onclick="record_payment(' . $row->id . ')" class="text-primary">' . __('invoices.record_payment') . '</a>
                     ';
                 })
                 ->addColumn('action', function ($row) {
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> Action
+                                aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
                         <li>
-                        <a href="#" onClick="viewInvoiceProcedures('.$row->id.')"> View procedures Done</a>
+                        <a href="#" onClick="viewInvoiceProcedures('.$row->id.')"> ' . __('invoices.view_procedures_done') . '</a>
                     </li>
                     <li>
-                                <a href="' . url('invoices/' . $row->id) . '"> View Invoice Details</a>
+                                <a href="' . url('invoices/' . $row->id) . '"> ' . __('invoices.view_invoice_details') . '</a>
                             </li>
                              <li>
-                                <a target="_blank" href="' . url('print-receipt/' . $row->id) . '"  > Print </a>
+                                <a target="_blank" href="' . url('print-receipt/' . $row->id) . '"  > ' . __('invoices.print') . ' </a>
                             </li>
                               <li>
-                         <a  href="#" onClick="shareInvoiceView(' . $row->id . ')">Share Invoice  </a>
-                            </li>   
+                         <a  href="#" onClick="shareInvoiceView(' . $row->id . ')"> ' . __('invoices.share_invoice') . ' </a>
+                            </li>
+                            <li class="divider"></li>
+                            <li>
+                                <a href="#" onClick="deleteInvoice(' . $row->id . ')" class="text-danger"> ' . __('invoices.delete_invoice') . '</a>
+                            </li>
                         </ul>
                     </div>
                     ';
@@ -143,7 +145,7 @@ class InvoiceController extends Controller
         return view('invoices.index');
     }
 
-    public function PreviewInvoice($invoice_id)
+    public function previewInvoice($invoice_id)
     {
         $invoice = Invoice::where('id', $invoice_id)->first();
         //get invoice items
@@ -164,11 +166,14 @@ class InvoiceController extends Controller
         return response()->json($invoice);
     }
 
-    public function SendInvoice(Request $request)
+    public function sendInvoice(Request $request)
     {
         Validator::make($request->all(), [
             'invoice_id' => 'required',
             'email' => 'required'
+        ], [
+            'invoice_id.required' => __('validation.attributes.invoice_id') . ' ' . __('validation.required'),
+            'email.required' => __('validation.attributes.email') . ' ' . __('validation.required'),
         ])->validate();
 
         $data['patient'] = DB::table('invoices')
@@ -183,11 +188,11 @@ class InvoiceController extends Controller
         $data['payments'] = InvoicePayment::where('invoice_id', $request->invoice_id)->get();
 
         dispatch(new App\Jobs\ShareEmailInvoice($data, $request->email, $request->message));
-        return response()->json(['message' => 'Invoice has been sent successfully', 'status' => true]);
+        return response()->json(['message' => __('emails.invoice_sent_successfully'), 'status' => true]);
     }
 
 
-    public function InvoiceAmount($invoice_id) //used to auto show the invoice balance on the payment clearance view
+    public function invoiceAmount($invoice_id) //used to auto show the invoice balance on the payment clearance view
     {
         //get invoice info
         $invoice = Invoice::findOrfail($invoice_id);
@@ -198,6 +203,58 @@ class InvoiceController extends Controller
         return response()->json($data);
     }
 
+
+    /**
+     * Patient-specific invoices for patient detail page.
+     */
+    public function patientInvoices(Request $request, $patient_id)
+    {
+        if ($request->ajax()) {
+            $data = DB::table('invoices')
+                ->join('appointments', 'appointments.id', 'invoices.appointment_id')
+                ->join('patients', 'patients.id', 'appointments.patient_id')
+                ->whereNull('invoices.deleted_at')
+                ->where('patients.id', $patient_id)
+                ->select(
+                    'invoices.*',
+                    'appointments.status as appointment_status'
+                )
+                ->orderBy('invoices.created_at', 'desc')
+                ->get();
+
+            return Datatables::of($data)
+                ->addIndexColumn()
+                ->editColumn('created_at', function ($row) {
+                    return $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('Y-m-d') : '-';
+                })
+                ->addColumn('amount', function ($row) {
+                    return number_format($this->TotalInvoiceAmount($row->id));
+                })
+                ->addColumn('statusBadge', function ($row) {
+                    $balance = $this->InvoiceBalance($row->id);
+                    $total = $this->TotalInvoiceAmount($row->id);
+                    if ($total <= 0) {
+                        $class = 'default';
+                        $text = '-';
+                    } elseif ($balance <= 0) {
+                        $class = 'success';
+                        $text = __('invoices.paid');
+                    } elseif ($balance < $total) {
+                        $class = 'warning';
+                        $text = __('invoices.partially_paid');
+                    } else {
+                        $class = 'danger';
+                        $text = __('invoices.unpaid');
+                    }
+                    return '<span class="label label-' . $class . '">' . $text . '</span>';
+                })
+                ->addColumn('viewBtn', function ($row) {
+                    return '<a href="' . url('invoices/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+                })
+                ->rawColumns(['statusBadge', 'viewBtn'])
+                ->make(true);
+        }
+    }
 
     private function InvoiceBalance($invoice_id)
     {
@@ -332,7 +389,7 @@ class InvoiceController extends Controller
         })->download('xls');
 
     }
-    public function InvoiceProceduresToJson($InvoiceId){
+    public function invoiceProceduresToJson($InvoiceId){
        $InvoiceProcedures = DB::table("invoice_items")
        ->leftjoin("medical_services", "medical_services.id", "invoice_items.medical_service_id")
        ->whereNull("invoice_items.deleted_at")
@@ -396,7 +453,7 @@ class InvoiceController extends Controller
                         '_who_added' => Auth::User()->id,
                     ]);
                 }
-                return response()->json(['message' => 'Invoice has been created successfully', 'status' => true]);
+                return response()->json(['message' => __('invoices.invoice_created_successfully'), 'status' => true]);
             }
         } else {
             //invoice has already been created so add new invoice items
@@ -410,9 +467,9 @@ class InvoiceController extends Controller
                     '_who_added' => Auth::User()->id,
                 ]);
             }
-            return response()->json(['message' => 'Invoice Items have been created successfully', 'status' => true]);
+            return response()->json(['message' => __('invoices.invoice_created_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops an error has occurred, please try again later', 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
     /**
@@ -461,12 +518,25 @@ class InvoiceController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\Invoice $invoice
-     * @return \Illuminate\Http\Response
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function destroy(Invoice $invoice)
+    public function destroy($id)
     {
-        //
+        $invoice = Invoice::find($id);
+
+        if (!$invoice) {
+            return response()->json(['message' => __('invoices.no_invoices_found'), 'status' => false]);
+        }
+
+        // Soft delete the invoice (the model uses SoftDeletes trait)
+        $status = $invoice->delete();
+
+        if ($status) {
+            return response()->json(['message' => __('invoices.invoice_deleted_successfully'), 'status' => true]);
+        }
+
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
 
     private function generateServiceId($medical_service)
@@ -497,5 +567,160 @@ class InvoiceController extends Controller
     private function TotalInvoicePaidAmount($id)
     {
         return InvoicePayment::where('invoice_id', $id)->sum('amount');
+    }
+
+    /**
+     * 待折扣审批列表 (PRD 4.1.2 BR-035)
+     */
+    public function pendingDiscountApprovals(Request $request)
+    {
+        if ($request->ajax()) {
+            $data = Invoice::pendingDiscountApproval()
+                ->with(['patient', 'addedBy'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            return \Yajra\DataTables\DataTables::of($data)
+                ->addIndexColumn()
+                ->addColumn('invoice_no', function ($row) {
+                    return '<a href="' . url('invoices/' . $row->id) . '">' . $row->invoice_no . '</a>';
+                })
+                ->addColumn('patient_name', function ($row) {
+                    if ($row->patient) {
+                        return $row->patient->surname . ' ' . $row->patient->othername;
+                    }
+                    return '-';
+                })
+                ->addColumn('subtotal', function ($row) {
+                    return number_format($row->subtotal, 2);
+                })
+                ->addColumn('discount_amount', function ($row) {
+                    return number_format($row->discount_amount, 2);
+                })
+                ->addColumn('total_amount', function ($row) {
+                    return number_format($row->total_amount, 2);
+                })
+                ->addColumn('added_by', function ($row) {
+                    return $row->addedBy ? $row->addedBy->othername : '-';
+                })
+                ->addColumn('action', function ($row) {
+                    return '
+                        <button class="btn btn-sm btn-success" onclick="approveDiscount(' . $row->id . ')">
+                            <i class="fa fa-check"></i> ' . __('invoices.approve') . '
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectDiscount(' . $row->id . ')">
+                            <i class="fa fa-times"></i> ' . __('invoices.reject') . '
+                        </button>
+                    ';
+                })
+                ->rawColumns(['invoice_no', 'action'])
+                ->make(true);
+        }
+
+        return view('invoices.pending_discount_approvals');
+    }
+
+    /**
+     * 审批折扣 - 批准 (PRD 4.1.2 BR-035)
+     */
+    public function approveDiscount(Request $request, $id)
+    {
+        $invoice = Invoice::findOrFail($id);
+
+        if ($invoice->discount_approval_status !== 'pending') {
+            return response()->json([
+                'message' => __('invoices.discount_not_pending'),
+                'status' => false
+            ]);
+        }
+
+        $invoice->approveDiscount(Auth::id(), $request->reason);
+
+        return response()->json([
+            'message' => __('invoices.discount_approved'),
+            'status' => true
+        ]);
+    }
+
+    /**
+     * 审批折扣 - 拒绝 (PRD 4.1.2 BR-035)
+     */
+    public function rejectDiscount(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'reason' => 'required|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first(),
+                'status' => false
+            ]);
+        }
+
+        $invoice = Invoice::findOrFail($id);
+
+        if ($invoice->discount_approval_status !== 'pending') {
+            return response()->json([
+                'message' => __('invoices.discount_not_pending'),
+                'status' => false
+            ]);
+        }
+
+        $invoice->rejectDiscount(Auth::id(), $request->reason);
+
+        return response()->json([
+            'message' => __('invoices.discount_rejected'),
+            'status' => true
+        ]);
+    }
+
+    /**
+     * 设置为挂账 (PRD 4.1.3 欠费挂账)
+     */
+    public function setCredit(Request $request, $id)
+    {
+        $invoice = Invoice::findOrFail($id);
+
+        if ($invoice->payment_status === 'paid') {
+            return response()->json([
+                'message' => __('invoices.invoice_already_paid'),
+                'status' => false
+            ]);
+        }
+
+        $invoice->setAsCredit(Auth::id());
+
+        return response()->json([
+            'message' => __('invoices.credit_approved'),
+            'status' => true
+        ]);
+    }
+
+    /**
+     * 搜索发票 (用于退费页面)
+     */
+    public function searchInvoices(Request $request)
+    {
+        $search = $request->get('q', '');
+
+        $invoices = DB::table('invoices')
+            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
+            ->leftJoin('patients', 'patients.id', DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'))
+            ->where(function ($query) use ($search) {
+                $query->where('invoices.invoice_no', 'like', "%{$search}%")
+                    ->orWhere('patients.surname', 'like', "%{$search}%")
+                    ->orWhere('patients.othername', 'like', "%{$search}%");
+            })
+            ->whereNull('invoices.deleted_at')
+            ->select(
+                'invoices.id',
+                'invoices.invoice_no',
+                DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name")
+            )
+            ->limit(20)
+            ->get();
+
+        return response()->json($invoices);
     }
 }

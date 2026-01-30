@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Expense Item Form </h4>
+                <h4 class="modal-title"> {{ __('expense_categories.expense_item_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -18,13 +18,13 @@
                     @csrf
                     <input type="hidden" id="id" name="id">
                     <div class="form-group">
-                        <label class="text-primary">Expense Item </label>
-                        <input type="text" name="name" placeholder="Enter name here" class="form-control">
+                        <label class="text-primary">{{ __('expense_categories.expense_item') }}</label>
+                        <input type="text" name="name" placeholder="{{ __('expense_categories.enter_name_here') }}" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Expense Account </label>
+                        <label class="text-primary">{{ __('expense_categories.expense_account') }}</label>
                         <select name="expense_account" id="expense_account" class="form-control">
-                            <option value="">Please choose account</option>
+                            <option value="">{{ __('expense_categories.please_choose_account') }}</option>
                             @foreach($expense_accounts as $acct)
                                 <option value="{{$acct->id}}">{{$acct->name}}</option>
                             @endforeach
@@ -36,8 +36,8 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">Save changes</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

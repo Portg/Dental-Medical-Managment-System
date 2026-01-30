@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject">Email Notifications </span>
+                    <span class="caption-subject">{{ __('billing_notifications.email_notifications') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -22,7 +22,7 @@
                         <div class="col-md-6">
                             <div class="btn-group pull-right">
                                 {{--                                <a href="{{ url('export-sms-report') }}" class="text-danger">--}}
-                                {{--                                    <i class="icon-cloud-download"></i> Download Excel Report </a>--}}
+                                {{--                                    <i class="icon-cloud-download"></i>{{ __('common.download_excel_report') }} </a>--}}
                             </div>
                         </div>
                     </div>
@@ -39,16 +39,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Period</label>
+                                        <label class="control-label col-md-3">{{__('datetime.period')}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option>All</option>
-                                                <option value="Today">Today</option>
-                                                <option value="Yesterday">Yesterday</option>
-                                                <option value="This week">This week</option>
-                                                <option value="Last week">Last week</option>
-                                                <option value="This Month">This Month</option>
-                                                <option value="Last Month">Last Month</option>
+                                                <option>{{__('datetime.time_periods.all')}}</option>
+                                                <option value="Today">{{__('datetime.time_periods.today')}}</option>
+                                                <option value="Yesterday">{{__('datetime.time_periods.yesterday')}}</option>
+                                                <option value="This week">{{__('datetime.time_periods.this_week')}}</option>
+                                                <option value="Last week">{{__('datetime.time_periods.last_week')}}</option>
+                                                <option value="This Month">{{__('datetime.time_periods.this_month')}}</option>
+                                                <option value="Last Month">{{__('datetime.time_periods.last_month')}}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -57,14 +57,14 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{__('datetime.date_range.start_date')}}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{__('datetime.date_range.end_date')}}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -77,10 +77,9 @@
                                 <div class="col-md-6">
                                     <div class="row">
                                         <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
-                                                Notifications
+                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('billing_notifications.filter_notifications') }}
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{__('common.clear')}}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -94,12 +93,12 @@
                        id="email-notifications-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Sent Date</th>
-                        <th>Email</th>
-                        <th>Message</th>
-                        <th>Message Type</th>
-                        <th>Message Status</th>
+                        <th>{{__('common.id') }}</th>
+                        <th>{{__('billing_notifications.sent_date')}}</th>
+                        <th>{{ __('billing_notifications.email') }}</th>
+                        <th>{{ __('billing_notifications.message') }}</th>
+                        <th>{{ __('billing_notifications.message_type') }}</th>
+                        <th>{{ __('billing_notifications.message_status') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -112,7 +111,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @endsection
 @section('js')
@@ -162,6 +161,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),  // 使用当前语言配置
                 ajax: {
                     url: "{{ url('/billing-notifications/') }}",
                     data: function (d) {
@@ -195,7 +195,7 @@
         });
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#email-notifications-table').dataTable();
                 oTable.fnDraw(false);

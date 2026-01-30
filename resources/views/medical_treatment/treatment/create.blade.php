@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Treatment Form </h4>
+                <h4 class="modal-title"> {{ __('medical_treatment.treatment_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger treatment_alert"  style="display:none">
@@ -19,22 +19,22 @@
                     <input type="hidden" id="treatment_id" name="id">
                     <input type="hidden" id="treatment_appointment_id" name="appointment_id">
                     <div class="form-group">
-                        <label class="text-primary">Clinical Notes </label>
-                        <textarea name="clinical_notes" rows="8" placeholder="Enter clinical Notes here"
+                        <label class="text-primary">{{ __('medical_treatment.clinical_notes') }} </label>
+                        <textarea name="clinical_notes" rows="8" placeholder="{{ __('medical_treatment.enter_clinical_notes') }}"
                                   class="form-control" spellcheck="true"></textarea>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="text-primary">Procedure </label>
-                                <input id="procedure_id" name="procedure" placeholder="Enter procedure"
+                                <label class="text-primary">{{ __('medical_treatment.procedure') }} </label>
+                                <input id="procedure_id" name="procedure" placeholder="{{ __('medical_treatment.enter_procedure') }}"
                                        class="form-control"/>
                             </div>
                             <div class="form-group">
-                                <label class="text-primary">Tooth Number </label>
+                                <label class="text-primary">{{ __('medical_treatment.tooth_number') }} </label>
                                 <select name="tooth_number" id="tooth_number" class="form-control">
-                                    <option value="null"> select tooth number</option>
+                                    <option value="null"> {{ __('medical_treatment.select_tooth_number') }}</option>
                                     <option value="11">11</option>
                                     <option value="12">12</option>
                                     <option value="13">13</option>
@@ -89,13 +89,13 @@
                                     <option value="85">85</option>
                                 </select>
                             </div>
-                            <button type="button" class="btn btn-danger" onclick="add_new_tooth()">Add</button>
+                            <button type="button" class="btn btn-danger" onclick="add_new_tooth()">{{ __('medical_treatment.add') }}</button>
 
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="text-primary">Treatment </label>
-                                <textarea name="treatment" id="treatment" placeholder="Enter treatment done here" rows="8"
+                                <label class="text-primary">{{ __('medical_treatment.treatment') }} </label>
+                                <textarea name="treatment" id="treatment" placeholder="{{ __('medical_treatment.enter_treatment') }}" rows="8"
                                           class="form-control"
                                           spellcheck="true"></textarea>
                             </div>
@@ -109,10 +109,9 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-treatment" onclick="save_treatment()">Save
-                    changes
+                <button type="button" class="btn btn-primary" id="btn-treatment" onclick="save_treatment()">{{ __('common.save_changes') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

@@ -5,7 +5,7 @@
 @endsection
 <div class="note note-success">
     <p class="text-black-50">
-        <a href="{{ url('quotations')}}" class="text-primary">Go Back to Quotations</a> /
+        <a href="{{ url('quotations')}}" class="text-primary">{{ __('quotations.go_back_to_quotations') }}</a> /
         @if(isset($patient))  {{ $patient->surname." ".$patient->othername  }} @endif
     </p>
 </div>
@@ -15,7 +15,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold uppercase">Quotation</span>
+                    <span class="caption-subject bold uppercase">{{ __('quotations.quotation') }}</span>
                     &nbsp; &nbsp; &nbsp
 
                 </div>
@@ -26,7 +26,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('quotations.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -38,15 +38,15 @@
                 <table class="table table-hover" id="quotation-items-table">
                     <thead>
                     <tr>
-                        <th> #</th>
-                        <th>Procedure</th>
-                        <th>Tooth No</th>
-                        <th>Qty</th>
-                        <th>unit Price</th>
-                        <th>Total Amount</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th> {{ __('quotations.hash') }}</th>
+                        <th>{{ __('quotations.procedure') }}</th>
+                        <th>{{ __('quotations.tooth_no') }}</th>
+                        <th>{{ __('quotations.qty') }}</th>
+                        <th>{{ __('quotations.unit_price') }}</th>
+                        <th>{{ __('quotations.total_amount') }}</th>
+                        <th>{{ __('quotations.added_by') }}</th>
+                        <th>{{ __('quotations.edit') }}</th>
+                        <th>{{ __('quotations.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -73,6 +73,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "/quotation-items/" + quotation_id,
                     data: function (d) {
@@ -109,7 +110,7 @@
             let id = $('#global_quotation_id').val();
             //set assign
             $('#quotation_id').val(id);
-            $('#btn-save').text('save record');
+            $('#btn-save').text('{{ __("common.save_record") }}');
             $('#quotation-modal').modal('show');
         }
 
@@ -139,7 +140,7 @@
                     $('#medical_service_id').append(newOption2).trigger('change');
 
                     $('.loading').hide();
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#quotation-modal').modal('show');
                 },
                 error: function (request, status, error) {
@@ -150,7 +151,8 @@
 
 
         $('#medical_service_id').select2({
-            placeholder: "Select Procedure...",
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('common.select_procedure') }}",
             minimumInputLength: 2,
             ajax: {
                 url: '/search-medical-service',
@@ -219,7 +221,7 @@
             $('.loading').show();
 
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'post',
                 data: $('#quotation-form').serialize(),
@@ -236,7 +238,7 @@
                 error: function (request, status, error) {
                     $('.loading').hide();
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('save changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#quotation-modal').modal('show');
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -250,7 +252,7 @@
         function update_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#quotation-form').serialize(),
@@ -267,7 +269,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('update record');
+                    $('#btn-save').text('{{ __("common.update_record") }}');
 
                     json = $.parseJSON(request.responseText);
                     $.each(json.errors, function (key, value) {
@@ -280,12 +282,12 @@
 
         function deleteItem(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this Quotation Item!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('quotations.delete_item_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -321,9 +323,9 @@
         }
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
 
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#quotation-items-table').dataTable();
                 oTable.fnDraw(false);

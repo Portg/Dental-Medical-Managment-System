@@ -62,10 +62,10 @@ class DoctorClaimController extends Controller
                     if ($row->status == "Pending") {
                         $action_btn = '
                        <li>
-                                <a href="#" onclick="editRecord(' . $row->id . ')"> Edit </a>
+                                <a href="#" onclick="editRecord(' . $row->id . ')"> ' . __('common.edit') . '</a>
                             </li>
                              <li>
-                                <a  href="#" onclick="deleteRecord(' . $row->id . ')"  > Delete </a>
+                                <a  href="#" onclick="deleteRecord(' . $row->id . ')"  >' . __('common.delete') . '</a>
                             </li>
                     ';
                     }
@@ -73,7 +73,7 @@ class DoctorClaimController extends Controller
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> Action
+                                aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
@@ -128,7 +128,7 @@ class DoctorClaimController extends Controller
         //get the doctor claim rate
         $claim_rate = ClaimRate::where(['doctor_id' => Auth::User()->id, 'status' => 'active'])->first();
         if ($claim_rate == null) {
-            return response()->json(['message' => 'Sorry you dont have claim rate in the system, please contact the system admin', 'status' => false]);
+            return response()->json(['message' => __('doctor_claims.no_claim_rate_in_system'), 'status' => false]);
         }
         $status = DoctorClaim::create([
             'claim_amount' => $request->amount,
@@ -137,9 +137,9 @@ class DoctorClaimController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Claim has been submitted successfully', 'status' => true]);
+            return response()->json(['message' => __('doctor_claims.claim_submitted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
     }
 
     /**
@@ -180,9 +180,9 @@ class DoctorClaimController extends Controller
             '_who_added' => Auth::User()->id
         ]);
         if ($status) {
-            return response()->json(['message' => 'Claim has been updated successfully', 'status' => true]);
+            return response()->json(['message' => __('doctor_claims.claim_updated_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
     }
 
     /**
@@ -194,9 +194,9 @@ class DoctorClaimController extends Controller
     {
         $status = DoctorClaim::where('id', $id)->delete();
         if ($status) {
-            return response()->json(['message' => 'Claim has been deleted successfully', 'status' => true]);
+            return response()->json(['message' => __('doctor_claims.claim_deleted_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => 'Oops error has occurred, please try again', 'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
 
     }
 }

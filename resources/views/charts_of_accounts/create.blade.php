@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Chart Of Accounts Form </h4>
+                <h4 class="modal-title"> {{ __('charts_of_accounts.chart_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -18,10 +18,10 @@
                     @csrf
                     <input type="hidden" id="id" name="id">
                     <div class="form-group">
-                        <label class="text-primary">Account type </label>
+                        <label class="text-primary">{{ __('charts_of_accounts.account_type') }} </label>
                         <select id="select2-single-input-group-sm"
                                 class="form-control select2 account_type" name="account_type">
-                            <option value="null">Choose one</option>
+                            <option value="null">{{ __('charts_of_accounts.choose_one') }}</option>
                             @foreach($AccountingEquations as $row)
                                 <optgroup label="{{$row->name}}">
                                     @foreach($row->Categories as $cat)
@@ -32,11 +32,11 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Account Name </label>
-                        <input type="text" name="name" class="form-control" placeholder="Enter account name">
+                        <label class="text-primary">{{ __('charts_of_accounts.account_name') }} </label>
+                        <input type="text" name="name" class="form-control" placeholder="{{ __('charts_of_accounts.enter_account_name') }}">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Description (optional)</label>
+                        <label class="text-primary">{{ __('charts_of_accounts.description') }}</label>
                         <textarea class="form-control" name="description" rows="7"></textarea>
                     </div>
                 </form>
@@ -44,8 +44,8 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">Save changes</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

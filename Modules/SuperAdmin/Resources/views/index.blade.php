@@ -1,11 +1,6 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 
 @section('content')
-    <div class="note note-success">
-        <p class="text-black-50"><a href="{{ url('profile') }}" class="text-primary">My Profile</a>
-            / {{ Auth::User()->surname." ".Auth::User()->othername }} <span class="text-primary">[ {{  Auth::User()->UserRole->name }}  ]</span>
-        </p>
-    </div>
     <div class="row">
         <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
             <a class="dashboard-stat dashboard-stat-v2 blue" href="{{ url('appointments') }}">
@@ -17,7 +12,7 @@
                         <span data-counter="counterup"
                               data-value="{{ $today_appointments }}">{{ $today_appointments }}</span>
                     </div>
-                    <div class="desc"> Today's Appointments</div>
+                    <div class="desc"> {{__('report.today_appointments')}}</div>
                 </div>
             </a>
         </div>
@@ -31,7 +26,7 @@
                         <span data-counter="counterup"
                               data-value="{{ number_format($today_cash_amount) }}">{{ number_format($today_cash_amount) }}</span>
                     </div>
-                    <div class="desc"> Today's Cash (Amount)</div>
+                    <div class="desc"> {{__('report.today_cash_amount')}}</div>
                 </div>
             </a>
         </div>
@@ -45,7 +40,7 @@
                         <span data-counter="counterup"
                               data-value="{{ number_format($today_Insurance_amount) }}">{{ number_format($today_Insurance_amount)  }}</span>
                     </div>
-                    <div class="desc"> Today's Insurance (Amount)</div>
+                    <div class="desc"> {{__('report.today_insurance_amount')}}</div>
                 </div>
             </a>
         </div>
@@ -60,7 +55,7 @@
                         <span data-counter="counterup"
                               data-value="{{ number_format($today_expense_amount) }}">{{ number_format($today_expense_amount) }}</span>
                     </div>
-                    <div class="desc">Today's Expenses (Amount)</div>
+                    <div class="desc"> {{__('report.today_expenses_amount')}}</div>
                 </div>
             </a>
         </div>
@@ -74,7 +69,7 @@
                 <div class="portlet-title">
                     <div class="caption">
                         <i class="icon-bar-chart font-dark hide"></i>
-                        <span class="caption-subject font-dark bold uppercase">Monthly Income Chart (Cash In)</span>
+                        <span class="caption-subject font-dark bold uppercase"> {{__('report.monthly_income_chart_cash_in')}}</span>
                     </div>
                     <div class="actions">
 
@@ -90,7 +85,7 @@
                 <div class="portlet-title">
                     <div class="caption">
                         <i class="icon-share font-red-sunglo hide"></i>
-                        <span class="caption-subject font-dark bold uppercase">Monthly Expenses Chart (Cash out)</span>
+                        <span class="caption-subject font-dark bold uppercase"> {{__('report.monthly_expenses_chart_cash_out')}}</span>
                     </div>
                     <div class="actions">
                         <div class="btn-group">
@@ -112,7 +107,7 @@
                     <div class="caption">
                         <i class="icon-bar-chart font-dark hide"></i>
                         <span
-                            class="caption-subject font-dark bold uppercase">Monthly Overall Income Chart</span>
+                            class="caption-subject font-dark bold uppercase"> {{__('report.monthly_overall_income_chart')}}</span>
                     </div>
                     <div class="actions">
 
@@ -129,7 +124,7 @@
                     <div class="caption">
                         <i class="icon-share font-red-sunglo hide"></i>
                         <span
-                            class="caption-subject font-dark bold uppercase">Monthly Overall Chart (Income & Expenditure)</span>
+                            class="caption-subject font-dark bold uppercase"> {{__('report.monthly_overall_chart_income_expenditure')}}</span>
                     </div>
                     <div class="actions">
                         <div class="btn-group">

@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Invoice Payments Report</span>
+                    <span class="caption-subject"> {{ __('report.invoice_payments_report') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -22,7 +22,7 @@
                         <div class="col-md-6">
                             <div class="btn-group pull-right">
                                 <a href="{{ url('export-invoice-payments-report') }}" class="text-danger">
-                                    <i class="icon-cloud-download"></i> Download Excel Report </a>
+                                    <i class="icon-cloud-download"></i> {{ __('report.download_excel_report') }} </a>
                             </div>
                         </div>
                     </div>
@@ -39,15 +39,15 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Period</label>
+                                        <label class="control-label col-md-3">{{ __('report.period') }}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
-                                                <option value="Today">Today</option>
-                                                <option value="Yesterday">Yesterday</option>
-                                                <option value="This week">This week</option>
-                                                <option value="Last week">Last week</option>
-                                                <option value="This Month">This Month</option>
-                                                <option value="Last Month">Last Month</option>
+                                                <option value="Today">{{ __('report.today') }}</option>
+                                                <option value="Yesterday">{{ __('report.yesterday') }}</option>
+                                                <option value="This week">{{ __('report.this_week') }}</option>
+                                                <option value="Last week">{{ __('report.last_week') }}</option>
+                                                <option value="This Month">{{ __('report.this_month') }}</option>
+                                                <option value="Last Month">{{ __('report.last_month') }}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -57,14 +57,14 @@
 
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">Start Date</label>
+                                        <label class="control-label col-md-3">{{ __('common.start_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control start_date"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">End Date</label>
+                                        <label class="control-label col-md-3">{{ __('common.end_date') }}</label>
                                         <div class="col-md-9">
                                             <input type="text" class="form-control end_date">
                                         </div>
@@ -77,10 +77,9 @@
                                 <div class="col-md-6">
                                     <div class="row">
                                         <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">Filter
-                                                Report
+                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('report.filter_report') }}
                                             </button>
-                                            <button type="button" class="btn default">Clear</button>
+                                            <button type="button" class="btn default">{{ __('common.clear') }}</button>
                                         </div>
                                     </div>
                                 </div>
@@ -94,11 +93,11 @@
                        id="payment-report">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Payment Date</th>
-                        <th>Patient Name</th>
-                        <th>Paid Amount</th>
-                        <th>Payment Method</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('report.payment_date') }}</th>
+                        <th>{{ __('report.patient_name') }}</th>
+                        <th>{{ __('report.paid_amount') }}</th>
+                        <th>{{ __('report.payment_method') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -111,7 +110,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @endsection
 @section('js')
@@ -159,6 +158,7 @@
 
 
             var table = $('#payment-report').DataTable({
+                language: LanguageManager.getDataTableLang(),
                 destroy: true,
                 processing: true,
                 serverSide: true,

@@ -36,11 +36,11 @@ class LeaveTypeController extends Controller
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">Edit</a>';
+                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     }
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
                 ->make(true);
@@ -62,6 +62,28 @@ class LeaveTypeController extends Controller
             }
             return \Response::json($formatted_tags);
         }
+    }
+
+    /**
+     * 获取所有休假类型列表（用于下拉选择）
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAll()
+    {
+        $data = LeaveType::whereNull('deleted_at')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $formatted = [];
+        foreach ($data as $item) {
+            $formatted[] = [
+                'id' => $item->id,
+                'text' => $item->name,
+                'max_days' => $item->max_days
+            ];
+        }
+        return \Response::json($formatted);
     }
 
     /**
@@ -88,6 +110,9 @@ class LeaveTypeController extends Controller
             [
                 'name' => 'required',
                 'max_days' => 'required'
+            ], [
+                'name.required' => __('validation.custom.name.required'),
+                'max_days.required' => __('validation.custom.max_days.required')
             ])->validate();
 
         $success = LeaveType::create(
@@ -96,7 +121,7 @@ class LeaveTypeController extends Controller
                 'max_days' => $request->max_days,
                 '_who_added' => Auth::User()->id
             ]);
-        return FunctionsHelper::messageResponse("Leave type has been added successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.leave_type_added_successfully'), $success);
     }
 
     /**
@@ -138,6 +163,9 @@ class LeaveTypeController extends Controller
             [
                 'name' => 'required',
                 'max_days' => 'required'
+            ], [
+                'name.required' => __('validation.custom.name.required'),
+                'max_days.required' => __('validation.custom.max_days.required')
             ])->validate();
 
         $success = LeaveType::where('id', $id)->update(
@@ -146,7 +174,7 @@ class LeaveTypeController extends Controller
                 'max_days' => $request->max_days,
                 '_who_added' => Auth::User()->id
             ]);
-        return FunctionsHelper::messageResponse("Leave type has been updated successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.leave_type_updated_successfully'), $success);
     }
 
     /**
@@ -159,6 +187,6 @@ class LeaveTypeController extends Controller
     function destroy($id)
     {
         $success = LeaveType::where('id', $id)->delete();
-        return FunctionsHelper::messageResponse("Leave type has been deleted successfully", $success);
+        return FunctionsHelper::messageResponse(__('messages.leave_type_deleted_successfully'), $success);
     }
 }

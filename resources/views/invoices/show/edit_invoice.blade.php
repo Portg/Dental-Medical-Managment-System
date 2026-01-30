@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
-                <h4 class="modal-title"> Invoice Item Form </h4>
+                <h4 class="modal-title"> {{ __('invoices.invoice_item_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
@@ -18,31 +18,31 @@
                     @csrf
                     <input type="hidden" id="invoice_item_id" name="invoice_item_id">
                     <div class="form-group">
-                        <label class="text-primary">Procedure </label>
+                        <label class="text-primary">{{ __('invoices.procedure') }} </label>
                         <select id="medical_service_id" name="medical_service_id" class="form-control"
                                 style="width: 100%;"></select>
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Procedure Done By </label>
+                        <label class="text-primary">{{ __('invoices.procedure_done_by') }}</label>
                         <select id="doctor_id" name="doctor_id" class="form-control"
                                 style="width: 100%;"></select>
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Tooth Numbers(optional) </label>
-                        <input type="text" name="tooth_no" placeholder="Enter tooth no" class="form-control">
+                        <label class="text-primary">{{ __('invoices.tooth_numbers_optional') }} </label>
+                        <input type="text" name="tooth_no" placeholder="{{ __('invoices.enter_tooth_no') }}" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Qty </label>
-                        <input type="number" id="procedure_qty" name="qty" placeholder="Enter Qty here"
+                        <label class="text-primary">{{ __('invoices.qty') }} </label>
+                        <input type="number" id="procedure_qty" name="qty" placeholder="{{ __('invoices.enter_qty_here') }}"
                                class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Unit Price </label>
-                        <input type="number" id="procedure_price" name="price" placeholder="Enter price here"
+                        <label class="text-primary">{{ __('invoices.unit_price') }}</label>
+                        <input type="number" id="procedure_price" name="price" placeholder="{{ __('invoices.enter_price_here') }}"
                                class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="text-primary">Total Price </label>
+                        <label class="text-primary">{{ __('invoices.total_price') }}</label>
                         <input type="text" name="total_amount" id="total_amount" placeholder="" readonly
                                class="form-control">
                     </div>
@@ -51,10 +51,9 @@
             </div>
             <div class="modal-footer">
 
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_invoice_update()">Save
-                    changes
+                <button type="button" class="btn btn-primary" id="btn-save" onclick="save_invoice_update()">{{ __('common.save_changes') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

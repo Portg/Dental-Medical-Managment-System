@@ -53,12 +53,12 @@ class MedicalCardController extends Controller
                 })
                 ->addColumn('view_cards', function ($row) {
 
-                    $btn = '<a href="' . url('medical-cards/' . $row->id) . '" class="btn btn-primary">View Cards</a>';
+                    $btn = '<a href="' . url('medical-cards/' . $row->id) . '" class="btn btn-primary">' . __('medical_cards.view_cards') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
 
-                    $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">Delete</a>';
+                    $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->addColumn('checkbox', '<input type="checkbox" name="student_checkbox[]" class="student_checkbox" value="{{$id}}" />')
@@ -68,7 +68,7 @@ class MedicalCardController extends Controller
         return view('medical_cards.index');
     }
 
-    public function IndividualMedicalCards(Request $request, $patient_id)
+    public function individualMedicalCards(Request $request, $patient_id)
     {
         if ($request->ajax()) {
 
@@ -144,7 +144,7 @@ class MedicalCardController extends Controller
         if ($status) {
             return redirect('/medical-cards/' . $status->id);
         }
-        return Response()->json(["message" => 'Oops an error has occurred please try again later', "status" => true]);
+        return Response()->json(["message" => __('messages.error_occurred_later'), "status" => true]);
     }
 
     /**
@@ -203,10 +203,10 @@ class MedicalCardController extends Controller
     {
         $status = MedicalCard::where('id', $id)->delete();
         if ($status) {
-            return Response()->json(["message" => 'Image Has been deleted successfully', "status" => true
+            return Response()->json(["message" => __('medical_cards.medical_card_deleted_successfully'), "status" => true
             ]);
         }
-        return Response()->json(["message" => 'Oops an error has occurred please try again later', "status" => true]);
+        return Response()->json(["message" => __('messages.error_occurred_later'), "status" => true]);
 
     }
 
@@ -215,7 +215,7 @@ class MedicalCardController extends Controller
         $student_id_array = $request->input('id');
         $student = Student::whereIn('id', $student_id_array);
         if ($student->delete()) {
-            echo 'Data Deleted';
+            echo __('messages.data_deleted');
         }
     }
 }

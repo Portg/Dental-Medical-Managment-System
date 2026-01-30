@@ -68,7 +68,7 @@ class HomeController extends Controller
         } else if (Gate::allows('Nurse-Dashboard', auth()->user())) {
             return redirect('nurse');
         } else {
-            return "Your not a valid user";
+            return __('auth.invalid_user');
         }
     }
 

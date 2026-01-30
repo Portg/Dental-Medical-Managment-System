@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Expenses Mgt/ Suppliers</span>
+                    <span class="caption-subject"> {{ __('suppliers.expenses_mgt_suppliers') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -17,7 +17,7 @@
                         <div class="col-md-6">
                             <div class="btn-group">
                                 <a class="btn blue btn-outline sbold" href="#"
-                                   onclick="createRecord()"> Add New <i
+                                   onclick="createRecord()"> {{ __('suppliers.add_new') }} <i
                                             class="fa fa-plus"></i> </a>
                             </div>
                         </div>
@@ -32,12 +32,12 @@
                        id="suppliers-table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Name</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('suppliers.id') }}</th>
+                        <th>{{ __('suppliers.date') }}</th>
+                        <th>{{ __('suppliers.name') }}</th>
+                        <th>{{ __('suppliers.added_by') }}</th>
+                        <th>{{ __('suppliers.edit') }}</th>
+                        <th>{{ __('suppliers.delete') }}</th>
                     </thead>
                     <tbody>
 
@@ -49,7 +49,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('suppliers.loading') }}</span>
 </div>
 @include('suppliers.create')
 @endsection
@@ -58,11 +58,15 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
         $(function () {
+            LanguageManager.loadAllFromPHP({
+                'suppliers': @json(__('suppliers'))
+            });
 
             let table = $('#suppliers-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/suppliers/') }}",
                     data: function (d) {
@@ -93,7 +97,7 @@
             $("#supplier-form")[0].reset();
             $('#id').val(''); ///always reset hidden form fields
             $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save changes');
+            $('#btn-save').text('{{ __("common.save_changes") }}');
             $('#supplier-modal').modal('show');
         }
 
@@ -110,7 +114,7 @@
         function save_new_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('processing...');
+            $('#btn-save').text('{{ __("common.processing") }}');
             $.ajax({
                 type: 'POST',
                 data: $('#supplier-form').serialize(),
@@ -128,7 +132,7 @@
                 error: function (request, status, error) {
                     $.LoadingOverlay("hide");
                     $('#btn-save').attr('disabled', false);
-                    $('#btn-save').text('Save changes');
+                    $('#btn-save').text('{{ __("common.save_changes") }}');
                     $('#supplier-modal').modal('show');
 
                     json = $.parseJSON(request.responseText);
@@ -153,7 +157,7 @@
                     $('#id').val(id);
                     $('[name="name"]').val(data.name);
                     $.LoadingOverlay("hide");
-                    $('#btn-save').text('Update Record')
+                    $('#btn-save').text('{{ __("common.update_record") }}')
                     $('#supplier-modal').modal('show');
 
                 },
@@ -166,7 +170,7 @@
         function update_record() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('Updating...');
+            $('#btn-save').text('{{ __("common.updating") }}');
             $.ajax({
                 type: 'PUT',
                 data: $('#supplier-form').serialize(),
@@ -193,12 +197,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this supplier!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('suppliers.delete_confirm_message') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -231,7 +235,7 @@
 
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#suppliers-table').dataTable();
                 oTable.fnDraw(false);

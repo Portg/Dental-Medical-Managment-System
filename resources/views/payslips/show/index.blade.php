@@ -4,8 +4,8 @@
     @include('layouts.page_loader')
 @endsection
 <div class="note note-success">
-    <p class="text-black-50"><a href="{{ url('payslips')}}" class="text-primary">Go back to payslips </a>
-        /@if(isset($employee)) {{ $employee->surname." ".$employee->othername }} / Payslip Month:
+    <p class="text-black-50"><a href="{{ url('payslips')}}" class="text-primary">{{ __('payslips.go_back_payslips') }} </a>
+        /@if(isset($employee)) {{ $employee->surname." ".$employee->othername }} / {{ __('payslips.payslip_month') }}:
         {{ $employee->payslip_month }}  @endif
     </p>
 </div>
@@ -15,10 +15,10 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject bold uppercase">Allowances</span>
+                    <span class="caption-subject bold uppercase">{{ __('payslips.allowances') }}</span>
                     &nbsp; &nbsp; &nbsp
                     <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_allowance()"> Add New <i
+                       onclick="Add_new_allowance()"> {{ __('payslips.add_more') }} <i
                                 class="fa fa-plus"></i> </a>
                 </div>
             </div>
@@ -27,12 +27,12 @@
                     <thead>
                     <tr>
                         <th> #</th>
-                        <th>Added At</th>
-                        <th>Allowance</th>
-                        <th>Amount</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('payslips.added_at') }}</th>
+                        <th>{{ __('payslips.allowance') }}</th>
+                        <th>{{ __('payslips.amount') }}</th>
+                        <th>{{ __('payslips.added_by') }}</th>
+                        <th>{{ __('payslips.edit') }}</th>
+                        <th>{{ __('payslips.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -47,10 +47,10 @@
         <div class="portlet light portlet-fit bordered">
             <div class="portlet-title">
                 <div class="caption">
-                    <span class="caption-subject font-dark bold uppercase">Deductions</span>
+                    <span class="caption-subject font-dark bold uppercase">{{ __('payslips.deductions') }}</span>
                     &nbsp; &nbsp
                     <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_deduction()"> Add New <i
+                       onclick="Add_new_deduction()"> {{ __('payslips.add_more') }} <i
                                 class="fa fa-plus"></i> </a>
                 </div>
                 <div class="actions">
@@ -67,12 +67,12 @@
                     <tr>
 
                         <th> #</th>
-                        <th>Added At</th>
-                        <th>Deduction</th>
-                        <th>Amount</th>
-                        <th>Added By</th>
-                        <th>Edit</th>
-                        <th>Delete</th>
+                        <th>{{ __('payslips.added_at') }}</th>
+                        <th>{{ __('payslips.deduction') }}</th>
+                        <th>{{ __('payslips.amount') }}</th>
+                        <th>{{ __('payslips.added_by') }}</th>
+                        <th>{{ __('payslips.edit') }}</th>
+                        <th>{{ __('payslips.delete') }}</th>
                     </tr>
                     </thead>
                     <tbody>

@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Leave Mgt / Leave Requests / Approval</span>
+                    <span class="caption-subject"> {{ __('leaves.leave_requests_approval.title') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -25,14 +25,14 @@
                        id="leave-requests_table">
                     <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Employee</th>
-                        <th>Request Date</th>
-                        <th>Leave Type</th>
-                        <th>Start Date</th>
-                        <th>Duration</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        <th>{{ __('common.id') }}</th>
+                        <th>{{ __('leaves.employee') }}</th>
+                        <th>{{ __('leaves.request_date') }}</th>
+                        <th>{{ __('leaves.leave_type') }}</th>
+                        <th>{{ __('leaves.start_date') }}</th>
+                        <th>{{ __('leaves.duration') }}</th>
+                        <th>{{ __('leaves.status') }}</th>
+                        <th>{{ __('common.action') }}</th>
                     </thead>
                     <tbody>
 
@@ -44,7 +44,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('common.loading') }}</span>
 </div>
 @endsection
 @section('js')
@@ -57,6 +57,7 @@
                 destroy: true,
                 processing: true,
                 serverSide: true,
+                language : LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/leave-requests-approval/') }}",
                     data: function (d) {
@@ -85,12 +86,12 @@
 
         function approveRequest(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "This leave request will be approved, so are you sure!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('leaves.confirm_approve_request') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-warning",
-                    confirmButtonText: "Yes, Approve Request!",
+                    confirmButtonText: "{{ __('leaves.yes_approve_request') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -117,12 +118,12 @@
 
         function rejectRequest(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "This leave request will be reject, so are you sure!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('leaves.reject_approve_request') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, Reject Request!",
+                    confirmButtonText: "{{ __('leaves.yes_reject_request') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -148,13 +149,12 @@
         }
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('common.alert') }}", message, status);
             if (status) {
                 let oTable = $('#leave-requests_table').dataTable();
                 oTable.fnDraw(false);
             }
         }
-
 
     </script>
 @endsection

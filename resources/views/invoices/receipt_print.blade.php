@@ -16,8 +16,8 @@
         <table width="100%">
             <tr>
                 <td align="left">
-                    <span>Invoice No: {{ $invoice->invoice_no }} <br>
-                        Date: {{ $invoice->created_at }}<br>
+                    <span>{{ __('invoices.invoice_no') }}: {{ $invoice->invoice_no }} <br>
+                        {{ __('invoices.date') }}: {{ $invoice->created_at }}<br>
                     </span>
 
                 </td>
@@ -33,10 +33,10 @@
             <table width="100%">
                 <thead>
                 <tr>
-                    <th>Transaction</th>
-                    <th class="text-alignment">Qty</th>
-                    <th class="text-alignment">Unit Price</th>
-                    <th class="text-alignment">Total Amount</th>
+                    <th>{{ __('invoices.transaction') }}</th>
+                    <th class="text-alignment">{{ __('invoices.quantity') }}</th>
+                    <th class="text-alignment">{{ __('invoices.unit_price') }}</th>
+                    <th class="text-alignment">{{ __('invoices.total_amount') }}</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -56,7 +56,7 @@
                 <tfoot>
                 <tr>
                     <hr style="border: 1px solid #b0b0b0">
-                    <td class="standout" style="color: red">Total Amount</td>
+                    <td class="standout" style="color: red">{{ __('invoices.total_amount') }}</td>
                     <td></td>
                     <td></td>
                     <td class="standout text-alignment" style="color: red">{{ number_format($due_amount) }}</td>
@@ -67,13 +67,13 @@
         </div>
         <div class="col-xs-4">
 
-            <h3 style="font-size: 15px;">This Receipt</h3>
+            <h3 style="font-size: 15px;">{{ __('invoices.this_receipt') }}</h3>
             <table width="100%">
                 <thead>
                 <tr>
-                    <th>Payment Date</th>
-                    <th>Payment method</th>
-                    <th class="text-alignment">Amount</th>
+                    <th>{{ __('invoices.payment_date') }}</th>
+                    <th>{{ __('invoices.payment_method') }}</th>
+                    <th class="text-alignment">{{ __('invoices.amount') }}</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -91,13 +91,13 @@
                 </tbody>
                 <tfoot>
                 <tr>
-                    <td class="standout" style="color: red">Total Paid Amount</td>
+                    <td class="standout" style="color: red">{{ __('invoices.total_paid_amount') }}</td>
                     <td></td>
                     <td class="standout text-alignment" style="color: red">{{ number_format($paid_amount) }}
                     </td>
                 </tr>
                 <tr>
-                    <td class="standout" style="color: red">Outstanding Balance:</td>
+                    <td class="standout" style="color: red">{{ __('invoices.outstanding_balance') }}</td>
                     <td></td>
                     <td class="standout text-alignment" style="color: red">{{ number_format($due_amount-$paid_amount) }}
                     </td>

@@ -19,7 +19,7 @@
     }
 </style>
 <div class="note note-success">
-    <p class="text-black-50"><a href="{{ url('/medical-cards')}}" class="text-primary">View All Medical Cards</a>
+    <p class="text-black-50"><a href="{{ url('/medical-cards')}}" class="text-primary">{{ __('medical_cards.view_all_medical_cards') }}</a>
         </a> / @if(isset($patient)) {{ $patient->surname." ".$patient->othername }} ({{ $patient->patient_no }}) @endif
     </p>
 </div>
@@ -29,7 +29,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject"> Medical History / Cards</span>
+                    <span class="caption-subject"> {{ __('medical_cards.medical_history') }} / {{ __('medical_cards.cards') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -61,7 +61,7 @@
 
 
                                     <a href="#" onclick="deleteRecord({{ $image->id }})"
-                                       class="close-icon btn green-meadow">Delete Card
+                                       class="close-icon btn green-meadow">{{ __('medical_cards.delete_card') }}
                                     </a>
                                 </div>
                             @endforeach
@@ -75,7 +75,7 @@
 </div>
 <div class="loading">
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>Loading</span>
+    <span>{{ __('medical_cards.loading') }}</span>
 </div>
 @endsection
 @section('js')
@@ -90,12 +90,12 @@
 
         function deleteRecord(id) {
             swal({
-                    title: "Are you sure?",
-                    text: "Your will not be able to recover this card!",
+                    title: "{{ __('common.are_you_sure') }}",
+                    text: "{{ __('medical_cards.cannot_recover_card') }}",
                     type: "warning",
                     showCancelButton: true,
                     confirmButtonClass: "btn-danger",
-                    confirmButtonText: "Yes, delete it!",
+                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
                     closeOnConfirm: false
                 },
                 function () {
@@ -127,7 +127,7 @@
         }
 
         function alert_dialog(message, status) {
-            swal("Alert!", message, status);
+            swal("{{ __('medical_cards.alert') }}", message, status);
 
             setTimeout(function () {
                 location.reload();
