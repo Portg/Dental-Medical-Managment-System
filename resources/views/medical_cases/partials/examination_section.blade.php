@@ -1,6 +1,6 @@
 {{-- Examination Section (O - Objective) --}}
 @php
-    $examinationTeeth = isset($case) && $case->examination_teeth ? json_decode($case->examination_teeth, true) : [];
+    $examinationTeeth = isset($case) && $case->examination_teeth ? $case->examination_teeth : [];
 @endphp
 
 <div class="soap-section">

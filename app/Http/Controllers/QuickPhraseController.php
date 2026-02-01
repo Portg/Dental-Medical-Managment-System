@@ -44,6 +44,15 @@ class QuickPhraseController extends Controller
 
             return Datatables::of($data)
                 ->addIndexColumn()
+                ->addColumn('category_label', function ($row) {
+                    $labels = [
+                        'examination' => __('templates.examination'),
+                        'diagnosis' => __('templates.diagnosis'),
+                        'treatment' => __('templates.treatment'),
+                        'other' => __('templates.other'),
+                    ];
+                    return $labels[$row->category] ?? $row->category;
+                })
                 ->addColumn('scope_label', function ($row) {
                     if ($row->scope === 'system') {
                         return '<span class="label label-primary">' . __('templates.system') . '</span>';
@@ -60,7 +69,7 @@ class QuickPhraseController extends Controller
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
-                            ' . __('common.action') . ' <i class="fa fa-angle-down"></i>
+                            ' . __('common.action') . '
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <li>

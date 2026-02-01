@@ -5,7 +5,7 @@
         <div class="followup-item">
             <label>{{ __('medical_cases.next_visit_date') }}</label>
             <input type="date" name="next_visit_date" id="next_visit_date" class="form-control"
-                   value="{{ $case->next_visit_date ?? '' }}">
+                   value="{{ isset($case) && $case->next_visit_date ? $case->next_visit_date->format('Y-m-d') : '' }}">
         </div>
         <div class="followup-item" style="flex: 2;">
             <label>{{ __('medical_cases.next_visit_note') }}</label>

@@ -85,8 +85,8 @@ function uploadImage() {
             if (response.status) {
                 toastr.success(response.message);
 
-                // Add to auxiliary images list
-                var images = JSON.parse($('#auxiliary_images').val() || '[]');
+                // Add to related images list
+                var images = JSON.parse($('#related_images').val() || '[]');
                 var newImage = {
                     id: response.data ? response.data.id : Date.now(),
                     title: title,
@@ -94,7 +94,7 @@ function uploadImage() {
                     image_type: $('#image_type').val()
                 };
                 images.push(newImage);
-                $('#auxiliary_images').val(JSON.stringify(images));
+                $('#related_images').val(JSON.stringify(images));
 
                 // Add preview
                 addImagePreview(newImage);
@@ -137,9 +137,9 @@ function addImagePreview(image) {
 }
 
 function removeImage(imageId) {
-    var images = JSON.parse($('#auxiliary_images').val() || '[]');
+    var images = JSON.parse($('#related_images').val() || '[]');
     images = images.filter(function(img) { return img.id != imageId; });
-    $('#auxiliary_images').val(JSON.stringify(images));
+    $('#related_images').val(JSON.stringify(images));
     $('#auxiliary-image-preview .image-preview-item[data-id="' + imageId + '"]').remove();
 }
 </script>

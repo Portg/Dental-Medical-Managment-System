@@ -161,7 +161,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" id="btn-save" class="btn green" onclick="save_template()">{{ __('common.save_record') }}</button>
+                <button type="button" id="btn-save" class="btn btn-primary" onclick="save_template()">{{ __('common.save_record') }}</button>
                 <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>

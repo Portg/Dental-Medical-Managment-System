@@ -162,12 +162,20 @@
 
 <script>
 var selectedTeethInModal = [];
+var teethBeforeModal = [];
 
 document.addEventListener('DOMContentLoaded', function() {
     $('#tooth_selector_modal').on('show.bs.modal', function() {
-        // Load current selected teeth based on currentToothField
-        var inputId = currentToothField === 'examination' ? 'examination_teeth' : 'related_teeth';
-        selectedTeethInModal = JSON.parse($('#' + inputId).val() || '[]');
+        // Load union of both fields
+        var relatedTeeth = JSON.parse($('#related_teeth').val() || '[]');
+        var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
+        // Merge and deduplicate
+        var merged = relatedTeeth.slice();
+        examTeeth.forEach(function(t) {
+            if (merged.indexOf(t) === -1) merged.push(t);
+        });
+        selectedTeethInModal = merged;
+        teethBeforeModal = merged.slice(); // snapshot for diff
         updateToothSelectorUI();
     });
 });
@@ -207,20 +215,20 @@ function updateToothSelectorUI() {
 }
 
 function confirmToothSelection() {
-    var inputId = currentToothField === 'examination' ? 'examination_teeth' : 'related_teeth';
-    var tagContainer = currentToothField === 'examination' ? '#examination-teeth-tags' : '#related-teeth-tags';
+    // Diff: find added and removed teeth
+    var added = selectedTeethInModal.filter(function(t) {
+        return teethBeforeModal.indexOf(t) === -1;
+    });
+    var removed = teethBeforeModal.filter(function(t) {
+        return selectedTeethInModal.indexOf(t) === -1;
+    });
 
-    // Update hidden input
-    $('#' + inputId).val(JSON.stringify(selectedTeethInModal));
-
-    // Rebuild tags
-    $(tagContainer).find('.tooth-tag').remove();
-    selectedTeethInModal.forEach(function(tooth) {
-        var tag = '<span class="tooth-tag" data-tooth="' + tooth + '">' +
-                  tooth +
-                  '<span class="remove-tooth" onclick="removeTooth(\'' + currentToothField + '\', \'' + tooth + '\')">&times;</span>' +
-                  '</span>';
-        $(tagContainer).find('.add-teeth-btn').before(tag);
+    // Apply changes through sync functions
+    removed.forEach(function(tooth) {
+        removeToothFromBoth(tooth);
+    });
+    added.forEach(function(tooth) {
+        addToothToBoth(tooth);
     });
 
     updateMiniChartHighlights();

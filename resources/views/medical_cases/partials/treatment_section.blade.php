@@ -1,6 +1,6 @@
 {{-- Treatment Section (P - Plan) --}}
 @php
-    $treatmentServices = isset($case) && $case->treatment_services ? json_decode($case->treatment_services, true) : [];
+    $treatmentServices = isset($case) && $case->treatment_services ? $case->treatment_services : [];
 @endphp
 
 <div class="soap-section">

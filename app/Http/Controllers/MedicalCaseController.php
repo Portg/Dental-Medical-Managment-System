@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Helper\ActionColumnHelper;
 use App\MedicalCase;
 use App\Patient;
 use App\User;
@@ -89,13 +90,13 @@ class MedicalCaseController extends Controller
                     $statusKey = strtolower(str_replace([' ', '-'], '_', $row->status));
                     return '<span class="label label-' . $class . '">' . __('medical_cases.status_' . $statusKey) . '</span>';
                 })
-                ->addColumn('actions', function ($row) {
-                    $viewBtn = '<a href="' . url('medical-cases/' . $row->id) . '" class="btn btn-info btn-sm" title="' . __('common.view') . '"><i class="fa fa-eye"></i></a>';
-                    $editBtn = '<a href="' . url('medical-cases/' . $row->id . '/edit') . '" class="btn btn-primary btn-sm" title="' . __('common.edit') . '"><i class="fa fa-pencil"></i></a>';
-                    $deleteBtn = '<a href="javascript:void(0)" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger btn-sm" title="' . __('common.delete') . '"><i class="fa fa-trash"></i></a>';
-                    return $viewBtn . ' ' . $editBtn . ' ' . $deleteBtn;
+                ->addColumn('action', function ($row) {
+                    return ActionColumnHelper::make($row->id)
+                        ->primaryIf($row->deleted_at == null, 'edit')
+                        ->add('delete')
+                        ->render();
                 })
-                ->rawColumns(['statusBadge', 'actions'])
+                ->rawColumns(['statusBadge', 'action'])
                 ->make(true);
         }
 

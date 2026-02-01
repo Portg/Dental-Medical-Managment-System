@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Helper\ActionColumnHelper;
 use App\MedicalTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -66,24 +67,11 @@ class MedicalTemplateController extends Controller
                     return '<span class="text-danger">' . __('common.inactive') . '</span>';
                 })
                 ->addColumn('action', function ($row) {
-                    $btn = '
-                      <div class="btn-group">
-                        <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
-                            ' . __('common.action') . ' <i class="fa fa-angle-down"></i>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                            <li>
-                                <a href="#" onclick="previewTemplate(' . $row->id . ')">' . __('templates.preview') . '</a>
-                            </li>
-                            <li>
-                                <a href="#" onclick="editTemplate(' . $row->id . ')">' . __('common.edit') . '</a>
-                            </li>
-                            <li>
-                                <a href="#" onclick="deleteTemplate(' . $row->id . ')">' . __('common.delete') . '</a>
-                            </li>
-                        </ul>
-                    </div>';
-                    return $btn;
+                    return ActionColumnHelper::make($row->id)
+                        ->primary('preview', __('templates.preview'), '#', 'previewTemplate')
+                        ->add('edit', __('common.edit'), '#', 'editTemplate')
+                        ->add('delete', __('common.delete'), '#', 'deleteTemplate')
+                        ->render();
                 })
                 ->rawColumns(['category_label', 'status', 'action'])
                 ->make(true);

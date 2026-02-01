@@ -6,6 +6,10 @@
         </div>
     </div>
     <div class="portlet-body">
+        <div style="background: #f8f9fa; border-radius: 4px; padding: 8px 10px; margin-bottom: 10px; font-size: 12px; color: #666; line-height: 1.8;">
+            <div>💡 {{ __('medical_cases.hint_template_picker', ['key' => '/']) }}</div>
+            <div>💡 {{ __('medical_cases.hint_phrase_picker', ['key' => ';']) }}</div>
+        </div>
         <div class="quick-phrases-grid" style="display: flex; flex-wrap: wrap; gap: 6px;">
             {{-- Common examination phrases --}}
             <span class="quick-phrase btn btn-xs btn-default" data-phrase="{{ __('medical_cases.phrase_probe_normal') }}">

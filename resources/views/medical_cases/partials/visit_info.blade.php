@@ -3,7 +3,7 @@
     <div class="visit-info-item">
         <label>{{ __('medical_cases.case_date') }}</label>
         <input type="date" name="case_date" id="case_date" class="form-control"
-               value="{{ $case->case_date ?? date('Y-m-d') }}">
+               value="{{ isset($case) && $case->case_date ? $case->case_date->format('Y-m-d') : date('Y-m-d') }}">
     </div>
     <div class="visit-info-item">
         <label>{{ __('medical_cases.attending_doctor') }}</label>

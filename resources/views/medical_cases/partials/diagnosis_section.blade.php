@@ -1,6 +1,6 @@
 {{-- Diagnosis Section (A - Assessment) --}}
 @php
-    $relatedTeeth = isset($case) && $case->related_teeth ? json_decode($case->related_teeth, true) : [];
+    $relatedTeeth = isset($case) && $case->related_teeth ? $case->related_teeth : [];
 @endphp
 
 <div class="soap-section">

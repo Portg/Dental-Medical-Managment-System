@@ -633,6 +633,13 @@ function initTemplatePicker() {
             baseUrl: ''
         });
     }
+
+    // Initialize PhrasePicker (semicolon-triggered dropdown) if available
+    if (typeof PhrasePicker !== 'undefined') {
+        PhrasePicker.init({
+            baseUrl: ''
+        });
+    }
 }
 
 /**

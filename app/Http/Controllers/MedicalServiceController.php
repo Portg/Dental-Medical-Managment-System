@@ -22,50 +22,43 @@ class MedicalServiceController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['search'])) {
-                $data = DB::table('medical_services')
-                    ->leftJoin('users', 'users.id', 'medical_services._who_added')
-                    ->whereNull('medical_services.deleted_at')
-                    ->where('medical_services.name', 'like', '%' . $request->get('search') . '%')
-                    ->select(['medical_services.*', 'users.surname'])
-                    ->OrderBy('medical_services.id', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('medical_services')
-                    ->leftJoin('users', 'users.id', 'medical_services._who_added')
-                    ->whereNull('medical_services.deleted_at')
-                    ->select(['medical_services.*', 'users.surname'])
-                    ->OrderBy('medical_services.id', 'desc')
-                    ->get();
+            $query = DB::table('medical_services')
+                ->leftJoin('users', 'users.id', 'medical_services._who_added')
+                ->whereNull('medical_services.deleted_at')
+                ->select(['medical_services.*', 'users.surname']);
+
+            if ($request->has('search') && $request->search) {
+                $query->where('medical_services.name', 'like', '%' . $request->search . '%');
             }
+
+            $data = $query->orderBy('medical_services.id', 'desc')->get();
 
             return Datatables::of($data)
                 ->addIndexColumn()
-                ->filter(function ($instance) use ($request) {
-                })
                 ->addColumn('price', function ($row) {
                     return number_format($row->price);
                 })
                 ->addColumn('addedBy', function ($row) {
                     return $row->surname;
                 })
-                ->addColumn('status', function ($row) {
-                    if ($row->deleted_at != null) {
-                        return '<span class="text-danger">' . __('common.inactive') . '</span>';
-                    } else {
-                        return '<span class="text-primary">' . __('common.active') . '</span>';
-                    }
+                ->addColumn('action', function ($row) {
+                    $btn = '
+                      <div class="btn-group">
+                        <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
+                            ' . __('common.action') . '
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                            <li>
+                                <a href="#" onclick="editRecord(' . $row->id . ')">' . __('common.edit') . '</a>
+                            </li>
+                            <li>
+                                <a href="#" onclick="deleteRecord(' . $row->id . ')">' . __('common.delete') . '</a>
+                            </li>
+                        </ul>
+                    </div>';
+                    return $btn;
                 })
-                ->addColumn('editBtn', function ($row) {
-                    if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
-                    }
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
-
-                })
-                ->rawColumns(['status', 'editBtn', 'deleteBtn'])
+                ->rawColumns(['action'])
                 ->make(true);
         }
         return view('clinical_services.index');
