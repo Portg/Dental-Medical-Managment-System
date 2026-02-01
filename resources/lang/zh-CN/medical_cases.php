@@ -351,6 +351,10 @@ return [
     'phrase_xray_normal' => 'X光片显示根尖周正常',
     'phrase_xray_normal_short' => 'X光正常',
 
+    // Picker hints
+    'hint_template_picker' => '文本框中输入 :key 选择病例模板',
+    'hint_phrase_picker' => '文本框中输入 :key 选择常用短语',
+
     // Slash command menu
     'select_template' => '选择模板（输入关键字筛选）',
     'navigate' => '导航',

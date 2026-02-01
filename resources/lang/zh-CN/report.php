@@ -312,6 +312,7 @@ return [
     'conversion_rate' => '转化率',
     'conversion' => '转化',
     'patients' => '患者',
+    'unknown_source' => '未知来源',
 
     // Revisit Rate Report
     'revisit_rate_analysis' => '复诊率分析',

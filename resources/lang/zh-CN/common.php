@@ -343,12 +343,15 @@ return [
     // 搜索
     'type_to_search' => '输入关键词搜索...',
     'no_results' => '未找到结果',
+    'no_matching_phrases' => '没有找到匹配的短语',
+    'quick_phrases' => '常用短语',
     'searching' => '搜索中...',
 
     // 空状态
     'no_data' => '暂无数据',
     'no_data_found' => '暂无数据',
     'click_add_to_start' => '点击添加按钮开始创建',
+    'try_adjust_filters' => '请尝试调整筛选条件，或稍后再查看',
     'view_all' => '查看全部',
 
     // 选择

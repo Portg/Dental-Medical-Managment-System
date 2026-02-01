@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Leave Mgt / Holidays',
+    'title' => 'Holidays',
     'holidays_form' => 'Holidays Form',
 
     // 表单字段

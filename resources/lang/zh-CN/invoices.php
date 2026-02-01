@@ -207,6 +207,8 @@ return [
     'cannot_delete_approved_refund' => '无法删除已通过的退费',
     'refund_deleted_successfully' => '退费删除成功',
     'refund_to_stored_value' => '退费来自 :refund_no',
+    'requested_by' => '申请人',
+    'requested_at' => '申请时间',
 
     // 支付方式 (PRD 4.1.3)
     'wechat_pay' => '微信支付',

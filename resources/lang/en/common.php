@@ -147,12 +147,15 @@ return [
     // Search
     'type_to_search' => 'Type to search...',
     'no_results' => 'No results found',
+    'no_matching_phrases' => 'No matching phrases found',
+    'quick_phrases' => 'Quick Phrases',
     'searching' => 'Searching...',
 
     // Empty State
     'no_data' => 'No data',
     'no_data_found' => 'No data found',
     'click_add_to_start' => 'Click the add button to get started',
+    'try_adjust_filters' => 'Try adjusting your filters or check back later',
     'view_all' => 'View All',
 
     // Selection

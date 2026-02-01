@@ -351,6 +351,10 @@ return [
     'phrase_xray_normal' => 'X-ray shows normal periapical area',
     'phrase_xray_normal_short' => 'X-ray Normal',
 
+    // Picker hints
+    'hint_template_picker' => 'Type :key in a text field to select a case template',
+    'hint_phrase_picker' => 'Type :key in a text field to select a common phrase',
+
     // Slash command menu
     'select_template' => 'Select template (type to filter)',
     'navigate' => 'Navigate',

@@ -19,6 +19,7 @@ return [
 
     // 表格列
     'name' => '名称',
+    'added_date' => '添加日期',
     'added_by' => '录入人',
     'status' => '状态',
     'edit' => '编辑',

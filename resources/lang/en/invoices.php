@@ -206,6 +206,8 @@ return [
     'cannot_delete_approved_refund' => 'Cannot delete an approved refund',
     'refund_deleted_successfully' => 'Refund deleted successfully',
     'refund_to_stored_value' => 'Refund from :refund_no',
+    'requested_by' => 'Requested By',
+    'requested_at' => 'Requested At',
 
     // Payment methods (PRD 4.1.3)
     'wechat_pay' => 'WeChat Pay',

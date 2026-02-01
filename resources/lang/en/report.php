@@ -142,6 +142,8 @@ return [
     'conversion_rate' => 'Conversion Rate',
     'conversion' => 'Conversion',
     'patients' => 'patients',
+    'percentage' => 'Percentage',
+    'unknown_source' => 'Unknown Source',
 
     // Revisit Rate Report
     'revisit_rate_analysis' => 'Revisit Rate Analysis',
