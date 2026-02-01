@@ -49,10 +49,10 @@
             <div class="portlet-title">
                 <div class="caption">
                     <span class="caption-subject bold uppercase">{{ __('medical_history.surgical_history') }}</span>
-                    <a class="btn  blue btn-outline btn-circle btn-sm" href="#"
+                    <button type="button" class="btn  blue btn-outline btn-circle btn-sm"
                        onclick="AddSurgery({{ $patient->id  }})">
                         {{ __('medical_history.add_surgery') }}
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="portlet-body">
@@ -81,10 +81,10 @@
             <div class="portlet-title">
                 <div class="caption">
                     <span class="caption-subject font-dark bold uppercase">{{ __('medical_history.chronic_diseases') }}</span>
-                    <a class="btn dark btn-outline btn-circle btn-sm" href="#"
+                    <button type="button" class="btn dark btn-outline btn-circle btn-sm"
                        onclick="AddIllness({{ $patient->id  }})">
                         {{ __('medical_history.add_illness') }}
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="portlet-body">
@@ -115,10 +115,10 @@
             <div class="portlet-title">
                 <div class="caption">
                     <span class="caption-subject bold uppercase">{{ __('medical_history.drug_allergies') }}</span>
-                    <a class="btn  blue btn-outline btn-circle btn-sm" href="#"
+                    <button type="button" class="btn  blue btn-outline btn-circle btn-sm"
                        onclick="AddAllergy({{ $patient->id  }})">
                         {{ __('medical_history.add_allergies') }}
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="portlet-body">

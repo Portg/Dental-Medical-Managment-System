@@ -43,7 +43,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <i class="icon-emotsmile"></i>
+                    <i class="icon-emoticon-smile"></i>
                     <span class="caption-subject">{{ __('satisfaction.title') }}</span>
                 </div>
                 <div class="actions">

@@ -94,10 +94,10 @@
                                             <div class="portlet light">
                                                 <div class="portlet-title">
 
-                                                    <a class="btn  blue btn-outline btn-circle btn-sm" href="#"
+                                                    <button type="button" class="btn  blue btn-outline btn-circle btn-sm"
                                                        onclick="AddTreatment({{ $appointment_id  }})">
                                                         {{ __('medical_treatment.add_clinical_notes') }}
-                                                    </a>
+                                                    </button>
                                                 </div>
                                                 <div class="portlet-body">
                                                     <table class="table table-hover" id="dental_treatment_table">
@@ -171,10 +171,10 @@
                                             <div class="portlet light">
                                                 <div class="portlet-title">
 
-                                                    <a class="btn blue btn-outline btn-circle btn-sm" href="#"
+                                                    <button type="button" class="btn blue btn-outline btn-circle btn-sm"
                                                        onclick="AddInvoice({{ $appointment_id  }})">
                                                         {{ __('medical_treatment.create_invoice') }}
-                                                    </a>
+                                                    </button>
                                                 </div>
                                                 <div class="portlet-body">
                                                     <table class="table table-striped table-bordered table-hover table-checkable order-column"
@@ -207,13 +207,13 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
 
-                                        <a class="btn dark btn-outline btn-circle btn-sm" href="#"
+                                        <button type="button" class="btn dark btn-outline btn-circle btn-sm"
                                            onclick="AddIllness(<?php if (isset($patient->id)) {
                                                /** @var TYPE_NAME $patient */
                                                echo $patient->id;
                                            } ?>)">
                                             {{ __('medical_treatment.add_illness') }}
-                                        </a>
+                                        </button>
                                     </div>
                                     <div class="portlet-body">
                                         <table class="table table-striped table-bordered table-hover table-checkable order-column"
@@ -244,13 +244,13 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
 
-                                        <a class="btn dark btn-outline btn-circle btn-sm" href="#"
+                                        <button type="button" class="btn dark btn-outline btn-circle btn-sm"
                                            onclick="AddAllergy(<?php if (isset($patient->id)) {
                                                /** @var TYPE_NAME $patient */
                                                echo $patient->id;
                                            } ?>)">
                                             {{ __('medical_treatment.add_allergies') }}
-                                        </a>
+                                        </button>
                                     </div>
                                     <div class="portlet-body">
                                         <table class="table table-striped table-bordered table-hover table-checkable order-column"

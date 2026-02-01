@@ -208,7 +208,7 @@
                                     @endforeach
                                 @else
                                     <div class="no-patients">
-                                        <i class="icon-emotsmile" style="font-size: 40px; margin-bottom: 10px; display: block;"></i>
+                                        <i class="icon-emoticon-smile" style="font-size: 40px; margin-bottom: 10px; display: block;"></i>
                                         {{ __('waiting_queue.no_waiting_patients') }}
                                     </div>
                                 @endif

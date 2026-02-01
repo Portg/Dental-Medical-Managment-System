@@ -15,9 +15,7 @@
                     <span class="caption-subject">{{ __('doctor_schedules.title') }}</span>
                 </div>
                 <div class="actions">
-                    <a class="btn blue btn-outline sbold" href="#" onclick="createRecord()">
-                        {{ __('common.add_new') }} <i class="fa fa-plus"></i>
-                    </a>
+                    <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('common.add_new') }}</button>
                 </div>
             </div>
             <div class="portlet-body">

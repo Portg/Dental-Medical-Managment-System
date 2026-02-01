@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('menu.settings') }} / {{ __('templates.medical_templates') }}</span>
+                    <span class="caption-subject">{{ __('templates.medical_templates') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -16,9 +16,7 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="btn-group">
-                                <a class="btn blue btn-outline sbold" href="#" onclick="createTemplate()">
-                                    {{ __('common.add_new') }} <i class="fa fa-plus"></i>
-                                </a>
+                                <button type="button" class="btn blue btn-outline sbold" onclick="createTemplate()">{{ __('common.add_new') }}</button>
                             </div>
                         </div>
                         <div class="col-md-4">

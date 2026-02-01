@@ -18,9 +18,7 @@
                 <div class="caption">
                     <span class="caption-subject bold uppercase">{{ __('expense_items.title') }}</span>
                     &nbsp; &nbsp; &nbsp
-                    <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_item()"> {{ __('common.add_new') }}  <i
-                                class="fa fa-plus"></i> </a>
+                    <button type="button" class="btn blue btn-outline sbold" onclick="Add_new_item()">{{ __('common.add_new') }}</button>
                 </div>
             </div>
             <div class="portlet-body">

@@ -93,8 +93,8 @@
                                        class="form-control" value="{{ $user->nin }}"/>
                             </div>
                             <div class="margin-top-10">
-                                <a href="#" onclick="Update_Biodata();" class="btn green"> {{ __('profile.save_changes') }} </a>
-                                <a href="javascript:;" class="btn default"> {{ __('profile.cancel') }} </a>
+                                <button type="button" onclick="Update_Biodata();" class="btn green"> {{ __('profile.save_changes') }} </button>
+                                <button type="button" class="btn default"> {{ __('profile.cancel') }} </button>
                             </div>
                         </form>
                     </div>
@@ -116,13 +116,13 @@
                                             <span class="fileinput-exists"> {{ __('common.change', ['default' => 'Change']) }} </span>
                                             <input type="file" name="avatar">
                                         </span>
-                                        <a href="javascript:;" class="btn default fileinput-exists" data-dismiss="fileinput"> {{ __('payslips.remove') }} </a>
+                                        <button type="button" class="btn default fileinput-exists" data-dismiss="fileinput"> {{ __('payslips.remove') }} </button>
                                     </div>
                                 </div>
                             </div>
                             <div class="margin-top-10">
                                 <input type="submit" value="{{ __('profile.upload_picture') }}" class="btn btn-primary">
-                                <a href="javascript:;" class="btn default"> {{ __('profile.cancel') }} </a>
+                                <button type="button" class="btn default"> {{ __('profile.cancel') }} </button>
                             </div>
                         </form>
                     </div>
@@ -152,8 +152,8 @@
                                        placeholder="{{ __('profile.confirm_password') }}" class="form-control"/>
                             </div>
                             <div class="margin-top-10">
-                                <a href="#" onclick="Change_Password();" class="btn green"> {{ __('profile.change_password') }} </a>
-                                <a href="javascript:;" class="btn default"> {{ __('profile.cancel') }} </a>
+                                <button type="button" onclick="Change_Password();" class="btn green"> {{ __('profile.change_password') }} </button>
+                                <button type="button" class="btn default"> {{ __('profile.cancel') }} </button>
                             </div>
                         </form>
                     </div>

@@ -34,8 +34,7 @@
                                             <div class="row">
                                                 <div class="col-md-6">
                                                     <div class="btn-group">
-                                                        <a class="btn blue btn-outline sbold" href="#"
-                                                           onclick="createRecord()"> {{ __('appointment.add_appointment')}}</a>
+                                                        <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('appointment.add_appointment') }}</button>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">

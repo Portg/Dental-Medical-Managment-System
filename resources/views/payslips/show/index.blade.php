@@ -17,9 +17,7 @@
                 <div class="caption">
                     <span class="caption-subject bold uppercase">{{ __('payslips.allowances') }}</span>
                     &nbsp; &nbsp; &nbsp
-                    <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_allowance()"> {{ __('payslips.add_more') }} <i
-                                class="fa fa-plus"></i> </a>
+                    <button type="button" class="btn blue btn-outline sbold" onclick="Add_new_allowance()">{{ __('payslips.add_more') }}</button>
                 </div>
             </div>
             <div class="portlet-body">
@@ -49,9 +47,7 @@
                 <div class="caption">
                     <span class="caption-subject font-dark bold uppercase">{{ __('payslips.deductions') }}</span>
                     &nbsp; &nbsp
-                    <a class="btn blue btn-outline sbold " href="#"
-                       onclick="Add_new_deduction()"> {{ __('payslips.add_more') }} <i
-                                class="fa fa-plus"></i> </a>
+                    <button type="button" class="btn blue btn-outline sbold" onclick="Add_new_deduction()">{{ __('payslips.add_more') }}</button>
                 </div>
                 <div class="actions">
                     <div class="btn-group btn-group-devided">

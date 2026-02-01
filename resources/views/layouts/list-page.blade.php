@@ -128,7 +128,15 @@
                         @yield('empty_title', __('common.no_data_found'))
                     </div>
                     <div class="empty-desc">
-                        @yield('empty_desc', __('common.click_add_to_start'))
+                        @hasSection('empty_desc')
+                            @yield('empty_desc')
+                        @else
+                            @if(isset($createRoute) || View::hasSection('create_action'))
+                                {{ __('common.click_add_to_start') }}
+                            @else
+                                {{ __('common.try_adjust_filters') }}
+                            @endif
+                        @endif
                     </div>
                     @hasSection('empty_action')
                         @yield('empty_action')
@@ -219,8 +227,8 @@
      * Clear all filters - override in child page for custom behavior
      */
     function clearFilters() {
-        // Reset text inputs
-        $('.filter-area-l2 input[type="text"]').val('');
+        // Reset text, date, datetime-local inputs
+        $('.filter-area-l2 input[type="text"], .filter-area-l2 input[type="date"], .filter-area-l2 input[type="datetime-local"]').val('');
 
         // Reset select2
         $('.filter-area-l2 select').val(null).trigger('change');

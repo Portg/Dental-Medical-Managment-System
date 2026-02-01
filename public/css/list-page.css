@@ -193,7 +193,7 @@
 /* Action Column */
 .list-table th:last-child,
 .list-table td:last-child {
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
 }
 
@@ -384,3 +384,21 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+/* ==========================================================================
+   Action Column - Split Button Group
+   ========================================================================== */
+
+/*
+ * Allow action-column dropdown menu to escape ancestor overflow clipping.
+ * Metronic's .table-scrollable { overflow: auto hidden } clips dropdown menus.
+ * .portlet-body may also clip the action button at the right edge.
+ */
+.table-scrollable { overflow: visible !important; }
+.portlet > .portlet-body { overflow: visible !important; }
+
+.list-table .btn-group .btn.btn-sm { padding: 4px 10px; font-size: 12px; }
+.list-table .btn-group .dropdown-toggle.btn-sm { padding: 4px 8px; }
+.list-table .btn-group .dropdown-menu { min-width: 140px; }
+.list-table .btn-group .dropdown-menu > li > a { padding: 6px 16px; color: #303133; }
+.list-table .btn-group .dropdown-menu > li > a:hover { background: #E8EAF6; color: #1A237E; }

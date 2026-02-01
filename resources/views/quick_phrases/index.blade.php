@@ -8,7 +8,7 @@
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('menu.settings') }} / {{ __('templates.quick_phrases') }}</span>
+                    <span class="caption-subject">{{ __('templates.quick_phrases') }}</span>
                 </div>
             </div>
             <div class="portlet-body">
@@ -16,9 +16,7 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="btn-group">
-                                <a class="btn blue btn-outline sbold" href="#" onclick="createPhrase()">
-                                    {{ __('common.add_new') }} <i class="fa fa-plus"></i>
-                                </a>
+                                <button type="button" class="btn blue btn-outline sbold" onclick="createPhrase()">{{ __('common.add_new') }}</button>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -95,7 +93,7 @@
                 {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                 {data: 'shortcut', name: 'shortcut'},
                 {data: 'phrase', name: 'phrase'},
-                {data: 'category', name: 'category'},
+                {data: 'category_label', name: 'category_label'},
                 {data: 'scope_label', name: 'scope_label'},
                 {data: 'status', name: 'status'},
                 {data: 'action', name: 'action', orderable: false, searchable: false}
@@ -227,7 +225,8 @@
             showCancelButton: true,
             confirmButtonClass: "btn-danger",
             confirmButtonText: "{{ __('common.yes_delete_it') }}",
-            closeOnConfirm: false
+            closeOnConfirm: false,
+            cancelButtonText: "{{ __('common.cancel') }}"
         }, function () {
             var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
             $.LoadingOverlay("show");

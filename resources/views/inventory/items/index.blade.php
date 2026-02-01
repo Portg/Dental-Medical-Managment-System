@@ -16,9 +16,7 @@
                     <div class="row">
                         <div class="col-md-3">
                             <div class="btn-group">
-                                <a class="btn blue btn-outline sbold" href="#" onclick="createRecord()">
-                                    {{ __('inventory.add_item') }} <i class="fa fa-plus"></i>
-                                </a>
+                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('inventory.add_item') }}</button>
                             </div>
                         </div>
                         <div class="col-md-3">

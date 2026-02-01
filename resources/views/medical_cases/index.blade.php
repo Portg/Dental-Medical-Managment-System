@@ -109,11 +109,6 @@
         'messages': @json(__('messages'))
     });
 
-    // ==========================================================================
-    // Select2 Initializations (Global Scope - same as patients page)
-    // ==========================================================================
-
-    // Doctor filter - AJAX loading
     $('#filter_doctor').select2({
         language: '{{ app()->getLocale() }}',
         placeholder: "{{ __('medical_cases.select_doctor') }}",
@@ -198,7 +193,7 @@
                 {data: 'doctor_name', name: 'doctor_name'},
                 {data: 'case_date', name: 'case_date'},
                 {data: 'statusBadge', name: 'statusBadge', orderable: false, searchable: false},
-                {data: 'actions', name: 'actions', orderable: false, searchable: false}
+                {data: 'action', name: 'action', orderable: false, searchable: false}
             ],
             order: [[5, 'desc']]
         });
