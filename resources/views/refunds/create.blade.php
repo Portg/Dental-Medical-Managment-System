@@ -4,12 +4,8 @@
     @include('layouts.page_loader')
 @endsection
 
-<div class="page-content-wrapper">
-    <div class="page-content">
-        <div class="note note-info">
-            <p><a href="{{ url('refunds') }}" class="text-primary">{{ __('invoices.back_to_refunds') }}</a></p>
-        </div>
-
+<div class="row">
+    <div class="col-md-12">
         <div class="row">
             <div class="col-md-8">
                 <div class="portlet light bordered">
@@ -85,7 +81,7 @@
 
                             <div class="form-group">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fa fa-save"></i> {{ __('invoices.submit_refund') }}
+                                    {{ __('invoices.submit_refund') }}
                                 </button>
                                 <a href="{{ url('refunds') }}" class="btn btn-default">{{ __('common.cancel') }}</a>
                             </div>

@@ -1,5 +1,3 @@
-create.blade.php:
-
 <div class="modal fade" id="create_modal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">

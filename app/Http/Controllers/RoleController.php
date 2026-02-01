@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Helper\ActionColumnHelper;
+use App\Role;
 use Exception;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Http\Request;
 use Yajra\DataTables\DataTables;
-use App\Role;
 
 class RoleController extends Controller
 {
@@ -29,16 +30,13 @@ class RoleController extends Controller
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
-                ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
-                    return $btn;
+                ->addColumn('action', function ($row) {
+                    return ActionColumnHelper::make($row->id)
+                        ->primary('edit')
+                        ->add('delete')
+                        ->render();
                 })
-                ->addColumn('deleteBtn', function ($row) {
-
-                    $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
-                    return $btn;
-                })
-                ->rawColumns(['editBtn', 'deleteBtn'])
+                ->rawColumns(['action'])
                 ->make(true);
         }
         return view('roles.index');

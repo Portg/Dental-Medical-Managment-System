@@ -80,8 +80,6 @@ class UsersController extends Controller
         }
         return view('users.index');
     }
-
-
     public function filterDoctor(Request $request)
     {
         $search = $request->q;

@@ -12,6 +12,9 @@ class MedicalTemplatesSeeder extends Seeder
      */
     public function run()
     {
+        // Clear existing templates before re-seeding
+        DB::table('medical_templates')->truncate();
+
         // Get a user ID for _who_added (use first user or ID 1)
         $userId = DB::table('users')->first()->id ?? 1;
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Holiday;
+use App\Http\Helper\ActionColumnHelper;
 use App\Http\Helper\FunctionsHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -24,28 +25,35 @@ class HolidayController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = DB::table('holidays')
+            $query = DB::table('holidays')
                 ->leftJoin('users', 'users.id', 'holidays._who_added')
                 ->whereNull('holidays.deleted_at')
                 ->select(['holidays.*', 'users.surname'])
-                ->OrderBy('holidays.id', 'desc')
-                ->get();
+                ->OrderBy('holidays.holiday_date');
+
+            if ($request->filled('filter_name')) {
+                $query->where('holidays.name', 'like', '%' . $request->filter_name . '%');
+            }
+            if ($request->filled('filter_repeat')) {
+                $query->where('holidays.repeat_date', $request->filter_repeat);
+            }
+
+            $data = $query->get();
             return Datatables::of($data)
                 ->addIndexColumn()
-                ->filter(function ($instance) use ($request) {
-                })
                 ->addColumn('addedBy', function ($row) {
                     return $row->surname;
                 })
-                ->addColumn('editBtn', function ($row) {
-                    if ($row->deleted_at == null) {
-                        return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
-                    }
+                ->editColumn('repeat_date', function ($row) {
+                    return $row->repeat_date === 'Yes' ? __('common.yes') : __('common.no');
                 })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
+                ->addColumn('action', function ($row) {
+                    return ActionColumnHelper::make($row->id)
+                        ->primaryIf($row->deleted_at == null, 'edit')
+                        ->add('delete')
+                        ->render();
                 })
-                ->rawColumns(['editBtn', 'deleteBtn'])
+                ->rawColumns(['action'])
                 ->make(true);
         }
         return view('holidays.index');
