@@ -1,4 +1,4 @@
-{{-- Doctor Sidebar Menu - Layout4 --}}
+{{-- Doctor Sidebar Menu - Layout4 (3-Level) --}}
 <div class="page-sidebar-wrapper">
     <div class="page-sidebar navbar-collapse collapse">
         <ul class="page-sidebar-menu page-header-fixed" data-keep-expanded="false" data-auto-scroll="true" data-slide-speed="200">
@@ -28,9 +28,27 @@
                     <span class="arrow"></span>
                 </a>
                 <ul class="sub-menu">
-                    <li class="nav-item"><a href="{{ url('patients') }}" class="nav-link"><i class="icon-people"></i><span class="title">{{ __('menu.patients_list') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('patient-images') }}" class="nav-link"><i class="icon-picture"></i><span class="title">{{ __('menu.patient_images') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('members') }}" class="nav-link"><i class="icon-badge"></i><span class="title">{{ __('menu.members_list') }}</span></a></li>
+                    {{-- 2.1 Patient Files (patients only) --}}
+                    <li class="nav-item">
+                        <a href="{{ url('patients') }}" class="nav-link">
+                            <i class="icon-list"></i>
+                            <span class="title">{{ __('menu.group_patient_management') }}</span>
+                        </a>
+                    </li>
+                    {{-- 2.2 Membership (members list only) --}}
+                    <li class="nav-item">
+                        <a href="{{ url('members') }}" class="nav-link">
+                            <i class="icon-badge"></i>
+                            <span class="title">{{ __('menu.group_member_management') }}</span>
+                        </a>
+                    </li>
+                    {{-- 2.3 Image Data --}}
+                    <li class="nav-item">
+                        <a href="{{ url('patient-images') }}" class="nav-link">
+                            <i class="icon-picture"></i>
+                            <span class="title">{{ __('menu.group_image_data') }}</span>
+                        </a>
+                    </li>
                 </ul>
             </li>
             {{-- 3. Clinical Center --}}
@@ -41,45 +59,102 @@
                     <span class="arrow"></span>
                 </a>
                 <ul class="sub-menu">
-                    <li class="nav-item"><a href="{{ url('appointments') }}" class="nav-link"><i class="icon-clock"></i><span class="title">{{ __('menu.appointments') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('doctor-queue') }}" class="nav-link"><i class="icon-people"></i><span class="title">{{ __('menu.doctor_queue') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('medical-cases') }}" class="nav-link"><i class="icon-doc"></i><span class="title">{{ __('menu.medical_cases') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('treatment-plans') }}" class="nav-link"><i class="icon-list"></i><span class="title">{{ __('menu.treatment_plans') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('prescriptions') }}" class="nav-link"><i class="icon-note"></i><span class="title">{{ __('menu.prescriptions') }}</span></a></li>
+                    {{-- 3.1 Appointment Management --}}
+                    <li class="nav-item">
+                        <a href="javascript:;" class="nav-link nav-toggle">
+                            <i class="icon-calendar"></i>
+                            <span class="title">{{ __('menu.group_appointment_management') }}</span>
+                            <span class="arrow"></span>
+                        </a>
+                        <ul class="sub-menu">
+                            <li class="nav-item"><a href="{{ url('appointments') }}" class="nav-link"><span class="title">{{ __('menu.appointments') }}</span></a></li>
+                            <li class="nav-item"><a href="{{ url('doctor-queue') }}" class="nav-link"><span class="title">{{ __('menu.doctor_queue') }}</span></a></li>
+                        </ul>
+                    </li>
+                    {{-- 3.2 Medical Records --}}
+                    <li class="nav-item">
+                        <a href="javascript:;" class="nav-link nav-toggle">
+                            <i class="icon-doc"></i>
+                            <span class="title">{{ __('menu.group_medical_records') }}</span>
+                            <span class="arrow"></span>
+                        </a>
+                        <ul class="sub-menu">
+                            <li class="nav-item"><a href="{{ url('medical-cases') }}" class="nav-link"><span class="title">{{ __('menu.medical_cases') }}</span></a></li>
+                            <li class="nav-item"><a href="{{ url('dental-charting') }}" class="nav-link"><span class="title">{{ __('menu.dental_charting') }}</span></a></li>
+                            <li class="nav-item"><a href="{{ url('prescriptions') }}" class="nav-link"><span class="title">{{ __('menu.prescriptions') }}</span></a></li>
+                        </ul>
+                    </li>
+                    {{-- 3.3 Treatment Plans --}}
+                    <li class="nav-item">
+                        <a href="{{ url('treatment-plans') }}" class="nav-link">
+                            <i class="icon-list"></i>
+                            <span class="title">{{ __('menu.group_treatment_plan') }}</span>
+                        </a>
+                    </li>
+                    {{-- 3.4 Clinical Config (templates & phrases) --}}
+                    <li class="nav-item">
+                        <a href="javascript:;" class="nav-link nav-toggle">
+                            <i class="icon-wrench"></i>
+                            <span class="title">{{ __('menu.group_clinical_config') }}</span>
+                            <span class="arrow"></span>
+                        </a>
+                        <ul class="sub-menu">
+                            <li class="nav-item"><a href="{{ url('medical-templates') }}" class="nav-link"><span class="title">{{ __('menu.medical_templates') }}</span></a></li>
+                            <li class="nav-item"><a href="{{ url('quick-phrases') }}" class="nav-link"><span class="title">{{ __('menu.quick_phrases') }}</span></a></li>
+                        </ul>
+                    </li>
                 </ul>
             </li>
-            {{-- 4. Finance --}}
+            {{-- 4. Operations Center (Doctor: billing + claims + payslip + performance + leave) --}}
             <li class="nav-item">
                 <a href="javascript:;" class="nav-link nav-toggle">
                     <i class="icon-wallet"></i>
-                    <span class="title">{{ __('menu.finance') }}</span>
+                    <span class="title">{{ __('menu.operations_center') }}</span>
                     <span class="arrow"></span>
                 </a>
                 <ul class="sub-menu">
-                    <li class="nav-item"><a href="{{ url('invoices') }}" class="nav-link"><i class="icon-doc"></i><span class="title">{{ __('menu.invoices') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('quotations') }}" class="nav-link"><i class="icon-docs"></i><span class="title">{{ __('menu.quotations') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('refunds') }}" class="nav-link"><i class="icon-action-undo"></i><span class="title">{{ __('menu.refunds') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('invoices/pending-discount-approvals') }}" class="nav-link"><i class="icon-check"></i><span class="title">{{ __('menu.pending_discount_approvals') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('doctor-claims') }}" class="nav-link"><i class="icon-badge"></i><span class="title">{{ __('menu.doctor_claims') }}</span></a></li>
-                </ul>
-            </li>
-            {{-- 5. Leave Requests --}}
-            <li class="nav-item">
-                <a href="{{ url('leave-requests') }}" class="nav-link">
-                    <i class="icon-calendar"></i>
-                    <span class="title">{{ __('menu.leave_requests') }}</span>
-                </a>
-            </li>
-            {{-- 6. Settings --}}
-            <li class="nav-item">
-                <a href="javascript:;" class="nav-link nav-toggle">
-                    <i class="icon-settings"></i>
-                    <span class="title">{{ __('menu.settings') }}</span>
-                    <span class="arrow"></span>
-                </a>
-                <ul class="sub-menu">
-                    <li class="nav-item"><a href="{{ url('medical-templates') }}" class="nav-link"><i class="icon-notebook"></i><span class="title">{{ __('menu.medical_templates') }}</span></a></li>
-                    <li class="nav-item"><a href="{{ url('quick-phrases') }}" class="nav-link"><i class="icon-speech"></i><span class="title">{{ __('menu.quick_phrases') }}</span></a></li>
+                    {{-- 4.1 Billing --}}
+                    <li class="nav-item">
+                        <a href="javascript:;" class="nav-link nav-toggle">
+                            <i class="icon-doc"></i>
+                            <span class="title">{{ __('menu.group_billing') }}</span>
+                            <span class="arrow"></span>
+                        </a>
+                        <ul class="sub-menu">
+                            <li class="nav-item"><a href="{{ url('invoices') }}" class="nav-link"><span class="title">{{ __('menu.invoices') }}</span></a></li>
+                            <li class="nav-item"><a href="{{ url('quotations') }}" class="nav-link"><span class="title">{{ __('menu.quotations') }}</span></a></li>
+                            <li class="nav-item"><a href="{{ url('refunds') }}" class="nav-link"><span class="title">{{ __('menu.refunds') }}</span></a></li>
+                            <li class="nav-item"><a href="{{ url('invoices/pending-discount-approvals') }}" class="nav-link"><span class="title">{{ __('menu.pending_discount_approvals') }}</span></a></li>
+                        </ul>
+                    </li>
+                    {{-- 4.2 Insurance Claims (claim submission only) --}}
+                    <li class="nav-item">
+                        <a href="{{ url('doctor-claims') }}" class="nav-link">
+                            <i class="icon-shield"></i>
+                            <span class="title">{{ __('menu.group_insurance_claims') }}</span>
+                        </a>
+                    </li>
+                    {{-- 4.3 Employee (own payslip) --}}
+                    <li class="nav-item">
+                        <a href="{{ url('individual-payslips') }}" class="nav-link">
+                            <i class="icon-briefcase"></i>
+                            <span class="title">{{ __('menu.individual_payslip') }}</span>
+                        </a>
+                    </li>
+                    {{-- 4.4 Performance (own stats) --}}
+                    <li class="nav-item">
+                        <a href="{{ url('doctor-performance-report') }}" class="nav-link">
+                            <i class="icon-calculator"></i>
+                            <span class="title">{{ __('menu.group_performance') }}</span>
+                        </a>
+                    </li>
+                    {{-- 4.5 Leave --}}
+                    <li class="nav-item">
+                        <a href="{{ url('leave-requests') }}" class="nav-link">
+                            <i class="icon-calendar"></i>
+                            <span class="title">{{ __('menu.leave_requests') }}</span>
+                        </a>
+                    </li>
                 </ul>
             </li>
         </ul>
