@@ -12,13 +12,13 @@ use App\Notifications\ReminderNotification;
 use App\Patient;
 use Carbon\Carbon;
 use DateTime;
-use ExcelReport;
+use App\Exports\AppointmentExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use MaddHatter\LaravelFullcalendar\Facades\Calendar;
 use Thomasjohnkane\Snooze\ScheduledNotification;
 use Yajra\DataTables\DataTables;
 
@@ -194,78 +194,60 @@ class AppointmentsController extends Controller
                 ->rawColumns(['visit_information', 'invoice_status', 'action'])
                 ->make(true);
         }
-        $incoming = [];
-        $appointment_data = DB::table('appointments')
+        return view('appointments.index');
+    }
+
+    public function calendarEvents(Request $request)
+    {
+        $query = DB::table('appointments')
             ->join('patients', 'patients.id', 'appointments.patient_id')
             ->join('users', 'users.id', 'appointments.doctor_id')
             ->whereNull('appointments.deleted_at')
-            ->select('appointments.*', 'patients.surname', 'patients.othername', 'users.surname as 
-                    d_surname', 'users.othername as d_othername')
-            ->orderBy('appointments.sort_by', 'desc')
-            ->get();
-//        if ($appointment_data->count()) {
-        foreach ($appointment_data as $key => $value) {
-            $incoming[] = Calendar::event(
-                \App\Http\Helper\NameHelper::join($value->surname, $value->othername), //event title
-                false,
-                date_format(date_create($value->sort_by), "Y-m-d H:i:s"),
-                date_format(date_create($value->sort_by), "Y-m-d H:i:s"),
-                null,
-                // Add color
-                [
-//                        'color' => '#000000',
-                    'textColor' => '#ffffff',
-                ]
-            );
+            ->select('appointments.*', 'patients.surname', 'patients.othername',
+                'users.surname as d_surname', 'users.othername as d_othername');
+
+        if ($request->start && $request->end) {
+            $query->whereBetween('appointments.sort_by', [$request->start, $request->end]);
         }
-//        }
-        $calendar = Calendar::addEvents($incoming)
-            ->setOptions([ //set fullcalendar options;
-                'locale' => app()->getLocale() === 'zh-CN' ? 'zh-cn' : 'en'
-            ]);
-        return view('appointments.index', compact('calendar'));
+
+        $events = [];
+        foreach ($query->get() as $value) {
+            $events[] = [
+                'title' => NameHelper::join($value->surname, $value->othername),
+                'start' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
+                'end' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
+                'textColor' => '#ffffff',
+            ];
+        }
+
+        return response()->json($events);
     }
 
     public function exportAppointmentReport(Request $request)
     {
         if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $query = DB::table('appointments')
+            $data = DB::table('appointments')
                 ->join('patients', 'patients.id', 'appointments.patient_id')
                 ->join('users', 'users.id', 'appointments.doctor_id')
                 ->whereNull('appointments.deleted_at')
                 ->whereBetween(DB::raw('DATE(appointments.sort_by)'), array($request->session()->get('from'),
                     $request->session()->get('to')))
-                ->orderBy('appointments.sort_by', 'DESC');
-
+                ->select('appointments.*', 'patients.surname', 'patients.othername', 'users.surname as
+                    d_surname', 'users.othername as d_othername')
+                ->orderBy('appointments.sort_by', 'DESC')
+                ->get();
         } else {
-            $query = DB::table('appointments')
+            $data = DB::table('appointments')
                 ->join('patients', 'patients.id', 'appointments.patient_id')
                 ->join('users', 'users.id', 'appointments.doctor_id')
                 ->whereNull('appointments.deleted_at')
-                ->orderBy('appointments.sort_by', 'DESC');
+                ->select('appointments.*', 'patients.surname', 'patients.othername', 'users.surname as
+                    d_surname', 'users.othername as d_othername')
+                ->orderBy('appointments.sort_by', 'DESC')
+                ->get();
         }
 
-
-        $query->select('appointments.*', 'patients.surname', 'patients.othername', 'users.surname as 
-                    d_surname', 'users.othername as d_othername');
-
-        $columns = [
-            'surname' => 'surname',
-            'othername' => 'othername',
-            __('appointment.appointment_date') => 'start_date',
-            __('appointment.appointment_time') => 'start_time',
-            __('appointment.visit_information') => 'visit_information',
-            __('appointment.appointment_status') => 'status'
-        ];
-
-        return ExcelReport::of(null,
-            [
-                'Appointments Report ' => "From:   " . $request->session()->get('from') . "    To:    " .
-                    $request->session()
-                        ->get('to'),
-            ], $query, $columns)
-            ->simple()
-            ->download('appointments-report' . date('Y-m-d H:m:s'));
+        return Excel::download(new AppointmentExport($data), 'appointments-report-' . date('Y-m-d') . '.xlsx');
     }
 
     /**

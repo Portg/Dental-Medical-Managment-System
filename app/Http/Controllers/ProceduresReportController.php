@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 use Haruncpi\LaravelIdGenerator\IdGenerator;
-use ExcelReport;
-use Excel;
+use App\Exports\ProceduresExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProceduresReportController extends Controller
 {
@@ -64,8 +64,9 @@ class ProceduresReportController extends Controller
 
     public function downloadProcedureSalesReport(Request $request)
     {
+        $data = collect();
         if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $queryBuilder = DB::table('invoice_items')
+            $data = DB::table('invoice_items')
                 ->join('medical_services', 'medical_services.id', 'invoice_items.medical_service_id')
                 ->whereNull('invoice_items.deleted_at')
                 ->whereBetween(DB::raw('DATE_FORMAT(invoice_items.created_at, \'%Y-%m-%d\')'),
@@ -77,33 +78,9 @@ class ProceduresReportController extends Controller
                 ->get();
         }
 
-
-        $excel_file_name = "procedures-sales-report-" . time();
         $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
             date('d-m-Y', strtotime($request->session()->get('to')));
 
-        return Excel::create($excel_file_name, function ($excel) use ($queryBuilder, $sheet_title) {
-
-            $excel->sheet($sheet_title, function ($sheet) use ($queryBuilder) {
-                $payload = [];
-                $count_rows = 2;
-                $grand_total = 0;
-
-                foreach ($queryBuilder as $row) {
-                    $payload[] = array(
-                        'Procedure' => $row->name,
-                        'Sales Amount' => $row->procedure_income);
-                    $count_rows++;
-                    $grand_total = $grand_total + $row->procedure_income;
-                }
-
-                $sheet->cell('B' . $count_rows, function ($cell) use ($grand_total) {
-                    $cell->setValue('Total= ' . number_format($grand_total));
-                    $cell->setFontWeight('bold');
-                });
-                $sheet->fromArray($payload);
-            });
-
-        })->download('xls');
+        return Excel::download(new ProceduresExport($data, $sheet_title), 'procedures-sales-report-' . date('Y-m-d') . '.xlsx');
     }
 }

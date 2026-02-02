@@ -8,7 +8,8 @@ use App\InvoicePayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
-use Excel;
+use App\Exports\InvoicingReportExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class InvoicingReportsController extends Controller
 {
@@ -59,7 +60,7 @@ class InvoicingReportsController extends Controller
 
     public function exportInvoicePayments(Request $request)
     {
-        $queryBuilder = DB::table('invoice_payments')
+        $data = DB::table('invoice_payments')
             ->leftJoin('insurance_companies', 'insurance_companies.id', 'invoice_payments.insurance_company_id')
             ->leftJoin('invoices', 'invoices.id', 'invoice_payments.invoice_id')
             ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
@@ -70,74 +71,10 @@ class InvoicingReportsController extends Controller
             ->select('invoice_payments.*', 'invoices.invoice_no', DB::raw('DATE_FORMAT(invoice_payments.payment_date, "%d-%b-%Y") as payment_date'), 'patients.surname', 'patients.othername', 'insurance_companies.name as insurance')
             ->get();
 
-        $excel_file_name = "Invoice-payments-report- " . time();
         $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
             date('d-m-Y', strtotime($request->session()->get('to')));
 
-        Excel::create($excel_file_name, function ($excel) use ($queryBuilder, $sheet_title, $request) {
-
-            $excel->sheet($sheet_title, function ($sheet) use ($queryBuilder) {
-                $payload = [];
-                $count_rows = 2;
-                $grand_total = 0;
-
-                foreach ($queryBuilder as $row) {
-                    $payload[] = array('Invoice No' => $row->invoice_no,
-                        'Payment Date' => date('d-M-Y', strtotime($row->payment_date)),
-                        'Patient Name' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
-                        'Amount Paid' => $row->amount,
-                        'Payment Method' => $row->payment_method
-                    );
-                    //check if not empty
-                    if (!empty($this->payment_methods)) {
-                        //check if the payment method already exists
-                        $key_values = array_column($this->payment_methods, 'method_used');
-                        if (!in_array($row->payment_method, $key_values)) {
-                            $this->payment_methods[] = array('method_used' => $row->payment_method);
-                        }
-                    } else {
-                        //refresh adding of the data
-                        $this->payment_methods[] = array('method_used' => $row->payment_method);
-                    }
-                    $count_rows++;
-                    $grand_total = $grand_total + $row->amount;
-                }
-                //general invoices totals
-                $sheet->cell('D' . $count_rows, function ($cell) use ($grand_total) {
-                    $cell->setValue('Total= ' . number_format($grand_total));
-                    $cell->setFontWeight('bold');
-                });
-                $sheet->fromArray($payload);
-            });
-            //create new sheets for the payment methods used
-            foreach ($this->payment_methods as $value) {
-
-                $excel->sheet($value['method_used'], function ($sheet) use ($queryBuilder, $value, $request) {
-                    $payload = [];
-                    $count_rows = 2;
-                    $grand_total = 0;
-
-                    foreach ($queryBuilder as $row) {
-                        if ($row->payment_method == $value['method_used']) {
-                            $payload[] = array('Invoice No' => $row->invoice_no,
-                                'Payment Date' => date('d-M-Y', strtotime($row->payment_date)),
-                                'Patient Name' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
-                                'Amount Paid' => $row->amount,
-                                'Payment Method' => $row->payment_method . " " . $row->insurance . " "
-                            );
-                            $count_rows++;
-                            $grand_total = $grand_total + $row->amount;
-                        }
-                    }
-                    $sheet->cell('D' . $count_rows, function ($cell) use ($grand_total) {
-                        $cell->setValue('Total= ' . number_format($grand_total));
-                        $cell->setFontWeight('bold');
-                    });
-                    $sheet->fromArray($payload);
-                });
-            }
-        })->download('xls');
-
+        return Excel::download(new InvoicingReportExport($data, $sheet_title), 'invoice-payments-report-' . date('Y-m-d') . '.xlsx');
     }
 
     public function todaysCash(Request $request)

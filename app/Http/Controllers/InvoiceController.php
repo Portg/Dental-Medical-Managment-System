@@ -9,7 +9,8 @@ use App\Invoice;
 use App\InvoiceItem;
 use App\InvoicePayment;
 use App\MedicalService;
-use Excel;
+use App\Exports\InvoiceExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Haruncpi\LaravelIdGenerator\IdGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -320,21 +321,18 @@ class InvoiceController extends Controller
 
     public function exportReport(Request $request)
     {
-
         if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $queryBuilder =
-                DB::table('invoices')
-                    ->join('appointments', 'appointments.id', 'invoices.appointment_id')
-                    ->join('patients', 'patients.id', 'appointments.patient_id')
-                    ->join('users', 'users.id', 'invoices._who_added')
-                    ->whereBetween(DB::raw('DATE(invoices.created_at)'), array($request->session()->get('from'),
-                        $request->session()->get('to')))
-                    ->select('invoices.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy')
-                    ->OrderBy('invoices.id', 'ASC')
-                    ->get();
-
+            $data = DB::table('invoices')
+                ->join('appointments', 'appointments.id', 'invoices.appointment_id')
+                ->join('patients', 'patients.id', 'appointments.patient_id')
+                ->join('users', 'users.id', 'invoices._who_added')
+                ->whereBetween(DB::raw('DATE(invoices.created_at)'), array($request->session()->get('from'),
+                    $request->session()->get('to')))
+                ->select('invoices.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy')
+                ->OrderBy('invoices.id', 'ASC')
+                ->get();
         } else {
-            $queryBuilder = DB::table('invoices')
+            $data = DB::table('invoices')
                 ->join('appointments', 'appointments.id', 'invoices.appointment_id')
                 ->join('patients', 'patients.id', 'appointments.patient_id')
                 ->join('users', 'users.id', 'invoices._who_added')
@@ -343,53 +341,7 @@ class InvoiceController extends Controller
                 ->get();
         }
 
-
-        $excel_file_name = "Invoicing-report- " . time();
-        $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
-            date('d-m-Y', strtotime($request->session()->get('to')));
-
-        return Excel::create($excel_file_name, function ($excel) use ($queryBuilder, $sheet_title) {
-
-            $excel->sheet($sheet_title, function ($sheet) use ($queryBuilder) {
-                $payload = [];
-                $count_rows = 2;
-                $grand_total = 0;
-                $grand_total_paid = 0;
-                $grand_outstanding = 0;
-
-                foreach ($queryBuilder as $row) {
-                    $payload[] = array('Invoice No' => $row->invoice_no,
-                        'Invoice Date' => date('d-M-Y', strtotime($row->created_at)),
-                        'Patient Name' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
-                        'Total Amount' => $this->TotalInvoiceAmount($row->id),
-                        'invoice_procedures' => $this->invoiceProcedures($row->id),
-                        'Paid Amount' => $this->TotalInvoicePaidAmount($row->id),
-                        'Outstanding Balance' => $this->InvoiceBalance($row->id));
-                    $count_rows++;
-                    $grand_total = $grand_total + $this->TotalInvoiceAmount($row->id);
-                    $grand_total_paid = $grand_total_paid + $this->TotalInvoicePaidAmount($row->id);
-                    $grand_outstanding = $grand_outstanding + $this->InvoiceBalance($row->id);
-                }
-                //general invoices totals
-                $sheet->cell('D' . $count_rows, function ($cell) use ($grand_total) {
-                    $cell->setValue('Total= ' . number_format($grand_total));
-                    $cell->setFontWeight('bold');
-                });
-                //grand total paid amounts
-                $sheet->cell('E' . $count_rows, function ($cell) use ($grand_total_paid) {
-                    $cell->setValue('Total Paid = ' . number_format($grand_total_paid));
-                    $cell->setFontWeight('bold');
-                });
-                //grand outstanding balances
-                $sheet->cell('F' . $count_rows, function ($cell) use ($grand_outstanding) {
-                    $cell->setValue('Total Outstanding = ' . number_format($grand_outstanding));
-                    $cell->setFontWeight('bold');
-                });
-                $sheet->fromArray($payload);
-            });
-
-        })->download('xls');
-
+        return Excel::download(new InvoiceExport($data), 'invoicing-report-' . date('Y-m-d') . '.xlsx');
     }
     public function invoiceProceduresToJson($InvoiceId){
        $InvoiceProcedures = DB::table("invoice_items")

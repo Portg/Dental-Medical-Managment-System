@@ -17,6 +17,7 @@ Route::group(['middleware' => ['auth']], function () {
         Route::get('/', 'DoctorController@index');
     });
 
+    Route::get('doctor-appointments/calendar-events', 'AppointmentsController@calendarEvents');
     Route::resource('doctor-appointments', 'AppointmentsController');
     Route::post('appointment-status', 'AppointmentsController@updateAppointmentStatus');
     Route::resource('claims', 'DoctorClaimController');

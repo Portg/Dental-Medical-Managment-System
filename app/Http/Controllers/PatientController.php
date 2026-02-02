@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Yajra\DataTables\DataTables;
 use Haruncpi\LaravelIdGenerator\IdGenerator;
-use ExcelReport;
+use App\Exports\PatientExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PatientController extends Controller
 {
@@ -174,29 +175,22 @@ class PatientController extends Controller
     public function exportPatients(Request $request)
     {
         if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $queryBuilder = DB::table('patients')
+            $data = DB::table('patients')
                 ->leftJoin('insurance_companies', 'insurance_companies.id', 'patients.insurance_company_id')
                 ->whereBetween(DB::raw('DATE(patients.created_at)'), array($request->session()->get('from'),
                     $request->session()->get('to')))
                 ->select('patients.*', 'insurance_companies.name as insurance_company')
-                ->orderBy('created_at', 'ASC');
+                ->orderBy('created_at', 'ASC')
+                ->get();
         } else {
-            $queryBuilder = DB::table('patients')
+            $data = DB::table('patients')
                 ->leftJoin('insurance_companies', 'insurance_companies.id', 'patients.insurance_company_id')
                 ->select('patients.*', 'insurance_companies.name as insurance_company')
-                ->orderBy('created_at', 'ASC');
+                ->orderBy('created_at', 'ASC')
+                ->get();
         }
 
-        $columns = ['surname', 'othername', 'gender', 'dob', 'phone_no', 'alternative_no', 'address', 'profession', 'next_of_kin', 'has_insurance', 'insurance_company'];
-
-        return ExcelReport::of(null,
-            [
-                'Patients Registered Report ' => "From:   " . $request->session()->get('from') . "    To:    " .
-                    $request->session()
-                        ->get('to'),
-            ], $queryBuilder, $columns)
-            ->simple()
-            ->download('patients' . date('Y-m-d H:m:s'));
+        return Excel::download(new PatientExport($data), 'patients-' . date('Y-m-d') . '.xlsx');
     }
 
     public function filterPatients(Request $request)

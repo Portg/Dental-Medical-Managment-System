@@ -62,6 +62,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::get('export-patients', 'PatientController@exportPatients');
     Route::get('search-patient', 'PatientController@filterPatients');
+    Route::get('appointments/calendar-events', 'AppointmentsController@calendarEvents');
     Route::resource('appointments', 'AppointmentsController');
     Route::post('appointments-reschedule', 'AppointmentsController@sendReschedule');
 

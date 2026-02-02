@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Yajra\DataTables\DataTables;
 use Haruncpi\LaravelIdGenerator\IdGenerator;
-use ExcelReport;
-use Excel;
+use App\Exports\DebtorsExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DebtorsReportController extends Controller
 {
@@ -85,8 +85,8 @@ class DebtorsReportController extends Controller
                 ->select(DB::raw('sum(amount) as amount_paid'))
                 ->first();
 
-            $invoice_info = DB::table('invoices') //patient & invoice Info
-            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
+            $invoice_info = DB::table('invoices')
+                ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
                 ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
                 ->leftJoin('insurance_companies', 'insurance_companies.id', 'patients.insurance_company_id')
                 ->where('invoices.id', $item->invoice_id)
@@ -106,53 +106,9 @@ class DebtorsReportController extends Controller
                     'outstanding_balance' => $outstanding_balance,
                 );
             }
-
         }
 
-        $excel_file_name = "debtors-report- " . time();
-        return Excel::create($excel_file_name, function ($excel) use ($output_array) {
-            $excel->sheet("Debtors Report File", function ($sheet) use ($output_array) {
-                $payload = [];
-                $count_rows = 2;
-                $grand_total = 0;
-                $grand_total_paid = 0;
-                $grand_outstanding = 0;
-
-                foreach ($output_array as $row) {
-                    $payload[] = array(
-                        'Invoice No' => $row['invoice_no'],
-                        'Invoice Date' => $row['invoice_date'],
-                        'Patient Name' => \App\Http\Helper\NameHelper::join($row['surname'], $row['othername']),
-                        'Total Amount' => number_format($row['invoice_amount']),
-                        'Paid Amount' => number_format($row['amount_paid']),
-                        'Outstanding Balance' => number_format($row['outstanding_balance'])
-                    );
-                    $count_rows++;
-                    $grand_total = $grand_total + $row['invoice_amount'];
-                    $grand_total_paid = $grand_total_paid + $row['amount_paid'];
-                    $grand_outstanding = $grand_outstanding + $row['outstanding_balance'];
-                }
-                //general invoices totals
-                $sheet->cell('D' . $count_rows, function ($cell) use ($grand_total) {
-                    $cell->setValue('Total= ' . number_format($grand_total));
-                    $cell->setFontWeight('bold');
-                });
-                //grand total paid amounts
-                $sheet->cell('E' . $count_rows, function ($cell) use ($grand_total_paid) {
-                    $cell->setValue('Total Paid = ' . number_format($grand_total_paid));
-                    $cell->setFontWeight('bold');
-                });
-                //grand outstanding balances
-                $sheet->cell('F' . $count_rows, function ($cell) use ($grand_outstanding) {
-                    $cell->setValue('Total Outstanding = ' . number_format($grand_outstanding));
-                    $cell->setFontWeight('bold');
-                });
-
-                $sheet->fromArray($payload);
-            });
-
-        })->download('xls');
-
+        return Excel::download(new DebtorsExport($output_array), 'debtors-report-' . date('Y-m-d') . '.xlsx');
     }
 
     /**

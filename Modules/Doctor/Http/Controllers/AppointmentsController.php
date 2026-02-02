@@ -14,7 +14,6 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use MaddHatter\LaravelFullcalendar\Facades\Calendar;
 use Yajra\DataTables\DataTables;
 
 class AppointmentsController extends Controller
@@ -95,36 +94,34 @@ class AppointmentsController extends Controller
                 rawColumns(['Medical_History', 'treatment', 'doctor_claim'])
                 ->make(true);
         }
-        $incoming = [];
-        $appointment_data = DB::table('appointments')
-            ->join('patients', 'patients.id', 'appointments.patient_id')
-            ->join('users', 'users.id', 'appointments.doctor_id')
-            ->whereNull('appointments.deleted_at')
-            ->where('appointments.doctor_id', Auth::User()->id)
-            ->select('appointments.*', 'patients.surname', 'patients.othername', 'users.surname as 
-                    d_surname', 'users.othername as d_othername')
-            ->orderBy('appointments.sort_by', 'desc')
-            ->get();
-//        if ($appointment_data->count()) {
-        foreach ($appointment_data as $key => $value) {
-            $incoming[] = Calendar::event(
-                \App\Http\Helper\NameHelper::join($value->surname, $value->othername), //event title
-                false,
-                date_format(date_create($value->sort_by), "Y-m-d H:i:s"),
-                date_format(date_create($value->sort_by), "Y-m-d H:i:s"),
-                null,
-                // Add color
-                [
-//                        'color' => '#000000',
-                    'textColor' => '#ffffff',
-                ]
-            );
-        }
-//        }
-        $calendar = Calendar::addEvents($incoming);
-        return view('doctor::appointments.index', compact('calendar'));
+        return view('doctor::appointments.index');
     }
 
+
+    public function calendarEvents(Request $request)
+    {
+        $query = DB::table('appointments')
+            ->join('patients', 'patients.id', 'appointments.patient_id')
+            ->whereNull('appointments.deleted_at')
+            ->where('appointments.doctor_id', Auth::User()->id)
+            ->select('appointments.*', 'patients.surname', 'patients.othername');
+
+        if ($request->start && $request->end) {
+            $query->whereBetween('appointments.sort_by', [$request->start, $request->end]);
+        }
+
+        $events = [];
+        foreach ($query->get() as $value) {
+            $events[] = [
+                'title' => NameHelper::join($value->surname, $value->othername),
+                'start' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
+                'end' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
+                'textColor' => '#ffffff',
+            ];
+        }
+
+        return response()->json($events);
+    }
 
     /**
      * Show the form for creating a new resource.

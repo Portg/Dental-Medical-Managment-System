@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 use Haruncpi\LaravelIdGenerator\IdGenerator;
-use ExcelReport;
-use Excel;
+use App\Exports\DoctorPerformanceExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DoctorPerformanceReport extends Controller
 {
@@ -70,6 +70,7 @@ class DoctorPerformanceReport extends Controller
 
     public function downloadPerformanceReport(Request $request)
     {
+        $queryBuilder = collect();
         if ($request->session()->get('from') != '' && $request->session()->get('to') != ''
             && $request->session()->get('doctor_id') != '') {
             $queryBuilder =
@@ -87,53 +88,12 @@ class DoctorPerformanceReport extends Controller
                     ->get();
         }
 
-        //get doctor information
         $user = User::where('id', $request->session()->get('doctor_id'))->first();
-        $excel_file_name = \App\Http\Helper\NameHelper::join($user->surname, $user->othername) . "-performance-report-" . time();
+        $excel_file_name = \App\Http\Helper\NameHelper::join($user->surname, $user->othername) . '-performance-report-' . date('Y-m-d') . '.xlsx';
         $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
             date('d-m-Y', strtotime($request->session()->get('to')));
 
-        return Excel::create($excel_file_name, function ($excel) use ($queryBuilder, $sheet_title) {
-
-            $excel->sheet($sheet_title, function ($sheet) use ($queryBuilder) {
-                $payload = [];
-                $count_rows = 2;
-                $grand_total = 0;
-                $grand_total_paid = 0;
-                $grand_outstanding = 0;
-
-                foreach ($queryBuilder as $row) {
-                    $payload[] = array('Invoice No' => $row->invoice_no,
-                        'Invoice Date' => date('d-M-Y', strtotime($row->created_at)),
-                        'Patient Name' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
-                        'Total Amount' => $this->TotalInvoiceAmount($row->invoice_id),
-                        'Invoice procedures' => $this->invoiceProcedures($row->invoice_id, $row->doctor_id),
-                        'Paid Amount' => $this->TotalInvoicePaidAmount($row->invoice_id),
-                        'Outstanding Balance' => $this->InvoiceBalance($row->invoice_id));
-                    $count_rows++;
-                    $grand_total = $grand_total + $this->TotalInvoiceAmount($row->invoice_id);
-                    $grand_total_paid = $grand_total_paid + $this->TotalInvoicePaidAmount($row->invoice_id);
-                    $grand_outstanding = $grand_outstanding + $this->InvoiceBalance($row->invoice_id);
-                }
-                //general invoices totals
-                $sheet->cell('D' . $count_rows, function ($cell) use ($grand_total) {
-                    $cell->setValue('Total= ' . number_format($grand_total));
-                    $cell->setFontWeight('bold');
-                });
-                //grand total paid amounts
-                $sheet->cell('F' . $count_rows, function ($cell) use ($grand_total_paid) {
-                    $cell->setValue('Total Paid = ' . number_format($grand_total_paid));
-                    $cell->setFontWeight('bold');
-                });
-                //grand outstanding balances
-                $sheet->cell('G' . $count_rows, function ($cell) use ($grand_outstanding) {
-                    $cell->setValue('Total Outstanding = ' . number_format($grand_outstanding));
-                    $cell->setFontWeight('bold');
-                });
-                $sheet->fromArray($payload);
-            });
-
-        })->download('xls');
+        return Excel::download(new DoctorPerformanceExport($queryBuilder, $sheet_title), $excel_file_name);
     }
 
     private function TotalInvoiceAmount($id)

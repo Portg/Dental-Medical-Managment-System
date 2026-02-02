@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 use Haruncpi\LaravelIdGenerator\IdGenerator;
-use ExcelReport;
-use Excel;
+use App\Exports\ExpenseExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ExpenseController extends Controller
 {
@@ -231,9 +231,8 @@ class ExpenseController extends Controller
 
     public function exportReport(Request $request)
     {
-
         if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $queryBuilder = DB::table('expense_items')
+            $data = DB::table('expense_items')
                 ->join('expenses', 'expenses.id', 'expense_items.expense_id')
                 ->join('expense_categories', 'expense_categories.id', 'expense_items.expense_category_id')
                 ->join('chart_of_account_items', 'chart_of_account_items.id', 'expense_categories.chart_of_account_item_id')
@@ -244,9 +243,8 @@ class ExpenseController extends Controller
                 ->select('expense_items.*', 'expense_categories.name as item_name', 'chart_of_account_items.name as budget_line')
                 ->OrderBy('expense_items.id', 'ASC')
                 ->get();
-
         } else {
-            $queryBuilder = DB::table('expense_items')
+            $data = DB::table('expense_items')
                 ->join('expenses', 'expenses.id', 'expense_items.expense_id')
                 ->join('expense_categories', 'expense_categories.id', 'expense_items.expense_category_id')
                 ->join('chart_of_account_items', 'chart_of_account_items.id', 'expense_categories.chart_of_account_item_id')
@@ -257,41 +255,10 @@ class ExpenseController extends Controller
                 ->get();
         }
 
-
-        $excel_file_name = "expenses-report- " . time();
         $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
             date('d-m-Y', strtotime($request->session()->get('to')));
 
-        return Excel::create($excel_file_name, function ($excel) use ($queryBuilder, $sheet_title) {
-
-            $excel->sheet($sheet_title, function ($sheet) use ($queryBuilder) {
-                $payload = [];
-                $count_rows = 2;
-                $grand_total = 0;
-                $counter = 1;
-
-                foreach ($queryBuilder as $row) {
-                    $payload[] = array('ID' => $counter,
-                        'Purchase Date' => date('d-M-Y', strtotime($row->created_at)),
-                        'Item Name' => $row->item_name,
-                        'Budget Line' => $row->budget_line,
-                        'Quantity' => $row->qty,
-                        'Unit Price' => $row->price,
-                        'Total Amount' => $row->qty * $row->price);
-                    $count_rows++;
-                    $counter++;
-                    $grand_total = $grand_total + ($row->qty * $row->price);
-                }
-                //general invoices totals
-                $sheet->cell('G' . $count_rows, function ($cell) use ($grand_total) {
-                    $cell->setValue('Total= ' . number_format($grand_total));
-                    $cell->setFontWeight('bold');
-                });
-
-                $sheet->fromArray($payload);
-            });
-
-        })->download('xls');
+        return Excel::download(new ExpenseExport($data, $sheet_title), 'expenses-report-' . date('Y-m-d') . '.xlsx');
     }
 
     /**

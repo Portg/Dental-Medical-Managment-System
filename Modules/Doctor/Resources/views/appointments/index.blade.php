@@ -151,7 +151,7 @@
                                         </div>
                                     </div>
                                     <div class="portlet-body">
-                                        {!! $calendar->calendar() !!}
+                                        <div id="calendar"></div>
                                     </div>
                                 </div>
                             </div>
@@ -301,8 +301,39 @@
 
     </script>
 
-    {{--load appointment calender script--}}
-    {!! $calendar->script() !!}
+    {{--load appointment calender script via FullCalendar 5.x CDN--}}
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
+    @if(app()->getLocale() === 'zh-CN')
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/locales/zh-cn.min.js"></script>
+    @endif
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            if (calendarEl) {
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    locale: '{{ app()->getLocale() === "zh-CN" ? "zh-cn" : "en" }}',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    },
+                    events: {
+                        url: '{{ url("doctor-appointments/calendar-events") }}',
+                        method: 'GET',
+                        failure: function() {
+                            console.error('Failed to load calendar events');
+                        }
+                    }
+                });
+                // Render calendar when tab is shown
+                $('a[href="#appointment_calender_tab"]').on('shown.bs.tab', function () {
+                    calendar.render();
+                });
+            }
+        });
+    </script>
 @endsection
 
 

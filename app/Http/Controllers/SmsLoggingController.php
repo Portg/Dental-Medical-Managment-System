@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 use Haruncpi\LaravelIdGenerator\IdGenerator;
-use ExcelReport;
+use App\Exports\SmsLoggingExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 class SmsLoggingController extends Controller
@@ -76,27 +77,20 @@ class SmsLoggingController extends Controller
     public function exportReport(Request $request)
     {
         if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $queryBuilder = DB::table('sms_loggings')
+            $data = DB::table('sms_loggings')
                 ->whereBetween(DB::raw('DATE(sms_loggings.created_at)'), array($request->session()->get('from'),
                     $request->session()->get('to')))
                 ->select('sms_loggings.*')
-                ->OrderBy('sms_loggings.id', 'desc');
+                ->OrderBy('sms_loggings.id', 'desc')
+                ->get();
         } else {
-            $queryBuilder = DB::table('sms_loggings')
+            $data = DB::table('sms_loggings')
                 ->select('sms_loggings.*')
-                ->OrderBy('sms_loggings.id', 'desc');
+                ->OrderBy('sms_loggings.id', 'desc')
+                ->get();
         }
 
-
-        $columns = ['created_at', 'phone_number', 'message', 'cost', 'status'];
-
-        return ExcelReport::of(null,
-            [
-                'SMS Report ' => "From:   " . $request->session()->get('from') . "    To:    " . $request->session()
-                        ->get('to'),
-            ], $queryBuilder, $columns)
-            ->simple()
-            ->download('sms-logging-report' . date('Y-m-d H:m:s'));
+        return Excel::download(new SmsLoggingExport($data), 'sms-logging-report-' . date('Y-m-d') . '.xlsx');
     }
 
     /**
