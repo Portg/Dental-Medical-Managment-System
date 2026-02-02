@@ -44,7 +44,7 @@ class PaySlipController extends Controller
                     return '';
                 })
                 ->addColumn('employee', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('basic_salary', function ($row) {
                     $wage = $this->calculateWage($row);

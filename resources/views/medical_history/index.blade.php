@@ -13,7 +13,7 @@
 <div class="note note-success">
     <p class="text-black-50"><a href="{{ url('doctor-appointments')}}" class="text-primary">{{ __('medical_history.view_appointments') }}
         </a> / {{ __('medical_history.page_title') }}
-        / @if(isset($patient)) {{ $patient->surname." ".$patient->othername  }}  @endif </p>
+        / @if(isset($patient)) {{ $patient->full_name  }}  @endif </p>
 </div>
 <input type="hidden" id="global_patient_id" value="{{ $patient->id }}">
 <div class="row">

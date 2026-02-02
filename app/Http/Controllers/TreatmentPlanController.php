@@ -31,10 +31,10 @@ class TreatmentPlanController extends Controller
                 ->select(
                     'treatment_plans.*',
                     'patients.patient_no',
-                    DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                     'medical_cases.case_no',
                     'medical_cases.title as case_title',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 
@@ -93,7 +93,7 @@ class TreatmentPlanController extends Controller
                     'treatment_plans.*',
                     'medical_cases.case_no',
                     'medical_cases.title as case_title',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 
@@ -147,7 +147,7 @@ class TreatmentPlanController extends Controller
                 ->orderBy('treatment_plans.created_at', 'desc')
                 ->select(
                     'treatment_plans.*',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 

@@ -10,7 +10,7 @@
     <div class="row">
         <div class="col-md-6">
             <p class="text-black-50"><a href="{{ url('appointments')}}" class="text-primary">{{ __('medical_treatment.view_appointments') }}
-                </a> / @if(isset($patient)) {{ $patient->surname." ".$patient->othername }} ({{ $patient->patient_no
+                </a> / @if(isset($patient)) {{ $patient->full_name }} ({{ $patient->patient_no
                 }}) @endif
             </p>
         </div>

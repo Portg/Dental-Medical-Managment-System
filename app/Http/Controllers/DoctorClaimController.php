@@ -41,7 +41,7 @@ class DoctorClaimController extends Controller
                     return date('d/m/Y', strtotime($row->created_at));
                 })
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('claim_amount', function ($row) {
                     return number_format($row->claim_amount);

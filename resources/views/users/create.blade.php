@@ -20,14 +20,21 @@
                     <input type="hidden" id="id" name="id">
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="text-primary">{{ __('users.surname') }} </label>
-                                <input type="text" name="surname" placeholder="{{ __('users.enter_surname') }}" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label class="text-primary">{{ __('users.other_name') }} </label>
-                                <input type="text" name="othername" placeholder="{{ __('users.enter_other_name') }}" class="form-control">
-                            </div>
+                            @if(app()->getLocale() === 'zh-CN')
+                                <div class="form-group">
+                                    <label class="text-primary">{{ __('users.full_name') }} </label>
+                                    <input type="text" name="full_name" placeholder="{{ __('users.enter_full_name') }}" class="form-control">
+                                </div>
+                            @else
+                                <div class="form-group">
+                                    <label class="text-primary">{{ __('users.surname') }} </label>
+                                    <input type="text" name="surname" placeholder="{{ __('users.enter_surname') }}" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="text-primary">{{ __('users.other_name') }} </label>
+                                    <input type="text" name="othername" placeholder="{{ __('users.enter_other_name') }}" class="form-control">
+                                </div>
+                            @endif
                             <div class="form-group">
                                 <label class="text-primary">{{ __('users.email') }} </label>
                                 <input type="text" name="email" placeholder="{{ __('users.enter_email') }}" class="form-control">

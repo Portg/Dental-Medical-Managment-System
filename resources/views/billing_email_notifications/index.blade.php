@@ -39,7 +39,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-3">{{__('datetime.period')}</label>
+                                        <label class="control-label col-md-3">{{__('datetime.period')}}</label>
                                         <div class="col-md-9">
                                             <select class="form-control" id="period_selector">
                                                 <option>{{__('datetime.time_periods.all')}}</option>

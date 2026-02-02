@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App;
 use App\Http\Helper\FunctionsHelper;
+use App\Http\Helper\NameHelper;
 use App\Invoice;
 use App\InvoiceItem;
 use App\InvoicePayment;
@@ -48,8 +49,9 @@ class InvoiceController extends Controller
                     ->join('appointments', 'appointments.id', 'invoices.appointment_id')
                     ->join('patients', 'patients.id', 'appointments.patient_id')
                     ->join('users', 'users.id', 'invoices._who_added')
-                    ->where('patients.surname', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('patients.othername', 'like', '%' . $request->get('search') . '%')
+                    ->where(function($q) use ($request) {
+                        NameHelper::addNameSearch($q, $request->get('search'), 'patients');
+                    })
                     ->select('invoices.*', 'patients.surname', 'patients.othername', 'patients.email', 'users.othername as addedBy')
                     ->OrderBy('invoices.id', 'desc')
                     ->get();
@@ -93,7 +95,7 @@ class InvoiceController extends Controller
                     return '<a href="' . url('invoices/' . $row->id) . '">' . $row->invoice_no . '</a>';
                 })
                 ->addColumn('customer', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('amount', function ($row) {
                     return number_format($this->TotalInvoiceAmount($row->id));
@@ -358,7 +360,7 @@ class InvoiceController extends Controller
                 foreach ($queryBuilder as $row) {
                     $payload[] = array('Invoice No' => $row->invoice_no,
                         'Invoice Date' => date('d-M-Y', strtotime($row->created_at)),
-                        'Patient Name' => $row->surname . " " . $row->othername,
+                        'Patient Name' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
                         'Total Amount' => $this->TotalInvoiceAmount($row->id),
                         'invoice_procedures' => $this->invoiceProcedures($row->id),
                         'Paid Amount' => $this->TotalInvoicePaidAmount($row->id),
@@ -587,7 +589,7 @@ class InvoiceController extends Controller
                 })
                 ->addColumn('patient_name', function ($row) {
                     if ($row->patient) {
-                        return $row->patient->surname . ' ' . $row->patient->othername;
+                        return $row->patient->full_name;
                     }
                     return '-';
                 })
@@ -708,15 +710,16 @@ class InvoiceController extends Controller
             ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
             ->leftJoin('patients', 'patients.id', DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'))
             ->where(function ($query) use ($search) {
-                $query->where('invoices.invoice_no', 'like', "%{$search}%")
-                    ->orWhere('patients.surname', 'like', "%{$search}%")
-                    ->orWhere('patients.othername', 'like', "%{$search}%");
+                $query->where('invoices.invoice_no', 'like', "%{$search}%");
+                NameHelper::addNameSearch($query, $search, 'patients');
             })
             ->whereNull('invoices.deleted_at')
             ->select(
                 'invoices.id',
                 'invoices.invoice_no',
-                DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name")
+                DB::raw(app()->getLocale() === 'zh-CN'
+                    ? "CONCAT(patients.surname, patients.othername) as patient_name"
+                    : "CONCAT(patients.surname, ' ', patients.othername) as patient_name")
             )
             ->limit(20)
             ->get();

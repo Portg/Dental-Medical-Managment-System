@@ -31,9 +31,9 @@ class PatientImageController extends Controller
                 ->orderBy('patient_images.created_at', 'desc')
                 ->select(
                     'patient_images.*',
-                    DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                     'patients.patient_no',
-                    DB::raw("CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
                 )
                 ->get();
 
@@ -82,7 +82,7 @@ class PatientImageController extends Controller
                 ->orderBy('patient_images.image_date', 'desc')
                 ->select(
                     'patient_images.*',
-                    DB::raw("CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
                 )
                 ->get();
 

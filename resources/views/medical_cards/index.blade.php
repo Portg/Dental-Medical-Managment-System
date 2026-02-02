@@ -209,7 +209,7 @@
                     $('[name="name"]').val(data.name);
                     let patient_data = {
                         id: data.patient_id,
-                        text: data.surname + " " + data.othername
+                        text: LanguageManager.joinName(data.surname, data.othername)
                     };
                     let newOption = new Option(patient_data.text, patient_data.id, true, true);
                     $('#patient').append(newOption).trigger('change');

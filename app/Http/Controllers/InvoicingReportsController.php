@@ -45,7 +45,7 @@ class InvoicingReportsController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('amount', function ($row) {
                     return number_format($row->amount);
@@ -84,7 +84,7 @@ class InvoicingReportsController extends Controller
                 foreach ($queryBuilder as $row) {
                     $payload[] = array('Invoice No' => $row->invoice_no,
                         'Payment Date' => date('d-M-Y', strtotime($row->payment_date)),
-                        'Patient Name' => $row->surname . " " . $row->othername,
+                        'Patient Name' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
                         'Amount Paid' => $row->amount,
                         'Payment Method' => $row->payment_method
                     );
@@ -121,7 +121,7 @@ class InvoicingReportsController extends Controller
                         if ($row->payment_method == $value['method_used']) {
                             $payload[] = array('Invoice No' => $row->invoice_no,
                                 'Payment Date' => date('d-M-Y', strtotime($row->payment_date)),
-                                'Patient Name' => $row->surname . " " . $row->othername,
+                                'Patient Name' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
                                 'Amount Paid' => $row->amount,
                                 'Payment Method' => $row->payment_method . " " . $row->insurance . " "
                             );

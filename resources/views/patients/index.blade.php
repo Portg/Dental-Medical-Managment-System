@@ -618,7 +618,7 @@
             type: 'get',
             url: "patients/" + patient_id + "/medicalHistory",
             success: function(data) {
-                $('.patientInfoText').text(data.patientInfor.surname + " " + data.patientInfor.othername);
+                $('.patientInfoText').text(LanguageManager.joinName(data.patientInfor.surname, data.patientInfor.othername));
                 if (data.treatmentHistory.length != 0) {
                     convertJsontoHtmlTable(data.treatmentHistory);
                 } else {

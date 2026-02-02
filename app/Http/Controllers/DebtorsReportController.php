@@ -122,7 +122,7 @@ class DebtorsReportController extends Controller
                     $payload[] = array(
                         'Invoice No' => $row['invoice_no'],
                         'Invoice Date' => $row['invoice_date'],
-                        'Patient Name' => $row['surname'] . " " . $row['othername'],
+                        'Patient Name' => \App\Http\Helper\NameHelper::join($row['surname'], $row['othername']),
                         'Total Amount' => number_format($row['invoice_amount']),
                         'Paid Amount' => number_format($row['amount_paid']),
                         'Outstanding Balance' => number_format($row['outstanding_balance'])

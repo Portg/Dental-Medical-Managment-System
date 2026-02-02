@@ -36,7 +36,7 @@ class SalaryAdvanceController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('employee', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('addedBy', function ($row) {
                     return $row->LoggedInUser;

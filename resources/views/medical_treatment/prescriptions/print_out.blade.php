@@ -7,14 +7,14 @@
              <table width="100%">
             <tr>
                 <td align="left">
-                    <span>{{ __('medical_treatment.prescribed_by') }}: {{ $prescribed_by->surname." ".$prescribed_by->othername}}<br>
+                    <span>{{ __('medical_treatment.prescribed_by') }}: {{ $prescribed_by->full_name}}<br>
                     </span>
 
                 </td>
                 <td align="center">
                 </td>
                 <td align="right">
-                    <span>{{ $patient->surname." ".$patient->othername }} ({{ $patient->patient_no }})
+                    <span>{{ $patient->full_name }} ({{ $patient->patient_no }})
                     </span>
                 </td>
             </tr>

@@ -64,7 +64,7 @@ class TreatmentController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('doctor', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->make(true);
         }

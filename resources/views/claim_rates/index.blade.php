@@ -187,7 +187,7 @@
                     $('[name="cash_rate"]').val(data.cash_rate);
                     let doctor_data = {
                         id: data.doctor_id,
-                        text: data.surname + " " + data.othername
+                        text: LanguageManager.joinName(data.surname, data.othername)
                     };
                     let newOption = new Option(doctor_data.text, doctor_data.id, true, true);
                     $('#doctor').append(newOption).trigger('change');

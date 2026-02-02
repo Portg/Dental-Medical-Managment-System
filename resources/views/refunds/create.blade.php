@@ -29,7 +29,7 @@
                                     <option value="">{{ __('invoices.search_invoice') }}</option>
                                     @if(isset($invoice))
                                         <option value="{{ $invoice->id }}" selected>
-                                            {{ $invoice->invoice_no }} - {{ $invoice->patient ? $invoice->patient->surname . ' ' . $invoice->patient->othername : '' }}
+                                            {{ $invoice->invoice_no }} - {{ $invoice->patient ? $invoice->patient->full_name : '' }}
                                         </option>
                                     @endif
                                 </select>

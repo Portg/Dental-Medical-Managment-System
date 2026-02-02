@@ -20,7 +20,7 @@
 </style>
 <div class="note note-success">
     <p class="text-black-50"><a href="{{ url('/medical-cards')}}" class="text-primary">{{ __('medical_cards.view_all_medical_cards') }}</a>
-        </a> / @if(isset($patient)) {{ $patient->surname." ".$patient->othername }} ({{ $patient->patient_no }}) @endif
+        </a> / @if(isset($patient)) {{ $patient->full_name }} ({{ $patient->patient_no }}) @endif
     </p>
 </div>
 

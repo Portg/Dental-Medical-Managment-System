@@ -39,7 +39,7 @@ class EmployeeContractController extends Controller
                     return $row->loggedInName;
                 })
                 ->addColumn('employee', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('contract_validity', function ($row) {
                     return $row->contract_length . " " . $row->contract_period;

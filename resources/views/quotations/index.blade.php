@@ -448,7 +448,7 @@
                     $.LoadingOverlay("hide");
                     $('[name="quotation_id"]').val(data.id);
                     $('[name="quotation_no"]').val(data.quotation_no);
-                    $('[name="name"]').val(data.surname + " " + data.othername);
+                    $('[name="name"]').val(LanguageManager.joinName(data.surname, data.othername));
                     $('[name="email"]').val(data.email);
                     $('#share-quotation-modal').modal('show');
 

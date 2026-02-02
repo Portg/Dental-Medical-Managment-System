@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
+use App\Http\Helper\NameHelper;
 use App\Notifications\AppointmentReminderNotification;
 use App\Notifications\ReminderNotification;
 use App\User;
@@ -36,10 +37,11 @@ class UsersController extends Controller
                     ->leftJoin('roles', 'roles.id', 'users.role_id')
                     ->leftJoin('branches', 'branches.id', 'users.branch_id')
                     ->whereNull('users.deleted_at')
-                    ->where('users.surname', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('users.othername', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('users.email', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('users.phone_no', 'like', '%' . $request->get('search') . '%')
+                    ->where(function($q) use ($request) {
+                        NameHelper::addNameSearch($q, $request->get('search'), 'users');
+                        $q->orWhere('users.email', 'like', '%' . $request->get('search') . '%')
+                          ->orWhere('users.phone_no', 'like', '%' . $request->get('search') . '%');
+                    })
                     ->select(['users.*', 'roles.name as user_role', 'branches.name as branch'])
                     ->OrderBy('users.id', 'desc')
                     ->get();
@@ -91,8 +93,7 @@ class UsersController extends Controller
         // Apply search filter if provided
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->where('users.surname', 'LIKE', "%{$search}%")
-                  ->orWhere('users.othername', 'LIKE', "%{$search}%");
+                NameHelper::addNameSearch($q, $search, 'users');
             });
         }
 
@@ -100,7 +101,7 @@ class UsersController extends Controller
 
         $formatted = [];
         foreach ($data as $item) {
-            $formatted[] = ['id' => $item->id, 'text' => $item->surname . " " . $item->othername];
+            $formatted[] = ['id' => $item->id, 'text' => NameHelper::join($item->surname, $item->othername)];
         }
         return \Response::json($formatted);
     }
@@ -113,14 +114,15 @@ class UsersController extends Controller
             $search = $name;
             $data = DB::table("users")
                 ->whereNull('users.deleted_at')
-                ->where('surname', 'LIKE', "%$search%")
-                ->Orwhere('othername', 'LIKE', "%$search%")
+                ->where(function($q) use ($search) {
+                    NameHelper::addNameSearch($q, $search);
+                })
                 ->select('users.*')
                 ->get();
 
             $formatted_tags = [];
             foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->surname . " " . $tag->othername];
+                $formatted_tags[] = ['id' => $tag->id, 'text' => NameHelper::join($tag->surname, $tag->othername)];
             }
             return \Response::json($formatted_tags);
         }
@@ -144,16 +146,29 @@ class UsersController extends Controller
      */
     public function store(Request $request)
     {
-        Validator::make($request->all(), [
-            'surname' => ['required'],
-            'othername' => ['required'],
-            'email' => 'required',
-            'password' => 'min:6 | required_with:password_confirmation',
-            'password_confirmation' => 'min:6 | same:password_confirmation'
-        ])->validate();
+        // Locale-adaptive validation
+        if ($request->filled('full_name')) {
+            Validator::make($request->all(), [
+                'full_name' => ['required', 'min:2'],
+                'email' => 'required',
+                'password' => 'min:6 | required_with:password_confirmation',
+                'password_confirmation' => 'min:6 | same:password_confirmation'
+            ])->validate();
+            $nameParts = NameHelper::split($request->full_name);
+        } else {
+            Validator::make($request->all(), [
+                'surname' => ['required'],
+                'othername' => ['required'],
+                'email' => 'required',
+                'password' => 'min:6 | required_with:password_confirmation',
+                'password_confirmation' => 'min:6 | same:password_confirmation'
+            ])->validate();
+            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
+        }
+
         $status = User::create([
-            'surname' => $request->surname,
-            'othername' => $request->othername,
+            'surname' => $nameParts['surname'],
+            'othername' => $nameParts['othername'],
             'email' => $request->email,
             'phone_no' => $request->phone_no,
             'alternative_no' => $request->alternative_no,
@@ -204,9 +219,15 @@ class UsersController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if ($request->filled('full_name')) {
+            $nameParts = NameHelper::split($request->full_name);
+        } else {
+            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
+        }
+
         $status = User::where('id', $id)->update([
-            'surname' => $request->surname,
-            'othername' => $request->othername,
+            'surname' => $nameParts['surname'],
+            'othername' => $nameParts['othername'],
             'email' => $request->email,
             'phone_no' => $request->phone_no,
             'alternative_no' => $request->alternative_no,

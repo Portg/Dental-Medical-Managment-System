@@ -19,7 +19,7 @@ return [
     'quotation_subject' => '报价单',
 
     // 邮件内容
-    'dear_patient' => '尊敬的 :surname :othername，',
+    'dear_patient' => '尊敬的:surname:othername，',
     'thank_you_message' => '感谢您选择 :company_name 的服务，请查收附件中的:document_type；',
     'invoice_attached' => '发票',
     'quotation_attached' => '报价单',

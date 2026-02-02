@@ -3,7 +3,7 @@
 @section('content')
     <div class="note note-success hidden">
         <p class="text-black-50"><a href="{{ url('profile') }}" class="text-primary">{{ __('common.my_profile') }}</a>
-            / {{ Auth::User()->surname." ".Auth::User()->othername }}
+            / {{ Auth::User()->full_name }}
             <span class="text-primary">[ {{  Auth::User()->UserRole->name }}]</span>
         </p>
     </div>

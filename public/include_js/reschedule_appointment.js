@@ -10,7 +10,7 @@ function RescheduleAppointment(id) {
         url: "appointments/" + id + "/edit",
         success: function (data) {
             $('#reschedule_appointment_id').val(id);
-            $('#reschedule_patient').val(data.surname + " " + data.othername);
+            $('#reschedule_patient').val(LanguageManager.joinName(data.surname, data.othername));
 
             $.LoadingOverlay("hide");
             $('#reschedule-appointment-modal').modal('show');

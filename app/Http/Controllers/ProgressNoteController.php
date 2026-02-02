@@ -34,7 +34,7 @@ class ProgressNoteController extends Controller
                     'medical_cases.case_no',
                     'medical_cases.title as case_title',
                     'appointments.appointment_no',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 
@@ -81,7 +81,7 @@ class ProgressNoteController extends Controller
                 ->select(
                     'progress_notes.*',
                     'appointments.appointment_no',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 

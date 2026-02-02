@@ -50,7 +50,7 @@ class InvoicePaymentController extends Controller
                     return number_format($row->amount);
                 })
                 ->addColumn('added_by', function ($row) {
-                    return $row->addedBy->surname . " " . $row->addedBy->othername;
+                    return \App\Http\Helper\NameHelper::join($row->addedBy->surname, $row->addedBy->othername);
                 })
                 ->addColumn('editBtn', function ($row) {
                     $btn = '<a href="#" onclick="edit_Payment(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';

@@ -37,7 +37,7 @@ class MedicalCardController extends Controller
 
                     if (!empty($request->get('search'))) {
                         $instance->collection = $instance->collection->filter(function ($row) use ($request) {
-                            if (Str::contains(Str::lower($row['surname'] . " " . $row['othername']), Str::lower($request->get('search'))
+                            if (Str::contains(Str::lower(\App\Http\Helper\NameHelper::join($row['surname'], $row['othername'])), Str::lower($request->get('search'))
                             )) {
                                 return true;
                             }
@@ -46,7 +46,7 @@ class MedicalCardController extends Controller
                     }
                 })
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('added_by', function ($row) {
                     return $row->added_by;
@@ -82,7 +82,7 @@ class MedicalCardController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('card_link', function ($row) {
                     $btn = '

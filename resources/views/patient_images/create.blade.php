@@ -21,7 +21,7 @@
                             <select name="patient_id" id="patient_id" class="form-control select2">
                                 <option value="">{{ __('common.select') }}</option>
                                 @foreach($patients as $patient)
-                                    <option value="{{ $patient->id }}">{{ $patient->surname }} {{ $patient->othername }} ({{ $patient->patient_no }})</option>
+                                    <option value="{{ $patient->id }}">{{ $patient->full_name }} ({{ $patient->patient_no }})</option>
                                 @endforeach
                             </select>
                         </div>

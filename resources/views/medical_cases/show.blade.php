@@ -33,14 +33,14 @@
                 <div class="row">
                     <div class="col-md-3">
                         <p><strong>{{ __('medical_cases.patient') }}:</strong><br>
-                            {{ $case->patient->surname }} {{ $case->patient->othername }}
+                            {{ $case->patient->full_name }}
                             ({{ $case->patient->patient_no }})
                         </p>
                     </div>
                     <div class="col-md-3">
                         <p><strong>{{ __('medical_cases.doctor') }}:</strong><br>
                             @if($case->doctor)
-                                {{ $case->doctor->surname }} {{ $case->doctor->othername }}
+                                {{ $case->doctor->full_name }}
                             @else
                                 -
                             @endif
@@ -54,7 +54,7 @@
                     <div class="col-md-3">
                         <p><strong>{{ __('medical_cases.added_by') }}:</strong><br>
                             @if($case->addedBy)
-                                {{ $case->addedBy->surname }} {{ $case->addedBy->othername }}
+                                {{ $case->addedBy->full_name }}
                             @endif
                         </p>
                     </div>

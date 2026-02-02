@@ -49,7 +49,7 @@
                 </div>
                 <div class="col-xs-9">
                     <div style="font-weight: 600;">
-                        {{ $currentPatient ? $currentPatient->surname . ' ' . $currentPatient->othername : '-' }}
+                        {{ $currentPatient ? $currentPatient->full_name : '-' }}
                     </div>
                     <div class="text-muted" style="font-size: 12px;">
                         @if($currentPatient)

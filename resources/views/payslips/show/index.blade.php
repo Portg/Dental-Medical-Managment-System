@@ -5,7 +5,7 @@
 @endsection
 <div class="note note-success">
     <p class="text-black-50"><a href="{{ url('payslips')}}" class="text-primary">{{ __('payslips.go_back_payslips') }} </a>
-        /@if(isset($employee)) {{ $employee->surname." ".$employee->othername }} / {{ __('payslips.payslip_month') }}:
+        /@if(isset($employee)) {{ $employee->full_name }} / {{ __('payslips.payslip_month') }}:
         {{ $employee->payslip_month }}  @endif
     </p>
 </div>

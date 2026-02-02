@@ -407,6 +407,16 @@ var LanguageManager = (function() {
             return this;
         },
 
+        /**
+         * Join surname and othername with locale-aware separator.
+         */
+        joinName: function(surname, othername) {
+            if (currentLang === 'zh-CN') {
+                return (surname || '') + (othername || '');
+            }
+            return (surname || '') + ' ' + (othername || '');
+        },
+
         // Getters
         getCurrentLanguage: function() { return currentLang; },
         getDefaultLanguage: function() { return defaultLang; },

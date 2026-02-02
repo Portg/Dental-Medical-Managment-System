@@ -470,7 +470,7 @@
                         // Populate patient
                         let patient_data = {
                             id: data.patient_id,
-                            text: data.surname + " " + data.othername
+                            text: LanguageManager.joinName(data.surname, data.othername)
                         };
                         let patientOption = new Option(patient_data.text, patient_data.id, true, true);
                         $('#drawer_patient').append(patientOption).trigger('change');
@@ -483,7 +483,7 @@
                         // Populate doctor
                         let doctor_data = {
                             id: data.doctor_id,
-                            text: data.d_surname + " " + data.d_othername
+                            text: LanguageManager.joinName(data.d_surname, data.d_othername)
                         };
                         let doctorOption = new Option(doctor_data.text, doctor_data.id, true, true);
                         $('#drawer_doctor').append(doctorOption).trigger('change');
@@ -570,9 +570,9 @@
                     url: "appointments/" + id + "/edit",
                     success: function (data) {
                         $('#id').val(id);
-                        let patient_data = { id: data.patient_id, text: data.surname + " " + data.othername };
+                        let patient_data = { id: data.patient_id, text: LanguageManager.joinName(data.surname, data.othername) };
                         $('#patient').append(new Option(patient_data.text, patient_data.id, true, true)).trigger('change');
-                        let doctor_data = { id: data.doctor_id, text: data.d_surname + " " + data.d_othername };
+                        let doctor_data = { id: data.doctor_id, text: LanguageManager.joinName(data.d_surname, data.d_othername) };
                         $('#doctor').append(new Option(doctor_data.text, doctor_data.id, true, true)).trigger('change');
                         $('input[name^="visit_information"][value="' + data.visit_information + '"').prop('checked', true);
                         $('[name="notes"]').val(data.notes);
@@ -634,14 +634,14 @@
                     $('#id').val(id);
                     let patient_data = {
                         id: data.patient_id,
-                        text: data.surname + " " + data.othername
+                        text: LanguageManager.joinName(data.surname, data.othername)
                     };
                     let newOption = new Option(patient_data.text, patient_data.id, true, true);
                     $('#patient').append(newOption).trigger('change');
 
                     let doctor_data = {
                         id: data.doctor_id,
-                        text: data.d_surname + " " + data.d_othername
+                        text: LanguageManager.joinName(data.d_surname, data.d_othername)
                     };
                     let newOption2 = new Option(doctor_data.text, doctor_data.id, true, true);
                     $('#doctor').append(newOption2).trigger('change');

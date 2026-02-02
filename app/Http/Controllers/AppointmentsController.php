@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Appointment;
 use App\AppointmentHistory;
 use App\Http\Helper\FunctionsHelper;
+use App\Http\Helper\NameHelper;
 use App\Invoice;
 use App\Jobs\SendAppointmentSms;
 use App\Notifications\ReminderNotification;
@@ -70,9 +71,8 @@ class AppointmentsController extends Controller
             if (!empty($request->get('quick_search'))) {
                 $search = $request->get('quick_search');
                 $query->where(function($q) use ($search) {
-                    $q->where('patients.surname', 'like', '%' . $search . '%')
-                      ->orWhere('patients.othername', 'like', '%' . $search . '%')
-                      ->orWhere('patients.phone_no', 'like', '%' . $search . '%')
+                    NameHelper::addNameSearch($q, $search, 'patients');
+                    $q->orWhere('patients.phone_no', 'like', '%' . $search . '%')
                       ->orWhere('appointments.appointment_no', 'like', '%' . $search . '%');
                 });
             }
@@ -109,8 +109,7 @@ class AppointmentsController extends Controller
                 if (is_array($search) && !empty($search['value'])) {
                     $searchValue = $search['value'];
                     $query->where(function($q) use ($searchValue) {
-                        $q->where('patients.surname', 'like', '%' . $searchValue . '%')
-                          ->orWhere('patients.othername', 'like', '%' . $searchValue . '%');
+                        NameHelper::addNameSearch($q, $searchValue, 'patients');
                     });
                 }
             }
@@ -130,10 +129,10 @@ class AppointmentsController extends Controller
                     return $translated !== $key ? $translated : $row->status;
                 })
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('doctor', function ($row) {
-                    return $row->d_surname . " " . $row->d_othername;
+                    return \App\Http\Helper\NameHelper::join($row->d_surname, $row->d_othername);
                 })
                 ->addColumn('visit_information', function ($row) {
                     $action = '';
@@ -207,7 +206,7 @@ class AppointmentsController extends Controller
 //        if ($appointment_data->count()) {
         foreach ($appointment_data as $key => $value) {
             $incoming[] = Calendar::event(
-                $value->surname . " " . $value->othername, //event title
+                \App\Http\Helper\NameHelper::join($value->surname, $value->othername), //event title
                 false,
                 date_format(date_create($value->sort_by), "Y-m-d H:i:s"),
                 date_format(date_create($value->sort_by), "Y-m-d H:i:s"),
@@ -585,7 +584,8 @@ class AppointmentsController extends Controller
             ->whereNotIn('appointments.status', ['Cancelled', 'no_show'])
             ->select(
                 'appointments.start_time',
-                DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name")
+                'patients.surname as p_surname',
+                'patients.othername as p_othername'
             )
             ->get();
 
@@ -593,7 +593,7 @@ class AppointmentsController extends Controller
         foreach ($existingAppointments as $appt) {
             $timeKey = date('H:i', strtotime($appt->start_time));
             $booked[$timeKey] = [
-                'patient_name' => $appt->patient_name
+                'patient_name' => NameHelper::join($appt->p_surname, $appt->p_othername)
             ];
         }
 

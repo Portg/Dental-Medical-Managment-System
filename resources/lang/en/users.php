@@ -9,6 +9,7 @@ return [
     'system_user' => 'System User',
 
     // Fields
+    'full_name' => 'Full Name',
     'surname' => 'Surname',
     'othername' => 'Other Name',
     'other_name' => 'Other Name',
@@ -29,6 +30,7 @@ return [
     'nin' => 'National ID No',
 
     // Placeholders
+    'enter_full_name' => 'Enter full name',
     'enter_surname' => 'Enter surname',
     'enter_other_name' => 'Enter other name',
     'enter_email' => 'email address',

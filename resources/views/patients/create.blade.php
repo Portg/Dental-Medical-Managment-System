@@ -25,26 +25,39 @@
                         'title' => __('patient.basic_info'),
                         'icon' => 'fa-user'
                     ])
-                        {{-- Row 1: Surname & Other Name --}}
+                        {{-- Row 1: Name fields (locale-adaptive) --}}
                         <div class="form-row row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="control-label col-md-4">
-                                        <span class="required-asterisk">*</span>{{ __('patient.surname') }}
-                                    </label>
-                                    <div class="col-md-8">
-                                        <input type="text" name="surname" id="surname" class="form-control" placeholder="{{ __('patient.surname') }}">
+                            @if(app()->getLocale() === 'zh-CN')
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label col-md-4">
+                                            <span class="required-asterisk">*</span>{{ __('patient.full_name') }}
+                                        </label>
+                                        <div class="col-md-8">
+                                            <input type="text" name="full_name" id="full_name" class="form-control" placeholder="{{ __('patient.full_name') }}">
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                @include('components.form.text-field', [
-                                    'name' => 'othername',
-                                    'label' => __('patient.other_name'),
-                                    'required' => true,
-                                    'placeholder' => __('patient.other_name'),
-                                ])
-                            </div>
+                            @else
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label col-md-4">
+                                            <span class="required-asterisk">*</span>{{ __('patient.surname') }}
+                                        </label>
+                                        <div class="col-md-8">
+                                            <input type="text" name="surname" id="surname" class="form-control" placeholder="{{ __('patient.surname') }}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    @include('components.form.text-field', [
+                                        'name' => 'othername',
+                                        'label' => __('patient.other_name'),
+                                        'required' => true,
+                                        'placeholder' => __('patient.other_name'),
+                                    ])
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Row 2: Phone & ID Card (ID card first for auto-fill) --}}
@@ -564,8 +577,8 @@ function resetPatientFormToCreateMode() {
 
     // Focus on first input field after modal is shown
     setTimeout(function() {
-        var surnameInput = document.getElementById('surname');
-        if (surnameInput) surnameInput.focus();
+        var nameInput = document.getElementById('full_name') || document.getElementById('surname');
+        if (nameInput) nameInput.focus();
     }, 300);
 }
 

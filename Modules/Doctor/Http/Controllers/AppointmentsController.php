@@ -5,6 +5,7 @@ namespace Modules\Doctor\Http\Controllers;
 use App\Appointment;
 use App\DoctorClaim;
 use App\Http\Helper\FunctionsHelper;
+use App\Http\Helper\NameHelper;
 use App\Invoice;
 use Exception;
 use Illuminate\Http\Request;
@@ -33,8 +34,9 @@ class AppointmentsController extends Controller
                     ->join('patients', 'patients.id', 'appointments.patient_id')
                     ->whereNull('appointments.deleted_at')
                     ->where('appointments.doctor_id', Auth::User()->id)
-                    ->where('patients.surname', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('patients.othername', 'like', '%' . $request->get('search') . '%')
+                    ->where(function($q) use ($request) {
+                        NameHelper::addNameSearch($q, $request->get('search'), 'patients');
+                    })
                     ->select('appointments.*', 'patients.surname', 'patients.othername')
                     ->orderBy('appointments.sort_by', 'desc')
                     ->get();
@@ -66,7 +68,7 @@ class AppointmentsController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('Medical_History', function ($row) {
                     //medical history goes with the patient ID
@@ -106,7 +108,7 @@ class AppointmentsController extends Controller
 //        if ($appointment_data->count()) {
         foreach ($appointment_data as $key => $value) {
             $incoming[] = Calendar::event(
-                $value->surname . " " . $value->othername, //event title
+                \App\Http\Helper\NameHelper::join($value->surname, $value->othername), //event title
                 false,
                 date_format(date_create($value->sort_by), "Y-m-d H:i:s"),
                 date_format(date_create($value->sort_by), "Y-m-d H:i:s"),

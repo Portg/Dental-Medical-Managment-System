@@ -39,6 +39,17 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    /**
+     * Accessor: join name based on locale
+     */
+    public function getFullNameAttribute()
+    {
+        if (app()->getLocale() === 'zh-CN') {
+            return $this->surname . $this->othername;
+        }
+        return $this->surname . ' ' . $this->othername;
+    }
+
     public function UserRole()
     {
         return $this->belongsTo('App\Role', 'role_id');

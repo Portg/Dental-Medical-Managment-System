@@ -9,6 +9,7 @@ return [
     'system_user' => '系统用户',
 
     // 字段
+    'full_name' => '姓名',
     'surname' => '姓',
     'othername' => '名',
     'other_name' => '名',
@@ -29,6 +30,7 @@ return [
     'nin' => '身份证号',
 
     // 占位符
+    'enter_full_name' => '请输入姓名',
     'enter_surname' => '请输入姓',
     'enter_other_name' => '请输入名',
     'enter_email' => '邮箱地址',

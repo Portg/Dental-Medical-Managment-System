@@ -61,7 +61,7 @@ function editItem(id) {
 
             let doctor_data = {
                 id: data.doctor_id,
-                text: data.surname + " " + data.othername
+                text: LanguageManager.joinName(data.surname, data.othername)
             };
             let newOption3 = new Option(doctor_data.text, doctor_data.id, true, true);
             $('#doctor_id').append(newOption3).trigger('change');

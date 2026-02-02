@@ -97,7 +97,7 @@ function editMember(id) {
         success: function(patient) {
             $('#edit_member_id').val(patient.id);
             $('#edit_member_no').val(patient.member_no);
-            $('#edit_patient_name').val(patient.surname + ' ' + patient.othername);
+            $('#edit_patient_name').val(LanguageManager.joinName(patient.surname, patient.othername));
             $('#edit_member_level_id').val(patient.member_level_id);
             $('#edit_member_expiry').val(patient.member_expiry);
             $('#edit_member_status').val(patient.member_status);
@@ -155,7 +155,7 @@ function depositMember(id) {
         success: function(patient) {
             $('#deposit_member_id').val(patient.id);
             $('#deposit_member_no').val(patient.member_no);
-            $('#deposit_patient_name').val(patient.surname + ' ' + patient.othername);
+            $('#deposit_patient_name').val(LanguageManager.joinName(patient.surname, patient.othername));
             $('#deposit_current_balance').val(parseFloat(patient.member_balance).toFixed(2));
             $('#deposit_amount').val('');
             $('#deposit_description').val('');

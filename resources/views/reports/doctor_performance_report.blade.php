@@ -39,7 +39,7 @@
                                         <div class="col-md-9">
                                             <select class="form-control doctor_id" name="doctor_id">
                                                 @foreach($doctors as $row)
-                                                    <option value="{{ $row->id }}">{{ $row->surname." ".$row->othername }}</option>
+                                                    <option value="{{ $row->id }}">{{ $row->full_name }}</option>
                                                 @endforeach
                                             </select>
                                         </div>

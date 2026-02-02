@@ -191,7 +191,7 @@
                     $('[name="payment_date"]').val(data.payment_date);
                     let employee_data = {
                         id: data.employee_id,
-                        text: data.surname + " " + data.othername
+                        text: LanguageManager.joinName(data.surname, data.othername)
                     };
                     let newOption = new Option(employee_data.text, employee_data.id, true, true);
                     $('#employee').append(newOption).trigger('change');

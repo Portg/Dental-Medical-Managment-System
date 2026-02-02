@@ -42,7 +42,7 @@ class DoctorPerformanceReport extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('done_procedures_amount', function ($row) {
                     return number_format($row->amount);
@@ -89,7 +89,7 @@ class DoctorPerformanceReport extends Controller
 
         //get doctor information
         $user = User::where('id', $request->session()->get('doctor_id'))->first();
-        $excel_file_name = $user->surname . " " . $user->othername . "-performance-report-" . time();
+        $excel_file_name = \App\Http\Helper\NameHelper::join($user->surname, $user->othername) . "-performance-report-" . time();
         $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
             date('d-m-Y', strtotime($request->session()->get('to')));
 
@@ -105,7 +105,7 @@ class DoctorPerformanceReport extends Controller
                 foreach ($queryBuilder as $row) {
                     $payload[] = array('Invoice No' => $row->invoice_no,
                         'Invoice Date' => date('d-M-Y', strtotime($row->created_at)),
-                        'Patient Name' => $row->surname . " " . $row->othername,
+                        'Patient Name' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
                         'Total Amount' => $this->TotalInvoiceAmount($row->invoice_id),
                         'Invoice procedures' => $this->invoiceProcedures($row->invoice_id, $row->doctor_id),
                         'Paid Amount' => $this->TotalInvoicePaidAmount($row->invoice_id),

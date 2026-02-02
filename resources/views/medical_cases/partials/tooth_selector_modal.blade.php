@@ -1,4 +1,22 @@
 {{-- Tooth Selector Modal --}}
+@php
+    // Auto-detect default tab by patient age: ≤12 → deciduous, else permanent
+    $modalDefaultTab = 'permanent';
+    if (isset($case) && $case->patient) {
+        $p = $case->patient;
+        $patientAge = null;
+        if ($p->date_of_birth) {
+            $patientAge = \Carbon\Carbon::parse($p->date_of_birth)->age;
+        } elseif ($p->dob) {
+            $patientAge = \Carbon\Carbon::parse($p->dob)->age;
+        } elseif ($p->age !== null && $p->age !== '') {
+            $patientAge = (int) $p->age;
+        }
+        if ($patientAge !== null && $patientAge <= 12) {
+            $modalDefaultTab = 'deciduous';
+        }
+    }
+@endphp
 <div class="modal fade" id="tooth_selector_modal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -60,84 +78,122 @@
                         background: #e8e8e8;
                         margin: 0 8px;
                     }
-                    .deciduous-section {
-                        margin-top: 30px;
-                        padding-top: 20px;
-                        border-top: 1px dashed #e8e8e8;
-                    }
-                    .deciduous-label {
-                        font-size: 13px;
-                        color: #666;
-                        margin-bottom: 10px;
-                        text-align: center;
-                    }
                     .tooth-cell.deciduous {
                         background: #fffbe6;
                         border-color: #ffe58f;
+                    }
+                    .tooth-cell.deciduous:hover {
+                        background: #fff1b8;
+                        border-color: #faad14;
                     }
                     .tooth-cell.deciduous.selected {
                         background: #faad14;
                         border-color: #d48806;
                         color: #fff;
                     }
+
+                    /* Modal tab switcher */
+                    .modal-tooth-tabs {
+                        display: flex;
+                        justify-content: center;
+                        margin-bottom: 16px;
+                        gap: 0;
+                    }
+                    .modal-tooth-tab {
+                        padding: 8px 28px;
+                        font-size: 14px;
+                        border: 1px solid #d9d9d9;
+                        background: #fafafa;
+                        color: #666;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        outline: none;
+                        position: relative;
+                    }
+                    .modal-tooth-tab:first-child {
+                        border-radius: 4px 0 0 4px;
+                    }
+                    .modal-tooth-tab:last-child {
+                        border-radius: 0 4px 4px 0;
+                        border-left: none;
+                    }
+                    .modal-tooth-tab.active {
+                        background: #1A237E;
+                        border-color: #1A237E;
+                        color: #fff;
+                    }
+                    .modal-tooth-tab:not(.active):hover {
+                        background: #f0f0f0;
+                    }
+                    .modal-tooth-tab .tab-dot {
+                        display: inline-block;
+                        width: 6px;
+                        height: 6px;
+                        background: #faad14;
+                        border-radius: 50%;
+                        margin-left: 6px;
+                        vertical-align: middle;
+                    }
                 </style>
 
-                <div class="tooth-selector-container">
-                    {{-- Permanent Teeth - Upper --}}
+                {{-- Tab Switcher --}}
+                <div class="modal-tooth-tabs">
+                    <button type="button" class="modal-tooth-tab {{ $modalDefaultTab === 'permanent' ? 'active' : '' }}" data-target="modal-permanent">
+                        {{ __('odontogram.permanent') }}
+                    </button>
+                    <button type="button" class="modal-tooth-tab {{ $modalDefaultTab === 'deciduous' ? 'active' : '' }}" data-target="modal-deciduous">
+                        {{ __('odontogram.decidua') }}
+                    </button>
+                </div>
+
+                {{-- Permanent Teeth Panel --}}
+                <div class="tooth-selector-container modal-tooth-panel" id="modal-permanent" @if($modalDefaultTab === 'deciduous') style="display: none;" @endif>
                     <div class="quadrant-label">{{ __('odontogram.upper_right') }} | {{ __('odontogram.upper_left') }}</div>
                     <div class="tooth-row">
-                        {{-- Upper Right (18-11) --}}
                         @for($i = 18; $i >= 11; $i--)
                             <div class="tooth-cell" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
                         @endfor
                         <div class="teeth-separator-vertical"></div>
-                        {{-- Upper Left (21-28) --}}
                         @for($i = 21; $i <= 28; $i++)
                             <div class="tooth-cell" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
                         @endfor
                     </div>
-
                     <div class="teeth-separator"></div>
-
-                    {{-- Permanent Teeth - Lower --}}
                     <div class="tooth-row">
-                        {{-- Lower Right (48-41) --}}
                         @for($i = 48; $i >= 41; $i--)
                             <div class="tooth-cell" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
                         @endfor
                         <div class="teeth-separator-vertical"></div>
-                        {{-- Lower Left (31-38) --}}
                         @for($i = 31; $i <= 38; $i++)
                             <div class="tooth-cell" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
                         @endfor
                     </div>
                     <div class="quadrant-label">{{ __('odontogram.lower_right') }} | {{ __('odontogram.lower_left') }}</div>
+                </div>
 
-                    {{-- Deciduous Teeth --}}
-                    <div class="deciduous-section">
-                        <div class="deciduous-label">{{ __('odontogram.deciduous_teeth') }}</div>
-                        {{-- Upper Deciduous --}}
-                        <div class="tooth-row">
-                            @for($i = 55; $i >= 51; $i--)
-                                <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                            @endfor
-                            <div class="teeth-separator-vertical"></div>
-                            @for($i = 61; $i <= 65; $i++)
-                                <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                            @endfor
-                        </div>
-                        <div class="teeth-separator" style="width: 60%; margin-left: auto; margin-right: auto;"></div>
-                        {{-- Lower Deciduous --}}
-                        <div class="tooth-row">
-                            @for($i = 85; $i >= 81; $i--)
-                                <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                            @endfor
-                            <div class="teeth-separator-vertical"></div>
-                            @for($i = 71; $i <= 75; $i++)
-                                <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                            @endfor
-                        </div>
+                {{-- Deciduous Teeth Panel --}}
+                <div class="tooth-selector-container modal-tooth-panel" id="modal-deciduous" @if($modalDefaultTab === 'permanent') style="display: none;" @endif>
+                    <div class="quadrant-label">{{ __('odontogram.upper_right') }} | {{ __('odontogram.upper_left') }}</div>
+                    <div class="tooth-row">
+                        @for($i = 55; $i >= 51; $i--)
+                            <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
+                        @endfor
+                        <div class="teeth-separator-vertical"></div>
+                        @for($i = 61; $i <= 65; $i++)
+                            <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
+                        @endfor
                     </div>
+                    <div class="teeth-separator" style="width: 60%; margin-left: auto; margin-right: auto;"></div>
+                    <div class="tooth-row">
+                        @for($i = 85; $i >= 81; $i--)
+                            <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
+                        @endfor
+                        <div class="teeth-separator-vertical"></div>
+                        @for($i = 71; $i <= 75; $i++)
+                            <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
+                        @endfor
+                    </div>
+                    <div class="quadrant-label">{{ __('odontogram.lower_right') }} | {{ __('odontogram.lower_left') }}</div>
                 </div>
 
                 {{-- Selected Teeth Display --}}
@@ -165,17 +221,25 @@ var selectedTeethInModal = [];
 var teethBeforeModal = [];
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Modal tab switching
+    $(document).on('click', '.modal-tooth-tab', function(e) {
+        e.preventDefault();
+        var target = $(this).data('target');
+        $(this).siblings('.modal-tooth-tab').removeClass('active');
+        $(this).addClass('active');
+        $('.modal-tooth-panel').hide();
+        $('#' + target).show();
+        // Update tab dot badges
+        updateModalTabDots();
+    });
+
     $('#tooth_selector_modal').on('show.bs.modal', function() {
-        // Load union of both fields
-        var relatedTeeth = JSON.parse($('#related_teeth').val() || '[]');
-        var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
-        // Merge and deduplicate
-        var merged = relatedTeeth.slice();
-        examTeeth.forEach(function(t) {
-            if (merged.indexOf(t) === -1) merged.push(t);
-        });
-        selectedTeethInModal = merged;
-        teethBeforeModal = merged.slice(); // snapshot for diff
+        // Load teeth from the field that opened the modal
+        var field = currentToothField || 'examination';
+        var inputId = (field === 'related') ? '#related_teeth' : '#examination_teeth';
+        var teeth = JSON.parse($(inputId).val() || '[]');
+        selectedTeethInModal = teeth.slice();
+        teethBeforeModal = teeth.slice(); // snapshot for diff
         updateToothSelectorUI();
     });
 });
@@ -206,15 +270,50 @@ function updateToothSelectorUI() {
     var $display = $('#selected-teeth-display');
     if (selectedTeethInModal.length > 0) {
         var html = selectedTeethInModal.map(function(t) {
-            return '<span class="tooth-tag" style="display: inline-block; margin: 2px; padding: 4px 8px; background: #e6f7ff; border: 1px solid #91d5ff; border-radius: 3px; font-size: 12px; color: #1890ff;">' + t + '</span>';
+            var isDeciduous = parseInt(t) >= 51;
+            var bg = isDeciduous ? '#fffbe6' : '#e6f7ff';
+            var border = isDeciduous ? '#ffe58f' : '#91d5ff';
+            var color = isDeciduous ? '#d48806' : '#1890ff';
+            return '<span class="tooth-tag" style="display: inline-block; margin: 2px; padding: 4px 8px; background: ' + bg + '; border: 1px solid ' + border + '; border-radius: 3px; font-size: 12px; color: ' + color + ';">' + t + '</span>';
         }).join('');
         $display.html(html);
     } else {
         $display.html('<span class="text-muted">{{ __("common.none_selected") }}</span>');
     }
+
+    updateModalTabDots();
+}
+
+/**
+ * Show dot badge on inactive modal tab if that panel has selections
+ */
+function updateModalTabDots() {
+    var hasPermanent = false;
+    var hasDeciduous = false;
+    selectedTeethInModal.forEach(function(t) {
+        if (parseInt(t) >= 51) {
+            hasDeciduous = true;
+        } else {
+            hasPermanent = true;
+        }
+    });
+
+    $('.modal-tooth-tab').each(function() {
+        var target = $(this).data('target');
+        var hasSelection = (target === 'modal-permanent') ? hasPermanent : hasDeciduous;
+        if (hasSelection && !$(this).hasClass('active')) {
+            if (!$(this).find('.tab-dot').length) {
+                $(this).append('<span class="tab-dot"></span>');
+            }
+        } else {
+            $(this).find('.tab-dot').remove();
+        }
+    });
 }
 
 function confirmToothSelection() {
+    var field = currentToothField || 'examination';
+
     // Diff: find added and removed teeth
     var added = selectedTeethInModal.filter(function(t) {
         return teethBeforeModal.indexOf(t) === -1;
@@ -223,12 +322,12 @@ function confirmToothSelection() {
         return selectedTeethInModal.indexOf(t) === -1;
     });
 
-    // Apply changes through sync functions
+    // Apply changes through field-aware sync (respects one-way downstream)
     removed.forEach(function(tooth) {
-        removeToothFromBoth(tooth);
+        removeToothFromField(field, tooth);
     });
     added.forEach(function(tooth) {
-        addToothToBoth(tooth);
+        addToothToField(field, tooth);
     });
 
     updateMiniChartHighlights();

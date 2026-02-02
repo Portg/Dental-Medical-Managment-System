@@ -28,7 +28,7 @@ class DentalChartController extends Controller
                 ->select(
                     'patients.id as patient_id',
                     'patients.patient_no',
-                    DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                     DB::raw('COUNT(dental_charts.id) as tooth_count'),
                     DB::raw('MAX(dental_charts.updated_at) as last_updated')
                 )

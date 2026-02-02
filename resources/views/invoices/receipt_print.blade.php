@@ -24,7 +24,7 @@
                 <td align="center">
                 </td>
                 <td align="right">
-                    <span>{{ $patient->surname." ".$patient->othername }}
+                    <span>{{ $patient->full_name }}
                     </span>
                 </td>
             </tr>

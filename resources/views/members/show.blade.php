@@ -39,7 +39,7 @@
                                     </tr>
                                     <tr>
                                         <td><strong>{{ __('members.patient_name') }}:</strong></td>
-                                        <td>{{ $patient->surname }} {{ $patient->othername }}</td>
+                                        <td>{{ $patient->full_name }}</td>
                                     </tr>
                                     <tr>
                                         <td><strong>{{ __('members.level') }}:</strong></td>

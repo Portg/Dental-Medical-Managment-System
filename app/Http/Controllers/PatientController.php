@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\ChronicDisease;
 use App\Http\Helper\FunctionsHelper;
+use App\Http\Helper\NameHelper;
 use App\InsuranceCompany;
 use App\Patient;
 use Illuminate\Http\Request;
@@ -40,9 +41,8 @@ class PatientController extends Controller
             if (!empty($request->get('quick_search'))) {
                 $search = $request->get('quick_search');
                 $query->where(function($q) use ($search) {
-                    $q->where('patients.surname', 'like', '%' . $search . '%')
-                      ->orWhere('patients.othername', 'like', '%' . $search . '%')
-                      ->orWhere('patients.phone_no', 'like', '%' . $search . '%')
+                    NameHelper::addNameSearch($q, $search, 'patients');
+                    $q->orWhere('patients.phone_no', 'like', '%' . $search . '%')
                       ->orWhere('patients.patient_no', 'like', '%' . $search . '%');
                 });
             }
@@ -53,9 +53,8 @@ class PatientController extends Controller
                 if (is_array($search) && !empty($search['value'])) {
                     $searchValue = $search['value'];
                     $query->where(function($q) use ($searchValue) {
-                        $q->where('patients.surname', 'like', '%' . $searchValue . '%')
-                          ->orWhere('patients.othername', 'like', '%' . $searchValue . '%')
-                          ->orWhere('patients.phone_no', 'like', '%' . $searchValue . '%');
+                        NameHelper::addNameSearch($q, $searchValue, 'patients');
+                        $q->orWhere('patients.phone_no', 'like', '%' . $searchValue . '%');
                     });
                 }
             }
@@ -93,7 +92,7 @@ class PatientController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('full_name', function ($row) {
-                    return $row->surname . ' ' . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('gender', function ($row) {
                     if ($row->gender == 'Male') {
@@ -209,9 +208,8 @@ class PatientController extends Controller
         if ($name) {
             $search = $name;
             $data = Patient::where(function($query) use ($search) {
-                    $query->where('surname', 'LIKE', "%$search%")
-                        ->orWhere('othername', 'LIKE', "%$search%")
-                        ->orWhere('phone_no', 'LIKE', "%$search%")
+                    NameHelper::addNameSearch($query, $search);
+                    $query->orWhere('phone_no', 'LIKE', "%$search%")
                         ->orWhere('email', 'LIKE', "%$search%")
                         ->orWhere('patient_no', 'LIKE', "%$search%");
                 })
@@ -227,7 +225,7 @@ class PatientController extends Controller
             // Return simple format for other uses
             $formatted_tags = [];
             foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->surname . " " . $tag->othername];
+                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->full_name];
             }
             return \Response::json($formatted_tags);
         }
@@ -267,23 +265,40 @@ class PatientController extends Controller
      */
     public function store(Request $request)
     {
-        Validator::make($request->all(), [
-            'surname' => 'required',
-            'othername' => 'required',
-            'gender' => 'required',
-            'telephone' => 'required'
-        ], [
-            'surname.required' => __('validation.required', ['attribute' => __('patient.surname')]),
-            'othername.required' => __('validation.required', ['attribute' => __('patient.othername')]),
-            'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
-            'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
-        ])->validate();
+        // Locale-adaptive validation: zh-CN uses full_name, en uses surname+othername
+        if ($request->filled('full_name')) {
+            Validator::make($request->all(), [
+                'full_name' => 'required|min:2',
+                'gender' => 'required',
+                'telephone' => 'required'
+            ], [
+                'full_name.required' => __('validation.required', ['attribute' => __('patient.full_name')]),
+                'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
+                'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
+            ])->validate();
+
+            $nameParts = NameHelper::split($request->full_name);
+        } else {
+            Validator::make($request->all(), [
+                'surname' => 'required',
+                'othername' => 'required',
+                'gender' => 'required',
+                'telephone' => 'required'
+            ], [
+                'surname.required' => __('validation.required', ['attribute' => __('patient.surname')]),
+                'othername.required' => __('validation.required', ['attribute' => __('patient.othername')]),
+                'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
+                'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
+            ])->validate();
+
+            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
+        }
 
         // Build data array, only include fields with values
         $data = [
             'patient_no' => Patient::PatientNumber(),
-            'surname' => $request->surname,
-            'othername' => $request->othername,
+            'surname' => $nameParts['surname'],
+            'othername' => $nameParts['othername'],
             'gender' => $request->gender,
             'telephone' => $request->telephone,
             '_who_added' => Auth::User()->id
@@ -468,22 +483,39 @@ class PatientController extends Controller
      */
     public function update(Request $request, $id)
     {
-        Validator::make($request->all(), [
-            'surname' => 'required',
-            'othername' => 'required',
-            'gender' => 'required',
-            'telephone' => 'required'
-        ], [
-            'surname.required' => __('validation.required', ['attribute' => __('patient.surname')]),
-            'othername.required' => __('validation.required', ['attribute' => __('patient.othername')]),
-            'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
-            'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
-        ])->validate();
+        // Locale-adaptive validation
+        if ($request->filled('full_name')) {
+            Validator::make($request->all(), [
+                'full_name' => 'required|min:2',
+                'gender' => 'required',
+                'telephone' => 'required'
+            ], [
+                'full_name.required' => __('validation.required', ['attribute' => __('patient.full_name')]),
+                'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
+                'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
+            ])->validate();
+
+            $nameParts = NameHelper::split($request->full_name);
+        } else {
+            Validator::make($request->all(), [
+                'surname' => 'required',
+                'othername' => 'required',
+                'gender' => 'required',
+                'telephone' => 'required'
+            ], [
+                'surname.required' => __('validation.required', ['attribute' => __('patient.surname')]),
+                'othername.required' => __('validation.required', ['attribute' => __('patient.othername')]),
+                'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
+                'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
+            ])->validate();
+
+            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
+        }
 
         // Build data array with required fields
         $data = [
-            'surname' => $request->surname,
-            'othername' => $request->othername,
+            'surname' => $nameParts['surname'],
+            'othername' => $nameParts['othername'],
             'gender' => $request->gender,
             'telephone' => $request->telephone,
         ];

@@ -63,7 +63,7 @@ function initPatientSelector() {
                     results: data.map(function(patient) {
                         return {
                             id: patient.id,
-                            text: (patient.patient_no || '') + ' - ' + patient.surname + ' ' + patient.othername,
+                            text: (patient.patient_no || '') + ' - ' + LanguageManager.joinName(patient.surname, patient.othername),
                             patient: patient
                         };
                     })
@@ -144,10 +144,28 @@ function initQuickPhrases() {
 }
 
 /**
+ * Initialize tooth chart tab switching (permanent / deciduous)
+ */
+function initToothChartTabs() {
+    $(document).on('click', '.tooth-chart-tab', function(e) {
+        e.preventDefault();
+        var target = $(this).data('target');
+        // Switch active tab
+        $(this).siblings('.tooth-chart-tab').removeClass('active');
+        $(this).addClass('active');
+        // Switch panel
+        $(this).closest('.portlet-body').find('.tooth-chart-panel').hide();
+        $('#tooth-panel-' + target).show();
+    });
+}
+
+/**
  * Initialize tooth mini chart click events (using event delegation)
- * Single click to toggle: add to or remove from BOTH related and examination teeth
+ * Sidebar mini chart operates on examination teeth, with downstream sync to diagnosis
  */
 function initToothMiniChart() {
+    initToothChartTabs();
+
     $(document).on('click', '.tooth-mini', function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -161,17 +179,14 @@ function initToothMiniChart() {
         if (!tooth) return;
         var toothStr = tooth.toString();
 
-        // Check if tooth is in either field
-        var relatedTeeth = JSON.parse($('#related_teeth').val() || '[]');
+        // Check if tooth is in examination field
         var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
-        var isSelected = relatedTeeth.indexOf(toothStr) !== -1 || examTeeth.indexOf(toothStr) !== -1;
+        var isSelected = examTeeth.indexOf(toothStr) !== -1;
 
         if (isSelected) {
-            // Remove from both fields
-            removeToothFromBoth(tooth);
+            removeToothFromField('examination', tooth);
         } else {
-            // Add to both fields
-            addToothToBoth(tooth);
+            addToothToField('examination', tooth);
         }
 
         updateMiniChartHighlights();
@@ -179,63 +194,70 @@ function initToothMiniChart() {
 }
 
 /**
- * Add tooth to both related and examination fields
+ * Add tooth to a specific field, with one-way downstream sync:
+ *   examination → diagnosis (downstream)
+ *   diagnosis → nothing (no upstream sync)
  */
-function addToothToBoth(tooth) {
+function addToothToField(field, tooth) {
     var toothStr = tooth.toString();
-    var oldTeethStr = getSelectedTeethString();
 
-    // Add to related teeth
-    var relatedTeeth = JSON.parse($('#related_teeth').val() || '[]');
-    if (relatedTeeth.indexOf(toothStr) === -1) {
-        relatedTeeth.push(toothStr);
-        $('#related_teeth').val(JSON.stringify(relatedTeeth));
-        var tag = '<span class="tooth-tag" data-tooth="' + tooth + '">' + tooth +
-                  '<span class="remove-tooth" onclick="removeTooth(\'related\', \'' + tooth + '\')">&times;</span></span>';
-        $('#related-teeth-tags').find('.add-teeth-btn').before(tag);
+    // Add to the target field
+    _addToothUI(field, toothStr);
+
+    // One-way downstream: examination → diagnosis
+    if (field === 'examination') {
+        _addToothUI('related', toothStr);
     }
-
-    // Add to examination teeth
-    var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
-    if (examTeeth.indexOf(toothStr) === -1) {
-        examTeeth.push(toothStr);
-        $('#examination_teeth').val(JSON.stringify(examTeeth));
-        var tag = '<span class="tooth-tag" data-tooth="' + tooth + '">' + tooth +
-                  '<span class="remove-tooth" onclick="removeTooth(\'examination\', \'' + tooth + '\')">&times;</span></span>';
-        $('#examination-teeth-tags').find('.add-teeth-btn').before(tag);
-    }
-
-    // Sync teeth in text fields
-    syncTeethInTextFields(oldTeethStr, getSelectedTeethString());
 }
 
 /**
- * Remove tooth from both related and examination fields
+ * Remove tooth from a specific field, with one-way downstream sync:
+ *   examination → diagnosis (downstream)
+ *   diagnosis → nothing (no upstream sync)
  */
-function removeToothFromBoth(tooth) {
+function removeToothFromField(field, tooth) {
     var toothStr = tooth.toString();
-    var oldTeethStr = getSelectedTeethString();
 
-    // Remove from related teeth
-    var relatedTeeth = JSON.parse($('#related_teeth').val() || '[]');
-    var idx = relatedTeeth.indexOf(toothStr);
-    if (idx !== -1) {
-        relatedTeeth.splice(idx, 1);
-        $('#related_teeth').val(JSON.stringify(relatedTeeth));
-        $('#related-teeth-tags .tooth-tag[data-tooth="' + tooth + '"]').remove();
+    // Remove from the target field
+    _removeToothUI(field, toothStr);
+
+    // One-way downstream: examination → diagnosis
+    if (field === 'examination') {
+        _removeToothUI('related', toothStr);
     }
+}
 
-    // Remove from examination teeth
-    var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
-    idx = examTeeth.indexOf(toothStr);
-    if (idx !== -1) {
-        examTeeth.splice(idx, 1);
-        $('#examination_teeth').val(JSON.stringify(examTeeth));
-        $('#examination-teeth-tags .tooth-tag[data-tooth="' + tooth + '"]').remove();
+/**
+ * Internal: add tooth to a single field's hidden input and UI tags
+ */
+function _addToothUI(field, toothStr) {
+    var inputId = (field === 'related') ? '#related_teeth' : '#examination_teeth';
+    var tagsId = (field === 'related') ? '#related-teeth-tags' : '#examination-teeth-tags';
+
+    var teeth = JSON.parse($(inputId).val() || '[]');
+    if (teeth.indexOf(toothStr) === -1) {
+        teeth.push(toothStr);
+        $(inputId).val(JSON.stringify(teeth));
+        var tag = '<span class="tooth-tag" data-tooth="' + toothStr + '">' + toothStr +
+                  '<span class="remove-tooth" onclick="removeTooth(\'' + field + '\', \'' + toothStr + '\')">&times;</span></span>';
+        $(tagsId).find('.add-teeth-btn').before(tag);
     }
+}
 
-    // Sync teeth in text fields
-    syncTeethInTextFields(oldTeethStr, getSelectedTeethString());
+/**
+ * Internal: remove tooth from a single field's hidden input and UI tags
+ */
+function _removeToothUI(field, toothStr) {
+    var inputId = (field === 'related') ? '#related_teeth' : '#examination_teeth';
+    var tagsId = (field === 'related') ? '#related-teeth-tags' : '#examination-teeth-tags';
+
+    var teeth = JSON.parse($(inputId).val() || '[]');
+    var idx = teeth.indexOf(toothStr);
+    if (idx !== -1) {
+        teeth.splice(idx, 1);
+        $(inputId).val(JSON.stringify(teeth));
+        $(tagsId + ' .tooth-tag[data-tooth="' + toothStr + '"]').remove();
+    }
 }
 
 // ==========================================================================
@@ -251,34 +273,56 @@ function openToothSelector(field) {
 }
 
 /**
- * Add a tooth to the specified field — delegates to addToothToBoth for full sync
+ * Add a tooth from a specific field context (called by UI tag buttons)
  */
 function addTooth(field, tooth) {
-    addToothToBoth(tooth);
+    addToothToField(field, tooth);
     updateMiniChartHighlights();
 }
 
 /**
- * Remove a tooth from the specified field — delegates to removeToothFromBoth for full sync
+ * Remove a tooth from a specific field context (called by UI tag ×buttons)
  */
 function removeTooth(field, tooth) {
-    removeToothFromBoth(tooth);
+    removeToothFromField(field, tooth);
     updateMiniChartHighlights();
 }
 
 /**
- * Update mini chart highlights based on selected teeth (checks both fields)
+ * Update mini chart highlights based on examination teeth
+ * (sidebar mini chart reflects examination state)
  */
 function updateMiniChartHighlights() {
-    var relatedTeeth = JSON.parse($('#related_teeth').val() || '[]');
     var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
+    var allSelected = examTeeth;
+
+    var hasPermanent = false;
+    var hasDeciduous = false;
 
     $('.tooth-mini').each(function() {
         var tooth = $(this).data('tooth').toString();
-        if (relatedTeeth.indexOf(tooth) !== -1 || examTeeth.indexOf(tooth) !== -1) {
+        if (allSelected.indexOf(tooth) !== -1) {
             $(this).addClass('selected');
+            if ($(this).hasClass('deciduous')) {
+                hasDeciduous = true;
+            } else {
+                hasPermanent = true;
+            }
         } else {
             $(this).removeClass('selected');
+        }
+    });
+
+    // Show dot badge on inactive tab if that panel has selections
+    $('.tooth-chart-tab').each(function() {
+        var target = $(this).data('target');
+        var hasSelection = (target === 'permanent') ? hasPermanent : hasDeciduous;
+        if (hasSelection && !$(this).hasClass('active')) {
+            if (!$(this).find('.tab-dot').length) {
+                $(this).append('<span class="tab-dot"></span>');
+            }
+        } else {
+            $(this).find('.tab-dot').remove();
         }
     });
 }
@@ -504,7 +548,7 @@ function enableFormWithPatient() {
 
     // Update patient info display
     $('#patient-avatar').text(selectedPatientData.surname.charAt(0));
-    $('#patient-name').text(selectedPatientData.surname + ' ' + selectedPatientData.othername);
+    $('#patient-name').text(LanguageManager.joinName(selectedPatientData.surname, selectedPatientData.othername));
 
     // Calculate age if DOB exists
     var metaText = selectedPatientData.gender === 'Male' ?
@@ -658,23 +702,23 @@ function handleTemplateInsert(template, $input) {
         parsed = null;
     }
 
-    // Get selected teeth for placeholder replacement
-    var selectedTeeth = getSelectedTeethString();
-
     // If it's a SOAP template (JSON with subjective/objective/assessment/plan)
     if (parsed && typeof parsed === 'object' && (parsed.subjective || parsed.objective || parsed.assessment || parsed.plan)) {
-        // Fill each field with corresponding content (with tooth replacement)
+        var examTeeth = getTeethStringByField('#examination_teeth');
+        var diagTeeth = getTeethStringByField('#related_teeth');
+
+        // Fill each field with corresponding content (use field-appropriate teeth)
         if (parsed.subjective) {
-            $('#chief_complaint').val(replaceToothPlaceholder(parsed.subjective, selectedTeeth));
+            $('#chief_complaint').val(replaceToothPlaceholder(parsed.subjective, examTeeth));
         }
         if (parsed.objective) {
-            $('#examination').val(replaceToothPlaceholder(parsed.objective, selectedTeeth));
+            $('#examination').val(replaceToothPlaceholder(parsed.objective, examTeeth));
         }
         if (parsed.assessment) {
-            $('#diagnosis').val(replaceToothPlaceholder(parsed.assessment, selectedTeeth));
+            $('#diagnosis').val(replaceToothPlaceholder(parsed.assessment, diagTeeth));
         }
         if (parsed.plan) {
-            $('#treatment').val(replaceToothPlaceholder(parsed.plan, selectedTeeth));
+            $('#treatment').val(replaceToothPlaceholder(parsed.plan, diagTeeth));
         }
 
         // Update character counter
@@ -688,8 +732,12 @@ function handleTemplateInsert(template, $input) {
         return true; // Handled, prevent default insertion
     }
 
-    // For plain text templates, replace tooth placeholder and insert
-    content = replaceToothPlaceholder(content, selectedTeeth);
+    // For plain text templates, determine teeth by target field context
+    var inputId = $input.attr('id');
+    var contextTeeth = (inputId === 'diagnosis' || inputId === 'treatment')
+        ? getTeethStringByField('#related_teeth')
+        : getTeethStringByField('#examination_teeth');
+    content = replaceToothPlaceholder(content, contextTeeth);
 
     // Insert into current field
     var val = $input.val();
@@ -706,14 +754,22 @@ function handleTemplateInsert(template, $input) {
 }
 
 /**
- * Get selected teeth as a string (e.g., "47" or "46,47")
+ * Get teeth string for a specific field (e.g., "47" or "46,47")
+ * @param {string} inputId - jQuery selector for hidden input (default: examination)
  */
-function getSelectedTeethString() {
-    var relatedTeeth = JSON.parse($('#related_teeth').val() || '[]');
-    if (relatedTeeth.length === 0) {
+function getTeethStringByField(inputId) {
+    var teeth = JSON.parse($(inputId).val() || '[]');
+    if (teeth.length === 0) {
         return '__'; // Keep placeholder if no teeth selected
     }
-    return relatedTeeth.join(',');
+    return teeth.join(',');
+}
+
+/**
+ * Get selected teeth as a string - uses examination teeth as default
+ */
+function getSelectedTeethString() {
+    return getTeethStringByField('#examination_teeth');
 }
 
 /**
@@ -722,23 +778,4 @@ function getSelectedTeethString() {
 function replaceToothPlaceholder(text, teethStr) {
     if (!text) return text;
     return text.replace(/__/g, teethStr);
-}
-
-/**
- * Sync tooth numbers in text fields when teeth selection changes.
- * Replaces old teeth string with new teeth string in examination and diagnosis fields.
- */
-function syncTeethInTextFields(oldTeethStr, newTeethStr) {
-    if (!oldTeethStr || oldTeethStr === newTeethStr) return;
-
-    var fields = ['#examination', '#diagnosis'];
-    fields.forEach(function(selector) {
-        var $field = $(selector);
-        if (!$field.length) return;
-        var val = $field.val();
-        if (!val) return;
-        if (val.indexOf(oldTeethStr) !== -1) {
-            $field.val(val.split(oldTeethStr).join(newTeethStr));
-        }
-    });
 }

@@ -6,7 +6,7 @@
 <div class="note note-success">
     <p class="text-black-50">
         <a href="{{ url('quotations')}}" class="text-primary">{{ __('quotations.go_back_to_quotations') }}</a> /
-        @if(isset($patient))  {{ $patient->surname." ".$patient->othername  }} @endif
+        @if(isset($patient))  {{ $patient->full_name  }} @endif
     </p>
 </div>
 <input type="hidden" value="{{ $quotation_id }}" id="global_quotation_id">

@@ -560,7 +560,7 @@ window.showPatientInfoCard = function(patient) {
     $('#patient-avatar').text(firstName.charAt(0));
 
     // Name
-    $('#patient-name').text((patient.surname || '') + ' ' + (patient.othername || ''));
+    $('#patient-name').text(LanguageManager.joinName(patient.surname, patient.othername));
 
     // VIP badge
     if (patient.member_status === 'Active') {
@@ -763,7 +763,7 @@ window.loadPatientById = function(patientId) {
         url: '/patients/' + patientId + '/edit',
         success: function(data) {
             var patient = data.patient;
-            var option = new Option(patient.surname + ' ' + patient.othername, patient.id, true, true);
+            var option = new Option(LanguageManager.joinName(patient.surname, patient.othername), patient.id, true, true);
             $('#drawer_patient').append(option).trigger('change');
             showPatientInfoCard(patient);
         }
@@ -775,7 +775,7 @@ window.loadDoctorById = function(doctorId) {
     $.ajax({
         url: '/users/' + doctorId,
         success: function(user) {
-            var option = new Option(user.surname + ' ' + user.othername, user.id, true, true);
+            var option = new Option(LanguageManager.joinName(user.surname, user.othername), user.id, true, true);
             $('#drawer_doctor').append(option).trigger('change');
         }
     });
@@ -803,7 +803,7 @@ $(document).ready(function() {
                         var phone = item.phone_no ? item.phone_no.slice(-4) : '';
                         return {
                             id: item.id,
-                            text: item.surname + ' ' + item.othername + (phone ? ' ***' + phone : ''),
+                            text: LanguageManager.joinName(item.surname, item.othername) + (phone ? ' ***' + phone : ''),
                             patient: item
                         };
                     })

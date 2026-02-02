@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
+use App\Http\Helper\NameHelper;
 use App\Jobs\ShareEmailQuotation;
 use App\MedicalService;
 use App\Quotation;
@@ -33,8 +34,9 @@ class QuotationController extends Controller
                     ->join('patients', 'patients.id', 'quotations.patient_id')
                     ->join('users', 'users.id', 'quotations._who_added')
                     ->whereNull("quotations.deleted_at")
-                    ->where('patients.surname', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('patients.othername', 'like', '%' . $request->get('search') . '%')
+                    ->where(function($q) use ($request) {
+                        NameHelper::addNameSearch($q, $request->get('search'), 'patients');
+                    })
                     ->select('quotations.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy')
                     ->OrderBy('quotations.id', 'desc')
                     ->get();
@@ -77,7 +79,7 @@ class QuotationController extends Controller
                     return '<a href="' . url('quotations/' . $row->id) . '">' . $row->quotation_no . '</a>';
                 })
                 ->addColumn('customer', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('amount', function ($row) {
                     return number_format(QuotationItem::where('quotation_id', $row->id)->sum(DB::raw('qty*price')));

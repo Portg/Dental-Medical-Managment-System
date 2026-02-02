@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Helper\NameHelper;
 use App\Invoice;
 use App\InvoicePayment;
 use App\Patient;
@@ -47,8 +48,7 @@ class RefundController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('refund_no', 'like', "%{$search}%")
                         ->orWhereHas('patient', function ($pq) use ($search) {
-                            $pq->where('surname', 'like', "%{$search}%")
-                                ->orWhere('othername', 'like', "%{$search}%");
+                            NameHelper::addNameSearch($pq, $search);
                         })
                         ->orWhereHas('invoice', function ($iq) use ($search) {
                             $iq->where('invoice_no', 'like', "%{$search}%");
@@ -64,7 +64,7 @@ class RefundController extends Controller
                     return '<a href="' . url('refunds/' . $row->id) . '">' . $row->refund_no . '</a>';
                 })
                 ->addColumn('patient_name', function ($row) {
-                    return $row->patient ? $row->patient->surname . ' ' . $row->patient->othername : '-';
+                    return $row->patient ? $row->patient->full_name : '-';
                 })
                 ->addColumn('invoice_no', function ($row) {
                     return $row->invoice ? '<a href="' . url('invoices/' . $row->invoice_id) . '">' . $row->invoice->invoice_no . '</a>' : '-';
@@ -412,7 +412,7 @@ class RefundController extends Controller
                     return $row->refund_no;
                 })
                 ->addColumn('patient_name', function ($row) {
-                    return $row->patient ? $row->patient->surname . ' ' . $row->patient->othername : '-';
+                    return $row->patient ? $row->patient->full_name : '-';
                 })
                 ->addColumn('refund_amount', function ($row) {
                     return number_format($row->refund_amount, 2);

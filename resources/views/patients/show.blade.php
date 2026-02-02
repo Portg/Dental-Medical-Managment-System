@@ -10,7 +10,7 @@
                 <div class="caption font-dark">
                     <span class="caption-subject">
                         <a href="{{ url('patients') }}" class="text-primary">{{ __('patient.patients') }}</a>
-                        / {{ $patient->surname }} {{ $patient->othername }} ({{ $patient->patient_no }})
+                        / {{ $patient->full_name }} ({{ $patient->patient_no }})
                     </span>
                 </div>
                 <div class="actions">
@@ -35,7 +35,7 @@
                                 <p><strong>{{ __('patient.patient_no') }}:</strong><br>{{ $patient->patient_no }}</p>
                             </div>
                             <div class="col-md-3">
-                                <p><strong>{{ __('patient.name') }}:</strong><br>{{ $patient->surname }} {{ $patient->othername }}</p>
+                                <p><strong>{{ __('patient.name') }}:</strong><br>{{ $patient->full_name }}</p>
                             </div>
                             <div class="col-md-3">
                                 <p><strong>{{ __('patient.gender') }}:</strong><br>{{ $patient->gender == 'Male' ? __('patient.male') : __('patient.female') }}</p>

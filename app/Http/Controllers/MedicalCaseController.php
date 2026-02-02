@@ -32,10 +32,10 @@ class MedicalCaseController extends Controller
                 ->orderBy('medical_cases.created_at', 'desc')
                 ->select(
                     'medical_cases.*',
-                    DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                     'patients.patient_no',
-                    DB::raw("CONCAT(doctors.surname, ' ', doctors.othername) as doctor_name"),
-                    DB::raw("CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(doctors.surname, doctors.othername) as doctor_name" : "CONCAT(doctors.surname, ' ', doctors.othername) as doctor_name"),
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
                 )
                 ->get();
 
@@ -121,7 +121,7 @@ class MedicalCaseController extends Controller
                 ->orderBy('medical_cases.created_at', 'desc')
                 ->select(
                     'medical_cases.*',
-                    DB::raw("CONCAT(doctors.surname, ' ', doctors.othername) as doctor_name")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(doctors.surname, doctors.othername) as doctor_name" : "CONCAT(doctors.surname, ' ', doctors.othername) as doctor_name")
                 )
                 ->get();
 

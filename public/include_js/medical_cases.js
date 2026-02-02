@@ -16,7 +16,7 @@ function initializePatientSelect() {
     $('#patient_id').empty().append('<option value="">' + LanguageManager.trans('medical_cases.select_patient') + '</option>');
     if (typeof patients !== 'undefined') {
         patients.forEach(function(patient) {
-            $('#patient_id').append('<option value="' + patient.id + '">' + patient.surname + ' ' + patient.othername + ' (' + patient.patient_no + ')</option>');
+            $('#patient_id').append('<option value="' + patient.id + '">' + LanguageManager.joinName(patient.surname, patient.othername) + ' (' + patient.patient_no + ')</option>');
         });
     }
 }
@@ -25,7 +25,7 @@ function initializeDoctorSelect() {
     $('#doctor_id').empty().append('<option value="">' + LanguageManager.trans('medical_cases.select_doctor') + '</option>');
     if (typeof doctors !== 'undefined') {
         doctors.forEach(function(doctor) {
-            $('#doctor_id').append('<option value="' + doctor.id + '">' + doctor.surname + ' ' + doctor.othername + '</option>');
+            $('#doctor_id').append('<option value="' + doctor.id + '">' + LanguageManager.joinName(doctor.surname, doctor.othername) + '</option>');
         });
     }
 }

@@ -46,7 +46,7 @@ class MemberController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('patient_name', function ($row) {
-                    return $row->surname . ' ' . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('levelBadge', function ($row) {
                     if ($row->level_name) {
@@ -226,7 +226,7 @@ class MemberController extends Controller
                 ->orderBy('member_transactions.created_at', 'desc')
                 ->select(
                     'member_transactions.*',
-                    DB::raw("CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
                 )
                 ->get();
 

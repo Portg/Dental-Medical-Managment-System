@@ -12,7 +12,7 @@
             @foreach($doctors as $doctor)
                 <option value="{{ $doctor->id }}"
                     {{ (isset($case) && $case->doctor_id == $doctor->id) ? 'selected' : '' }}>
-                    {{ $doctor->surname }} {{ $doctor->othername }}
+                    {{ $doctor->full_name }}
                 </option>
             @endforeach
         </select>

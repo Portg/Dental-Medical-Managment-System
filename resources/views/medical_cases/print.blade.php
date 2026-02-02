@@ -86,7 +86,7 @@
             </tr>
             <tr>
                 <th>{{ __('medical_cases.patient') }}</th>
-                <td>{{ $case->patient->surname }} {{ $case->patient->othername }} ({{ $case->patient->patient_no }})</td>
+                <td>{{ $case->patient->full_name ({{ $case->patient->patient_no }})</td>
                 <th>{{ __('medical_cases.status') }}</th>
                 <td>
                     <span class="status-badge status-{{ strtolower(str_replace('-', '', $case->status)) }}">
@@ -96,7 +96,7 @@
             </tr>
             <tr>
                 <th>{{ __('medical_cases.doctor') }}</th>
-                <td>{{ $case->doctor ? $case->doctor->surname . ' ' . $case->doctor->othername : '-' }}</td>
+                <td>{{ $case->doctor ? $case->doctor->full_name : '-' }}</td>
                 <th>{{ __('medical_cases.visit_type') }}</th>
                 <td>{{ __('medical_cases.visit_type_' . $case->visit_type) }}</td>
             </tr>

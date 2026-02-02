@@ -11,7 +11,7 @@
         <div class="col-md-6">
             <p class="text-black-50">
                 <a href="{{ url('dental-charting')}}" class="text-primary">{{ __('odontogram.dental_charting') }}</a>
-                / @if(isset($patient)) {{ $patient->surname." ".$patient->othername }} ({{ $patient->patient_no }}) @endif
+                / @if(isset($patient)) {{ $patient->full_name }} ({{ $patient->patient_no }}) @endif
             </p>
         </div>
         <div class="col-md-6">

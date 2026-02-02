@@ -30,10 +30,10 @@ class PatientFollowupController extends Controller
                 ->orderBy('patient_followups.scheduled_date', 'desc')
                 ->select(
                     'patient_followups.*',
-                    DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                     'patients.patient_no',
                     'patients.phone_no',
-                    DB::raw("CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
                 )
                 ->get();
 
@@ -97,7 +97,7 @@ class PatientFollowupController extends Controller
                 ->orderBy('patient_followups.scheduled_date', 'desc')
                 ->select(
                     'patient_followups.*',
-                    DB::raw("CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
                 )
                 ->get();
 
@@ -157,7 +157,7 @@ class PatientFollowupController extends Controller
             ->orderBy('patient_followups.scheduled_date', 'asc')
             ->select(
                 'patient_followups.*',
-                DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                 'patients.phone_no'
             )
             ->get();
@@ -180,7 +180,7 @@ class PatientFollowupController extends Controller
             ->orderBy('patient_followups.scheduled_date', 'asc')
             ->select(
                 'patient_followups.*',
-                DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                 'patients.phone_no'
             )
             ->get();

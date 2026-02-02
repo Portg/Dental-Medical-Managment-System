@@ -24,7 +24,7 @@ return [
     'last_name' => '姓',
     'surname' => '姓',
     'other_name' => '名',
-    'full_name' => '全名',
+    'full_name' => '姓名',
     'username' => '用户名',
     'email' => '邮箱',
     'email_address' => '邮箱地址',

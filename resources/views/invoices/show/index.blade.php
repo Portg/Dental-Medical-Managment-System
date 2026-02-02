@@ -6,7 +6,7 @@
 <div class="note note-success">
     <p class="text-black-50">
         <a href="{{ url('invoices')}}" class="text-primary">{{ __('invoices.go_back_to_invoices') }}</a> /
-        @if(isset($patient)) {{ $patient->surname." ".$patient->othername  }} @endif
+        @if(isset($patient)) {{ $patient->full_name  }} @endif
     </p>
 </div>
 <input type="hidden" value="{{ $invoice_id }}" id="global_invoice_id">

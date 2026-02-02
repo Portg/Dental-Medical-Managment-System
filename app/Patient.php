@@ -176,6 +176,17 @@ class Patient extends Model
         return implode('、', $diseases);
     }
 
+    /**
+     * Accessor: join name based on locale
+     */
+    public function getFullNameAttribute()
+    {
+        if (app()->getLocale() === 'zh-CN') {
+            return $this->surname . $this->othername;
+        }
+        return $this->surname . ' ' . $this->othername;
+    }
+
     public function routeNotificationForSms($notifiable)
     {
         return 'identifier-from-notification-for-sms: ' . $this->id;

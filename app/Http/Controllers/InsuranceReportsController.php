@@ -66,7 +66,7 @@ class InsuranceReportsController extends Controller
                     return $item;
                 })
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('amount', function ($row) {
                     return number_format($row->amount);

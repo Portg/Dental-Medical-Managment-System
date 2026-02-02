@@ -18,7 +18,7 @@
                 @endif
             </div>
             <div class="profile-usertitle">
-                <div class="profile-usertitle-name"> {{ $user->surname." ".$user->othername }} </div>
+                <div class="profile-usertitle-name"> {{ $user->full_name }} </div>
                 <div class="profile-usertitle-job"> {{ __('profile.profile') }}</div>
             </div>
 
@@ -62,16 +62,24 @@
                     <div class="tab-pane active" id="tab_1_1">
                         <form role="form" action="#" id="bio_data">
                             @csrf
-                            <div class="form-group">
-                                <label class="control-label">{{ __('profile.first_name') }}</label>
-                                <input type="text" placeholder="{{ __('profile.enter_first_name') }}" class="form-control"
-                                       name="surname" value="{{ $user->surname }}"/>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label">{{ __('profile.last_name') }}</label>
-                                <input type="text" name="othername" placeholder="{{ __('profile.enter_last_name') }}"
-                                       value="{{ $user->othername }}" class="form-control"/>
-                            </div>
+                            @if(app()->getLocale() === 'zh-CN')
+                                <div class="form-group">
+                                    <label class="control-label">{{ __('profile.full_name') }}</label>
+                                    <input type="text" placeholder="{{ __('profile.full_name') }}" class="form-control"
+                                           name="full_name" value="{{ $user->full_name }}"/>
+                                </div>
+                            @else
+                                <div class="form-group">
+                                    <label class="control-label">{{ __('profile.first_name') }}</label>
+                                    <input type="text" placeholder="{{ __('profile.enter_first_name') }}" class="form-control"
+                                           name="surname" value="{{ $user->surname }}"/>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label">{{ __('profile.last_name') }}</label>
+                                    <input type="text" name="othername" placeholder="{{ __('profile.enter_last_name') }}"
+                                           value="{{ $user->othername }}" class="form-control"/>
+                                </div>
+                            @endif
                             <div class="form-group">
                                 <label class="control-label">{{ __('profile.email') }}</label>
                                 <input type="text" name="email" placeholder="{{ __('profile.enter_email') }}"
@@ -93,8 +101,8 @@
                                        class="form-control" value="{{ $user->nin }}"/>
                             </div>
                             <div class="margin-top-10">
-                                <button type="button" onclick="Update_Biodata();" class="btn green"> {{ __('profile.save_changes') }} </button>
-                                <button type="button" class="btn default"> {{ __('profile.cancel') }} </button>
+                                <button type="button" onclick="Update_Biodata();" class="btn btn-primary"> {{ __('profile.save_changes') }} </button>
+                                <button type="button" class="btn default" onclick="document.getElementById('bio_data').reset();"> {{ __('profile.cancel') }} </button>
                             </div>
                         </form>
                     </div>
@@ -122,7 +130,7 @@
                             </div>
                             <div class="margin-top-10">
                                 <input type="submit" value="{{ __('profile.upload_picture') }}" class="btn btn-primary">
-                                <button type="button" class="btn default"> {{ __('profile.cancel') }} </button>
+                                <button type="reset" class="btn default"> {{ __('profile.cancel') }} </button>
                             </div>
                         </form>
                     </div>
@@ -152,8 +160,8 @@
                                        placeholder="{{ __('profile.confirm_password') }}" class="form-control"/>
                             </div>
                             <div class="margin-top-10">
-                                <button type="button" onclick="Change_Password();" class="btn green"> {{ __('profile.change_password') }} </button>
-                                <button type="button" class="btn default"> {{ __('profile.cancel') }} </button>
+                                <button type="button" onclick="Change_Password();" class="btn btn-primary"> {{ __('profile.change_password') }} </button>
+                                <button type="button" class="btn default" onclick="document.getElementById('passwords_form').reset();"> {{ __('profile.cancel') }} </button>
                             </div>
                         </form>
                     </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
+use App\Http\Helper\NameHelper;
 use App\SmsLogging;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,8 +27,9 @@ class SmsLoggingController extends Controller
             if (!empty($_GET['search'])) {
                 $data = DB::table('sms_loggings')
                     ->leftJoin('patients', 'patients.id', 'sms_loggings.patient_id')
-                    ->where('patients.surname', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('patients.othername', 'like', '%' . $request->get('search') . '%')
+                    ->where(function($q) use ($request) {
+                        NameHelper::addNameSearch($q, $request->get('search'), 'patients');
+                    })
                     ->select('sms_loggings.*', 'patients.surname', 'patients.othername')
                     ->OrderBy('sms_loggings.id', 'desc')
                     ->get();
@@ -54,7 +56,7 @@ class SmsLoggingController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('message_receiver', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('type', function ($row) {
                     $type = '';

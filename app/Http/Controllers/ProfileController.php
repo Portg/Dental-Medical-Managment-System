@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Helper\NameHelper;
 use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,16 +26,25 @@ class ProfileController extends Controller
     //update user bio data info
     public function update_Bio(Request $request)
     {
-        Validator::make($request->all(), [
-            'surname' => 'required|string',
-            'othername' => 'required|string',
-            'email' => 'required|email',
-        ])->validate();
+        if ($request->filled('full_name')) {
+            Validator::make($request->all(), [
+                'full_name' => 'required|string|min:2',
+                'email' => 'required|email',
+            ])->validate();
+            $nameParts = NameHelper::split($request->full_name);
+        } else {
+            Validator::make($request->all(), [
+                'surname' => 'required|string',
+                'othername' => 'required|string',
+                'email' => 'required|email',
+            ])->validate();
+            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
+        }
 
         $user = User::where('id', Auth::User()->id)->update(
             [
-                'surname' => $request->surname,
-                'othername' => $request->othername,
+                'surname' => $nameParts['surname'],
+                'othername' => $nameParts['othername'],
                 'email' => $request->email,
                 'phone_no' => $request->phone_number,
                 'alternative_no' => $request->alternative_no,

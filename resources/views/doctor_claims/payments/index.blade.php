@@ -6,7 +6,7 @@
 
 <div class="note note-success">
     <p class="text-black-50"><a href="{{ url('doctor-claims')}}" class="text-primary">{{ __('doctor_claim.payments.view_claims') }}
-        </a> / @if(isset($doctor)) {{ $doctor->surname." ".$doctor->othername }} ) @endif
+        </a> / @if(isset($doctor)) {{ $doctor->full_name }} ) @endif
     </p>
 </div>
 

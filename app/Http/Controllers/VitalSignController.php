@@ -31,7 +31,7 @@ class VitalSignController extends Controller
                 ->select(
                     'vital_signs.*',
                     'appointments.appointment_no',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 
@@ -86,7 +86,7 @@ class VitalSignController extends Controller
                 ->select(
                     'vital_signs.*',
                     'appointments.appointment_no',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 

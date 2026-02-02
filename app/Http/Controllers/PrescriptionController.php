@@ -31,8 +31,8 @@ class PrescriptionController extends Controller
                 ->select(
                     'prescriptions.*',
                     'patients.patient_no',
-                    DB::raw("CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by"),
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by"),
                     'appointments.id as appointment_id'
                 )
                 ->get();

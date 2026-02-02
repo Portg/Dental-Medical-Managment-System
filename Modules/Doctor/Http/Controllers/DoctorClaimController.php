@@ -38,7 +38,7 @@ class DoctorClaimController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('patient', function ($row) {
-                    return $row->surname . " " . $row->othername;
+                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('insurance_amount', function ($row) {
                     return $this->insurance_claim($row->insurance_amount);

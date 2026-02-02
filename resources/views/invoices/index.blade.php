@@ -510,7 +510,7 @@
                     $.LoadingOverlay("hide");
                     $('[name="invoice_id"]').val(data.id);
                     $('[name="invoice_no"]').val(data.invoice_no);
-                    $('[name="name"]').val(data.surname + " " + data.othername);
+                    $('[name="name"]').val(LanguageManager.joinName(data.surname, data.othername));
                     $('[name="email"]').val(data.email);
                     $('#share-invoice-modal').modal('show');
 

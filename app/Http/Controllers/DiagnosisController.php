@@ -32,7 +32,7 @@ class DiagnosisController extends Controller
                     'diagnoses.*',
                     'medical_cases.case_no',
                     'medical_cases.title as case_title',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 
@@ -82,7 +82,7 @@ class DiagnosisController extends Controller
                 ->orderBy('diagnoses.diagnosis_date', 'desc')
                 ->select(
                     'diagnoses.*',
-                    DB::raw("CONCAT(users.surname, ' ', users.othername) as added_by")
+                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
                 )
                 ->get();
 
