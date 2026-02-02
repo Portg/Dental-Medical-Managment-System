@@ -1,56 +1,42 @@
 <?php
 
-
 namespace App\Http\Helper;
 
-
-use AfricasTalking\SDK\AfricasTalking;
 use App\SmsLogging;
-use App\SmsTransaction;
+use Illuminate\Support\Facades\Log;
 
 class SmsLogger
 {
-
-    protected $username;
-    protected $apiKey;
-
     public function __construct()
     {
-        $this->username=env('AfricasTalking_Username', null); // use 'sandbox' for development in the test environment
-        $this->apiKey = env('AfricasTalking_Api_Key', null);; // use your sandbox app API key for development in the test environment
-
-
+        //
     }
 
+    /**
+     * Send SMS message.
+     *
+     * TODO: 接入国内短信服务（阿里云/腾讯云）替换此占位实现
+     */
     public function SendMessage($phone_number, $message, $type)
     {
-        $AT = new AfricasTalking($this->username, $this->apiKey);
-        // Get one of the services
-        $sms = $AT->sms();
-//        now send out the message
-        $success = $sms->send([
-            'to' => $phone_number,
+        Log::info('SMS not sent (no provider configured)', [
+            'phone' => $phone_number,
+            'type' => $type,
             'message' => $message,
         ]);
-        if ($success) {
-            //sms logging
-            $this->LogSms($phone_number, $message, $type);
-        }
+
+        // Log the attempt
+        $this->LogSms($phone_number, $message, $type);
     }
 
     private function LogSms($phone_number, $message, $type)
     {
-        $success = SmsLogging::create([
+        SmsLogging::create([
             'phone_number' => $phone_number,
             'message' => $message,
-            'cost' => '50',
+            'cost' => '0',
             'type' => $type,
-            'status' => 'success'
+            'status' => 'pending'
         ]);
-        if ($success) {
-            //log the transaction
-            FunctionsHelper::TrackAfricaIsTalkingTransactions("50", "sms", null);
-        }
     }
-
 }

@@ -3,7 +3,6 @@
 
 namespace App\Http\Helper;
 
-use App\SmsTransaction;
 Use Illuminate\Support\Facades\Auth;
 
 class FunctionsHelper
@@ -27,16 +26,6 @@ class FunctionsHelper
         }
         /** @var TYPE_NAME $layoutDirectory */
         return $layoutDirectory;
-    }
-
-    public static function TrackAfricaIsTalkingTransactions($amount, $type, $who_added)
-    {
-        //log the transaction
-        return SmsTransaction::create([
-            'amount' => $amount,
-            'type' => $type,
-            '_who_added' => $who_added
-        ]);
     }
 
     //format YYYY-MM-DD
