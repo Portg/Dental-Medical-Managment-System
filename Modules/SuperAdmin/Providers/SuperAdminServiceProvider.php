@@ -3,7 +3,6 @@
 namespace Modules\SuperAdmin\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Database\Eloquent\Factory;
 
 class SuperAdminServiceProvider extends ServiceProvider
 {
@@ -17,7 +16,6 @@ class SuperAdminServiceProvider extends ServiceProvider
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
-        $this->registerFactories();
         $this->loadMigrationsFrom(module_path('SuperAdmin', 'Database/Migrations'));
     }
 
@@ -79,18 +77,6 @@ class SuperAdminServiceProvider extends ServiceProvider
             $this->loadTranslationsFrom($langPath, 'superadmin');
         } else {
             $this->loadTranslationsFrom(module_path('SuperAdmin', 'Resources/lang'), 'superadmin');
-        }
-    }
-
-    /**
-     * Register an additional directory of factories.
-     *
-     * @return void
-     */
-    public function registerFactories()
-    {
-        if (! app()->environment('production') && $this->app->runningInConsole()) {
-            app(Factory::class)->load(module_path('SuperAdmin', 'Database/factories'));
         }
     }
 

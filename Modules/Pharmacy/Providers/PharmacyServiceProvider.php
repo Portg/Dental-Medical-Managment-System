@@ -3,7 +3,6 @@
 namespace Modules\Pharmacy\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Database\Eloquent\Factory;
 
 class PharmacyServiceProvider extends ServiceProvider
 {
@@ -17,7 +16,6 @@ class PharmacyServiceProvider extends ServiceProvider
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
-        $this->registerFactories();
         $this->loadMigrationsFrom(module_path('Pharmacy', 'Database/Migrations'));
     }
 
@@ -79,18 +77,6 @@ class PharmacyServiceProvider extends ServiceProvider
             $this->loadTranslationsFrom($langPath, 'pharmacy');
         } else {
             $this->loadTranslationsFrom(module_path('Pharmacy', 'Resources/lang'), 'pharmacy');
-        }
-    }
-
-    /**
-     * Register an additional directory of factories.
-     *
-     * @return void
-     */
-    public function registerFactories()
-    {
-        if (! app()->environment('production') && $this->app->runningInConsole()) {
-            app(Factory::class)->load(module_path('Pharmacy', 'Database/factories'));
         }
     }
 

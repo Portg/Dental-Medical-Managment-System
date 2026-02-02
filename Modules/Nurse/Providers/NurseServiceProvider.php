@@ -3,7 +3,6 @@
 namespace Modules\Nurse\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Database\Eloquent\Factory;
 
 class NurseServiceProvider extends ServiceProvider
 {
@@ -17,7 +16,6 @@ class NurseServiceProvider extends ServiceProvider
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
-        $this->registerFactories();
         $this->loadMigrationsFrom(module_path('Nurse', 'Database/Migrations'));
     }
 
@@ -79,18 +77,6 @@ class NurseServiceProvider extends ServiceProvider
             $this->loadTranslationsFrom($langPath, 'nurse');
         } else {
             $this->loadTranslationsFrom(module_path('Nurse', 'Resources/lang'), 'nurse');
-        }
-    }
-
-    /**
-     * Register an additional directory of factories.
-     *
-     * @return void
-     */
-    public function registerFactories()
-    {
-        if (! app()->environment('production') && $this->app->runningInConsole()) {
-            app(Factory::class)->load(module_path('Nurse', 'Database/factories'));
         }
     }
 
