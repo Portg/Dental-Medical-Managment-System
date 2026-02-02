@@ -26,7 +26,9 @@ class PatientImage extends Model
         '_who_added',
     ];
 
-    protected $dates = ['image_date', 'deleted_at'];
+    protected $casts = [
+        'image_date' => 'datetime',
+    ];
 
     /**
      * Generate unique image number

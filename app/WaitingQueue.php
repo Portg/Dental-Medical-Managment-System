@@ -31,14 +31,11 @@ class WaitingQueue extends Model
         'created_by'
     ];
 
-    protected $dates = [
-        'check_in_time',
-        'called_time',
-        'treatment_start_time',
-        'treatment_end_time',
-        'created_at',
-        'updated_at',
-        'deleted_at'
+    protected $casts = [
+        'check_in_time' => 'datetime',
+        'called_time' => 'datetime',
+        'treatment_start_time' => 'datetime',
+        'treatment_end_time' => 'datetime',
     ];
 
     // 状态常量

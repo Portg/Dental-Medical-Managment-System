@@ -30,11 +30,8 @@ class SatisfactionSurvey extends Model
         'status'
     ];
 
-    protected $dates = [
-        'survey_date',
-        'created_at',
-        'updated_at',
-        'deleted_at'
+    protected $casts = [
+        'survey_date' => 'datetime',
     ];
 
     // 状态常量

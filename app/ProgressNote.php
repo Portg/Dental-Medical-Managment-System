@@ -15,7 +15,9 @@ class ProgressNote extends Model
         'appointment_id', 'medical_case_id', 'patient_id', '_who_added'
     ];
 
-    protected $dates = ['note_date'];
+    protected $casts = [
+        'note_date' => 'datetime',
+    ];
 
     public function appointment()
     {

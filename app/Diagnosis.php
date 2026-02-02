@@ -17,7 +17,10 @@ class Diagnosis extends Model
         'medical_case_id', 'patient_id', '_who_added'
     ];
 
-    protected $dates = ['diagnosis_date', 'resolved_date'];
+    protected $casts = [
+        'diagnosis_date' => 'datetime',
+        'resolved_date' => 'datetime',
+    ];
 
     public function medicalCase()
     {

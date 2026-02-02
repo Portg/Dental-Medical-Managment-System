@@ -26,9 +26,10 @@ class PatientFollowup extends Model
         '_who_added',
     ];
 
-    protected $dates = ['scheduled_date', 'completed_date', 'next_followup_date', 'deleted_at'];
-
     protected $casts = [
+        'scheduled_date' => 'datetime',
+        'completed_date' => 'datetime',
+        'next_followup_date' => 'datetime',
         'reminder_sent' => 'boolean',
     ];
 
