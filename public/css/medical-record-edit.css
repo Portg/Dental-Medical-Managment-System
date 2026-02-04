@@ -349,6 +349,71 @@
     border-color: #1890ff;
 }
 
+/* Deciduous tooth mini - yellow scheme */
+.tooth-mini.deciduous {
+    background: #fffbe6;
+    border-color: #ffe58f;
+}
+.tooth-mini.deciduous:hover {
+    background: #fff1b8;
+    border-color: #faad14;
+}
+.tooth-mini.deciduous.selected {
+    background: #faad14;
+    border-color: #d48806;
+    color: #fff;
+}
+
+/* Quadrant labels for mini tooth chart */
+.quadrant-labels {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 2px;
+    font-size: 9px;
+    color: #bbb;
+    line-height: 1;
+    margin: 2px 0;
+}
+
+/* Tooth chart tab switcher */
+.tooth-chart-tabs {
+    display: flex;
+    margin-bottom: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.tooth-chart-tab {
+    flex: 1;
+    padding: 5px 0;
+    font-size: 12px;
+    border: none;
+    background: #fafafa;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+}
+.tooth-chart-tab + .tooth-chart-tab {
+    border-left: 1px solid #e0e0e0;
+}
+.tooth-chart-tab.active {
+    background: #1A237E;
+    color: #fff;
+}
+.tooth-chart-tab:not(.active):hover {
+    background: #f0f0f0;
+}
+.tooth-chart-tab .tab-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #faad14;
+    border-radius: 50%;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
 /* ==========================================================================
    History Records
    ========================================================================== */

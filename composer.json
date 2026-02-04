@@ -8,26 +8,26 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.1",
+        "php": "^8.2",
         "barryvdh/laravel-dompdf": "^2.0",
         "consoletvs/charts": "6.*",
         "guzzlehttp/guzzle": "^7.0",
-        "laravel/framework": "^10.0",
-        "laravel/tinker": "^2.8",
+        "laravel/framework": "^11.0",
+        "laravel/tinker": "^2.9",
         "laravel/ui": "^4.0",
         "maatwebsite/excel": "^3.1",
-        "nwidart/laravel-modules": "^10.0",
-        "owen-it/laravel-auditing": "^13.0",
+        "nwidart/laravel-modules": "^11.0",
+        "owen-it/laravel-auditing": "^13.6",
         "spatie/laravel-backup": "^8.0",
         "thomasjohnkane/snooze": "^2.0",
-        "yajra/laravel-datatables-oracle": "^10.0",
+        "yajra/laravel-datatables-oracle": "^11.0",
         "ext-json": "*"
     },
     "require-dev": {
         "spatie/laravel-ignition": "^2.0",
         "mockery/mockery": "^1.0",
-        "nunomaduro/collision": "^7.0",
-        "phpunit/phpunit": "^10.0"
+        "nunomaduro/collision": "^8.0",
+        "phpunit/phpunit": "^10.5|^11.0"
     },
     "config": {
         "optimize-autoloader": true,
@@ -37,7 +37,8 @@
             "kylekatarnls/update-helper": true,
             "php-http/discovery": true,
             "pestphp/pest-plugin": true,
-            "composer/installers": true
+            "composer/installers": true,
+            "wikimedia/composer-merge-plugin": true
         },
         "platform-check": false
     },

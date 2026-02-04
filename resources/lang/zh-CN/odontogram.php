@@ -52,6 +52,10 @@ return [
     'lower_right' => '右下',
     'lower_left' => '左下',
     'deciduous_teeth' => '乳牙',
+    'upper_right_abbr' => '右上',
+    'upper_left_abbr' => '左上',
+    'lower_right_abbr' => '右下',
+    'lower_left_abbr' => '左下',
 
     // ICD-10 诊断编码
     'anodontia' => '无牙畸形',

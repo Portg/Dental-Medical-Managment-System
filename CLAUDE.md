@@ -33,10 +33,11 @@ Modules/
 
 ### Prerequisites
 
-- PHP 7.4+
+- PHP 8.2+
 - MySQL 5.7+
 - Composer
 - Node.js (for assets)
+- Framework: Laravel 11.x
 
 ### Installation
 
@@ -196,7 +197,7 @@ All list views use Yajra DataTables with server-side processing: index.blade.php
 
 ### FullCalendar
 
-Appointment calendar visualization using MaddHatter FullCalendar package.
+Appointment calendar visualization using FullCalendar.
 
 ### Bootstrap Components
 

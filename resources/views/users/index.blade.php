@@ -31,8 +31,12 @@
                     <thead>
                     <tr>
                         <th>{{ __('common.id') }}</th>
-                        <th>{{ __('users.surname') }}</th>
-                        <th>{{ __('users.othername') }}</th>
+                        @if(app()->getLocale() === 'zh-CN')
+                            <th>{{ __('users.full_name') }}</th>
+                        @else
+                            <th>{{ __('users.surname') }}</th>
+                            <th>{{ __('users.othername') }}</th>
+                        @endif
                         <th>{{ __('users.email') }}</th>
                         <th>{{ __('users.phone_no') }}</th>
                         <th>{{ __('users.role') }}</th>
@@ -90,8 +94,12 @@
                 },
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
+                    @if(app()->getLocale() === 'zh-CN')
+                    {data: 'full_name', name: 'full_name'},
+                    @else
                     {data: 'surname', name: 'surname'},
                     {data: 'othername', name: 'othername'},
+                    @endif
                     {data: 'email', name: 'email', 'visible': true},
                     {data: 'phone_no', name: 'phone_no'},
                     {data: 'user_role', name: 'user_role'},
@@ -218,8 +226,12 @@
                 success: function (data) {
                     // console.log(data);
                     $('#id').val(id);
+                    @if(app()->getLocale() === 'zh-CN')
+                    $('[name="full_name"]').val((data.surname || '') + (data.othername || ''));
+                    @else
                     $('[name="surname"]').val(data.surname);
                     $('[name="othername"]').val(data.othername);
+                    @endif
                     $('[name="email"]').val(data.email);
                     $('[name="phone_no"]').val(data.phone_no);
                     $('[name="alternative_no"]').val(data.alternative_no);

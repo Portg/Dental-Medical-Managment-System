@@ -44,7 +44,7 @@
             <div class="row">
                 <div class="col-xs-3">
                     <div class="patient-avatar-large">
-                        {{ $currentPatient ? substr($currentPatient->surname, 0, 1) : '-' }}
+                        {{ $currentPatient ? mb_substr($currentPatient->surname, 0, 1) : '-' }}
                     </div>
                 </div>
                 <div class="col-xs-9">

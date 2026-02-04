@@ -60,6 +60,9 @@ class UsersController extends Controller
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
+                ->addColumn('full_name', function ($row) {
+                    return NameHelper::join($row->surname, $row->othername);
+                })
                 ->addColumn('is_doctor', function ($row) {
                     if ($row->is_doctor == "Yes") {
                         return '<span class="label label-sm label-success">' . $row->is_doctor . '</span>';

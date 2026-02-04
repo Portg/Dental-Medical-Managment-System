@@ -17,7 +17,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        Schema::defaultStringLength(191);
         // The log will be used in the Notification's via method
         // You can use whatever name your want
         Notification::extend('smsNotify', function ($app) {
@@ -33,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        Schema::defaultStringLength(191);
         // 共享语言数据到所有视图
         View::share('availableLocales', config('app.available_locales'));
         // 或者只共享到特定视图

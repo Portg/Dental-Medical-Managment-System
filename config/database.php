@@ -30,8 +30,6 @@ return [
             | choice installed on your machine before you begin development.
             |
     */
-    'dump_binary_path ' => 'D:\xammp_projects\mysql\bin',
-
     'connections' => [
 
         'sqlite' => [
@@ -117,7 +115,7 @@ return [
 
     'redis' => [
 
-        'client' => env('REDIS_CLIENT', 'predis'),
+        'client' => env('REDIS_CLIENT', 'phpredis'),
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'predis'),

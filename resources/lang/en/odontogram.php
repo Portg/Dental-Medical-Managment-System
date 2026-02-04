@@ -52,6 +52,10 @@ return [
     'lower_right' => 'Lower Right',
     'lower_left' => 'Lower Left',
     'deciduous_teeth' => 'Deciduous Teeth',
+    'upper_right_abbr' => 'UR',
+    'upper_left_abbr' => 'UL',
+    'lower_right_abbr' => 'LR',
+    'lower_left_abbr' => 'LL',
 
     // ICD-10 Diagnosis Codes
     'anodontia' => 'Anodontia',
