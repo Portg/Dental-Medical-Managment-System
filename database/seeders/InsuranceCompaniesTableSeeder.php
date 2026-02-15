@@ -15,8 +15,10 @@ class InsuranceCompaniesTableSeeder extends Seeder
      */
     public function run()
     {
-        // 清空现有数据
+        // 清空现有数据（禁用 FK 检查以支持 truncate）
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         DB::table('insurance_companies')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         // 插入保险公司
         $companies = [

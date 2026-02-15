@@ -11,53 +11,8 @@
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
     <meta content="clinic management system" name="description"/>
     <meta content="" name="author"/>
-    <link href="{{ asset('backend/assets/global/plugins/font-awesome/css/fontawesome.min.css') }}" rel="stylesheet"
-          type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/simple-line-icons/simple-line-icons.min.css') }}"
-          rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet"
-          type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css') }}"
-          rel="stylesheet"
-          type="text/css"/>
-    <link href="{{ asset('backend/assets/pages/css/select2.min.css') }}" rel="stylesheet" type="text/css"/>
-
-    <link href="{{ asset('backend/assets/global/plugins/bootstrap-sweetalert/sweetalert.css') }}" rel="stylesheet"
-          type="text/css"/>
-
-    <link href="{{ asset('backend/assets/global/plugins/bootstrap-daterangepicker/daterangepicker.min.css') }}"
-          rel="stylesheet"
-          type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/morris/morris.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/fullcalendar/fullcalendar.min.css') }}" rel="stylesheet"
-          type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/jqvmap/jqvmap/jqvmap.css') }}" rel="stylesheet"
-          type="text/css"/>
-    <link href="{{ asset('backend/assets/global/css/components.min.css') }}" rel="stylesheet" id="style_components"
-          type="text/css"/>
-    <link href="{{ asset('backend/assets/global/css/plugins.min.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/layouts/layout4/css/layout.min.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/layouts/layout4/css/themes/default.min.css') }}" rel="stylesheet"
-          type="text/css"
-          id="style_color"/>
-    <link href="{{ asset('backend/assets/layouts/layout4/css/custom.min.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/datatables/datatables.min.css') }}" rel="stylesheet"
-          type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/datatables/plugins/bootstrap/datatables.bootstrap.css') }}"
-          rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/pages/css/profile.min.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/bootstrap-fileinput/bootstrap-fileinput.css') }}"
-          rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/global/plugins/bootstrap-toastr/toastr.min.css') }}" rel="stylesheet"
-          type="text/css"/>
-
-    <link href="{{ asset('backend/assets/global/css/bootstrap-datepicker.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('backend/assets/global/css/clockface.css') }}"
-          rel="stylesheet" type="text/css"/>
-    <link rel="stylesheet"
-          href="{{ asset('backend/assets/global/css/magnific-popup.css') }}">
-    <link rel="stylesheet" href="{{ asset('backend/assets/global/css/jquery.fancybox.min.css') }}" media="screen">
-    <link rel="stylesheet" href="{{ asset('backend/assets/global/css/intlTelInput.css') }}" media="screen">
+    {{-- Backend CSS Bundle (compiled via npm run dev/prod) --}}
+    <link href="{{ asset('css/backend-bundle.css') }}" rel="stylesheet" type="text/css"/>
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 
     {{-- Purple Theme --}}

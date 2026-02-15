@@ -90,7 +90,6 @@ class ExpenseCategoriesSeeder extends Seeder
             DB::table('expense_categories')->insert([
                 'id' => $id++,
                 'name' => $category['name'],
-                'description' => $category['description'] ?? null,
                 '_who_added' => $adminId,
                 'created_at' => now(),
                 'updated_at' => now(),

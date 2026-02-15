@@ -10,6 +10,11 @@ class Quotation extends Model
     use SoftDeletes;
     protected $fillable = ['quotation_no', 'patient_id', '_who_added'];
 
+    public function items()
+    {
+        return $this->hasMany(QuotationItem::class, 'quotation_id');
+    }
+
     public static function QuotationNo()
     {
         $latest = self::latest()->first();
