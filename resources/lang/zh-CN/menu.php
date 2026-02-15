@@ -257,6 +257,11 @@ return [
     'group_basic_config' => '基础配置',
     'group_accounting' => '财务管理',
 
+    // 技工单管理
+    'group_lab_management' => '技工单管理',
+    'lab_cases' => '技工单',
+    'labs' => '技工厂',
+
     // 搜索框
     'search_placeholder' => '搜索患者...',
     'search' => '搜索',

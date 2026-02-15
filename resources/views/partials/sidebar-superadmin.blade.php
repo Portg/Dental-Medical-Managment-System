@@ -203,7 +203,19 @@
                             <span class="title">{{ __('menu.group_supplier') }}</span>
                         </a>
                     </li>
-                    {{-- 4.6 Employees --}}
+                    {{-- 4.6 Lab Case Management (技工单管理) --}}
+                    <li class="nav-item">
+                        <a href="javascript:;" class="nav-link nav-toggle">
+                            <i class="icon-wrench"></i>
+                            <span class="title">{{ __('menu.group_lab_management') }}</span>
+                            <span class="arrow"></span>
+                        </a>
+                        <ul class="sub-menu">
+                            <li class="nav-item"><a href="{{ url('lab-cases') }}" class="nav-link"><span class="title">{{ __('menu.lab_cases') }}</span></a></li>
+                            <li class="nav-item"><a href="{{ url('labs') }}" class="nav-link"><span class="title">{{ __('menu.labs') }}</span></a></li>
+                        </ul>
+                    </li>
+                    {{-- 4.7 Employees --}}
                     <li class="nav-item">
                         <a href="javascript:;" class="nav-link nav-toggle">
                             <i class="icon-briefcase"></i>
