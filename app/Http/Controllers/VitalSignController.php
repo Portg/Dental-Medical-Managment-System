@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\VitalSign;
+use App\Services\VitalSignService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class VitalSignController extends Controller
 {
+    private VitalSignService $service;
+
+    public function __construct(VitalSignService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource for a specific patient.
      *
@@ -22,41 +27,9 @@ class VitalSignController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = DB::table('vital_signs')
-                ->leftJoin('appointments', 'appointments.id', 'vital_signs.appointment_id')
-                ->leftJoin('users', 'users.id', 'vital_signs._who_added')
-                ->whereNull('vital_signs.deleted_at')
-                ->where('vital_signs.patient_id', $patient_id)
-                ->orderBy('vital_signs.recorded_at', 'desc')
-                ->select(
-                    'vital_signs.*',
-                    'appointments.appointment_no',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
-                )
-                ->get();
+            $data = $this->service->getByPatient($patient_id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('blood_pressure', function ($row) {
-                    if ($row->blood_pressure_systolic && $row->blood_pressure_diastolic) {
-                        return $row->blood_pressure_systolic . '/' . $row->blood_pressure_diastolic . ' mmHg';
-                    }
-                    return '-';
-                })
-                ->addColumn('heart_rate_display', function ($row) {
-                    return $row->heart_rate ? $row->heart_rate . ' bpm' : '-';
-                })
-                ->addColumn('temperature_display', function ($row) {
-                    return $row->temperature ? $row->temperature . ' °C' : '-';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editVitalSign(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteVitalSign(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->rawColumns(['editBtn', 'deleteBtn'])
-                ->make(true);
+            return $this->buildVitalSignDatatable($data);
         }
     }
 
@@ -71,48 +44,44 @@ class VitalSignController extends Controller
     public function caseIndex(Request $request, $case_id)
     {
         if ($request->ajax()) {
-            // Get patient_id from the medical case
-            $medicalCase = DB::table('medical_cases')->where('id', $case_id)->first();
-            if (!$medicalCase) {
+            $patientId = $this->service->getPatientIdFromCase($case_id);
+            if (!$patientId) {
                 return Datatables::of(collect([]))->make(true);
             }
 
-            $data = DB::table('vital_signs')
-                ->leftJoin('appointments', 'appointments.id', 'vital_signs.appointment_id')
-                ->leftJoin('users', 'users.id', 'vital_signs._who_added')
-                ->whereNull('vital_signs.deleted_at')
-                ->where('vital_signs.patient_id', $medicalCase->patient_id)
-                ->orderBy('vital_signs.recorded_at', 'desc')
-                ->select(
-                    'vital_signs.*',
-                    'appointments.appointment_no',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
-                )
-                ->get();
+            $data = $this->service->getByPatient($patientId);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('blood_pressure', function ($row) {
-                    if ($row->blood_pressure_systolic && $row->blood_pressure_diastolic) {
-                        return $row->blood_pressure_systolic . '/' . $row->blood_pressure_diastolic . ' mmHg';
-                    }
-                    return '-';
-                })
-                ->addColumn('heart_rate_display', function ($row) {
-                    return $row->heart_rate ? $row->heart_rate . ' bpm' : '-';
-                })
-                ->addColumn('temperature_display', function ($row) {
-                    return $row->temperature ? $row->temperature . ' °C' : '-';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editVitalSign(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteVitalSign(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->rawColumns(['editBtn', 'deleteBtn'])
-                ->make(true);
+            return $this->buildVitalSignDatatable($data);
         }
+    }
+
+    /**
+     * Build DataTable response for vital signs (shared by index and caseIndex).
+     */
+    private function buildVitalSignDatatable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->addColumn('blood_pressure', function ($row) {
+                if ($row->blood_pressure_systolic && $row->blood_pressure_diastolic) {
+                    return $row->blood_pressure_systolic . '/' . $row->blood_pressure_diastolic . ' mmHg';
+                }
+                return '-';
+            })
+            ->addColumn('heart_rate_display', function ($row) {
+                return $row->heart_rate ? $row->heart_rate . ' bpm' : '-';
+            })
+            ->addColumn('temperature_display', function ($row) {
+                return $row->temperature ? $row->temperature . ' °C' : '-';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editVitalSign(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteVitalSign(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->rawColumns(['editBtn', 'deleteBtn'])
+            ->make(true);
     }
 
     /**
@@ -131,7 +100,7 @@ class VitalSignController extends Controller
             'patient_id.required' => __('validation.custom.patient_id.required'),
         ])->validate();
 
-        $status = VitalSign::create([
+        $status = $this->service->createVitalSign([
             'blood_pressure_systolic' => $request->blood_pressure_systolic,
             'blood_pressure_diastolic' => $request->blood_pressure_diastolic,
             'heart_rate' => $request->heart_rate,
@@ -144,7 +113,6 @@ class VitalSignController extends Controller
             'recorded_at' => $request->recorded_at,
             'appointment_id' => $request->appointment_id,
             'patient_id' => $request->patient_id,
-            '_who_added' => Auth::User()->id
         ]);
 
         if ($status) {
@@ -161,7 +129,7 @@ class VitalSignController extends Controller
      */
     public function edit($id)
     {
-        $vitalSign = VitalSign::where('id', $id)->first();
+        $vitalSign = $this->service->getVitalSign($id);
         return response()->json($vitalSign);
     }
 
@@ -180,7 +148,7 @@ class VitalSignController extends Controller
             'recorded_at.required' => __('validation.custom.recorded_at.required'),
         ])->validate();
 
-        $status = VitalSign::where('id', $id)->update([
+        $status = $this->service->updateVitalSign($id, [
             'blood_pressure_systolic' => $request->blood_pressure_systolic,
             'blood_pressure_diastolic' => $request->blood_pressure_diastolic,
             'heart_rate' => $request->heart_rate,
@@ -207,7 +175,7 @@ class VitalSignController extends Controller
      */
     public function destroy($id)
     {
-        $status = VitalSign::where('id', $id)->delete();
+        $status = $this->service->deleteVitalSign($id);
         if ($status) {
             return response()->json(['message' => __('medical_cases.vital_sign_deleted_successfully'), 'status' => true]);
         }
@@ -222,10 +190,7 @@ class VitalSignController extends Controller
      */
     public function latest($patient_id)
     {
-        $latestVitalSign = VitalSign::where('patient_id', $patient_id)
-            ->whereNull('deleted_at')
-            ->orderBy('recorded_at', 'desc')
-            ->first();
+        $latestVitalSign = $this->service->getLatestForPatient($patient_id);
 
         return response()->json($latestVitalSign);
     }

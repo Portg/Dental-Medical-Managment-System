@@ -2,51 +2,34 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Helper\NameHelper;
 use App\MemberLevel;
-use App\MemberTransaction;
-use App\Patient;
+use App\Services\MemberService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class MemberController extends Controller
 {
+    private MemberService $memberService;
+
+    public function __construct(MemberService $memberService)
+    {
+        $this->memberService = $memberService;
+    }
+
     /**
      * Display a listing of members.
      */
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = DB::table('patients')
-                ->leftJoin('member_levels', 'member_levels.id', 'patients.member_level_id')
-                ->whereNull('patients.deleted_at')
-                ->where('patients.member_status', '!=', 'Inactive')
-                ->orderBy('patients.member_since', 'desc')
-                ->select(
-                    'patients.*',
-                    'member_levels.name as level_name',
-                    'member_levels.color as level_color',
-                    'member_levels.discount_rate'
-                );
-
-            // Filter by level
-            if ($request->has('level_id') && $request->level_id) {
-                $query->where('patients.member_level_id', $request->level_id);
-            }
-
-            // Filter by status
-            if ($request->has('status') && $request->status) {
-                $query->where('patients.member_status', $request->status);
-            }
-
-            $data = $query->get();
+            $data = $this->memberService->getMemberList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('patient_name', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('levelBadge', function ($row) {
                     if ($row->level_name) {
@@ -77,13 +60,7 @@ class MemberController extends Controller
         }
 
         $levels = MemberLevel::active()->ordered()->get();
-        $patients = Patient::whereNull('deleted_at')
-            ->where(function($q) {
-                $q->whereNull('member_status')
-                  ->orWhere('member_status', 'Inactive');
-            })
-            ->orderBy('surname')
-            ->get();
+        $patients = $this->memberService->getNonMembers();
 
         return view('members.index', compact('levels', 'patients'));
     }
@@ -93,13 +70,8 @@ class MemberController extends Controller
      */
     public function show($id)
     {
-        $patient = Patient::with(['memberLevel', 'memberTransactions' => function($q) {
-            $q->orderBy('created_at', 'desc')->limit(20);
-        }])->findOrFail($id);
-
-        $levels = MemberLevel::active()->ordered()->get();
-
-        return view('members.show', compact('patient', 'levels'));
+        $data = $this->memberService->getMemberDetail($id);
+        return view('members.show', $data);
     }
 
     /**
@@ -115,40 +87,7 @@ class MemberController extends Controller
             'member_level_id.required' => __('validation.custom.member_level_id.required'),
         ])->validate();
 
-        $patient = Patient::findOrFail($request->patient_id);
-
-        // Check if already a member
-        if ($patient->member_status === 'Active') {
-            return response()->json(['message' => __('members.already_member'), 'status' => false]);
-        }
-
-        $patient->update([
-            'member_no' => Patient::generateMemberNo(),
-            'member_level_id' => $request->member_level_id,
-            'member_balance' => $request->initial_balance ?? 0,
-            'member_points' => 0,
-            'total_consumption' => 0,
-            'member_since' => now(),
-            'member_expiry' => $request->member_expiry,
-            'member_status' => 'Active',
-        ]);
-
-        // Record initial deposit if any
-        if ($request->initial_balance > 0) {
-            MemberTransaction::create([
-                'transaction_no' => MemberTransaction::generateTransactionNo(),
-                'transaction_type' => 'Deposit',
-                'amount' => $request->initial_balance,
-                'balance_before' => 0,
-                'balance_after' => $request->initial_balance,
-                'payment_method' => $request->payment_method ?? 'Cash',
-                'description' => __('members.initial_deposit'),
-                'patient_id' => $patient->id,
-                '_who_added' => Auth::User()->id,
-            ]);
-        }
-
-        return response()->json(['message' => __('members.member_registered_successfully'), 'status' => true]);
+        return response()->json($this->memberService->registerMember($request->all()));
     }
 
     /**
@@ -160,15 +99,7 @@ class MemberController extends Controller
             'member_level_id' => 'required|exists:member_levels,id',
         ])->validate();
 
-        $patient = Patient::findOrFail($id);
-
-        $patient->update([
-            'member_level_id' => $request->member_level_id,
-            'member_expiry' => $request->member_expiry,
-            'member_status' => $request->member_status,
-        ]);
-
-        return response()->json(['message' => __('members.member_updated_successfully'), 'status' => true]);
+        return response()->json($this->memberService->updateMember($id, $request->all()));
     }
 
     /**
@@ -181,36 +112,7 @@ class MemberController extends Controller
             'payment_method' => 'required',
         ])->validate();
 
-        $patient = Patient::findOrFail($id);
-
-        if ($patient->member_status !== 'Active') {
-            return response()->json(['message' => __('members.not_active_member'), 'status' => false]);
-        }
-
-        $balanceBefore = $patient->member_balance;
-        $balanceAfter = $balanceBefore + $request->amount;
-
-        // Update balance
-        $patient->update(['member_balance' => $balanceAfter]);
-
-        // Record transaction
-        MemberTransaction::create([
-            'transaction_no' => MemberTransaction::generateTransactionNo(),
-            'transaction_type' => 'Deposit',
-            'amount' => $request->amount,
-            'balance_before' => $balanceBefore,
-            'balance_after' => $balanceAfter,
-            'payment_method' => $request->payment_method,
-            'description' => $request->description ?? __('members.balance_deposit'),
-            'patient_id' => $patient->id,
-            '_who_added' => Auth::User()->id,
-        ]);
-
-        return response()->json([
-            'message' => __('members.deposit_successful'),
-            'status' => true,
-            'new_balance' => $balanceAfter
-        ]);
+        return response()->json($this->memberService->deposit($id, $request->all()));
     }
 
     /**
@@ -219,16 +121,7 @@ class MemberController extends Controller
     public function transactions(Request $request, $id)
     {
         if ($request->ajax()) {
-            $data = DB::table('member_transactions')
-                ->leftJoin('users as added_by', 'added_by.id', 'member_transactions._who_added')
-                ->whereNull('member_transactions.deleted_at')
-                ->where('member_transactions.patient_id', $id)
-                ->orderBy('member_transactions.created_at', 'desc')
-                ->select(
-                    'member_transactions.*',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
-                )
-                ->get();
+            $data = $this->memberService->getTransactions($id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -257,9 +150,7 @@ class MemberController extends Controller
     public function levels(Request $request)
     {
         if ($request->ajax()) {
-            $data = MemberLevel::whereNull('deleted_at')
-                ->orderBy('sort_order')
-                ->get();
+            $data = $this->memberService->getLevelList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -301,21 +192,7 @@ class MemberController extends Controller
             'discount_rate' => 'required|numeric|min:0|max:100',
         ])->validate();
 
-        MemberLevel::create([
-            'name' => $request->name,
-            'code' => $request->code,
-            'color' => $request->color ?? '#999999',
-            'discount_rate' => $request->discount_rate,
-            'min_consumption' => $request->min_consumption ?? 0,
-            'points_rate' => $request->points_rate ?? 1,
-            'benefits' => $request->benefits,
-            'sort_order' => $request->sort_order ?? 0,
-            'is_default' => $request->is_default ?? false,
-            'is_active' => $request->is_active ?? true,
-            '_who_added' => Auth::User()->id,
-        ]);
-
-        return response()->json(['message' => __('members.level_created_successfully'), 'status' => true]);
+        return response()->json($this->memberService->createLevel($request->all()));
     }
 
     /**
@@ -323,8 +200,7 @@ class MemberController extends Controller
      */
     public function editLevel($id)
     {
-        $level = MemberLevel::findOrFail($id);
-        return response()->json($level);
+        return response()->json($this->memberService->getLevel($id));
     }
 
     /**
@@ -338,20 +214,7 @@ class MemberController extends Controller
             'discount_rate' => 'required|numeric|min:0|max:100',
         ])->validate();
 
-        MemberLevel::where('id', $id)->update([
-            'name' => $request->name,
-            'code' => $request->code,
-            'color' => $request->color ?? '#999999',
-            'discount_rate' => $request->discount_rate,
-            'min_consumption' => $request->min_consumption ?? 0,
-            'points_rate' => $request->points_rate ?? 1,
-            'benefits' => $request->benefits,
-            'sort_order' => $request->sort_order ?? 0,
-            'is_default' => $request->is_default ?? false,
-            'is_active' => $request->is_active ?? true,
-        ]);
-
-        return response()->json(['message' => __('members.level_updated_successfully'), 'status' => true]);
+        return response()->json($this->memberService->updateLevel($id, $request->all()));
     }
 
     /**
@@ -359,17 +222,6 @@ class MemberController extends Controller
      */
     public function destroyLevel($id)
     {
-        // Check if any members have this level
-        $count = Patient::where('member_level_id', $id)->count();
-        if ($count > 0) {
-            return response()->json([
-                'message' => __('members.level_has_members', ['count' => $count]),
-                'status' => false
-            ]);
-        }
-
-        MemberLevel::where('id', $id)->delete();
-
-        return response()->json(['message' => __('members.level_deleted_successfully'), 'status' => true]);
+        return response()->json($this->memberService->deleteLevel($id));
     }
 }

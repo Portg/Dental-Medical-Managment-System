@@ -2,40 +2,27 @@
 
 namespace Modules\Receptionist\Http\Controllers;
 
-use App\Appointment;
-use App\ExpensePayment;
-use App\InsuranceCompany;
-use App\InvoicePayment;
-use App\Patient;
-use App\User;
+use App\Services\ReceptionistDashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Carbon;
 
 class ReceptionistController extends Controller
 {
+    private ReceptionistDashboardService $service;
+
+    public function __construct(ReceptionistDashboardService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response
      */
     public function index()
     {
-         $data['total_patients'] = Patient::count();
-        $data['total_users'] = User::count();
-        $data['total_insurance_company'] = InsuranceCompany::count();
-
-        $data['today_appointments'] = Appointment::where('updated_at', '>', Carbon::today())->count();
-
-        $data['today_cash_amount'] = InvoicePayment::where('payment_method', 'Cash')
-            ->whereDate('payment_date',date('Y-m-d'))->sum('amount');
-
-
-        $data['today_Insurance_amount'] = InvoicePayment::where('payment_method', 'Insurance')
-            ->whereDate('payment_date', date('Y-m-d'))->sum('amount');
-
-        $data['today_expense_amount'] = ExpensePayment::whereDate('payment_date',date('Y-m-d'))->sum('amount');
-      
+        $data = $this->service->getDashboardData();
         return view('receptionist::index')->with($data);
     }
 

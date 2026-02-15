@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\SelfAccountDeposit;
+use App\Services\SelfAccountDepositService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class SelfAccountDepositController extends Controller
 {
+    private SelfAccountDepositService $selfAccountDepositService;
+
+    public function __construct(SelfAccountDepositService $selfAccountDepositService)
+    {
+        $this->selfAccountDepositService = $selfAccountDepositService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,32 +28,20 @@ class SelfAccountDepositController extends Controller
     public function index(Request $request, $self_account_id)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('self_account_deposits')
-                ->leftJoin('users', 'users.id', 'self_account_deposits._who_added')
-                ->whereNull('self_account_deposits.deleted_at')
-                ->where('self_account_deposits.self_account_id', $self_account_id)
-                ->select('self_account_deposits.*', 'users.surname as  added_by')
-                ->orderBy('self_account_deposits.updated_at', 'DESC')
-                ->get();
-
+            $data = $this->selfAccountDepositService->getList($self_account_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
-
                 })
                 ->addColumn('amount', function ($row) {
                     return number_format($row->amount);
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editDeposit(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
-                    return $btn;
+                    return '<a href="#" onclick="editDeposit(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
-                    $btn = '<a href="#" onclick="deleteDeposit(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
-                    return $btn;
+                    return '<a href="#" onclick="deleteDeposit(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
                 ->make(true);
@@ -76,30 +69,24 @@ class SelfAccountDepositController extends Controller
         Validator::make($request->all(), [
             'payment_date' => 'required',
             'amount' => 'required',
-            'payment_method' => 'required'
+            'payment_method' => 'required',
         ])->validate();
-        $status = SelfAccountDeposit::create([
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'payment_date' => $request->payment_date,
-            'self_account_id' => $request->self_account_id,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->selfAccountDepositService->create($request->all());
+
         if ($status) {
-            return response()->json(['message' => __('deposits.deposit_success'),
-                'status' => true]);
+            return response()->json(['message' => __('deposits.deposit_success'), 'status' => true]);
         }
-        return response()->json(['message' => __('messages.error_try_again'),
-            'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\SelfAccountDeposit $selfAccountDeposit
+     * @param int $id
      * @return Response
      */
-    public function show(SelfAccountDeposit $selfAccountDeposit)
+    public function show($id)
     {
         //
     }
@@ -112,7 +99,7 @@ class SelfAccountDepositController extends Controller
      */
     public function edit($id)
     {
-        $record = SelfAccountDeposit::where('id', $id)->first();
+        $record = $this->selfAccountDepositService->find($id);
         return response()->json($record);
     }
 
@@ -128,20 +115,15 @@ class SelfAccountDepositController extends Controller
         Validator::make($request->all(), [
             'payment_date' => 'required',
             'amount' => 'required',
-            'payment_method' => 'required'
+            'payment_method' => 'required',
         ])->validate();
-        $status = SelfAccountDeposit::where('id', $id)->update([
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'payment_date' => $request->payment_date,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->selfAccountDepositService->update($id, $request->all());
+
         if ($status) {
-            return response()->json(['message' => __('messages.record_updated'),
-                'status' => true]);
+            return response()->json(['message' => __('messages.record_updated'), 'status' => true]);
         }
-        return response()->json(['message' => __('messages.error_try_again'),
-            'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
     }
 
     /**
@@ -152,12 +134,10 @@ class SelfAccountDepositController extends Controller
      */
     public function destroy($id)
     {
-        $status = SelfAccountDeposit::where('id', $id)->delete();
+        $status = $this->selfAccountDepositService->delete($id);
         if ($status) {
-            return response()->json(['message' => __('messages.record_deleted'),
-                'status' => true]);
+            return response()->json(['message' => __('messages.record_deleted'), 'status' => true]);
         }
-        return response()->json(['message' => __('messages.error_try_again'),
-            'status' => false]);
+        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
     }
 }

@@ -2,35 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\DoctorSchedule;
-use App\User;
-use App\Branch;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\DoctorScheduleService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
 
 class DoctorScheduleController extends Controller
 {
+    private DoctorScheduleService $service;
+
+    public function __construct(DoctorScheduleService $service)
+    {
+        $this->service = $service;
+    }
+
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = DB::table('doctor_schedules')
-                ->leftJoin('users as doctor', 'doctor.id', 'doctor_schedules.doctor_id')
-                ->leftJoin('users as creator', 'creator.id', 'doctor_schedules._who_added')
-                ->leftJoin('branches', 'branches.id', 'doctor_schedules.branch_id')
-                ->whereNull('doctor_schedules.deleted_at')
-                ->select([
-                    'doctor_schedules.*',
-                    'doctor.surname as doctor_name',
-                    'creator.surname as added_by',
-                    'branches.name as branch_name'
-                ])
-                ->orderBy('doctor_schedules.schedule_date', 'desc')
-                ->get();
+            $data = $this->service->getScheduleList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -55,10 +46,9 @@ class DoctorScheduleController extends Controller
                 ->make(true);
         }
 
-        $doctors = User::where('is_doctor', 'Yes')->whereNull('deleted_at')->get();
-        $branches = Branch::whereNull('deleted_at')->get();
+        $formData = $this->service->getFormData();
 
-        return view('doctor_schedules.index', compact('doctors', 'branches'));
+        return view('doctor_schedules.index', $formData);
     }
 
     public function store(Request $request)
@@ -78,33 +68,14 @@ class DoctorScheduleController extends Controller
             'max_patients.required' => __('doctor_schedules.max_patients_required'),
         ])->validate();
 
-        $data = [
-            'doctor_id' => $request->doctor_id,
-            'schedule_date' => $request->schedule_date,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'is_recurring' => $request->is_recurring ? true : false,
-            'recurring_pattern' => $request->is_recurring ? $request->recurring_pattern : null,
-            'recurring_until' => $request->is_recurring ? $request->recurring_until : null,
-            'max_patients' => $request->max_patients,
-            'notes' => $request->notes,
-            'branch_id' => $request->branch_id,
-            '_who_added' => Auth::user()->id,
-        ];
-
-        $success = DoctorSchedule::create($data);
-
-        // Generate recurring schedules if needed
-        if ($request->is_recurring && $request->recurring_pattern && $request->recurring_until) {
-            $this->generateRecurringSchedules($data, $request->recurring_until);
-        }
+        $success = $this->service->createSchedule($request->all());
 
         return FunctionsHelper::messageResponse(__('doctor_schedules.added_successfully'), $success);
     }
 
     public function edit($id)
     {
-        $schedule = DoctorSchedule::where('id', $id)->first();
+        $schedule = $this->service->find($id);
         return response()->json($schedule);
     }
 
@@ -125,26 +96,14 @@ class DoctorScheduleController extends Controller
             'max_patients.required' => __('doctor_schedules.max_patients_required'),
         ])->validate();
 
-        $success = DoctorSchedule::where('id', $id)->update([
-            'doctor_id' => $request->doctor_id,
-            'schedule_date' => $request->schedule_date,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'is_recurring' => $request->is_recurring ? true : false,
-            'recurring_pattern' => $request->is_recurring ? $request->recurring_pattern : null,
-            'recurring_until' => $request->is_recurring ? $request->recurring_until : null,
-            'max_patients' => $request->max_patients,
-            'notes' => $request->notes,
-            'branch_id' => $request->branch_id,
-            'changed_by' => Auth::user()->id,
-        ]);
+        $success = $this->service->updateSchedule($id, $request->all());
 
         return FunctionsHelper::messageResponse(__('doctor_schedules.updated_successfully'), $success);
     }
 
     public function destroy($id)
     {
-        $success = DoctorSchedule::where('id', $id)->delete();
+        $success = $this->service->deleteSchedule($id);
         return FunctionsHelper::messageResponse(__('doctor_schedules.deleted_successfully'), $success);
     }
 
@@ -156,59 +115,8 @@ class DoctorScheduleController extends Controller
         $start = $request->start ?? Carbon::now()->startOfMonth()->format('Y-m-d');
         $end = $request->end ?? Carbon::now()->endOfMonth()->format('Y-m-d');
 
-        $schedules = DoctorSchedule::with('doctor')
-            ->whereBetween('schedule_date', [$start, $end])
-            ->whereNull('deleted_at')
-            ->get()
-            ->map(function ($schedule) {
-                return [
-                    'id' => $schedule->id,
-                    'title' => $schedule->doctor->surname . ' (' . substr($schedule->start_time, 0, 5) . '-' . substr($schedule->end_time, 0, 5) . ')',
-                    'start' => $schedule->schedule_date->format('Y-m-d') . 'T' . $schedule->start_time,
-                    'end' => $schedule->schedule_date->format('Y-m-d') . 'T' . $schedule->end_time,
-                    'color' => $this->getDoctorColor($schedule->doctor_id),
-                ];
-            });
+        $schedules = $this->service->getCalendarSchedules($start, $end);
 
         return response()->json($schedules);
-    }
-
-    /**
-     * Generate recurring schedules
-     */
-    private function generateRecurringSchedules($data, $until)
-    {
-        $currentDate = Carbon::parse($data['schedule_date']);
-        $endDate = Carbon::parse($until);
-        $pattern = $data['recurring_pattern'];
-
-        while ($currentDate->lt($endDate)) {
-            switch ($pattern) {
-                case 'daily':
-                    $currentDate->addDay();
-                    break;
-                case 'weekly':
-                    $currentDate->addWeek();
-                    break;
-                case 'monthly':
-                    $currentDate->addMonth();
-                    break;
-            }
-
-            if ($currentDate->lte($endDate)) {
-                $newData = $data;
-                $newData['schedule_date'] = $currentDate->format('Y-m-d');
-                DoctorSchedule::create($newData);
-            }
-        }
-    }
-
-    /**
-     * Get a consistent color for each doctor
-     */
-    private function getDoctorColor($doctorId)
-    {
-        $colors = ['#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#f39c12', '#1abc9c', '#e67e22', '#34495e'];
-        return $colors[$doctorId % count($colors)];
     }
 }

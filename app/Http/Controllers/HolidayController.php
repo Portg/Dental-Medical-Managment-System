@@ -2,18 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Holiday;
 use App\Http\Helper\ActionColumnHelper;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\HolidayService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class HolidayController extends Controller
 {
+    private HolidayService $holidayService;
+
+    public function __construct(HolidayService $holidayService)
+    {
+        $this->holidayService = $holidayService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -24,21 +29,8 @@ class HolidayController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
+            $data = $this->holidayService->getHolidayList($request->all());
 
-            $query = DB::table('holidays')
-                ->leftJoin('users', 'users.id', 'holidays._who_added')
-                ->whereNull('holidays.deleted_at')
-                ->select(['holidays.*', 'users.surname'])
-                ->OrderBy('holidays.holiday_date');
-
-            if ($request->filled('filter_name')) {
-                $query->where('holidays.name', 'like', '%' . $request->filter_name . '%');
-            }
-            if ($request->filled('filter_repeat')) {
-                $query->where('holidays.repeat_date', $request->filter_repeat);
-            }
-
-            $data = $query->get();
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('addedBy', function ($row) {
@@ -89,23 +81,17 @@ class HolidayController extends Controller
                 'repeat_date.required' => __('validation.attributes.repeat_date') . ' ' . __('validation.required'),
             ])->validate();
 
-        $success = Holiday::create(
-            [
-                'name' => $request->name,
-                'holiday_date' => $request->holiday_date,
-                'repeat_date' => $request->repeat_date,
-                '_who_added' => Auth::User()->id
-            ]);
+        $success = $this->holidayService->createHoliday($request->all());
         return FunctionsHelper::messageResponse(__('holidays.added_successfully'), $success);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\Holiday $holiday
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(Holiday $holiday)
+    public function show($id)
     {
         //
     }
@@ -118,7 +104,7 @@ class HolidayController extends Controller
      */
     public function edit($id)
     {
-        $holiday = Holiday::where('id', $id)->first();
+        $holiday = $this->holidayService->findHoliday($id);
         return response()->json($holiday);
     }
 
@@ -142,13 +128,7 @@ class HolidayController extends Controller
                 'repeat_date.required' => __('validation.attributes.repeat_date') . ' ' . __('validation.required'),
             ])->validate();
 
-        $success = Holiday::where('id', $id)->update(
-            [
-                'name' => $request->name,
-                'holiday_date' => $request->holiday_date,
-                'repeat_date' => $request->repeat_date,
-                '_who_added' => Auth::User()->id
-            ]);
+        $success = $this->holidayService->updateHoliday($id, $request->all());
         return FunctionsHelper::messageResponse(__('holidays.updated_successfully'), $success);
     }
 
@@ -161,7 +141,7 @@ class HolidayController extends Controller
      */
     public function destroy($id)
     {
-        $success = Holiday::where('id', $id)->delete();
+        $success = $this->holidayService->deleteHoliday($id);
         return FunctionsHelper::messageResponse(__('holidays.deleted_successfully'), $success);
     }
 }

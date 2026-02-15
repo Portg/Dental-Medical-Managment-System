@@ -3,15 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
-use App\SalaryDeduction;
+use App\Services\SalaryDeductionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class SalaryDeductionController extends Controller
 {
+    private SalaryDeductionService $service;
+
+    public function __construct(SalaryDeductionService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,15 +29,7 @@ class SalaryDeductionController extends Controller
     public function index(Request $request, $pay_slip_id)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('salary_deductions')
-                ->join('users', 'users.id', 'salary_deductions._who_added')
-                ->whereNull('salary_deductions.deleted_at')
-                ->where('salary_deductions.pay_slip_id', '=', $pay_slip_id)
-                ->select('salary_deductions.*', 'users.othername as added_by')
-                ->OrderBy('salary_deductions.updated_at', 'desc')
-                ->get();
-
+            $data = $this->service->getDeductionsForPaySlip($pay_slip_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -45,7 +43,6 @@ class SalaryDeductionController extends Controller
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
                     $btn = '<a href="#" onclick="deleteDeductionRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
@@ -80,23 +77,18 @@ class SalaryDeductionController extends Controller
             'deduction.required' => __('validation.custom.deduction.required'),
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
-        $success = SalaryDeduction::create([
-            'deduction' => $request->deduction,
-            'deduction_amount' => $request->amount,
-            'pay_slip_id' => $request->pay_slip_id,
-            '_who_added' => Auth::User()->id
-        ]);
-        return FunctionsHelper::messageResponse(__('messages.salary_deduction_added_successfully'), $success);
 
+        $success = $this->service->createDeduction($request->all(), Auth::User()->id);
+        return FunctionsHelper::messageResponse(__('messages.salary_deduction_added_successfully'), $success);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\SalaryDeduction $salaryDeduction
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(SalaryDeduction $salaryDeduction)
+    public function show($id)
     {
         //
     }
@@ -109,8 +101,7 @@ class SalaryDeductionController extends Controller
      */
     public function edit($id)
     {
-        $deduction = SalaryDeduction::where('id', $id)->first();
-        return response()->json($deduction);
+        return response()->json($this->service->getDeductionForEdit($id));
     }
 
     /**
@@ -129,13 +120,9 @@ class SalaryDeductionController extends Controller
             'deduction.required' => __('validation.custom.deduction.required'),
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
-        $success = SalaryDeduction::where('id', $id)->update([
-            'deduction' => $request->deduction,
-            'deduction_amount' => $request->amount,
-            '_who_added' => Auth::User()->id
-        ]);
-        return FunctionsHelper::messageResponse(__('messages.salary_deduction_updated_successfully'), $success);
 
+        $success = $this->service->updateDeduction($id, $request->all(), Auth::User()->id);
+        return FunctionsHelper::messageResponse(__('messages.salary_deduction_updated_successfully'), $success);
     }
 
     /**
@@ -146,7 +133,7 @@ class SalaryDeductionController extends Controller
      */
     public function destroy($id)
     {
-        $success = SalaryDeduction::where('id', $id)->delete();
+        $success = $this->service->deleteDeduction($id);
         return FunctionsHelper::messageResponse(__('messages.salary_deduction_deleted_successfully'), $success);
     }
 }

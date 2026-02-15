@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Permission;
+use App\Services\PermissionService;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
@@ -10,12 +10,18 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Yajra\DataTables\DataTables;
 
 class PermissionController extends Controller
 {
+    private PermissionService $permissionService;
+
+    public function __construct(PermissionService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -26,7 +32,7 @@ class PermissionController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = Permission::all();
+            $data = $this->permissionService->getAllPermissions();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -69,12 +75,12 @@ class PermissionController extends Controller
             'module' => ['nullable']
         ])->validate();
 
-        $status = Permission::create([
-            'name' => $request->name,
-            'slug' => $request->slug ?: Str::slug($request->name),
-            'description' => $request->description,
-            'module' => $request->module
-        ]);
+        $status = $this->permissionService->createPermission(
+            $request->name,
+            $request->slug,
+            $request->description,
+            $request->module
+        );
 
         if ($status) {
             return response()->json(['message' => __('permissions.permission_added_successfully'), 'status' => true]);
@@ -101,8 +107,7 @@ class PermissionController extends Controller
      */
     public function edit($id)
     {
-        $permission = Permission::where('id', $id)->first();
-        return response()->json($permission);
+        return response()->json($this->permissionService->findPermission($id));
     }
 
     /**
@@ -121,12 +126,13 @@ class PermissionController extends Controller
             'module' => ['nullable']
         ])->validate();
 
-        $status = Permission::where('id', $id)->update([
-            'name' => $request->name,
-            'slug' => $request->slug,
-            'description' => $request->description,
-            'module' => $request->module
-        ]);
+        $status = $this->permissionService->updatePermission(
+            $id,
+            $request->name,
+            $request->slug,
+            $request->description,
+            $request->module
+        );
 
         if ($status) {
             return response()->json(['message' => __('permissions.permission_updated_successfully'), 'status' => true]);
@@ -142,7 +148,7 @@ class PermissionController extends Controller
      */
     public function destroy($id)
     {
-        $status = Permission::where('id', $id)->delete();
+        $status = $this->permissionService->deletePermission($id);
         if ($status) {
             return response()->json(['message' => __('permissions.permission_deleted_successfully'), 'status' => true]);
         }

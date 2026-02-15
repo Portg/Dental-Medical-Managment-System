@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\ChartOfAccountCategory;
-use App\AccountingEquation;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\ChartOfAccountCategoryService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class ChartOfAccountCategoryController extends Controller
 {
+    private ChartOfAccountCategoryService $chartOfAccountCategoryService;
+
+    public function __construct(ChartOfAccountCategoryService $chartOfAccountCategoryService)
+    {
+        $this->chartOfAccountCategoryService = $chartOfAccountCategoryService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -21,7 +26,7 @@ class ChartOfAccountCategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = ChartOfAccountCategory::with('accountingEquation')->get();
+            $data = $this->chartOfAccountCategoryService->getAllCategories();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -40,7 +45,7 @@ class ChartOfAccountCategoryController extends Controller
                 ->make(true);
         }
 
-        $data['accounting_equations'] = AccountingEquation::orderBy('sort_by')->get();
+        $data['accounting_equations'] = $this->chartOfAccountCategoryService->getAccountingEquations();
         return view('chart_of_account_categories.index')->with($data);
     }
 
@@ -70,11 +75,7 @@ class ChartOfAccountCategoryController extends Controller
             'accounting_equation_id.required' => __('validation.custom.accounting_equation_id.required')
         ])->validate();
 
-        $success = ChartOfAccountCategory::create([
-            'name' => $request->name,
-            'accounting_equation_id' => $request->accounting_equation_id,
-            '_who_added' => Auth::User()->id
-        ]);
+        $success = $this->chartOfAccountCategoryService->createCategory($request->all());
 
         return FunctionsHelper::messageResponse(__('messages.chart_account_category_added_successfully'), $success);
     }
@@ -82,10 +83,10 @@ class ChartOfAccountCategoryController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\ChartOfAccountCategory $chartOfAccountCategory
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(ChartOfAccountCategory $chartOfAccountCategory)
+    public function show($id)
     {
         //
     }
@@ -98,9 +99,7 @@ class ChartOfAccountCategoryController extends Controller
      */
     public function edit($id)
     {
-        $data = ChartOfAccountCategory::with('accountingEquation')
-            ->where('id', $id)
-            ->first();
+        $data = $this->chartOfAccountCategoryService->findCategory($id);
         return response()->json($data);
     }
 
@@ -121,11 +120,7 @@ class ChartOfAccountCategoryController extends Controller
             'accounting_equation_id.required' => __('validation.custom.accounting_equation_id.required')
         ])->validate();
 
-        $success = ChartOfAccountCategory::where('id', $id)->update([
-            'name' => $request->name,
-            'accounting_equation_id' => $request->accounting_equation_id,
-            '_who_added' => Auth::User()->id
-        ]);
+        $success = $this->chartOfAccountCategoryService->updateCategory($id, $request->all());
 
         return FunctionsHelper::messageResponse(__('messages.chart_account_category_updated_successfully'), $success);
     }
@@ -139,7 +134,7 @@ class ChartOfAccountCategoryController extends Controller
      */
     public function destroy($id)
     {
-        $success = ChartOfAccountCategory::where('id', $id)->delete();
+        $success = $this->chartOfAccountCategoryService->deleteCategory($id);
         return FunctionsHelper::messageResponse(__('messages.chart_account_category_deleted_successfully'), $success);
     }
 }

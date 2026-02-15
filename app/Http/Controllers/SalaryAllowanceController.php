@@ -3,15 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
-use App\SalaryAllowance;
+use App\Services\SalaryAllowanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class SalaryAllowanceController extends Controller
 {
+    private SalaryAllowanceService $service;
+
+    public function __construct(SalaryAllowanceService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,15 +29,7 @@ class SalaryAllowanceController extends Controller
     public function index(Request $request, $pay_slip_id)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('salary_allowances')
-                ->join('users', 'users.id', 'salary_allowances._who_added')
-                ->whereNull('salary_allowances.deleted_at')
-                ->where('salary_allowances.pay_slip_id', '=', $pay_slip_id)
-                ->select('salary_allowances.*', 'users.othername as added_by')
-                ->OrderBy('salary_allowances.updated_at', 'desc')
-                ->get();
-
+            $data = $this->service->getAllowancesForPaySlip($pay_slip_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -45,7 +43,6 @@ class SalaryAllowanceController extends Controller
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
                     $btn = '<a href="#" onclick="deleteAllowanceRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
@@ -80,22 +77,18 @@ class SalaryAllowanceController extends Controller
             'allowance.required' => __('validation.custom.allowance.required'),
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
-        $success = SalaryAllowance::create([
-            'allowance' => $request->allowance,
-            'allowance_amount' => $request->amount,
-            'pay_slip_id' => $request->pay_slip_id,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $success = $this->service->createAllowance($request->all(), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('messages.salary_allowance_added_successfully'), $success);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\SalaryAllowance $salaryAllowance
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(SalaryAllowance $salaryAllowance)
+    public function show($id)
     {
         //
     }
@@ -108,8 +101,7 @@ class SalaryAllowanceController extends Controller
      */
     public function edit($id)
     {
-        $allowance = SalaryAllowance::where('id', $id)->first();
-        return response()->json($allowance);
+        return response()->json($this->service->getAllowanceForEdit($id));
     }
 
     /**
@@ -129,13 +121,8 @@ class SalaryAllowanceController extends Controller
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
 
-        $success = SalaryAllowance::where('id', $id)->update([
-            'allowance' => $request->allowance,
-            'allowance_amount' => $request->amount,
-            '_who_added' => Auth::User()->id
-        ]);
+        $success = $this->service->updateAllowance($id, $request->all(), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('messages.salary_allowance_updated_successfully'), $success);
-
     }
 
     /**
@@ -146,8 +133,7 @@ class SalaryAllowanceController extends Controller
      */
     public function destroy($id)
     {
-        $success = SalaryAllowance::where('id', $id)->delete();
+        $success = $this->service->deleteAllowance($id);
         return FunctionsHelper::messageResponse(__('messages.salary_allowance_deleted_successfully'), $success);
-
     }
 }

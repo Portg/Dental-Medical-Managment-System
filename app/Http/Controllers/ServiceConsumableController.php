@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\InventoryItem;
 use App\MedicalService;
-use App\ServiceConsumable;
+use App\Services\ServiceConsumableService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class ServiceConsumableController extends Controller
 {
+    private ServiceConsumableService $serviceConsumableService;
+
+    public function __construct(ServiceConsumableService $serviceConsumableService)
+    {
+        $this->serviceConsumableService = $serviceConsumableService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -22,14 +27,9 @@ class ServiceConsumableController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = ServiceConsumable::with(['medicalService', 'inventoryItem']);
-
-            // Filter by service
-            if ($request->medical_service_id) {
-                $query->where('medical_service_id', $request->medical_service_id);
-            }
-
-            $data = $query->orderBy('id', 'DESC')->get();
+            $data = $this->serviceConsumableService->getList(
+                $request->medical_service_id ? (int) $request->medical_service_id : null
+            );
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -70,10 +70,7 @@ class ServiceConsumableController extends Controller
      */
     public function show($serviceId)
     {
-        $consumables = ServiceConsumable::with('inventoryItem')
-            ->where('medical_service_id', $serviceId)
-            ->get();
-
+        $consumables = $this->serviceConsumableService->getByService($serviceId);
         return response()->json($consumables);
     }
 
@@ -96,25 +93,14 @@ class ServiceConsumableController extends Controller
             'qty.min' => __('inventory.qty_min'),
         ])->validate();
 
-        // Check if already exists
-        $exists = ServiceConsumable::where('medical_service_id', $request->medical_service_id)
-            ->where('inventory_item_id', $request->inventory_item_id)
-            ->exists();
-
-        if ($exists) {
+        if ($this->serviceConsumableService->exists($request->medical_service_id, $request->inventory_item_id)) {
             return response()->json([
                 'message' => __('inventory.consumable_already_exists'),
-                'status' => false
+                'status' => false,
             ]);
         }
 
-        $consumable = ServiceConsumable::create([
-            'medical_service_id' => $request->medical_service_id,
-            'inventory_item_id' => $request->inventory_item_id,
-            'qty' => $request->qty,
-            'is_required' => $request->is_required ?? true,
-            '_who_added' => Auth::User()->id
-        ]);
+        $consumable = $this->serviceConsumableService->create($request->all());
 
         if ($consumable) {
             return response()->json(['message' => __('inventory.consumable_added_successfully'), 'status' => true]);
@@ -135,10 +121,7 @@ class ServiceConsumableController extends Controller
             'qty' => 'required|numeric|min:0.01',
         ])->validate();
 
-        $status = ServiceConsumable::where('id', $id)->update([
-            'qty' => $request->qty,
-            'is_required' => $request->is_required ?? true,
-        ]);
+        $status = $this->serviceConsumableService->update($id, $request->all());
 
         if ($status) {
             return response()->json(['message' => __('inventory.consumable_updated_successfully'), 'status' => true]);
@@ -154,7 +137,7 @@ class ServiceConsumableController extends Controller
      */
     public function destroy($id)
     {
-        $status = ServiceConsumable::where('id', $id)->delete();
+        $status = $this->serviceConsumableService->delete($id);
         if ($status) {
             return response()->json(['message' => __('inventory.consumable_deleted_successfully'), 'status' => true]);
         }

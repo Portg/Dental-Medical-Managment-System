@@ -3,13 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
+use App\Services\SmsTransactionService;
 use App\SmsTransaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 
 class SmsTransactionController extends Controller
 {
+    private SmsTransactionService $smsTransactionService;
+
+    public function __construct(SmsTransactionService $smsTransactionService)
+    {
+        $this->smsTransactionService = $smsTransactionService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -20,27 +27,11 @@ class SmsTransactionController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
-                //store filtered dates
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
-
-                $data = DB::table('sms_transactions')
-                    ->leftJoin('users', 'users.id', 'sms_transactions._who_added')
-                    ->whereNull('sms_transactions.deleted_at')
-                    ->where('type','topup')
-                    ->whereBetween(DB::raw('DATE(sms_transactions.created_at)'), array($request->start_date, $request->end_date))
-                    ->select('sms_transactions.*', 'users.surname', 'users.othername')
-                    ->OrderBy('sms_transactions.id', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('sms_transactions')
-                    ->leftJoin('users', 'users.id', 'sms_transactions._who_added')
-                    ->whereNull('sms_transactions.deleted_at')
-                    ->where('type','topup')
-                    ->select('sms_transactions.*', 'users.surname', 'users.othername')
-                    ->OrderBy('sms_transactions.id', 'desc')
-                    ->get();
             }
+
+            $data = $this->smsTransactionService->getList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -55,24 +46,11 @@ class SmsTransactionController extends Controller
                 ->rawColumns(['message_receiver'])
                 ->make(true);
         }
-        //total amount loaded on the system
-        $current_balance = $this->CreditLoaded() - $this->CreditUsed();
+
+        $current_balance = $this->smsTransactionService->getCurrentBalance();
         $data['current_balance'] = number_format($current_balance);
         return view('sms_transactions.index')->with($data);
     }
-
-    private function CreditLoaded()
-    {
-        $loaded_credit = SmsTransaction::where('type', 'topup')->sum('amount');
-        return $loaded_credit;
-    }
-
-    private function CreditUsed()
-    {
-        $credit_used = SmsTransaction::where('type', '!=', 'topup')->sum('amount');
-        return $credit_used;
-    }
-
 
     /**
      * Show the form for creating a new resource.

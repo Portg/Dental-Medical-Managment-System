@@ -2,24 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Coupon;
-use App\CouponUsage;
+use App\Services\CouponService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class CouponController extends Controller
 {
+    private CouponService $service;
+
+    public function __construct(CouponService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of coupons.
      */
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = Coupon::whereNull('deleted_at')
-                ->orderBy('created_at', 'desc')
-                ->get();
+            $data = $this->service->getCouponList();
 
             return DataTables::of($data)
                 ->addIndexColumn()
@@ -106,21 +109,9 @@ class CouponController extends Controller
             ]);
         }
 
-        $coupon = Coupon::create([
-            'code' => strtoupper($request->code),
-            'name' => $request->name,
-            'description' => $request->description,
-            'type' => $request->type,
-            'value' => $request->value,
-            'min_order_amount' => $request->min_order_amount ?? 0,
-            'max_discount' => $request->max_discount,
-            'max_uses' => $request->max_uses,
-            'max_uses_per_user' => $request->max_uses_per_user ?? 1,
-            'starts_at' => $request->starts_at,
-            'expires_at' => $request->expires_at,
+        $coupon = $this->service->createCoupon(array_merge($request->all(), [
             'is_active' => $request->has('is_active') ? 1 : 0,
-            '_who_added' => Auth::id(),
-        ]);
+        ]));
 
         return response()->json([
             'message' => __('invoices.coupon_created_successfully'),
@@ -134,8 +125,7 @@ class CouponController extends Controller
      */
     public function show($id)
     {
-        $coupon = Coupon::with('usages.patient', 'usages.invoice')->findOrFail($id);
-        return response()->json($coupon);
+        return response()->json($this->service->getCouponDetail($id));
     }
 
     /**
@@ -143,8 +133,7 @@ class CouponController extends Controller
      */
     public function edit($id)
     {
-        $coupon = Coupon::findOrFail($id);
-        return response()->json($coupon);
+        return response()->json($this->service->getCouponForEdit($id));
     }
 
     /**
@@ -152,8 +141,6 @@ class CouponController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $coupon = Coupon::findOrFail($id);
-
         $validator = Validator::make($request->all(), [
             'code' => 'required|string|max:50|unique:coupons,code,' . $id,
             'name' => 'required|string|max:100',
@@ -181,20 +168,9 @@ class CouponController extends Controller
             ]);
         }
 
-        $coupon->update([
-            'code' => strtoupper($request->code),
-            'name' => $request->name,
-            'description' => $request->description,
-            'type' => $request->type,
-            'value' => $request->value,
-            'min_order_amount' => $request->min_order_amount ?? 0,
-            'max_discount' => $request->max_discount,
-            'max_uses' => $request->max_uses,
-            'max_uses_per_user' => $request->max_uses_per_user ?? 1,
-            'starts_at' => $request->starts_at,
-            'expires_at' => $request->expires_at,
+        $this->service->updateCoupon($id, array_merge($request->all(), [
             'is_active' => $request->has('is_active') ? 1 : 0,
-        ]);
+        ]));
 
         return response()->json([
             'message' => __('invoices.coupon_updated_successfully'),
@@ -207,16 +183,7 @@ class CouponController extends Controller
      */
     public function destroy($id)
     {
-        $coupon = Coupon::findOrFail($id);
-
-        // Check if coupon has been used
-        if ($coupon->used_count > 0) {
-            // Soft delete
-            $coupon->deleted_at = now();
-            $coupon->save();
-        } else {
-            $coupon->delete();
-        }
+        $this->service->deleteCoupon($id);
 
         return response()->json([
             'message' => __('invoices.coupon_deleted_successfully'),
@@ -229,58 +196,12 @@ class CouponController extends Controller
      */
     public function validateCoupon(Request $request, $code)
     {
-        $coupon = Coupon::where('code', strtoupper($code))->first();
+        $result = $this->service->validateCoupon(
+            $code,
+            $request->order_amount ?? 0,
+            $request->patient_id
+        );
 
-        if (!$coupon) {
-            return response()->json([
-                'valid' => false,
-                'message' => __('invoices.coupon_invalid')
-            ]);
-        }
-
-        $orderAmount = $request->order_amount ?? 0;
-        $patientId = $request->patient_id;
-
-        if (!$coupon->isValid($orderAmount, $patientId)) {
-            // Determine specific error
-            if (!$coupon->is_active) {
-                $message = __('invoices.coupon_inactive');
-            } elseif ($coupon->expires_at && $coupon->expires_at < now()) {
-                $message = __('invoices.coupon_expired');
-            } elseif ($coupon->max_uses && $coupon->used_count >= $coupon->max_uses) {
-                $message = __('invoices.coupon_exhausted');
-            } elseif ($coupon->min_order_amount > 0 && $orderAmount < $coupon->min_order_amount) {
-                $message = __('invoices.coupon_min_amount', ['amount' => number_format($coupon->min_order_amount, 2)]);
-            } elseif ($patientId && $coupon->max_uses_per_user) {
-                $userUsage = CouponUsage::where('coupon_id', $coupon->id)
-                    ->where('patient_id', $patientId)
-                    ->count();
-                if ($userUsage >= $coupon->max_uses_per_user) {
-                    $message = __('invoices.coupon_user_limit_reached');
-                }
-            } else {
-                $message = __('invoices.coupon_invalid');
-            }
-
-            return response()->json([
-                'valid' => false,
-                'message' => $message
-            ]);
-        }
-
-        $discount = $coupon->calculateDiscount($orderAmount);
-
-        return response()->json([
-            'valid' => true,
-            'coupon' => [
-                'id' => $coupon->id,
-                'code' => $coupon->code,
-                'name' => $coupon->name,
-                'type' => $coupon->type,
-                'value' => $coupon->value,
-                'discount' => $discount,
-            ],
-            'message' => __('invoices.coupon_applied')
-        ]);
+        return response()->json($result);
     }
 }

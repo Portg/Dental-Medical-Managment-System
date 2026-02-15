@@ -2,18 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\PatientImage;
-use App\Patient;
-use App\MedicalCase;
+use App\Services\PatientImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class PatientImageController extends Controller
 {
+    private PatientImageService $patientImageService;
+
+    public function __construct(PatientImageService $patientImageService)
+    {
+        $this->patientImageService = $patientImageService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -24,18 +27,7 @@ class PatientImageController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = DB::table('patient_images')
-                ->leftJoin('patients', 'patients.id', 'patient_images.patient_id')
-                ->leftJoin('users as added_by', 'added_by.id', 'patient_images._who_added')
-                ->whereNull('patient_images.deleted_at')
-                ->orderBy('patient_images.created_at', 'desc')
-                ->select(
-                    'patient_images.*',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
-                    'patients.patient_no',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
-                )
-                ->get();
+            $data = $this->patientImageService->getAllImages();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -60,7 +52,7 @@ class PatientImageController extends Controller
                 ->make(true);
         }
 
-        $patients = Patient::whereNull('deleted_at')->orderBy('surname')->get();
+        $patients = $this->patientImageService->getActivePatients();
         return view('patient_images.index', compact('patients'));
     }
 
@@ -75,16 +67,7 @@ class PatientImageController extends Controller
     public function patientImages(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = DB::table('patient_images')
-                ->leftJoin('users as added_by', 'added_by.id', 'patient_images._who_added')
-                ->whereNull('patient_images.deleted_at')
-                ->where('patient_images.patient_id', $patient_id)
-                ->orderBy('patient_images.image_date', 'desc')
-                ->select(
-                    'patient_images.*',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
-                )
-                ->get();
+            $data = $this->patientImageService->getPatientImages($patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -141,22 +124,18 @@ class PatientImageController extends Controller
             $filePath = 'patient_images/' . $request->patient_id;
             $file->move(public_path($filePath), $fileName);
 
-            $status = PatientImage::create([
-                'image_no' => PatientImage::generateImageNo(),
-                'title' => $request->title,
-                'image_type' => $request->image_type,
+            $fileInfo = [
                 'file_path' => $filePath . '/' . $fileName,
                 'file_name' => $file->getClientOriginalName(),
                 'file_size' => $file->getSize(),
                 'mime_type' => $file->getClientMimeType(),
-                'description' => $request->description,
-                'tooth_number' => $request->tooth_number,
-                'image_date' => $request->image_date,
-                'patient_id' => $request->patient_id,
-                'appointment_id' => $request->appointment_id,
-                'medical_case_id' => $request->medical_case_id,
-                '_who_added' => Auth::User()->id
-            ]);
+            ];
+
+            $status = $this->patientImageService->createImage(
+                $request->all(),
+                $fileInfo,
+                Auth::User()->id
+            );
 
             if ($status) {
                 return response()->json([
@@ -178,8 +157,7 @@ class PatientImageController extends Controller
      */
     public function show($id)
     {
-        $image = PatientImage::with(['patient', 'addedBy'])->findOrFail($id);
-        return response()->json($image);
+        return response()->json($this->patientImageService->getImageWithRelations($id));
     }
 
     /**
@@ -190,8 +168,7 @@ class PatientImageController extends Controller
      */
     public function edit($id)
     {
-        $image = PatientImage::where('id', $id)->first();
-        return response()->json($image);
+        return response()->json($this->patientImageService->getImageForEdit($id));
     }
 
     /**
@@ -213,36 +190,25 @@ class PatientImageController extends Controller
             'image_type.required' => __('validation.custom.image_type.required'),
         ])->validate();
 
-        $image = PatientImage::findOrFail($id);
-
-        $updateData = [
-            'title' => $request->title,
-            'image_type' => $request->image_type,
-            'description' => $request->description,
-            'tooth_number' => $request->tooth_number,
-            'image_date' => $request->image_date,
-        ];
+        $fileInfo = null;
 
         // Handle new file upload if provided
         if ($request->hasFile('image_file')) {
             $file = $request->file('image_file');
-
-            // Delete old file
-            if (file_exists(public_path($image->file_path))) {
-                unlink(public_path($image->file_path));
-            }
-
+            $image = $this->patientImageService->getImageForEdit($id);
             $fileName = time() . '_' . $file->getClientOriginalName();
             $filePath = 'patient_images/' . $image->patient_id;
             $file->move(public_path($filePath), $fileName);
 
-            $updateData['file_path'] = $filePath . '/' . $fileName;
-            $updateData['file_name'] = $file->getClientOriginalName();
-            $updateData['file_size'] = $file->getSize();
-            $updateData['mime_type'] = $file->getClientMimeType();
+            $fileInfo = [
+                'file_path' => $filePath . '/' . $fileName,
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getClientMimeType(),
+            ];
         }
 
-        $status = $image->update($updateData);
+        $status = $this->patientImageService->updateImage($id, $request->all(), $fileInfo);
 
         if ($status) {
             return response()->json(['message' => __('patient_images.image_updated_successfully'), 'status' => true]);
@@ -258,14 +224,7 @@ class PatientImageController extends Controller
      */
     public function destroy($id)
     {
-        $image = PatientImage::findOrFail($id);
-
-        // Delete the file
-        if (file_exists(public_path($image->file_path))) {
-            unlink(public_path($image->file_path));
-        }
-
-        $status = $image->delete();
+        $status = $this->patientImageService->deleteImage($id);
 
         if ($status) {
             return response()->json(['message' => __('patient_images.image_deleted_successfully'), 'status' => true]);

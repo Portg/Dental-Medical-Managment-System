@@ -3,42 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
+use App\Services\BudgetLineReportService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
-use Haruncpi\LaravelIdGenerator\IdGenerator;
 use App\Exports\BudgetLineExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class BudgetLineReportController extends Controller
 {
-    protected $budget_line_arry;
+    private BudgetLineReportService $service;
 
-    /**
-     * BudgetLineReportController constructor.
-     */
-    public function __construct()
+    public function __construct(BudgetLineReportService $service)
     {
-        $this->budget_line_arry = [];
+        $this->service = $service;
     }
 
     public function index(Request $request)
     {
-
         if ($request->ajax()) {
             if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
                 FunctionsHelper::storeDateFilter($request);
 
-                $data = DB::table('expense_items')
-                    ->join('expense_categories', 'expense_categories.id', 'expense_items.expense_category_id')
-                    ->join('chart_of_account_items', 'chart_of_account_items.id', 'expense_categories.chart_of_account_item_id')
-                    ->whereNull('expense_items.deleted_at')
-                    ->whereBetween(DB::raw('DATE_FORMAT(expense_items.created_at, \'%Y-%m-%d\')'), array
-                    ($request->start_date, $request->end_date))
-                    ->select('expense_items.*', DB::raw('sum(price*qty) as product_price'),
-                        DB::raw('sum(qty) as total_qty'), 'chart_of_account_items.name as budget_line')
-                    ->groupBy('expense_categories.chart_of_account_item_id')
-                    ->get();
+                $data = $this->service->getBudgetLineData($request->start_date, $request->end_date);
             }
 
             return Datatables::of($data)
@@ -60,27 +46,19 @@ class BudgetLineReportController extends Controller
 
     public function exportBudgetLIneReport(Request $request)
     {
+        $from = $request->session()->get('from');
+        $to = $request->session()->get('to');
+
         $data = collect();
-        if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $data = DB::table('expense_items')
-                ->join('expense_categories', 'expense_categories.id', 'expense_items.expense_category_id')
-                ->join('chart_of_account_items', 'chart_of_account_items.id', 'expense_categories.chart_of_account_item_id')
-                ->whereNull('expense_items.deleted_at')
-                ->whereBetween(DB::raw('DATE_FORMAT(expense_items.created_at, \'%Y-%m-%d\')'), array
-                ($request->session()->get('from'),
-                    $request->session()->get('to')))
-                ->select('expense_items.*', DB::raw('sum(price*qty) as product_price'),
-                    DB::raw('sum(qty) as total_qty'), 'chart_of_account_items.name as budget_line',
-                    'expense_categories.chart_of_account_item_id')
-                ->groupBy('expense_categories.chart_of_account_item_id')
-                ->get();
+        if ($from != '' && $to != '') {
+            $data = $this->service->getExportData($from, $to);
         }
 
-        $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
-            date('d-m-Y', strtotime($request->session()->get('to')));
+        $sheet_title = "From " . date('d-m-Y', strtotime($from)) . " To " .
+            date('d-m-Y', strtotime($to));
 
         return Excel::download(
-            new BudgetLineExport($data, $sheet_title, $request->session()->get('from'), $request->session()->get('to')),
+            new BudgetLineExport($data, $sheet_title, $from, $to),
             'budget-lines-report-' . date('Y-m-d') . '.xlsx'
         );
     }

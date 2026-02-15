@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Helper\FunctionsHelper;
-use App\MedicalService;
+use App\Services\MedicalServiceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class MedicalServiceController extends Controller
 {
+    private MedicalServiceService $medicalServiceService;
+
+    public function __construct(MedicalServiceService $medicalServiceService)
+    {
+        $this->medicalServiceService = $medicalServiceService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -22,16 +26,7 @@ class MedicalServiceController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = DB::table('medical_services')
-                ->leftJoin('users', 'users.id', 'medical_services._who_added')
-                ->whereNull('medical_services.deleted_at')
-                ->select(['medical_services.*', 'users.surname']);
-
-            if ($request->has('search') && $request->search) {
-                $query->where('medical_services.name', 'like', '%' . $request->search . '%');
-            }
-
-            $data = $query->orderBy('medical_services.id', 'desc')->get();
+            $data = $this->medicalServiceService->getServiceList($request->search);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -66,30 +61,16 @@ class MedicalServiceController extends Controller
 
     public function servicesArray(Request $request)
     {
-
-        $result = MedicalService::select('name')->get();
-        $data = [];
-        foreach ($result as $row) {
-            $data[] = $row->name;
-        }
+        $data = $this->medicalServiceService->getAllServiceNames();
         echo json_encode($data);
     }
 
-
     public function filterServices(Request $request)
     {
-        $data = [];
         $name = $request->q;
 
         if ($name) {
-            $search = $name;
-            $data = MedicalService::where('name', 'LIKE', "%$search%")->get();
-
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->name, 'price' => $tag->price];
-            }
-            return \Response::json($formatted_tags);
+            return \Response::json($this->medicalServiceService->filterServices($name));
         }
     }
 
@@ -115,11 +96,8 @@ class MedicalServiceController extends Controller
             'name' => 'required',
             'price' => 'required'
         ])->validate();
-        $status = MedicalService::create([
-            'name' => $request->name,
-            'price' => $request->price,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->medicalServiceService->createService($request->all());
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_added_successfully'), 'status' => true]);
         }
@@ -129,10 +107,10 @@ class MedicalServiceController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\MedicalService $medicalService
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(MedicalService $medicalService)
+    public function show($id)
     {
         //
     }
@@ -140,13 +118,12 @@ class MedicalServiceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\MedicalService $medicalService
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $service = MedicalService::where('id', $id)->first();
-        return response()->json($service);
+        return response()->json($this->medicalServiceService->getServiceForEdit($id));
     }
 
     /**
@@ -162,33 +139,26 @@ class MedicalServiceController extends Controller
             'name' => 'required',
             'price' => 'required'
         ])->validate();
-        $status = MedicalService::where('id', $id)->update([
-            'name' => $request->name,
-            'price' => $request->price,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->medicalServiceService->updateService($id, $request->all());
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\MedicalService $medicalService
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-
-        $status = MedicalService::where('id', $id)->delete();
+        $status = $this->medicalServiceService->deleteService($id);
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
-
 }

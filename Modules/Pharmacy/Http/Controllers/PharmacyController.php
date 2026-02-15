@@ -2,12 +2,20 @@
 
 namespace Modules\Pharmacy\Http\Controllers;
 
+use App\Services\PharmacyDashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 class PharmacyController extends Controller
 {
+    private PharmacyDashboardService $service;
+
+    public function __construct(PharmacyDashboardService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response

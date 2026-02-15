@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\PatientFollowup;
-use App\Patient;
-use App\MedicalCase;
+use App\Services\PatientFollowupService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class PatientFollowupController extends Controller
 {
+    private PatientFollowupService $followupService;
+
+    public function __construct(PatientFollowupService $followupService)
+    {
+        $this->followupService = $followupService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,19 +26,7 @@ class PatientFollowupController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = DB::table('patient_followups')
-                ->leftJoin('patients', 'patients.id', 'patient_followups.patient_id')
-                ->leftJoin('users as added_by', 'added_by.id', 'patient_followups._who_added')
-                ->whereNull('patient_followups.deleted_at')
-                ->orderBy('patient_followups.scheduled_date', 'desc')
-                ->select(
-                    'patient_followups.*',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
-                    'patients.patient_no',
-                    'patients.phone_no',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
-                )
-                ->get();
+            $data = $this->followupService->getAllFollowups();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -75,7 +66,7 @@ class PatientFollowupController extends Controller
                 ->make(true);
         }
 
-        $patients = Patient::whereNull('deleted_at')->orderBy('surname')->get();
+        $patients = $this->followupService->getAllPatients();
         return view('patient_followups.index', compact('patients'));
     }
 
@@ -90,16 +81,7 @@ class PatientFollowupController extends Controller
     public function patientFollowups(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = DB::table('patient_followups')
-                ->leftJoin('users as added_by', 'added_by.id', 'patient_followups._who_added')
-                ->whereNull('patient_followups.deleted_at')
-                ->where('patient_followups.patient_id', $patient_id)
-                ->orderBy('patient_followups.scheduled_date', 'desc')
-                ->select(
-                    'patient_followups.*',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
-                )
-                ->get();
+            $data = $this->followupService->getPatientFollowups($patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -148,21 +130,7 @@ class PatientFollowupController extends Controller
     public function pendingFollowups(Request $request)
     {
         $days = $request->get('days', 7);
-
-        $data = DB::table('patient_followups')
-            ->leftJoin('patients', 'patients.id', 'patient_followups.patient_id')
-            ->whereNull('patient_followups.deleted_at')
-            ->where('patient_followups.status', 'Pending')
-            ->whereBetween('patient_followups.scheduled_date', [now()->toDateString(), now()->addDays($days)->toDateString()])
-            ->orderBy('patient_followups.scheduled_date', 'asc')
-            ->select(
-                'patient_followups.*',
-                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
-                'patients.phone_no'
-            )
-            ->get();
-
-        return response()->json($data);
+        return response()->json($this->followupService->getPendingFollowups($days));
     }
 
     /**
@@ -172,20 +140,7 @@ class PatientFollowupController extends Controller
      */
     public function overdueFollowups()
     {
-        $data = DB::table('patient_followups')
-            ->leftJoin('patients', 'patients.id', 'patient_followups.patient_id')
-            ->whereNull('patient_followups.deleted_at')
-            ->where('patient_followups.status', 'Pending')
-            ->where('patient_followups.scheduled_date', '<', now()->toDateString())
-            ->orderBy('patient_followups.scheduled_date', 'asc')
-            ->select(
-                'patient_followups.*',
-                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
-                'patients.phone_no'
-            )
-            ->get();
-
-        return response()->json($data);
+        return response()->json($this->followupService->getOverdueFollowups());
     }
 
     /**
@@ -208,19 +163,7 @@ class PatientFollowupController extends Controller
             'purpose.required' => __('validation.custom.purpose.required'),
         ])->validate();
 
-        $status = PatientFollowup::create([
-            'followup_no' => PatientFollowup::generateFollowupNo(),
-            'followup_type' => $request->followup_type,
-            'scheduled_date' => $request->scheduled_date,
-            'status' => 'Pending',
-            'purpose' => $request->purpose,
-            'notes' => $request->notes,
-            'next_followup_date' => $request->next_followup_date,
-            'patient_id' => $request->patient_id,
-            'appointment_id' => $request->appointment_id,
-            'medical_case_id' => $request->medical_case_id,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->followupService->createFollowup($request->all());
 
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_created_successfully'), 'status' => true]);
@@ -236,8 +179,7 @@ class PatientFollowupController extends Controller
      */
     public function show($id)
     {
-        $followup = PatientFollowup::with(['patient', 'addedBy'])->findOrFail($id);
-        return response()->json($followup);
+        return response()->json($this->followupService->getFollowupDetail($id));
     }
 
     /**
@@ -248,8 +190,7 @@ class PatientFollowupController extends Controller
      */
     public function edit($id)
     {
-        $followup = PatientFollowup::where('id', $id)->first();
-        return response()->json($followup);
+        return response()->json($this->followupService->getFollowupForEdit($id));
     }
 
     /**
@@ -273,21 +214,7 @@ class PatientFollowupController extends Controller
             'status.required' => __('validation.custom.status.required'),
         ])->validate();
 
-        $updateData = [
-            'followup_type' => $request->followup_type,
-            'scheduled_date' => $request->scheduled_date,
-            'status' => $request->status,
-            'purpose' => $request->purpose,
-            'notes' => $request->notes,
-            'outcome' => $request->outcome,
-            'next_followup_date' => $request->next_followup_date,
-        ];
-
-        if ($request->status == 'Completed') {
-            $updateData['completed_date'] = now();
-        }
-
-        $status = PatientFollowup::where('id', $id)->update($updateData);
+        $status = $this->followupService->updateFollowup($id, $request->all());
 
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_updated_successfully'), 'status' => true]);
@@ -304,11 +231,7 @@ class PatientFollowupController extends Controller
      */
     public function complete(Request $request, $id)
     {
-        $status = PatientFollowup::where('id', $id)->update([
-            'status' => 'Completed',
-            'completed_date' => now(),
-            'outcome' => $request->outcome,
-        ]);
+        $status = $this->followupService->completeFollowup($id, $request->outcome);
 
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_completed_successfully'), 'status' => true]);
@@ -324,7 +247,7 @@ class PatientFollowupController extends Controller
      */
     public function destroy($id)
     {
-        $status = PatientFollowup::where('id', $id)->delete();
+        $status = $this->followupService->deleteFollowup($id);
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_deleted_successfully'), 'status' => true]);
         }

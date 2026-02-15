@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Branch;
-use App\InventoryBatch;
-use App\InventoryItem;
-use App\StockIn;
-use App\Supplier;
+use App\Services\StockInService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class StockInController extends Controller
 {
+    private StockInService $service;
+
+    public function __construct(StockInService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -25,21 +26,7 @@ class StockInController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = StockIn::with(['supplier', 'addedBy'])
-                ->orderBy('stock_in_date', 'DESC')
-                ->orderBy('id', 'DESC');
-
-            // Filter by status
-            if ($request->status) {
-                $query->where('status', $request->status);
-            }
-
-            // Filter by date range
-            if ($request->start_date && $request->end_date) {
-                $query->whereBetween('stock_in_date', [$request->start_date, $request->end_date]);
-            }
-
-            $data = $query->get();
+            $data = $this->service->getStockInList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -79,7 +66,7 @@ class StockInController extends Controller
                 ->make(true);
         }
 
-        $data['suppliers'] = Supplier::orderBy('name')->get();
+        $data['suppliers'] = $this->service->getSuppliers();
         return view('inventory.stock_ins.index')->with($data);
     }
 
@@ -90,9 +77,7 @@ class StockInController extends Controller
      */
     public function create()
     {
-        $data['suppliers'] = Supplier::orderBy('name')->get();
-        $data['branches'] = Branch::orderBy('name')->get();
-        $data['stock_in_no'] = StockIn::generateStockInNo();
+        $data = $this->service->getCreateFormData();
         return view('inventory.stock_ins.create')->with($data);
     }
 
@@ -110,15 +95,7 @@ class StockInController extends Controller
             'stock_in_date.required' => __('inventory.stock_in_date_required'),
         ])->validate();
 
-        $stockIn = StockIn::create([
-            'stock_in_no' => StockIn::generateStockInNo(),
-            'supplier_id' => $request->supplier_id,
-            'stock_in_date' => $request->stock_in_date,
-            'notes' => $request->notes,
-            'branch_id' => $request->branch_id,
-            'status' => 'draft',
-            '_who_added' => Auth::User()->id
-        ]);
+        $stockIn = $this->service->createStockIn($request->all());
 
         if ($stockIn) {
             return response()->json([
@@ -138,7 +115,7 @@ class StockInController extends Controller
      */
     public function show($id)
     {
-        $data['stockIn'] = StockIn::with(['supplier', 'items.inventoryItem', 'addedBy'])->find($id);
+        $data['stockIn'] = $this->service->getStockInDetail($id);
         if (!$data['stockIn']) {
             abort(404);
         }
@@ -153,12 +130,10 @@ class StockInController extends Controller
      */
     public function edit($id)
     {
-        $data['stockIn'] = StockIn::with(['supplier', 'items.inventoryItem'])->find($id);
-        if (!$data['stockIn'] || !$data['stockIn']->isDraft()) {
+        $data = $this->service->getStockInForEdit($id);
+        if (!$data) {
             abort(404);
         }
-        $data['suppliers'] = Supplier::orderBy('name')->get();
-        $data['branches'] = Branch::orderBy('name')->get();
         return view('inventory.stock_ins.create')->with($data);
     }
 
@@ -171,26 +146,12 @@ class StockInController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $stockIn = StockIn::find($id);
-        if (!$stockIn || !$stockIn->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_edit_confirmed'), 'status' => false]);
-        }
-
         Validator::make($request->all(), [
             'stock_in_date' => 'required|date',
         ])->validate();
 
-        $status = $stockIn->update([
-            'supplier_id' => $request->supplier_id,
-            'stock_in_date' => $request->stock_in_date,
-            'notes' => $request->notes,
-            'branch_id' => $request->branch_id,
-        ]);
-
-        if ($status) {
-            return response()->json(['message' => __('inventory.stock_in_updated_successfully'), 'status' => true]);
-        }
-        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
+        $result = $this->service->updateStockIn($id, $request->all());
+        return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 
     /**
@@ -201,16 +162,8 @@ class StockInController extends Controller
      */
     public function destroy($id)
     {
-        $stockIn = StockIn::find($id);
-        if (!$stockIn || !$stockIn->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_delete_confirmed'), 'status' => false]);
-        }
-
-        $status = $stockIn->delete();
-        if ($status) {
-            return response()->json(['message' => __('inventory.stock_in_deleted_successfully'), 'status' => true]);
-        }
-        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
+        $result = $this->service->deleteStockIn($id);
+        return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 
     /**
@@ -221,55 +174,8 @@ class StockInController extends Controller
      */
     public function confirm($id)
     {
-        $stockIn = StockIn::with('items.inventoryItem')->find($id);
-        if (!$stockIn || !$stockIn->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_confirm'), 'status' => false]);
-        }
-
-        if ($stockIn->items()->count() == 0) {
-            return response()->json(['message' => __('inventory.no_items_to_confirm'), 'status' => false]);
-        }
-
-        DB::beginTransaction();
-        try {
-            foreach ($stockIn->items as $item) {
-                $inventoryItem = $item->inventoryItem;
-                $oldStock = $inventoryItem->current_stock;
-                $oldCost = $inventoryItem->average_cost;
-                $newStock = $oldStock + $item->qty;
-
-                // Calculate weighted average cost
-                $newCost = $oldStock == 0
-                    ? $item->unit_price
-                    : (($oldStock * $oldCost) + ($item->qty * $item->unit_price)) / $newStock;
-
-                $inventoryItem->update([
-                    'current_stock' => $newStock,
-                    'average_cost' => $newCost
-                ]);
-
-                // Create batch record
-                InventoryBatch::create([
-                    'inventory_item_id' => $item->inventory_item_id,
-                    'batch_no' => $item->batch_no ?? ('B' . date('YmdHis') . $item->id),
-                    'expiry_date' => $item->expiry_date,
-                    'production_date' => $item->production_date,
-                    'qty' => $item->qty,
-                    'unit_cost' => $item->unit_price,
-                    'stock_in_id' => $stockIn->id,
-                    'status' => 'available',
-                    '_who_added' => Auth::User()->id
-                ]);
-            }
-
-            $stockIn->update(['status' => 'confirmed']);
-
-            DB::commit();
-            return response()->json(['message' => __('inventory.stock_in_confirmed'), 'status' => true]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-        }
+        $result = $this->service->confirmStockIn($id);
+        return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 
     /**
@@ -280,15 +186,7 @@ class StockInController extends Controller
      */
     public function cancel($id)
     {
-        $stockIn = StockIn::find($id);
-        if (!$stockIn || !$stockIn->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_cancel'), 'status' => false]);
-        }
-
-        $status = $stockIn->update(['status' => 'cancelled']);
-        if ($status) {
-            return response()->json(['message' => __('inventory.stock_in_cancelled'), 'status' => true]);
-        }
-        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
+        $result = $this->service->cancelStockIn($id);
+        return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 }

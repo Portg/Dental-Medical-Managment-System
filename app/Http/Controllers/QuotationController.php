@@ -5,10 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
 use App\Jobs\ShareEmailQuotation;
-use App\MedicalService;
-use App\Quotation;
-use PDF;
 use App\QuotationItem;
+use App\Services\QuotationService;
+use PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +16,13 @@ use Yajra\DataTables\DataTables;
 
 class QuotationController extends Controller
 {
+    private QuotationService $quotationService;
+
+    public function __construct(QuotationService $quotationService)
+    {
+        $this->quotationService = $quotationService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -27,49 +33,11 @@ class QuotationController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
-
-            if (!empty($_GET['search'])) {
-                $data = DB::table('quotations')
-                    ->join('patients', 'patients.id', 'quotations.patient_id')
-                    ->join('users', 'users.id', 'quotations._who_added')
-                    ->whereNull("quotations.deleted_at")
-                    ->where(function($q) use ($request) {
-                        NameHelper::addNameSearch($q, $request->get('search'), 'patients');
-                    })
-                    ->select('quotations.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy')
-                    ->OrderBy('quotations.id', 'desc')
-                    ->get();
-            } else if (!empty($_GET['quotation_no'])) {
-                $data = DB::table('quotations')
-                    ->join('patients', 'patients.id', 'quotations.patient_id')
-                    ->join('users', 'users.id', 'quotations._who_added')
-                    ->whereNull("quotations.deleted_at")
-                    ->where('quotations.quotation_no', '=', $request->quotation_no)
-                    ->select('quotations.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy')
-                    ->OrderBy('quotations.id', 'desc')
-                    ->get();
-            } else if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
-
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
-                $data = DB::table('quotations')
-                    ->join('patients', 'patients.id', 'quotations.patient_id')
-                    ->join('users', 'users.id', 'quotations._who_added')
-                    ->whereNull("quotations.deleted_at")
-                    ->whereBetween(DB::raw('DATE_FORMAT(quotations.updated_at, \'%Y-%m-%d\')'), array($request->start_date,
-                        $request->end_date))
-                    ->select('quotations.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy')
-                    ->OrderBy('quotations.id', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('quotations')
-                    ->join('patients', 'patients.id', 'quotations.patient_id')
-                    ->join('users', 'users.id', 'quotations._who_added')
-                    ->whereNull("quotations.deleted_at")
-                    ->select('quotations.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy')
-                    ->OrderBy('quotations.id', 'desc')
-                    ->get();
             }
+
+            $data = $this->quotationService->getQuotationList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -79,7 +47,7 @@ class QuotationController extends Controller
                     return '<a href="' . url('quotations/' . $row->id) . '">' . $row->quotation_no . '</a>';
                 })
                 ->addColumn('customer', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('amount', function ($row) {
                     return number_format(QuotationItem::where('quotation_id', $row->id)->sum(DB::raw('qty*price')));
@@ -136,29 +104,17 @@ class QuotationController extends Controller
             'patient_id.required' => __('validation.custom.patient_id.required')
         ])->validate();
 
-        $quotation_ = Quotation::create([
-                'quotation_no' => Quotation::QuotationNo(),
-                'patient_id' => $request->patient_id,
-                '_who_added' => Auth::User()->id
-            ]
+        $quotation = $this->quotationService->createQuotation(
+            $request->patient_id,
+            $request->addmore,
+            Auth::User()->id
         );
-        if ($quotation_) {
-            foreach ($request->addmore as $key => $value) {
-                //get service id
-                QuotationItem::create([
-                    'qty' => $value['qty'],
-                    'price' => $value['price'],
-                    'quotation_id' => $quotation_->id,
-                    'medical_service_id' => $value['medical_service_id'],
-                    'tooth_no' => $value['tooth_no'],
-                    '_who_added' => Auth::User()->id,
-                ]);
-            }
+
+        if ($quotation) {
             return response()->json(['message' => __('invoices.quotation_created_successfully'), 'status' => true]);
         }
 
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
 
@@ -170,13 +126,7 @@ class QuotationController extends Controller
      */
     public function show($quotation)
     {
-        $data['patient'] = DB::table('quotations')
-            ->join('patients', 'patients.id', 'quotations.patient_id')
-            ->where('quotations.id', $quotation)
-            ->select('patients.*')
-            ->first();
-        $data['quotation_id'] = $quotation;
-        $data['quotation'] = Quotation::where('id', $quotation)->first();
+        $data = $this->quotationService->getQuotationShowData($quotation);
         return view('quotations.show.index')->with($data);
     }
 
@@ -187,37 +137,15 @@ class QuotationController extends Controller
      */
     public function printQuotation($quotation_id)
     {
-        $data['patient'] = DB::table('quotations')
-            ->leftJoin('patients', 'patients.id', 'quotations.patient_id')
-            ->where('quotations.id', $quotation_id)
-            ->select('patients.*')
-            ->first();
-        $data['quotation'] = Quotation::where('id', $quotation_id)->first();
-        $data['quotation_items'] = DB::table('quotation_items')
-            ->join('medical_services', 'medical_services.id', 'quotation_items.medical_service_id')
-            ->join('users', 'users.id', 'quotation_items._who_added')
-            ->whereNull('quotation_items.deleted_at')
-            ->where('quotation_items.quotation_id', $quotation_id)
-            ->select('quotation_items.*', 'medical_services.name', 'users.othername')
-            ->OrderBy('quotation_items.updated_at', 'desc')
-            ->get();
+        $data = $this->quotationService->getQuotationPrintData($quotation_id);
 
         $pdf = PDF::loadView('quotations.print_quotation', $data);
         return $pdf->stream('receipt', array("attachment" => false))->header('Content-Type', 'application/pdf');
-
     }
 
     public function quotationShareDetails(Request $request, $quotation_id)
     {
-        $quotations = DB::table('quotations')
-            ->join('patients', 'patients.id', 'quotations.patient_id')
-            ->join('users', 'users.id', 'quotations._who_added')
-            ->whereNull("quotations.deleted_at")
-            ->where('quotations.id', '=', $quotation_id)
-            ->select('quotations.*', 'patients.surname', 'patients.othername', 'patients.email', 'users.othername as addedBy')
-            ->OrderBy('quotations.id', 'desc')
-            ->first();
-        return response()->json($quotations);
+        return response()->json($this->quotationService->getShareDetails($quotation_id));
     }
 
     public function sendQuotation(Request $request)
@@ -226,20 +154,8 @@ class QuotationController extends Controller
             'quotation_id' => 'required',
             'email' => 'required'
         ])->validate();
-        $data['patient'] = DB::table('quotations')
-            ->leftJoin('patients', 'patients.id', 'quotations.patient_id')
-            ->where('quotations.id', $request->quotation_id)
-            ->select('patients.*')
-            ->first();
-        $data['quotation'] = Quotation::where('id', $request->quotation_id)->first();
-        $data['quotation_items'] = DB::table('quotation_items')
-            ->join('medical_services', 'medical_services.id', 'quotation_items.medical_service_id')
-            ->join('users', 'users.id', 'quotation_items._who_added')
-            ->whereNull('quotation_items.deleted_at')
-            ->where('quotation_items.quotation_id', $request->quotation_id)
-            ->select('quotation_items.*', 'medical_services.name', 'users.othername')
-            ->OrderBy('quotation_items.updated_at', 'desc')
-            ->get();
+
+        $data = $this->quotationService->getQuotationPrintData($request->quotation_id);
 
         dispatch(new ShareEmailQuotation($data, $request->email, $request->message));
         return response()->json(['message' => __('emails.quotation_sent_successfully'), 'status' => true]);
@@ -252,7 +168,7 @@ class QuotationController extends Controller
      * @param \App\Quotation $quotation
      * @return \Illuminate\Http\Response
      */
-    public function edit(Quotation $quotation)
+    public function edit($quotation)
     {
         //
     }
@@ -264,7 +180,7 @@ class QuotationController extends Controller
      * @param \App\Quotation $quotation
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Quotation $quotation)
+    public function update(Request $request, $quotation)
     {
         //
     }
@@ -275,7 +191,7 @@ class QuotationController extends Controller
      * @param \App\Quotation $quotation
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Quotation $quotation)
+    public function destroy($quotation)
     {
         //
     }

@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\ClaimRate;
-use App\DoctorClaim;
-use App\DoctorClaimPayment;
+use App\Http\Helper\NameHelper;
+use App\Services\DoctorClaimService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class DoctorClaimController extends Controller
 {
+    private DoctorClaimService $service;
+
+    public function __construct(DoctorClaimService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -24,14 +28,7 @@ class DoctorClaimController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = DB::table('doctor_claims')
-                ->join('appointments', 'appointments.id', 'doctor_claims.appointment_id')
-                ->join('patients', 'patients.id', 'appointments.patient_id')
-                ->join('users', 'users.id', 'doctor_claims._who_added')
-                ->whereNull('doctor_claims.deleted_at')
-                ->select('doctor_claims.*', 'patients.surname', 'patients.othername', 'users.othername as doctor')
-                ->orderBy('doctor_claims.updated_at', 'desc')
-                ->get();
+            $data = $this->service->getClaimsList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -41,7 +38,7 @@ class DoctorClaimController extends Controller
                     return date('d/m/Y', strtotime($row->created_at));
                 })
                 ->addColumn('patient', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('claim_amount', function ($row) {
                     return number_format($row->claim_amount);
@@ -53,15 +50,11 @@ class DoctorClaimController extends Controller
                     return number_format($row->cash_amount);
                 })
                 ->addColumn('total_claim_amount', function ($row) {
-                    return '<span class="text-primary">' . number_format($this->getTotalClaims($row)) . '</span>';
+                    return '<span class="text-primary">' . number_format($this->service->getTotalClaims($row)) . '</span>';
                 })
                 ->addColumn('payment_balance', function ($row) {
-                    //get total claims amount
-                    $claims_amount = $this->getTotalClaims($row);
-
-                    //get the amount paid
-                    $paid_amount = DoctorClaimPayment::where('doctor_claim_id', $row->id)->sum('amount');
-                    $remaining_balance = $claims_amount - $paid_amount;
+                    $claims_amount = $this->service->getTotalClaims($row);
+                    $remaining_balance = $this->service->getPaymentBalance($row->id, $claims_amount);
                     $action_balance = '';
                     if ($remaining_balance > 0) {
                         $action_balance = "<br>(<a href=\"#\" class=\"text-danger\" onclick=\"record_payment('" . $row->id . "','" . $remaining_balance . "')\">" . __('doctor_claims.make_payment') . "</a>)";
@@ -86,7 +79,7 @@ class DoctorClaimController extends Controller
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> ' . __('common.action') . ' 
+                                aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
@@ -107,34 +100,6 @@ class DoctorClaimController extends Controller
         }
         return view('doctor_claims.index');
     }
-
-    private function getTotalClaims($row)
-    {
-        //calculate claims amount
-        $claim_rate = ClaimRate::where(['doctor_id' => Auth::User()->id, 'status' => 'active'])->first();
-        //insurance claim
-        $insurance = $this->insurance_claim($row->insurance_amount, $row->_who_added);
-        //cash claim
-        $cash = $this->cash_claim($row->cash_amount, $row->_who_added);
-        // over all total amount
-        return $insurance + $cash;
-    }
-
-
-    private function insurance_claim($insurance_amount, $doctor_id)
-    {
-        $claim_rate = ClaimRate::where(['doctor_id' => $doctor_id, 'status' => 'active'])->first();
-        return $claim_rate->insurance_rate / 100 * $insurance_amount;
-
-    }
-
-
-    private function cash_claim($cash_amount, $doctor_id)
-    {
-        $claim_rate = ClaimRate::where(['doctor_id' => $doctor_id, 'status' => 'active'])->first();
-        return $claim_rate->cash_rate / 100 * $cash_amount;
-    }
-
 
     /**
      * Show the form for creating a new resource.
@@ -158,12 +123,9 @@ class DoctorClaimController extends Controller
             'insurance_amount' => 'required',
             'cash_amount' => 'required'
         ])->validate();
-        $status = DoctorClaim::where('id', $request->id)->update([
-            'insurance_amount' => $request->insurance_amount,
-            'cash_amount' => $request->cash_amount,
-            'status' => 'Approved',
-            'approved_by' => Auth::User()->id
-        ]);
+
+        $status = $this->service->approveClaim($request->id, $request->insurance_amount, $request->cash_amount);
+
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_approved_successfully'), 'status' => true]);
         }
@@ -173,10 +135,10 @@ class DoctorClaimController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\DoctorClaim $doctorClaim
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(DoctorClaim $doctorClaim)
+    public function show($id)
     {
         //
     }
@@ -189,7 +151,7 @@ class DoctorClaimController extends Controller
      */
     public function edit($id)
     {
-        $claim = DoctorClaim::where('id', $id)->first();
+        $claim = $this->service->getClaim($id);
         return response()->json($claim);
     }
 
@@ -206,28 +168,24 @@ class DoctorClaimController extends Controller
             'insurance_amount' => 'required',
             'cash_amount' => 'required'
         ])->validate();
-        $status = DoctorClaim::where('id', $id)->update([
-            'insurance_amount' => $request->insurance_amount,
-            'cash_amount' => $request->cash_amount,
-            'status' => 'Approved',
-            'approved_by' => Auth::User()->id
-        ]);
+
+        $status = $this->service->updateClaim($id, $request->insurance_amount, $request->cash_amount);
+
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\DoctorClaim $doctorClaim
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = DoctorClaim::where('id', $id)->delete();
+        $status = $this->service->deleteClaim($id);
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_deleted_successfully'), 'status' => true]);
         }

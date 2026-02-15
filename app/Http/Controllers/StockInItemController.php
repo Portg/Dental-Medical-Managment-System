@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\InventoryItem;
-use App\StockIn;
-use App\StockInItem;
+use App\Services\StockInItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class StockInItemController extends Controller
 {
+    private StockInItemService $service;
+
+    public function __construct(StockInItemService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of items for a stock in.
      *
@@ -21,10 +25,7 @@ class StockInItemController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax() && $request->stock_in_id) {
-            $data = StockInItem::with('inventoryItem')
-                ->where('stock_in_id', $request->stock_in_id)
-                ->orderBy('id')
-                ->get();
+            $data = $this->service->getItemsByStockIn($request->stock_in_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -70,9 +71,9 @@ class StockInItemController extends Controller
     public function store(Request $request)
     {
         // Verify stock in is draft
-        $stockIn = StockIn::find($request->stock_in_id);
-        if (!$stockIn || !$stockIn->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_edit_confirmed'), 'status' => false]);
+        $draftError = $this->service->verifyDraftStatus($request->stock_in_id);
+        if ($draftError) {
+            return response()->json($draftError);
         }
 
         Validator::make($request->all(), [
@@ -88,46 +89,28 @@ class StockInItemController extends Controller
         ])->validate();
 
         // Check if item requires expiry tracking
-        $inventoryItem = InventoryItem::find($request->inventory_item_id);
-        if ($inventoryItem && $inventoryItem->track_expiry) {
-            if (empty($request->batch_no) || empty($request->expiry_date)) {
-                return response()->json([
-                    'message' => __('inventory.batch_expiry_required'),
-                    'status' => false
-                ]);
-            }
+        $expiryError = $this->service->checkExpiryRequirement(
+            $request->inventory_item_id, $request->batch_no, $request->expiry_date
+        );
+        if ($expiryError) {
+            return response()->json($expiryError);
         }
 
         // Check price deviation (BR-043)
-        if ($inventoryItem && $inventoryItem->reference_price > 0) {
-            $deviation = abs($request->unit_price - $inventoryItem->reference_price) / $inventoryItem->reference_price;
-            if ($deviation > 0.2 && !$request->confirm_deviation) {
-                return response()->json([
-                    'message' => __('inventory.price_deviation_warning'),
-                    'requires_confirmation' => true,
-                    'deviation_percent' => round($deviation * 100, 1),
-                    'status' => 'warning'
-                ]);
-            }
+        $deviationWarning = $this->service->checkPriceDeviation(
+            $request->inventory_item_id, $request->unit_price, (bool) $request->confirm_deviation
+        );
+        if ($deviationWarning) {
+            return response()->json($deviationWarning);
         }
 
-        $item = StockInItem::create([
-            'stock_in_id' => $request->stock_in_id,
-            'inventory_item_id' => $request->inventory_item_id,
-            'qty' => $request->qty,
-            'unit_price' => $request->unit_price,
-            'amount' => $request->qty * $request->unit_price,
-            'batch_no' => $request->batch_no,
-            'expiry_date' => $request->expiry_date,
-            'production_date' => $request->production_date,
-            '_who_added' => Auth::User()->id
-        ]);
+        $item = $this->service->createItem($request->all());
 
         if ($item) {
             return response()->json([
                 'message' => __('inventory.item_added_successfully'),
                 'status' => true,
-                'item' => $item
+                'item' => $item,
             ]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
@@ -141,7 +124,7 @@ class StockInItemController extends Controller
      */
     public function edit($id)
     {
-        $item = StockInItem::with('inventoryItem')->find($id);
+        $item = $this->service->find($id);
         return response()->json($item);
     }
 
@@ -154,15 +137,15 @@ class StockInItemController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $item = StockInItem::find($id);
+        $item = $this->service->findBasic($id);
         if (!$item) {
             return response()->json(['message' => __('common.not_found'), 'status' => false]);
         }
 
         // Verify stock in is draft
-        $stockIn = $item->stockIn;
-        if (!$stockIn || !$stockIn->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_edit_confirmed'), 'status' => false]);
+        $draftError = $this->service->verifyItemDraftStatus($item);
+        if ($draftError) {
+            return response()->json($draftError);
         }
 
         Validator::make($request->all(), [
@@ -171,24 +154,12 @@ class StockInItemController extends Controller
         ])->validate();
 
         // Check if item requires expiry tracking
-        $inventoryItem = $item->inventoryItem;
-        if ($inventoryItem && $inventoryItem->track_expiry) {
-            if (empty($request->batch_no) || empty($request->expiry_date)) {
-                return response()->json([
-                    'message' => __('inventory.batch_expiry_required'),
-                    'status' => false
-                ]);
-            }
+        $expiryError = $this->service->checkItemExpiryRequirement($item, $request->batch_no, $request->expiry_date);
+        if ($expiryError) {
+            return response()->json($expiryError);
         }
 
-        $status = $item->update([
-            'qty' => $request->qty,
-            'unit_price' => $request->unit_price,
-            'amount' => $request->qty * $request->unit_price,
-            'batch_no' => $request->batch_no,
-            'expiry_date' => $request->expiry_date,
-            'production_date' => $request->production_date,
-        ]);
+        $status = $this->service->updateItem($item, $request->all());
 
         if ($status) {
             return response()->json(['message' => __('inventory.item_updated_successfully'), 'status' => true]);
@@ -204,18 +175,18 @@ class StockInItemController extends Controller
      */
     public function destroy($id)
     {
-        $item = StockInItem::find($id);
+        $item = $this->service->findBasic($id);
         if (!$item) {
             return response()->json(['message' => __('common.not_found'), 'status' => false]);
         }
 
         // Verify stock in is draft
-        $stockIn = $item->stockIn;
-        if (!$stockIn || !$stockIn->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_edit_confirmed'), 'status' => false]);
+        $draftError = $this->service->verifyItemDraftStatus($item);
+        if ($draftError) {
+            return response()->json($draftError);
         }
 
-        $status = $item->delete();
+        $status = $this->service->deleteItem($item);
         if ($status) {
             return response()->json(['message' => __('inventory.item_deleted_successfully'), 'status' => true]);
         }

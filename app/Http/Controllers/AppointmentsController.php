@@ -2,119 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\Appointment;
-use App\AppointmentHistory;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
 use App\Invoice;
-use App\Jobs\SendAppointmentSms;
-use App\Notifications\ReminderNotification;
-use App\Patient;
-use Carbon\Carbon;
-use DateTime;
+use App\Services\AppointmentService;
 use App\Exports\AppointmentExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Thomasjohnkane\Snooze\ScheduledNotification;
 use Yajra\DataTables\DataTables;
 
 class AppointmentsController extends Controller
 {
-    protected $dateTime;
-    protected $app_time;
+    private AppointmentService $appointmentService;
 
-    /**
-     * AppointmentsController constructor.
-     */
-    public function __construct()
+    public function __construct(AppointmentService $appointmentService)
     {
-        $this->dateTime = new DateTime('now');
+        $this->appointmentService = $appointmentService;
     }
-    /**
-     * AppointmentsController constructor.
-     */
-
-    /**
-     * Display a listing of the resource.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\Response
-     * @throws \Exception
-     */
-
 
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            // Build query with query builder approach for flexible filtering
-            $query = DB::table('appointments')
-                ->join('patients', 'patients.id', 'appointments.patient_id')
-                ->join('users', 'users.id', 'appointments.doctor_id')
-                ->leftJoin('invoices', 'invoices.appointment_id', 'appointments.id')
-                ->whereNull('appointments.deleted_at')
-                ->select(
-                    'appointments.*',
-                    'patients.surname',
-                    'patients.othername',
-                    'patients.phone_no',
-                    'users.surname as d_surname',
-                    'users.othername as d_othername',
-                    DB::raw('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as start_date'),
-                    DB::raw('CASE WHEN invoices.id IS NOT NULL THEN "invoiced" ELSE "pending" END as has_invoice_status')
-                );
-
-            // Quick search filter (searches patient name, phone, appointment_no)
-            if (!empty($request->get('quick_search'))) {
-                $search = $request->get('quick_search');
-                $query->where(function($q) use ($search) {
-                    NameHelper::addNameSearch($q, $search, 'patients');
-                    $q->orWhere('patients.phone_no', 'like', '%' . $search . '%')
-                      ->orWhere('appointments.appointment_no', 'like', '%' . $search . '%');
-                });
-            }
-
-            // Appointment No filter
-            if (!empty($request->get('appointment_no'))) {
-                $query->where('appointments.appointment_no', '=', $request->appointment_no);
-            }
-
-            // Date range filter
             if (!empty($request->get('start_date')) && !empty($request->get('end_date'))) {
                 FunctionsHelper::storeDateFilter($request);
-                $query->whereBetween(DB::raw('DATE_FORMAT(appointments.sort_by, \'%Y-%m-%d\')'),
-                    array($request->start_date, $request->end_date));
             }
 
-            // Doctor filter
-            if (!empty($request->get('filter_doctor'))) {
-                $query->where('appointments.doctor_id', $request->filter_doctor);
-            }
-
-            // Invoice status filter
-            if (!empty($request->get('filter_invoice_status'))) {
-                if ($request->filter_invoice_status == 'invoiced') {
-                    $query->whereNotNull('invoices.id');
-                } else if ($request->filter_invoice_status == 'pending') {
-                    $query->whereNull('invoices.id');
-                }
-            }
-
-            // DataTables default search
-            if (!empty($request->get('search'))) {
-                $search = $request->get('search');
-                if (is_array($search) && !empty($search['value'])) {
-                    $searchValue = $search['value'];
-                    $query->where(function($q) use ($searchValue) {
-                        NameHelper::addNameSearch($q, $searchValue, 'patients');
-                    });
-                }
-            }
-
-            $data = $query->orderBy('appointments.sort_by', 'desc')->get();
+            $data = $this->appointmentService->getAppointmentList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -129,10 +45,10 @@ class AppointmentsController extends Controller
                     return $translated !== $key ? $translated : $row->status;
                 })
                 ->addColumn('patient', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('doctor', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->d_surname, $row->d_othername);
+                    return NameHelper::join($row->d_surname, $row->d_othername);
                 })
                 ->addColumn('visit_information', function ($row) {
                     $action = '';
@@ -143,34 +59,25 @@ class AppointmentsController extends Controller
                     return $row->visit_information . "" . $action;
                 })
                 ->addColumn('invoice_status', function ($row) {
-                    $invoice_status = '';
                     $has_invoice = Invoice::where('appointment_id', $row->id)->first();
                     if ($has_invoice == null) {
-                        $invoice_status = '<span class="text-danger">' . __('messages.no_invoice_yet') . '</span>';
-                    } else {
-                        $invoice_status = '<span class="text-primary">' . __('messages.invoice_already_generated') . '</span>';
+                        return '<span class="text-danger">' . __('messages.no_invoice_yet') . '</span>';
                     }
-                    return $invoice_status;
+                    return '<span class="text-primary">' . __('messages.invoice_already_generated') . '</span>';
                 })
                 ->addColumn('action', function ($row) {
-                    $invoice_action = '';
-                    //check if the appointment has gotten any invoice
-
                     $has_invoice = Invoice::where('appointment_id', $row->id)->first();
-                    if ($has_invoice == null) {
-                        $invoice_action = '<a href="#" onclick="RecordPayment(' . $row->id . ')" >' . __('invoices.generate_invoice') . '</a>';
-                    } else {
-                        $invoice_action = '<a href="' . url('invoices/' . $has_invoice->id) . '">' . __('invoices.view_invoice') . '</a>';
-                    }
+                    $invoice_action = $has_invoice == null
+                        ? '<a href="#" onclick="RecordPayment(' . $row->id . ')" >' . __('invoices.generate_invoice') . '</a>'
+                        : '<a href="' . url('invoices/' . $has_invoice->id) . '">' . __('invoices.view_invoice') . '</a>';
 
-                    $btn = '
+                    return '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
                                 aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
-
                               <li>
                                 <a href="#" onclick="RescheduleAppointment(' . $row->id . ')" >' . __('appointment.reschedule') . '</a>
                             </li>
@@ -189,7 +96,6 @@ class AppointmentsController extends Controller
                         </ul>
                     </div>
                     ';
-                    return $btn;
                 })
                 ->rawColumns(['visit_information', 'invoice_status', 'action'])
                 ->make(true);
@@ -199,61 +105,23 @@ class AppointmentsController extends Controller
 
     public function calendarEvents(Request $request)
     {
-        $query = DB::table('appointments')
-            ->join('patients', 'patients.id', 'appointments.patient_id')
-            ->join('users', 'users.id', 'appointments.doctor_id')
-            ->whereNull('appointments.deleted_at')
-            ->select('appointments.*', 'patients.surname', 'patients.othername',
-                'users.surname as d_surname', 'users.othername as d_othername');
-
-        if ($request->start && $request->end) {
-            $query->whereBetween('appointments.sort_by', [$request->start, $request->end]);
-        }
-
-        $events = [];
-        foreach ($query->get() as $value) {
-            $events[] = [
-                'title' => NameHelper::join($value->surname, $value->othername),
-                'start' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
-                'end' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
-                'textColor' => '#ffffff',
-            ];
-        }
-
-        return response()->json($events);
+        return response()->json(
+            $this->appointmentService->getCalendarEvents($request->start, $request->end)
+        );
     }
 
     public function exportAppointmentReport(Request $request)
     {
-        if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $data = DB::table('appointments')
-                ->join('patients', 'patients.id', 'appointments.patient_id')
-                ->join('users', 'users.id', 'appointments.doctor_id')
-                ->whereNull('appointments.deleted_at')
-                ->whereBetween(DB::raw('DATE(appointments.sort_by)'), array($request->session()->get('from'),
-                    $request->session()->get('to')))
-                ->select('appointments.*', 'patients.surname', 'patients.othername', 'users.surname as
-                    d_surname', 'users.othername as d_othername')
-                ->orderBy('appointments.sort_by', 'DESC')
-                ->get();
-        } else {
-            $data = DB::table('appointments')
-                ->join('patients', 'patients.id', 'appointments.patient_id')
-                ->join('users', 'users.id', 'appointments.doctor_id')
-                ->whereNull('appointments.deleted_at')
-                ->select('appointments.*', 'patients.surname', 'patients.othername', 'users.surname as
-                    d_surname', 'users.othername as d_othername')
-                ->orderBy('appointments.sort_by', 'DESC')
-                ->get();
-        }
+        $from = $request->session()->get('from') ?: null;
+        $to = $request->session()->get('to') ?: null;
+
+        $data = $this->appointmentService->getExportData($from, $to);
 
         return Excel::download(new AppointmentExport($data), 'appointments-report-' . date('Y-m-d') . '.xlsx');
     }
 
     /**
      * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function create()
     {
@@ -262,9 +130,6 @@ class AppointmentsController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
@@ -273,148 +138,37 @@ class AppointmentsController extends Controller
             'appointment_date' => 'required',
             'appointment_time' => 'required',
             'patient_id' => 'required',
-            'doctor_id' => 'required'
+            'doctor_id' => 'required',
         ])->validate();
 
-        //time_order column
-        $time_24_hours = date("H:i:s", strtotime($request->appointment_time));
-        //check visit information
-        if ($request->visit_information == 'walk_in') {
-            $this->app_time = $this->dateTime->format("h:i A");
-        } else {
-            $this->app_time = $request->appointment_time;
-        }
+        $appointment = $this->appointmentService->createAppointment($request->all());
 
-        $status = Appointment::create([
-            'appointment_no' => Appointment::AppointmentNo(),
-            'patient_id' => $request->patient_id,
-            'doctor_id' => $request->doctor_id,
-            'start_date' => $request->appointment_date,
-            'end_date' => $request->appointment_date,
-            'start_time' => $this->app_time,
-            'visit_information' => $request->visit_information,
-            'notes' => $request->notes,
-            'branch_id' => Auth::User()->branch_id,
-            'sort_by' => $request->appointment_date . " " . $time_24_hours,
-            // New fields per design spec F-APT-001
-            'chair_id' => $request->chair_id,
-            'service_id' => $request->service_id,
-            'appointment_type' => $request->appointment_type ?? 'revisit',
-            'duration_minutes' => $request->duration_minutes ?? 30,
-            '_who_added' => Auth::User()->id
-        ]);
-        if ($status) {
-            //generate appointment history
-            $this->CreateAppointmentHistory($status->id, "Created");
+        if ($appointment) {
             return response()->json(['message' => __('messages.appointment_created_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
-    public function CreateAppointmentHistory($appointment_id, $status)
-    {
-        $message = '';
-        $record = DB::table('appointments')
-            ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-            ->where('appointments.id', $appointment_id)
-            ->select('patients.surname', 'patients.othername', 'patients.phone_no',
-                'appointments.*', 'appointments.visit_information',
-                DB::raw
-                ('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as formatted_date'))
-            ->first();
-
-        if ($status == "Created") { //send out the message on appointment scheduling
-            //check if the appointment is not walk_in
-            if ($record->visit_information != "walk_in") {
-                //now generate the message to send to the patient
-                $message = __('sms.appointment_scheduled', [
-                    'name' => $record->othername,
-                    'company' => config('app.name', 'Laravel'),
-                    'date' => $record->formatted_date,
-                    'time' => $record->start_time
-                ]);
-                //sms/email to the patient
-                $patient = Patient::where('id', $record->patient_id)->first();
-                if ($record->phone_no != null) {
-                    $sendJob = new SendAppointmentSms($record->phone_no, $message, "Appointment");
-                    $this->dispatch($sendJob);
-                    //set the notification reminder scheduler
-                    //convert time to 24hrs
-                    $converted_appointment_time = date("H:i:s", strtotime($record->start_time));
-
-                    $appointment_time = $record->start_date . " " . $converted_appointment_time; //future appointment
-                    // date
-                    //day before the appointment
-                    $reminder_date = date('Y-m-d H:i:s', (strtotime('-1 day', strtotime($appointment_time)
-                    )));
-
-                    //check when the remainder should be sent
-                    $sendReminder = FunctionsHelper::getRangeDateString($reminder_date);
-
-                    if ($sendReminder == "Tomorrow" || $sendReminder == "future days") { //now set the reminder
-                        ScheduledNotification::create(
-                            $patient, // Target
-                            new ReminderNotification('Dear, ' . $patient->othername .
-                                " This is a polite reminder about your appointment at ".env('CompanyName',null)." scheduled for "
-                                . $record->formatted_date . " at " . $record->start_time), //
-                            // Notification
-                            Carbon::parse($reminder_date)// Send At
-                        );
-                    }
-                }
-            }
-        }
-        //now track appointment history from creation to reschedule
-        AppointmentHistory::create([
-            'start_date' => $record->start_date,
-            'end_date' => $record->start_date,
-            'start_time' => $record->start_time,
-            'status' => $status,
-            'message' => $message,
-            'appointment_id' => $appointment_id
-        ]);
-
-    }
-
     /**
      * Display the specified resource.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
      */
     public function show($id)
     {
-
+        //
     }
 
     /**
      * Show the form for editing the specified resource.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
      */
-    public
-    function edit($id)
+    public function edit($id)
     {
-        $appointment = DB::table("appointments")
-            ->join('users', 'users.id', 'appointments.doctor_id')
-            ->join('patients', 'patients.id', 'appointments.patient_id')
-            ->where('appointments.id', $id)
-            ->whereNull('appointments.deleted_at')
-            ->select('appointments.*', 'users.surname as d_surname', 'users.othername as d_othername', 'patients.surname', 'patients.othername')
-            ->first();
-        return response()->json($appointment);
+        return response()->json($this->appointmentService->getAppointmentForEdit($id));
     }
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\Response
      */
-    public
-    function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
         Validator::make($request->all(), [
             'visit_information' => 'required',
@@ -424,22 +178,8 @@ class AppointmentsController extends Controller
             'doctor_id' => 'required',
         ])->validate();
 
+        $status = $this->appointmentService->updateAppointment($id, $request->all());
 
-        //time_order column
-        $time_24_hours = date("H:i:s", strtotime($request->appointment_time));
-
-        //reactivated_appointment
-        $status = Appointment::where('id', $id)->update([
-            'patient_id' => $request->patient_id,
-            'doctor_id' => $request->doctor_id,
-            'start_date' => $request->appointment_date,
-            'end_date' => $request->appointment_date,
-            'start_time' => $request->appointment_time,
-            'visit_information' => $request->visit_information,
-            'sort_by' => $request->appointment_date . " " . $time_24_hours,
-            'notes' => $request->notes,
-            '_who_added' => Auth::User()->id
-        ]);
         if ($status) {
             return response()->json(['message' => __('messages.appointment_updated_successfully'), 'status' => true]);
         }
@@ -447,141 +187,52 @@ class AppointmentsController extends Controller
     }
 
     /**
-     * @param Request $request
-     * @return JsonResponse
+     * Reschedule an appointment.
      */
-    public function sendReschedule(Request $request)
+    public function sendReschedule(Request $request): JsonResponse
     {
-        //time_order column
-        $time_24_hours = date("H:i:s", strtotime($request->appointment_time));
-        $success = Appointment::where('id', $request->id)->update([
-            'start_date' => $request->appointment_date,
-            'end_date' => $request->appointment_date,
-            'start_time' => $request->appointment_time,
-            'sort_by' => $request->appointment_date . " " . $time_24_hours,
-            'visit_information' => 'appointment',
-            'status' => 'Rescheduled']);
+        $success = $this->appointmentService->rescheduleAppointment($request->id, $request->all());
+
         if ($success) {
-            //generate appointment history
-            $this->CreateAppointmentHistory($request->id, "Rescheduled");
-            return FunctionsHelper::messageResponse(__('messages.appointment_rescheduled_successfully'),
-                $success);
+            return FunctionsHelper::messageResponse(__('messages.appointment_rescheduled_successfully'), $success);
         }
+        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = Appointment::where('id', $id)->delete();
+        $status = $this->appointmentService->deleteAppointment($id);
+
         if ($status) {
             return response()->json(['message' => __('messages.appointment_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
-     * Get available chairs for appointment form (design spec F-APT-001)
-     *
-     * @return JsonResponse
+     * Get available chairs for appointment form.
      */
-    public function getChairs()
+    public function getChairs(): JsonResponse
     {
-        $chairs = DB::table('chairs')
-            ->where('branch_id', Auth::User()->branch_id)
-            ->where('is_active', true)
-            ->select('id', 'name as text')
-            ->get();
-
-        return response()->json($chairs);
+        return response()->json(
+            $this->appointmentService->getChairs(Auth::user()->branch_id)
+        );
     }
 
     /**
-     * Get doctor time slots for a specific date (design spec F-APT-001)
-     *
-     * @param Request $request
-     * @return JsonResponse
+     * Get doctor time slots for a specific date.
      */
-    public function getDoctorTimeSlots(Request $request)
+    public function getDoctorTimeSlots(Request $request): JsonResponse
     {
-        $doctorId = $request->doctor_id;
-        $date = $request->date;
-
-        if (!$doctorId || !$date) {
+        if (!$request->doctor_id || !$request->date) {
             return response()->json(['slots' => [], 'booked' => []]);
         }
 
-        // Get doctor's schedule for this day of week
-        $dayOfWeek = date('l', strtotime($date)); // Monday, Tuesday, etc.
-        $schedule = DB::table('doctor_schedules')
-            ->where('doctor_id', $doctorId)
-            ->where('day_of_week', $dayOfWeek)
-            ->where('is_active', true)
-            ->first();
-
-        // Generate time slots based on schedule or use defaults
-        $slots = [];
-        if ($schedule) {
-            $startTime = strtotime($schedule->start_time);
-            $endTime = strtotime($schedule->end_time);
-            $lunchStart = $schedule->lunch_start ? strtotime($schedule->lunch_start) : strtotime('12:00');
-            $lunchEnd = $schedule->lunch_end ? strtotime($schedule->lunch_end) : strtotime('14:00');
-            $interval = 30 * 60; // 30 minutes
-
-            for ($time = $startTime; $time < $endTime; $time += $interval) {
-                $isRest = ($time >= $lunchStart && $time < $lunchEnd);
-                $timeStr = date('H:i', $time);
-                $period = $time < strtotime('12:00') ? 'morning' : 'afternoon';
-
-                $slots[] = [
-                    'time' => $timeStr,
-                    'period' => $period,
-                    'is_rest' => $isRest
-                ];
-            }
-        } else {
-            // Default slots if no schedule defined
-            $defaultTimes = [
-                ['09:00', 'morning'], ['09:30', 'morning'], ['10:00', 'morning'], ['10:30', 'morning'],
-                ['11:00', 'morning'], ['11:30', 'morning'],
-                ['14:00', 'afternoon'], ['14:30', 'afternoon'], ['15:00', 'afternoon'], ['15:30', 'afternoon'],
-                ['16:00', 'afternoon'], ['16:30', 'afternoon'], ['17:00', 'afternoon'], ['17:30', 'afternoon']
-            ];
-            foreach ($defaultTimes as $dt) {
-                $slots[] = ['time' => $dt[0], 'period' => $dt[1], 'is_rest' => false];
-            }
-        }
-
-        // Get existing bookings for this doctor on this date
-        $existingAppointments = DB::table('appointments')
-            ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-            ->where('appointments.doctor_id', $doctorId)
-            ->where('appointments.start_date', $date)
-            ->whereNull('appointments.deleted_at')
-            ->whereNotIn('appointments.status', ['Cancelled', 'no_show'])
-            ->select(
-                'appointments.start_time',
-                'patients.surname as p_surname',
-                'patients.othername as p_othername'
-            )
-            ->get();
-
-        $booked = [];
-        foreach ($existingAppointments as $appt) {
-            $timeKey = date('H:i', strtotime($appt->start_time));
-            $booked[$timeKey] = [
-                'patient_name' => NameHelper::join($appt->p_surname, $appt->p_othername)
-            ];
-        }
-
-        return response()->json([
-            'slots' => $slots,
-            'booked' => $booked
-        ]);
+        return response()->json(
+            $this->appointmentService->getDoctorTimeSlots($request->doctor_id, $request->date)
+        );
     }
 }

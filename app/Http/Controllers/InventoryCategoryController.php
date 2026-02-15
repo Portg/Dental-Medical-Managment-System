@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\InventoryCategory;
+use App\Services\InventoryCategoryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class InventoryCategoryController extends Controller
 {
+    private InventoryCategoryService $service;
+
+    public function __construct(InventoryCategoryService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -20,9 +26,7 @@ class InventoryCategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = InventoryCategory::orderBy('sort_order')
-                ->orderBy('updated_at', 'DESC')
-                ->get();
+            $data = $this->service->getList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -61,11 +65,7 @@ class InventoryCategoryController extends Controller
      */
     public function list()
     {
-        $categories = InventoryCategory::active()
-            ->ordered()
-            ->get(['id', 'name', 'code', 'type']);
-
-        return response()->json($categories);
+        return response()->json($this->service->getActiveCategories());
     }
 
     /**
@@ -87,15 +87,7 @@ class InventoryCategoryController extends Controller
             'type.required' => __('inventory.category_type_required'),
         ])->validate();
 
-        $status = InventoryCategory::create([
-            'name' => $request->name,
-            'code' => $request->code,
-            'type' => $request->type,
-            'description' => $request->description,
-            'sort_order' => $request->sort_order ?? 0,
-            'is_active' => $request->is_active ?? true,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->service->create($request->all());
 
         if ($status) {
             return response()->json(['message' => __('inventory.category_added_successfully'), 'status' => true]);
@@ -111,8 +103,7 @@ class InventoryCategoryController extends Controller
      */
     public function edit($id)
     {
-        $category = InventoryCategory::find($id);
-        return response()->json($category);
+        return response()->json($this->service->find($id));
     }
 
     /**
@@ -135,14 +126,7 @@ class InventoryCategoryController extends Controller
             'type.required' => __('inventory.category_type_required'),
         ])->validate();
 
-        $status = InventoryCategory::where('id', $id)->update([
-            'name' => $request->name,
-            'code' => $request->code,
-            'type' => $request->type,
-            'description' => $request->description,
-            'sort_order' => $request->sort_order ?? 0,
-            'is_active' => $request->is_active ?? true,
-        ]);
+        $status = $this->service->update($id, $request->all());
 
         if ($status) {
             return response()->json(['message' => __('inventory.category_updated_successfully'), 'status' => true]);
@@ -158,17 +142,16 @@ class InventoryCategoryController extends Controller
      */
     public function destroy($id)
     {
-        // Check if category has items
-        $category = InventoryCategory::find($id);
-        if ($category && $category->items()->count() > 0) {
+        $result = $this->service->delete($id);
+
+        if ($result['has_items']) {
             return response()->json([
                 'message' => __('inventory.category_has_items'),
                 'status' => false
             ]);
         }
 
-        $status = InventoryCategory::where('id', $id)->delete();
-        if ($status) {
+        if ($result['success']) {
             return response()->json(['message' => __('inventory.category_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);

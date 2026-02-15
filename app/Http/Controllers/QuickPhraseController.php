@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\QuickPhrase;
+use App\Services\QuickPhraseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class QuickPhraseController extends Controller
 {
+    private QuickPhraseService $service;
+
+    public function __construct(QuickPhraseService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -20,27 +25,7 @@ class QuickPhraseController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = DB::table('quick_phrases')
-                ->leftJoin('users', 'users.id', 'quick_phrases.user_id')
-                ->whereNull('quick_phrases.deleted_at')
-                ->select(
-                    'quick_phrases.*',
-                    'users.surname as user_name'
-                );
-
-            // Filter by category
-            if ($request->has('category') && $request->category) {
-                $query->where('quick_phrases.category', $request->category);
-            }
-
-            // Filter by scope
-            if ($request->has('scope') && $request->scope) {
-                $query->where('quick_phrases.scope', $request->scope);
-            }
-
-            $data = $query->orderBy('quick_phrases.category', 'asc')
-                ->orderBy('quick_phrases.shortcut', 'asc')
-                ->get();
+            $data = $this->service->getPhraseList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -103,14 +88,12 @@ class QuickPhraseController extends Controller
             'scope' => 'required|in:system,personal',
         ])->validate();
 
-        $phrase = QuickPhrase::create([
+        $phrase = $this->service->createPhrase([
             'shortcut' => $request->shortcut,
             'phrase' => $request->phrase,
             'category' => $request->category,
             'scope' => $request->scope,
             'is_active' => $request->has('is_active') ? $request->is_active : true,
-            'user_id' => $request->scope === 'personal' ? Auth::user()->id : null,
-            '_who_added' => Auth::user()->id,
         ]);
 
         if ($phrase) {
@@ -135,7 +118,7 @@ class QuickPhraseController extends Controller
      */
     public function show($id)
     {
-        $phrase = QuickPhrase::with('user')->findOrFail($id);
+        $phrase = $this->service->getPhrase($id);
         return response()->json([
             'status' => true,
             'data' => $phrase
@@ -157,13 +140,12 @@ class QuickPhraseController extends Controller
             'scope' => 'required|in:system,personal',
         ])->validate();
 
-        $status = QuickPhrase::where('id', $id)->update([
+        $status = $this->service->updatePhrase($id, [
             'shortcut' => $request->shortcut,
             'phrase' => $request->phrase,
             'category' => $request->category,
             'scope' => $request->scope,
             'is_active' => $request->has('is_active') ? $request->is_active : true,
-            'user_id' => $request->scope === 'personal' ? Auth::user()->id : null,
         ]);
 
         if ($status) {
@@ -187,7 +169,7 @@ class QuickPhraseController extends Controller
      */
     public function destroy($id)
     {
-        $status = QuickPhrase::where('id', $id)->delete();
+        $status = $this->service->deletePhrase($id);
 
         if ($status) {
             return response()->json([
@@ -210,26 +192,7 @@ class QuickPhraseController extends Controller
      */
     public function search(Request $request)
     {
-        $userId = Auth::user()->id;
-        $q = $request->get('q', '');
-        $category = $request->get('category');
-
-        $query = QuickPhrase::active()
-            ->forUser($userId)
-            ->select('id', 'shortcut', 'phrase', 'category');
-
-        if ($q) {
-            $query->search($q);
-        }
-
-        if ($category) {
-            $query->byCategory($category);
-        }
-
-        $phrases = $query->orderBy('category', 'asc')
-            ->orderBy('shortcut', 'asc')
-            ->limit(50)
-            ->get();
+        $phrases = $this->service->searchPhrases($request->get('q', ''), $request->get('category'));
 
         return response()->json([
             'status' => true,

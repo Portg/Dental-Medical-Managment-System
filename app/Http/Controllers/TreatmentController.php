@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Treatment;
-use App\Appointment;
+use App\Http\Helper\NameHelper;
+use App\Services\TreatmentService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class TreatmentController extends Controller
 {
+    private TreatmentService $treatmentService;
+
+    public function __construct(TreatmentService $treatmentService)
+    {
+        $this->treatmentService = $treatmentService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,15 +28,8 @@ class TreatmentController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
+            $data = $this->treatmentService->getTreatmentsByPatient($patient_id);
 
-            $data = DB::table('treatments')
-                ->leftJoin('appointments', 'appointments.id', 'treatments.appointment_id')
-                ->leftJoin('users', 'users.id', 'treatments._who_added')
-                ->whereNull('treatments.deleted_at')
-                ->where('appointments.patient_id', $patient_id)
-                ->orderBy('treatments.updated_at','desc')
-                ->select('treatments.*', 'users.surname as added_by')
-                ->get();
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -52,19 +50,14 @@ class TreatmentController extends Controller
     public function treatmentHistory(Request $request, $patient_id)
     {
         if ($request->ajax()) {
+            $data = $this->treatmentService->getTreatmentHistory($patient_id);
 
-            $data = DB::table('treatments')
-                ->join('appointments', 'appointments.id', 'treatments.appointment_id')
-                ->join('users', 'users.id', 'treatments._who_added')
-                ->where('appointments.patient_id', $patient_id)
-                ->select('treatments.*', 'users.surname', 'users.othername')
-                ->get();
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('doctor', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->make(true);
         }
@@ -95,12 +88,12 @@ class TreatmentController extends Controller
             'clinical_notes.required' => __('validation.custom.clinical_notes.required'),
             'treatment.required' => __('validation.custom.treatment.required')
         ])->validate();
-        $status = Treatment::create([
-            'clinical_notes' => $request->clinical_notes,
-            'treatment' => $request->treatment,
-            'appointment_id' => $request->appointment_id,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->treatmentService->createTreatment(
+            $request->clinical_notes,
+            $request->treatment,
+            $request->appointment_id
+        );
 
         if ($status) {
             return response()->json(['message' => __('medical_treatment.treatment_captured_successfully'), 'status' => true]);
@@ -111,10 +104,10 @@ class TreatmentController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\Treatment $treatment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(Treatment $treatment)
+    public function show($id)
     {
         //
     }
@@ -122,12 +115,12 @@ class TreatmentController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\Treatment $treatment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $treatment = Treatment::where('id', $id)->first();
+        $treatment = $this->treatmentService->find($id);
         return response()->json($treatment);
     }
 
@@ -135,7 +128,7 @@ class TreatmentController extends Controller
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\Treatment $treatment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
@@ -149,32 +142,32 @@ class TreatmentController extends Controller
             'treatment.required' => __('validation.custom.treatment.required'),
             'appointment_id.required' => __('validation.custom.appointment_id.required')
         ])->validate();
-        $status = Treatment::where('id', $id)->update([
-            'clinical_notes' => $request->clinical_notes,
-            'treatment' => $request->treatment,
-            'appointment_id' => $request->appointment_id,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->treatmentService->updateTreatment(
+            $id,
+            $request->clinical_notes,
+            $request->treatment,
+            $request->appointment_id
+        );
+
         if ($status) {
             return response()->json(['message' => __('medical_treatment.treatment_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\Treatment $treatment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = Treatment::where('id', $id)->delete();
+        $status = $this->treatmentService->deleteTreatment($id);
         if ($status) {
             return response()->json(['message' => __('medical_treatment.treatment_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 }

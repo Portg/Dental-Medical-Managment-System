@@ -2,34 +2,31 @@
 
 namespace App\Http\Controllers;
 
-use App\SalaryAdvance;
+use App\Services\SalaryAdvanceService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class SalaryAdvanceController extends Controller
 {
+    private SalaryAdvanceService $service;
+
+    public function __construct(SalaryAdvanceService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
      * @param Request $request
-     * @return Response
+     * @return \Illuminate\Http\Response
      * @throws \Exception
      */
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('salary_advances')
-                ->leftJoin('users', 'users.id', 'salary_advances.employee_id')
-                ->leftJoin('users as LoggedInUser', 'LoggedInUser.id', 'salary_advances._who_added')
-                ->whereNull('salary_advances.deleted_at')
-                ->select('salary_advances.*', 'users.surname', 'users.othername', 'LoggedInUser.othername as LoggedInUser')
-                ->orderBy('salary_advances.id', 'desc')
-                ->get();
+            $data = $this->service->getList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -49,7 +46,6 @@ class SalaryAdvanceController extends Controller
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
                     $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
@@ -59,11 +55,10 @@ class SalaryAdvanceController extends Controller
         return view('salary_advances.index');
     }
 
-
     /**
      * Show the form for creating a new resource.
      *
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function create()
     {
@@ -74,7 +69,7 @@ class SalaryAdvanceController extends Controller
      * Store a newly created resource in storage.
      *
      * @param Request $request
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
@@ -86,15 +81,9 @@ class SalaryAdvanceController extends Controller
             'payment_method' => 'required',
             'payment_date' => 'required'
         ])->validate();
-        $status = SalaryAdvance::create([
-            'payment_classification' => $request->payment_classification,
-            'employee_id' => $request->employee,
-            'advance_month' => $request->advance_month,
-            'advance_amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'payment_date' => $request->payment_date,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->service->create($request->all());
+
         if ($status) {
             return response()->json(['message' => __('salary_advances.payment_captured_successfully'), 'status' => true]);
         }
@@ -105,9 +94,9 @@ class SalaryAdvanceController extends Controller
      * Display the specified resource.
      *
      * @param \App\SalaryAdvance $salaryAdvance
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
-    public function show(SalaryAdvance $salaryAdvance)
+    public function show($id)
     {
         //
     }
@@ -115,25 +104,20 @@ class SalaryAdvanceController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\SalaryAdvance $salaryAdvance
-     * @return Response
+     * @param int $id
+     * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $advance = DB::table('salary_advances')
-            ->join('users', 'users.id', 'salary_advances.employee_id')
-            ->where('salary_advances.id', $id)
-            ->select('salary_advances.*', 'users.surname', 'users.othername')
-            ->first();
-        return response()->json($advance);
+        return response()->json($this->service->find($id));
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param Request $request
-     * @param \App\SalaryAdvance $salaryAdvance
-     * @return Response
+     * @param int $id
+     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
     {
@@ -145,35 +129,28 @@ class SalaryAdvanceController extends Controller
             'payment_method' => 'required',
             'payment_date' => 'required'
         ])->validate();
-        $status = SalaryAdvance::where('id', $id)->update([
-            'payment_classification' => $request->payment_classification,
-            'employee_id' => $request->employee,
-            'advance_month' => $request->advance_month,
-            'advance_amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'payment_date' => $request->payment_date,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->service->update($id, $request->all());
+
         if ($status) {
             return response()->json(['message' => __('salary_advances.payment_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\SalaryAdvance $salaryAdvance
-     * @return Response
+     * @param int $id
+     * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = SalaryAdvance::where('id', $id)->delete();
+        $status = $this->service->delete($id);
+
         if ($status) {
             return response()->json(['message' => __('salary_advances.advance_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 }

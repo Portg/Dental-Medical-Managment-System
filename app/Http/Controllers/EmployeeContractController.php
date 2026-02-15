@@ -2,16 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\EmployeeContract;
+use App\Http\Helper\NameHelper;
+use App\Services\EmployeeContractService;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\Auth;
+use Yajra\DataTables\DataTables;
 
 class EmployeeContractController extends Controller
 {
+    private EmployeeContractService $employeeContractService;
+
+    public function __construct(EmployeeContractService $employeeContractService)
+    {
+        $this->employeeContractService = $employeeContractService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -22,14 +29,7 @@ class EmployeeContractController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('employee_contracts')
-                ->leftJoin('users', 'users.id', 'employee_contracts.employee_id')
-                ->leftJoin('users as loggedInUser', 'loggedInUser.id', 'employee_contracts._who_added')
-                ->whereNull('employee_contracts.deleted_at')
-                ->select('employee_contracts.*', 'users.surname', 'users.othername', 'loggedInUser.othername as loggedInName')
-                ->orderBy('employee_contracts.id', 'desc')
-                ->get();
+            $data = $this->employeeContractService->getContractList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -39,19 +39,17 @@ class EmployeeContractController extends Controller
                     return $row->loggedInName;
                 })
                 ->addColumn('employee', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('contract_validity', function ($row) {
                     return $row->contract_length . " " . $row->contract_period;
                 })
                 ->addColumn('contract_end_date', function ($row) {
-                    if ($row->contract_period == "Months") {
-                        $days = 30; //month will have 30 days
-                        return $this->calculateContractEndDate($days, $row->start_date, $row->contract_length);
-                    } else {
-                        $days = 365; //days in a year
-                        return $this->calculateContractEndDate($days, $row->start_date, $row->contract_length);
-                    }
+                    return $this->employeeContractService->calculateContractEndDate(
+                        $row->contract_period,
+                        $row->start_date,
+                        $row->contract_length
+                    );
                 })
                 ->addColumn('amount', function ($row) {
                     if ($row->payroll_type == "Salary") {
@@ -59,7 +57,6 @@ class EmployeeContractController extends Controller
                     } else if ($row->payroll_type == "Commission") {
                         return '<span class="text-primary">' . number_format($row->commission_percentage) . '%<br></span>' . __('employee_contracts.commission');
                     }
-//                    return '<span class="text-primary">' . number_format("100000") . '</span>';
                 })
                 ->addColumn('action', function ($row) {
                     $btn = '';
@@ -67,7 +64,7 @@ class EmployeeContractController extends Controller
                         $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> ' . __('common.action') . '  
+                                aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
@@ -122,20 +119,9 @@ class EmployeeContractController extends Controller
             'contract_period.required' => __('validation.attributes.contract_period') . ' ' . __('validation.required'),
             'payroll_type.required' => __('validation.attributes.payroll_type') . ' ' . __('validation.required'),
         ])->validate();
-        //check if the employee already has a contract
-        $this->hasContract($request->employee);
-        //now create new contract
-        $status = EmployeeContract::create([
-            'employee_id' => $request->employee,
-            'contract_type' => $request->contract_type,
-            'start_date' => $request->start_date,
-            'contract_length' => $request->contract_length,
-            'contract_period' => $request->contract_period,
-            'payroll_type' => $request->payroll_type,
-            'gross_salary' => $request->gross_salary,
-            'commission_percentage' => $request->commission_percentage,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->employeeContractService->createContract($request->all(), Auth::User()->id);
+
         if ($status) {
             return response()->json(['message' => __('employee_contracts.employee_contract_added_successfully'),
                 'status' => true]);
@@ -144,22 +130,13 @@ class EmployeeContractController extends Controller
             'status' => false]);
     }
 
-    private function hasContract($employee_id)
-    {
-        $contract = EmployeeContract::where('employee_id', $employee_id)->count();
-        if ($contract > 0) {
-            //deactivate the old contract
-            EmployeeContract::where('employee_id', $employee_id)->update(['status' => 'Expired']);
-        }
-    }
-
     /**
      * Display the specified resource.
      *
      * @param \App\EmployeeContract $employeeContract
      * @return Response
      */
-    public function show(EmployeeContract $employeeContract)
+    public function show($employeeContract)
     {
         //
     }
@@ -172,12 +149,7 @@ class EmployeeContractController extends Controller
      */
     public function edit($id)
     {
-        $contract = DB::table('employee_contracts')
-            ->join('users', 'users.id', 'employee_contracts.employee_id')
-            ->where('employee_contracts.id', $id)
-            ->select('employee_contracts.*', 'users.surname', 'users.othername')
-            ->first();
-        return response()->json($contract);
+        return response()->json($this->employeeContractService->getContractForEdit($id));
     }
 
     /**
@@ -205,17 +177,8 @@ class EmployeeContractController extends Controller
             'payroll_type.required' => __('validation.attributes.payroll_type') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = EmployeeContract::where('id', $id)->update([
-            'employee_id' => $request->employee,
-            'contract_type' => $request->contract_type,
-            'start_date' => $request->start_date,
-            'contract_length' => $request->contract_length,
-            'contract_period' => $request->contract_period,
-            'payroll_type' => $request->payroll_type,
-            'gross_salary' => $request->gross_salary,
-            'commission_percentage' => $request->commission_percentage,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->employeeContractService->updateContract($id, $request->all(), Auth::User()->id);
+
         if ($status) {
             return response()->json(['message' => __('employee_contracts.employee_contract_updated_successfully'),
                 'status' => true]);
@@ -232,19 +195,12 @@ class EmployeeContractController extends Controller
      */
     public function destroy($id)
     {
-        $status = EmployeeContract::where('id', $id)->delete();
+        $status = $this->employeeContractService->deleteContract($id);
         if ($status) {
             return response()->json(['message' => __('employee_contracts.employee_contract_deleted_successfully'),
                 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'),
             'status' => false]);
-    }
-
-    private function calculateContractEndDate($days, $start_date, $contract_length)
-    {
-        $total_days = $days * $contract_length;
-        $future_date = date('Y-m-d', strtotime($start_date . ' + ' . $total_days . ' days'));
-        return $future_date;
     }
 }

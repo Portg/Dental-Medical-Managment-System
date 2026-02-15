@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Appointment;
-use App\Branch;
-use App\Chair;
+use App\Services\WaitingQueueService;
 use App\WaitingQueue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,15 +10,20 @@ use Yajra\DataTables\DataTables;
 
 class WaitingQueueController extends Controller
 {
+    private WaitingQueueService $waitingQueueService;
+
+    public function __construct(WaitingQueueService $waitingQueueService)
+    {
+        $this->waitingQueueService = $waitingQueueService;
+    }
+
     /**
      * 候诊管理页面（前台使用）
      */
     public function index()
     {
         $branchId = Auth::user()->branch_id;
-        $chairs = Chair::where('branch_id', $branchId)
-            ->where('status', 'active')
-            ->get();
+        $chairs = $this->waitingQueueService->getBranchChairs($branchId);
 
         return view('waiting_queue.index', compact('chairs'));
     }
@@ -31,16 +34,8 @@ class WaitingQueueController extends Controller
     public function getData(Request $request)
     {
         $branchId = Auth::user()->branch_id;
-
-        $query = WaitingQueue::forBranch($branchId)
-            ->today()
-            ->with(['patient', 'doctor', 'chair', 'appointment'])
-            ->orderBy('queue_number');
-
-        // 状态筛选
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('status', $request->status);
-        }
+        $status = ($request->has('status') && $request->status !== '') ? $request->status : null;
+        $query = $this->waitingQueueService->getQueueQuery($branchId, $status);
 
         return DataTables::of($query)
             ->addColumn('patient_name', function ($row) {
@@ -127,7 +122,7 @@ class WaitingQueueController extends Controller
 
         try {
             $branchId = Auth::user()->branch_id;
-            $queue = WaitingQueue::checkIn(
+            $queue = $this->waitingQueueService->checkIn(
                 $request->appointment_id,
                 $branchId,
                 Auth::id()
@@ -154,24 +149,22 @@ class WaitingQueueController extends Controller
      */
     public function callPatient(Request $request, $id)
     {
-        $queue = WaitingQueue::findOrFail($id);
+        $result = $this->waitingQueueService->callPatient($id, Auth::id(), $request->chair_id);
 
-        if ($queue->status !== WaitingQueue::STATUS_WAITING) {
+        if (!$result['success']) {
             return response()->json([
                 'status' => 'error',
-                'message' => __('waiting_queue.invalid_status_for_call')
+                'message' => $result['message']
             ], 400);
         }
-
-        $queue->callPatient(Auth::id(), $request->chair_id);
 
         return response()->json([
             'status' => 'success',
             'message' => __('waiting_queue.call_success'),
             'data' => [
-                'queue_number' => $queue->queue_number,
-                'patient_name' => $queue->masked_patient_name,
-                'chair_name' => $queue->chair->chair_name ?? ''
+                'queue_number' => $result['queue_number'],
+                'patient_name' => $result['patient_name'],
+                'chair_name' => $result['chair_name']
             ]
         ]);
     }
@@ -181,16 +174,14 @@ class WaitingQueueController extends Controller
      */
     public function startTreatment($id)
     {
-        $queue = WaitingQueue::findOrFail($id);
+        $result = $this->waitingQueueService->startTreatment($id);
 
-        if ($queue->status !== WaitingQueue::STATUS_CALLED) {
+        if (!$result['success']) {
             return response()->json([
                 'status' => 'error',
-                'message' => __('waiting_queue.invalid_status_for_start')
+                'message' => $result['message']
             ], 400);
         }
-
-        $queue->startTreatment();
 
         return response()->json([
             'status' => 'success',
@@ -203,16 +194,14 @@ class WaitingQueueController extends Controller
      */
     public function completeTreatment($id)
     {
-        $queue = WaitingQueue::findOrFail($id);
+        $result = $this->waitingQueueService->completeTreatment($id);
 
-        if ($queue->status !== WaitingQueue::STATUS_IN_TREATMENT) {
+        if (!$result['success']) {
             return response()->json([
                 'status' => 'error',
-                'message' => __('waiting_queue.invalid_status_for_complete')
+                'message' => $result['message']
             ], 400);
         }
-
-        $queue->completeTreatment();
 
         return response()->json([
             'status' => 'success',
@@ -225,16 +214,14 @@ class WaitingQueueController extends Controller
      */
     public function cancel(Request $request, $id)
     {
-        $queue = WaitingQueue::findOrFail($id);
+        $result = $this->waitingQueueService->cancelQueue($id, $request->reason);
 
-        if (!in_array($queue->status, [WaitingQueue::STATUS_WAITING, WaitingQueue::STATUS_CALLED])) {
+        if (!$result['success']) {
             return response()->json([
                 'status' => 'error',
-                'message' => __('waiting_queue.cannot_cancel')
+                'message' => $result['message']
             ], 400);
         }
-
-        $queue->cancel($request->reason);
 
         return response()->json([
             'status' => 'success',
@@ -248,7 +235,7 @@ class WaitingQueueController extends Controller
     public function displayScreen()
     {
         $branchId = Auth::user()->branch_id ?? 1;
-        $branch = Branch::find($branchId);
+        $branch = $this->waitingQueueService->getBranch($branchId);
 
         return view('waiting_queue.display_screen', compact('branch'));
     }
@@ -260,50 +247,7 @@ class WaitingQueueController extends Controller
     {
         $branchId = $request->branch_id ?? Auth::user()->branch_id ?? 1;
 
-        // 当前叫号
-        $currentCalling = WaitingQueue::getCurrentCalling($branchId);
-
-        // 候诊队列
-        $waitingList = WaitingQueue::getWaitingList($branchId, 8);
-
-        // 就诊中
-        $inTreatmentList = WaitingQueue::getInTreatmentList($branchId);
-
-        // 统计数据
-        $stats = [
-            'waiting_count' => WaitingQueue::forBranch($branchId)->today()->waiting()->count(),
-            'in_treatment_count' => WaitingQueue::forBranch($branchId)->today()->inTreatment()->count(),
-            'completed_count' => WaitingQueue::forBranch($branchId)->today()
-                ->where('status', WaitingQueue::STATUS_COMPLETED)->count(),
-        ];
-
-        return response()->json([
-            'current_calling' => $currentCalling ? [
-                'queue_number' => $currentCalling->queue_number,
-                'patient_name' => $currentCalling->masked_patient_name,
-                'doctor_name' => $currentCalling->doctor->surname ?? '',
-                'chair_name' => $currentCalling->chair->chair_name ?? '',
-                'called_time' => $currentCalling->called_time->format('H:i')
-            ] : null,
-            'waiting_list' => $waitingList->map(function ($item) {
-                return [
-                    'queue_number' => $item->queue_number,
-                    'patient_name' => $item->masked_patient_name,
-                    'doctor_name' => $item->doctor->surname ?? '',
-                    'check_in_time' => $item->check_in_time->format('H:i'),
-                    'estimated_wait' => $item->estimated_wait_minutes
-                ];
-            }),
-            'in_treatment_list' => $inTreatmentList->map(function ($item) {
-                return [
-                    'patient_name' => $item->masked_patient_name,
-                    'doctor_name' => $item->doctor->surname ?? '',
-                    'chair_name' => $item->chair->chair_name ?? ''
-                ];
-            }),
-            'stats' => $stats,
-            'current_time' => now()->format('H:i:s')
-        ]);
+        return response()->json($this->waitingQueueService->getDisplayData($branchId));
     }
 
     /**
@@ -311,20 +255,7 @@ class WaitingQueueController extends Controller
      */
     public function getTodayAppointments(Request $request)
     {
-        $branchId = Auth::user()->branch_id;
-
-        // 今日预约，状态为已确认或待确认的
-        $appointments = Appointment::where('appointment_date', today())
-            ->whereIn('status', ['confirmed', 'pending', 'scheduled'])
-            ->whereDoesntHave('waitingQueue', function ($query) {
-                $query->today()->whereNotIn('status', [
-                    WaitingQueue::STATUS_CANCELLED,
-                    WaitingQueue::STATUS_NO_SHOW
-                ]);
-            })
-            ->with(['patients', 'doctors'])
-            ->orderBy('appointment_time')
-            ->get();
+        $appointments = $this->waitingQueueService->getTodayAppointments();
 
         return response()->json([
             'data' => $appointments->map(function ($apt) {
@@ -348,22 +279,9 @@ class WaitingQueueController extends Controller
         $doctorId = Auth::id();
         $branchId = Auth::user()->branch_id;
 
-        $waitingPatients = WaitingQueue::forBranch($branchId)
-            ->forDoctor($doctorId)
-            ->today()
-            ->whereIn('status', [WaitingQueue::STATUS_WAITING, WaitingQueue::STATUS_CALLED])
-            ->with(['patient', 'appointment'])
-            ->orderByQueue()
-            ->get();
+        $data = $this->waitingQueueService->getDoctorQueueData($doctorId, $branchId);
 
-        $inTreatment = WaitingQueue::forBranch($branchId)
-            ->forDoctor($doctorId)
-            ->today()
-            ->inTreatment()
-            ->with(['patient', 'chair'])
-            ->first();
-
-        return view('waiting_queue.doctor_queue', compact('waitingPatients', 'inTreatment'));
+        return view('waiting_queue.doctor_queue', $data);
     }
 
     /**
@@ -374,30 +292,22 @@ class WaitingQueueController extends Controller
         $doctorId = Auth::id();
         $branchId = Auth::user()->branch_id;
 
-        // 获取该医生的下一位等待患者
-        $nextPatient = WaitingQueue::forBranch($branchId)
-            ->forDoctor($doctorId)
-            ->today()
-            ->waiting()
-            ->orderByQueue()
-            ->first();
+        $result = $this->waitingQueueService->callNextForDoctor($doctorId, $branchId, $request->chair_id);
 
-        if (!$nextPatient) {
+        if (!empty($result['no_patients'])) {
             return response()->json([
                 'status' => 'info',
                 'message' => __('waiting_queue.no_waiting_patients')
             ]);
         }
 
-        $nextPatient->callPatient(Auth::id(), $request->chair_id);
-
         return response()->json([
             'status' => 'success',
             'message' => __('waiting_queue.call_success'),
             'data' => [
-                'queue_number' => $nextPatient->queue_number,
-                'patient_name' => $nextPatient->patient->name ?? '',
-                'patient_id' => $nextPatient->patient_id
+                'queue_number' => $result['queue_number'],
+                'patient_name' => $result['patient_name'],
+                'patient_id' => $result['patient_id']
             ]
         ]);
     }

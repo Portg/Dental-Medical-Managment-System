@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Patient;
+use App\Services\MedicalHistoryService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 
 class MedicalHistoryController extends Controller
 {
+    private MedicalHistoryService $service;
+
+    public function __construct(MedicalHistoryService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -18,14 +24,12 @@ class MedicalHistoryController extends Controller
      */
     public function index(Request $request, $patient_id)
     {
-        //patient
-        $patient = Patient::findOrfail($patient_id);
-        $data['medical_cards'] = DB::table('medical_card_items')
-            ->join('medical_cards', 'medical_cards.id', 'medical_card_items.medical_card_id')
-            ->whereNull('medical_card_items.deleted_at')
-            ->where('medical_cards.patient_id', $patient_id)
-            ->get();
-        return view('medical_history.index', compact('patient'))->with($data);
+        $data = $this->service->getMedicalHistoryForPatient($patient_id);
+
+        return view('medical_history.index', [
+            'patient' => $data['patient'],
+            'medical_cards' => $data['medical_cards'],
+        ]);
     }
 
     /**

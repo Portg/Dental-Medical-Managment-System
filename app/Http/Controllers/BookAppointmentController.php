@@ -2,13 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\BookAppointment;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\BookAppointmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class BookAppointmentController extends Controller
 {
+    private BookAppointmentService $bookAppointmentService;
+
+    public function __construct(BookAppointmentService $bookAppointmentService)
+    {
+        $this->bookAppointmentService = $bookAppointmentService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -42,23 +49,24 @@ class BookAppointmentController extends Controller
             'phone_number' => 'required',
             'message' => 'required'
         ])->validate();
-        $success = BookAppointment::create([
-            'full_name' => $request->full_name,
-            'phone_number' => $request->phone_number,
-            'email' => $request->email,
-            'message' => $request->message
-        ]);
-        return FunctionsHelper::messageResponse(__('messages.booking_request_sent_successfully'), $success);
 
+        $success = $this->bookAppointmentService->create(
+            $request->full_name,
+            $request->phone_number,
+            $request->email,
+            $request->message
+        );
+
+        return FunctionsHelper::messageResponse(__('messages.booking_request_sent_successfully'), $success);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\BookAppointment $bookAppointment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(BookAppointment $bookAppointment)
+    public function show($id)
     {
         //
     }
@@ -66,10 +74,10 @@ class BookAppointmentController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\BookAppointment $bookAppointment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function edit(BookAppointment $bookAppointment)
+    public function edit($id)
     {
         //
     }
@@ -78,10 +86,10 @@ class BookAppointmentController extends Controller
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\BookAppointment $bookAppointment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, BookAppointment $bookAppointment)
+    public function update(Request $request, $id)
     {
         //
     }
@@ -89,10 +97,10 @@ class BookAppointmentController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\BookAppointment $bookAppointment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(BookAppointment $bookAppointment)
+    public function destroy($id)
     {
         //
     }

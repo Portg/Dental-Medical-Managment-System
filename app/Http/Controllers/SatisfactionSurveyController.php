@@ -2,90 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\SatisfactionSurvey;
-use App\Patient;
-use App\Appointment;
-use App\Branch;
+use App\Services\SatisfactionSurveyService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
-use Carbon\Carbon;
 
 class SatisfactionSurveyController extends Controller
 {
-    /**
-     * 满意度调查列表
-     */
-    public function index(Request $request)
+    private SatisfactionSurveyService $service;
+
+    public function __construct(SatisfactionSurveyService $service)
     {
-        $startDate = $request->start_date ? Carbon::parse($request->start_date) : Carbon::now()->startOfMonth();
-        $endDate = $request->end_date ? Carbon::parse($request->end_date) : Carbon::now()->endOfMonth();
-
-        // NPS 分数
-        $nps = SatisfactionSurvey::calculateNPS(null, $startDate, $endDate);
-
-        // 平均评分
-        $avgRatings = SatisfactionSurvey::getAverageRatings(null, $startDate, $endDate);
-
-        // 调查统计
-        $totalSurveys = SatisfactionSurvey::completed()
-            ->whereBetween('survey_date', [$startDate, $endDate])
-            ->count();
-
-        $pendingSurveys = SatisfactionSurvey::where('status', SatisfactionSurvey::STATUS_PENDING)->count();
-
-        // 评分分布
-        $ratingDistribution = SatisfactionSurvey::completed()
-            ->whereBetween('survey_date', [$startDate, $endDate])
-            ->select('overall_rating', DB::raw('COUNT(*) as count'))
-            ->groupBy('overall_rating')
-            ->orderBy('overall_rating')
-            ->get()
-            ->keyBy('overall_rating');
-
-        // 月度趋势
-        $monthlyTrend = $this->getMonthlyTrend(6);
-
-        // 医生评分排名
-        $doctorRankings = SatisfactionSurvey::completed()
-            ->whereBetween('survey_date', [$startDate, $endDate])
-            ->select('doctor_id', DB::raw('AVG(doctor_rating) as avg_rating'), DB::raw('COUNT(*) as count'))
-            ->whereNotNull('doctor_id')
-            ->groupBy('doctor_id')
-            ->orderByDesc('avg_rating')
-            ->with('doctor')
-            ->limit(10)
-            ->get();
-
-        return view('satisfaction_surveys.index', compact(
-            'nps',
-            'avgRatings',
-            'totalSurveys',
-            'pendingSurveys',
-            'ratingDistribution',
-            'monthlyTrend',
-            'doctorRankings',
-            'startDate',
-            'endDate'
-        ));
+        $this->service = $service;
     }
 
     /**
-     * 获取调查数据（DataTable）
+     * Display the survey dashboard.
+     */
+    public function index(Request $request)
+    {
+        $data = $this->service->getDashboardData($request->start_date, $request->end_date);
+
+        return view('satisfaction_surveys.index', $data);
+    }
+
+    /**
+     * Get survey data for DataTable.
      */
     public function getData(Request $request)
     {
-        $query = SatisfactionSurvey::with(['patient', 'doctor', 'appointment'])
-            ->orderBy('created_at', 'desc');
-
-        if ($request->status) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->start_date && $request->end_date) {
-            $query->whereBetween('survey_date', [$request->start_date, $request->end_date]);
-        }
+        $query = $this->service->getSurveyQuery($request->all());
 
         return DataTables::of($query)
             ->addColumn('patient_name', function($row) {
@@ -120,7 +65,7 @@ class SatisfactionSurveyController extends Controller
     }
 
     /**
-     * 创建调查问卷（发送给患者）
+     * Show the create survey form.
      */
     public function create()
     {
@@ -128,7 +73,7 @@ class SatisfactionSurveyController extends Controller
     }
 
     /**
-     * 发送调查问卷
+     * Send a survey for an appointment.
      */
     public function store(Request $request)
     {
@@ -137,18 +82,7 @@ class SatisfactionSurveyController extends Controller
             'channel' => 'required|in:sms,wechat,app,instore'
         ]);
 
-        $appointment = Appointment::findOrFail($request->appointment_id);
-
-        $survey = SatisfactionSurvey::create([
-            'patient_id' => $appointment->patient_id,
-            'appointment_id' => $appointment->id,
-            'doctor_id' => $appointment->doctor,
-            'branch_id' => Auth::user()->branch_id,
-            'survey_channel' => $request->channel,
-            'status' => SatisfactionSurvey::STATUS_PENDING,
-        ]);
-
-        // TODO: Send survey via SMS/WeChat
+        $survey = $this->service->createSurvey($request->appointment_id, $request->channel);
 
         return response()->json([
             'status' => 'success',
@@ -158,17 +92,17 @@ class SatisfactionSurveyController extends Controller
     }
 
     /**
-     * 查看调查详情
+     * Show survey detail.
      */
     public function show($id)
     {
-        $survey = SatisfactionSurvey::with(['patient', 'doctor', 'appointment', 'branch'])->findOrFail($id);
+        $survey = $this->service->getSurveyDetail($id);
 
         return view('satisfaction_surveys.show', compact('survey'));
     }
 
     /**
-     * 患者填写调查问卷（公开链接）
+     * Patient fills out a survey (public link).
      */
     public function fill($token)
     {
@@ -177,7 +111,7 @@ class SatisfactionSurveyController extends Controller
     }
 
     /**
-     * 提交调查问卷
+     * Submit survey responses.
      */
     public function submit(Request $request, $id)
     {
@@ -192,20 +126,7 @@ class SatisfactionSurveyController extends Controller
             'suggestions' => 'nullable|string|max:1000',
         ]);
 
-        $survey = SatisfactionSurvey::findOrFail($id);
-
-        $survey->update([
-            'overall_rating' => $request->overall_rating,
-            'service_rating' => $request->service_rating,
-            'environment_rating' => $request->environment_rating,
-            'wait_time_rating' => $request->wait_time_rating,
-            'doctor_rating' => $request->doctor_rating,
-            'would_recommend' => $request->would_recommend,
-            'feedback' => $request->feedback,
-            'suggestions' => $request->suggestions,
-            'survey_date' => now(),
-            'status' => SatisfactionSurvey::STATUS_COMPLETED,
-        ]);
+        $this->service->submitSurvey($id, $request->all());
 
         return response()->json([
             'status' => 'success',
@@ -214,49 +135,7 @@ class SatisfactionSurveyController extends Controller
     }
 
     /**
-     * 获取月度趋势
-     */
-    private function getMonthlyTrend($months)
-    {
-        $trend = [];
-        $now = Carbon::now();
-
-        for ($i = $months - 1; $i >= 0; $i--) {
-            $monthStart = $now->copy()->subMonths($i)->startOfMonth();
-            $monthEnd = $now->copy()->subMonths($i)->endOfMonth();
-
-            $avgRating = SatisfactionSurvey::completed()
-                ->whereBetween('survey_date', [$monthStart, $monthEnd])
-                ->avg('overall_rating');
-
-            $nps = SatisfactionSurvey::calculateNPS(null, $monthStart, $monthEnd);
-
-            $count = SatisfactionSurvey::completed()
-                ->whereBetween('survey_date', [$monthStart, $monthEnd])
-                ->count();
-
-            $trend[] = [
-                'month' => $monthStart->format('Y-m'),
-                'month_label' => $this->localizedMonth($monthStart->month),
-                'avg_rating' => round($avgRating ?? 0, 1),
-                'nps' => $nps ?? 0,
-                'count' => $count,
-            ];
-        }
-
-        return $trend;
-    }
-
-    /**
-     * 获取本地化月份名称
-     */
-    private function localizedMonth($month)
-    {
-        return __('datetime.months_short.' . ($month - 1));
-    }
-
-    /**
-     * 批量发送调查
+     * Send surveys in batch.
      */
     public function sendBatch(Request $request)
     {
@@ -265,24 +144,7 @@ class SatisfactionSurveyController extends Controller
             'channel' => 'required|in:sms,wechat'
         ]);
 
-        // 获取指定日期完成的预约
-        $appointments = Appointment::where('appointment_date', $request->date)
-            ->where('status', 'completed')
-            ->whereDoesntHave('satisfactionSurvey')
-            ->get();
-
-        $sentCount = 0;
-        foreach ($appointments as $appointment) {
-            SatisfactionSurvey::create([
-                'patient_id' => $appointment->patient_id,
-                'appointment_id' => $appointment->id,
-                'doctor_id' => $appointment->doctor,
-                'branch_id' => Auth::user()->branch_id,
-                'survey_channel' => $request->channel,
-                'status' => SatisfactionSurvey::STATUS_PENDING,
-            ]);
-            $sentCount++;
-        }
+        $sentCount = $this->service->sendBatch($request->date, $request->channel);
 
         return response()->json([
             'status' => 'success',

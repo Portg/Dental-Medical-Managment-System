@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\ChartOfAccountItem;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\ChartOfAccountItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ChartOfAccountItemController extends Controller
 {
+    private ChartOfAccountItemService $chartOfAccountItemService;
+
+    public function __construct(ChartOfAccountItemService $chartOfAccountItemService)
+    {
+        $this->chartOfAccountItemService = $chartOfAccountItemService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -43,12 +48,8 @@ class ChartOfAccountItemController extends Controller
             'name' => 'required',
             'account_type' => 'required'
         ])->validate();
-        $success = ChartOfAccountItem::create([
-            'name' => $request->name,
-            'description' => $request->description,
-            'chart_of_account_category_id' => $request->account_type,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $success = $this->chartOfAccountItemService->createItem($request->all());
         if ($success) {
             return FunctionsHelper::messageResponse(__('charts_of_accounts.chart_of_accounts_added_successfully'), $success);
         }
@@ -57,10 +58,10 @@ class ChartOfAccountItemController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\ChartOfAccountItem $chartOfAccountItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(ChartOfAccountItem $chartOfAccountItem)
+    public function show($id)
     {
         //
     }
@@ -73,13 +74,7 @@ class ChartOfAccountItemController extends Controller
      */
     public function edit($id)
     {
-        $data = DB::table('chart_of_account_items')
-            ->leftJoin('chart_of_account_categories', 'chart_of_account_categories.id',
-                'chart_of_account_items.chart_of_account_category_id')
-            ->whereNull('chart_of_account_items.deleted_at')
-            ->where('chart_of_account_items.id', $id)
-            ->select(['chart_of_account_items.*', 'chart_of_account_categories.name as category_name'])
-            ->first();
+        $data = $this->chartOfAccountItemService->findItem($id);
         return response()->json($data);
     }
 
@@ -96,12 +91,8 @@ class ChartOfAccountItemController extends Controller
             'name' => 'required',
             'account_type' => 'required'
         ])->validate();
-        $success = ChartOfAccountItem::where('id', $id)->update([
-            'name' => $request->name,
-            'description' => $request->description,
-            'chart_of_account_category_id' => $request->account_type,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $success = $this->chartOfAccountItemService->updateItem($id, $request->all());
         if ($success) {
             return FunctionsHelper::messageResponse(__('charts_of_accounts.chart_of_accounts_updated_successfully'), $success);
         }
@@ -110,10 +101,10 @@ class ChartOfAccountItemController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\ChartOfAccountItem $chartOfAccountItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(ChartOfAccountItem $chartOfAccountItem)
+    public function destroy($id)
     {
         //
     }

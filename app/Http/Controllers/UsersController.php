@@ -4,22 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
-use App\Notifications\AppointmentReminderNotification;
-use App\Notifications\ReminderNotification;
-use App\User;
+use App\Services\UserService;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\AnonymousNotifiable;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Validator;
-use Thomasjohnkane\Snooze\ScheduledNotification;
 use Yajra\DataTables\DataTables;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 
 class UsersController extends Controller
 {
+    private UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -30,31 +28,7 @@ class UsersController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
-            if (!empty($_GET['search'])) {
-
-                $data = DB::table('users')
-                    ->leftJoin('roles', 'roles.id', 'users.role_id')
-                    ->leftJoin('branches', 'branches.id', 'users.branch_id')
-                    ->whereNull('users.deleted_at')
-                    ->where(function($q) use ($request) {
-                        NameHelper::addNameSearch($q, $request->get('search'), 'users');
-                        $q->orWhere('users.email', 'like', '%' . $request->get('search') . '%')
-                          ->orWhere('users.phone_no', 'like', '%' . $request->get('search') . '%');
-                    })
-                    ->select(['users.*', 'roles.name as user_role', 'branches.name as branch'])
-                    ->OrderBy('users.id', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('users')
-                    ->leftJoin('roles', 'roles.id', 'users.role_id')
-                    ->leftJoin('branches', 'branches.id', 'users.branch_id')
-                    ->whereNull('users.deleted_at')
-                    ->select(['users.*', 'roles.name as user_role', 'branches.name as branch'])
-                    ->OrderBy('users.id', 'desc')
-                    ->get();
-            }
-
+            $data = $this->userService->getUserList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -85,49 +59,19 @@ class UsersController extends Controller
         }
         return view('users.index');
     }
+
     public function filterDoctor(Request $request)
     {
-        $search = $request->q;
-
-        $query = DB::table("users")
-            ->whereNull('users.deleted_at')
-            ->where('users.is_doctor', '=', 'Yes');
-
-        // Apply search filter if provided
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                NameHelper::addNameSearch($q, $search, 'users');
-            });
-        }
-
-        $data = $query->orderBy('surname')->limit(20)->get();
-
-        $formatted = [];
-        foreach ($data as $item) {
-            $formatted[] = ['id' => $item->id, 'text' => NameHelper::join($item->surname, $item->othername)];
-        }
+        $formatted = $this->userService->searchDoctors($request->q);
         return \Response::json($formatted);
     }
 
     public function filterEmployees(Request $request)
     {
-        $data = [];
         $name = $request->q;
         if ($name) {
-            $search = $name;
-            $data = DB::table("users")
-                ->whereNull('users.deleted_at')
-                ->where(function($q) use ($search) {
-                    NameHelper::addNameSearch($q, $search);
-                })
-                ->select('users.*')
-                ->get();
-
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => NameHelper::join($tag->surname, $tag->othername)];
-            }
-            return \Response::json($formatted_tags);
+            $formatted = $this->userService->searchEmployees($name);
+            return \Response::json($formatted);
         }
     }
 
@@ -157,7 +101,6 @@ class UsersController extends Controller
                 'password' => 'min:6 | required_with:password_confirmation',
                 'password_confirmation' => 'min:6 | same:password_confirmation'
             ])->validate();
-            $nameParts = NameHelper::split($request->full_name);
         } else {
             Validator::make($request->all(), [
                 'surname' => ['required'],
@@ -166,21 +109,10 @@ class UsersController extends Controller
                 'password' => 'min:6 | required_with:password_confirmation',
                 'password_confirmation' => 'min:6 | same:password_confirmation'
             ])->validate();
-            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
         }
 
-        $status = User::create([
-            'surname' => $nameParts['surname'],
-            'othername' => $nameParts['othername'],
-            'email' => $request->email,
-            'phone_no' => $request->phone_no,
-            'alternative_no' => $request->alternative_no,
-            'nin' => $request->nin,
-            'role_id' => $request->role_id,
-            'branch_id' => $request->branch_id,
-            'is_doctor' => $request->is_doctor,
-            'password' => Hash::make($request->password),
-        ]);
+        $nameParts = $this->userService->parseNameParts($request->all());
+        $status = $this->userService->createUser($nameParts, $request->all());
         return FunctionsHelper::messageResponse(__('messages.user_registered_successfully'), $status);
     }
 
@@ -203,14 +135,7 @@ class UsersController extends Controller
      */
     public function edit($id)
     {
-        $user = DB::table("users")
-            ->leftJoin('branches', 'branches.id', 'users.branch_id')
-            ->leftJoin('roles', 'roles.id', 'users.role_id')
-            ->where('users.id', $id)
-            ->whereNull('users.deleted_at')
-            ->select('users.*', 'roles.name as user_role', 'branches.name as branch')
-            ->first();
-        return response()->json($user);
+        return response()->json($this->userService->getUserForEdit($id));
     }
 
     /**
@@ -222,23 +147,8 @@ class UsersController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if ($request->filled('full_name')) {
-            $nameParts = NameHelper::split($request->full_name);
-        } else {
-            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
-        }
-
-        $status = User::where('id', $id)->update([
-            'surname' => $nameParts['surname'],
-            'othername' => $nameParts['othername'],
-            'email' => $request->email,
-            'phone_no' => $request->phone_no,
-            'alternative_no' => $request->alternative_no,
-            'role_id' => $request->role_id,
-            'is_doctor' => $request->is_doctor,
-            'branch_id' => $request->branch_id,
-            'nin' => $request->nin
-        ]);
+        $nameParts = $this->userService->parseNameParts($request->all());
+        $status = $this->userService->updateUser($id, $nameParts, $request->all());
         return FunctionsHelper::messageResponse(__('messages.user_updated_successfully'), $status);
     }
 
@@ -250,9 +160,8 @@ class UsersController extends Controller
      */
     public function destroy($id)
     {
-        $status = User::where('id', $id)->delete();
+        $status = $this->userService->deleteUser($id);
         return FunctionsHelper::messageResponse(__('messages.user_deleted_successfully'), $status);
-
     }
 
 

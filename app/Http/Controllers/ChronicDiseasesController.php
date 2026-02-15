@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\ChronicDisease;
+use App\Services\ChronicDiseaseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class ChronicDiseasesController extends Controller
 {
+    private ChronicDiseaseService $chronicDiseaseService;
+
+    public function __construct(ChronicDiseaseService $chronicDiseaseService)
+    {
+        $this->chronicDiseaseService = $chronicDiseaseService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -19,9 +25,7 @@ class ChronicDiseasesController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = ChronicDisease::where('patient_id', $patient_id)
-                ->OrderBy('updated_at','desc')
-                ->get();
+            $data = $this->chronicDiseaseService->getListByPatient($patient_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -72,12 +76,9 @@ class ChronicDiseasesController extends Controller
             'disease.required' => __('validation.custom.disease.required'),
             'status.required' => __('validation.custom.status.required')
         ])->validate();
-        $status = ChronicDisease::create([
-            'disease' => $request->disease,
-            'status' => $request->status,
-            'patient_id' => $request->patient_id,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->chronicDiseaseService->create($request->disease, $request->status, $request->patient_id);
+
         if ($status) {
             return response()->json(['message' => __('messages.chronic_disease_added_successfully'), 'status' => true]);
         }
@@ -103,8 +104,7 @@ class ChronicDiseasesController extends Controller
      */
     public function edit($id)
     {
-        $illness = ChronicDisease::where('id', $id)->first();
-        return response()->json($illness);
+        return response()->json($this->chronicDiseaseService->find($id));
     }
 
     /**
@@ -123,16 +123,13 @@ class ChronicDiseasesController extends Controller
             'disease.required' => __('validation.custom.disease.required'),
             'status.required' => __('validation.custom.status.required')
         ])->validate();
-        $status = ChronicDisease::where('id', $id)->update([
-            'disease' => $request->disease,
-            'status' => $request->status,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->chronicDiseaseService->update($id, $request->disease, $request->status);
+
         if ($status) {
             return response()->json(['message' => __('messages.chronic_disease_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 
     /**
@@ -143,11 +140,11 @@ class ChronicDiseasesController extends Controller
      */
     public function destroy($id)
     {
-        $status = ChronicDisease::where('id', $id)->delete();
+        $status = $this->chronicDiseaseService->delete($id);
+
         if ($status) {
             return response()->json(['message' => __('messages.chronic_disease_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 }

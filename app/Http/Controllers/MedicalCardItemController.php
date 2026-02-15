@@ -2,11 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\MedicalCardItem;
+use App\Services\MedicalCardItemService;
 use Illuminate\Http\Request;
 
 class MedicalCardItemController extends Controller
 {
+    private MedicalCardItemService $service;
+
+    public function __construct(MedicalCardItemService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -41,10 +48,10 @@ class MedicalCardItemController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\MedicalCardItem $medicalCardItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(MedicalCardItem $medicalCardItem)
+    public function show($id)
     {
         //
     }
@@ -52,10 +59,10 @@ class MedicalCardItemController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\MedicalCardItem $medicalCardItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function edit(MedicalCardItem $medicalCardItem)
+    public function edit($id)
     {
         //
     }
@@ -64,10 +71,10 @@ class MedicalCardItemController extends Controller
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\MedicalCardItem $medicalCardItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, MedicalCardItem $medicalCardItem)
+    public function update(Request $request, $id)
     {
         //
     }
@@ -75,17 +82,15 @@ class MedicalCardItemController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\MedicalCardItem $medicalCardItem
+     * @param $id
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = MedicalCardItem::where('id', $id)->delete();
+        $status = $this->service->deleteMedicalCardItem($id);
         if ($status) {
-            return Response()->json(["message" => __('messages.medical_card_deleted_successfully'), "status" => true
-            ]);
+            return response()->json(["message" => __('messages.medical_card_deleted_successfully'), "status" => true]);
         }
-        return Response()->json(["message" => __('messages.error_try_again'), "status" => false]);
-
+        return response()->json(["message" => __('messages.error_try_again'), "status" => false]);
     }
 }

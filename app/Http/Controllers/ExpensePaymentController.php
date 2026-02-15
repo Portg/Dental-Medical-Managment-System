@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\ExpenseItem;
-use App\ExpensePayment;
+use App\Services\ExpensePaymentService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class ExpensePaymentController extends Controller
 {
+    private ExpensePaymentService $expensePaymentService;
+
+    public function __construct(ExpensePaymentService $expensePaymentService)
+    {
+        $this->expensePaymentService = $expensePaymentService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -24,7 +28,7 @@ class ExpensePaymentController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = ExpensePayment::where('expense_id', $expense_id)->OrderBy('updated_at', 'DESC')->get();
+            $data = $this->expensePaymentService->getPaymentsByExpense($expense_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -55,17 +59,9 @@ class ExpensePaymentController extends Controller
     }
 
     //show modal for updating the payment balance
-
     public function supplier_balance($purchase_id)
     {
-        $invoice_amount = ExpenseItem::where('expense_id', $purchase_id)->sum(DB::raw('qty * price'));
-
-        $amount_paid = ExpensePayment::where('expense_id', $purchase_id)->sum('amount');
-        //remaining balance
-        $balance = $invoice_amount - $amount_paid;
-        $data['amount'] = $balance;
-        $data['today_date'] = date('Y-m-d');
-        return response()->json($data);
+        return response()->json($this->expensePaymentService->getSupplierBalance($purchase_id));
     }
 
     /**
@@ -98,14 +94,7 @@ class ExpensePaymentController extends Controller
             'payment_account.required' => __('validation.attributes.payment_account') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = ExpensePayment::create([
-            'payment_date' => $request->payment_date,
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'payment_account_id' => $request->payment_account,
-            'expense_id' => $request->expense_id,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->expensePaymentService->createPayment($request->all());
         if ($status) {
             return response()->json(['message' => __('expense_items.payments.payment_captured_successfully'), 'status' => true]);
         }
@@ -115,10 +104,10 @@ class ExpensePaymentController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\ExpensePayment $expensePayment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(ExpensePayment $expensePayment)
+    public function show($id)
     {
         //
     }
@@ -126,20 +115,19 @@ class ExpensePaymentController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\ExpensePayment $expensePayment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $payment = ExpensePayment::where('id', $id)->first();
-        return response()->json($payment);
+        return response()->json($this->expensePaymentService->getPaymentForEdit($id));
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\ExpensePayment $expensePayment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
@@ -156,18 +144,11 @@ class ExpensePaymentController extends Controller
             'payment_account.required' => __('validation.attributes.payment_account') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = ExpensePayment::where('id', $id)->update([
-            'payment_date' => $request->payment_date,
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'payment_account_id' => $request->payment_account,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->expensePaymentService->updatePayment($id, $request->all());
         if ($status) {
             return response()->json(['message' => __('expense_items.payments.payment_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
@@ -178,11 +159,10 @@ class ExpensePaymentController extends Controller
      */
     public function destroy($id)
     {
-        $status = ExpensePayment::where('id', $id)->delete();
+        $status = $this->expensePaymentService->deletePayment($id);
         if ($status) {
             return response()->json(['message' => __('expense_items.payments.payment_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 }

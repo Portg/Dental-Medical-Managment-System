@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\InventoryBatch;
-use App\InventoryCategory;
-use App\InventoryItem;
-use Carbon\Carbon;
+use App\Services\InventoryItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class InventoryItemController extends Controller
 {
+    private InventoryItemService $service;
+
+    public function __construct(InventoryItemService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,20 +26,7 @@ class InventoryItemController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = InventoryItem::with('category')
-                ->orderBy('updated_at', 'DESC');
-
-            // Filter by category
-            if ($request->category_id) {
-                $query->where('category_id', $request->category_id);
-            }
-
-            // Filter by active status
-            if ($request->has('is_active') && $request->is_active !== '') {
-                $query->where('is_active', $request->is_active);
-            }
-
-            $data = $query->get();
+            $data = $this->service->getItemList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -65,7 +55,7 @@ class InventoryItemController extends Controller
                 ->make(true);
         }
 
-        $data['categories'] = InventoryCategory::active()->ordered()->get();
+        $data['categories'] = $this->service->getActiveCategories();
         return view('inventory.items.index')->with($data);
     }
 
@@ -77,34 +67,8 @@ class InventoryItemController extends Controller
      */
     public function search(Request $request)
     {
-        $search = $request->q;
-
-        if ($search) {
-            $items = InventoryItem::active()
-                ->search($search)
-                ->with('category')
-                ->limit(20)
-                ->get();
-
-            $formatted = [];
-            foreach ($items as $item) {
-                $formatted[] = [
-                    'id' => $item->id,
-                    'text' => $item->item_code . ' - ' . $item->name,
-                    'item_code' => $item->item_code,
-                    'name' => $item->name,
-                    'specification' => $item->specification,
-                    'unit' => $item->unit,
-                    'reference_price' => $item->reference_price,
-                    'selling_price' => $item->selling_price,
-                    'current_stock' => $item->current_stock,
-                    'average_cost' => $item->average_cost,
-                    'track_expiry' => $item->track_expiry,
-                    'category' => $item->category ? $item->category->name : null,
-                ];
-            }
-
-            return response()->json($formatted);
+        if ($request->q) {
+            return response()->json($this->service->searchItems($request->q));
         }
 
         return response()->json([]);
@@ -131,24 +95,9 @@ class InventoryItemController extends Controller
             'category_id.required' => __('inventory.category_required'),
         ])->validate();
 
-        $status = InventoryItem::create([
-            'item_code' => $request->item_code,
-            'name' => $request->name,
-            'specification' => $request->specification,
-            'unit' => $request->unit,
-            'category_id' => $request->category_id,
-            'brand' => $request->brand,
-            'reference_price' => $request->reference_price ?? 0,
-            'selling_price' => $request->selling_price ?? 0,
-            'track_expiry' => $request->track_expiry ?? false,
-            'stock_warning_level' => $request->stock_warning_level ?? 10,
-            'storage_location' => $request->storage_location,
-            'notes' => $request->notes,
-            'is_active' => $request->is_active ?? true,
-            '_who_added' => Auth::User()->id
-        ]);
+        $item = $this->service->createItem($request->all());
 
-        if ($status) {
+        if ($item) {
             return response()->json(['message' => __('inventory.item_added_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
@@ -162,8 +111,7 @@ class InventoryItemController extends Controller
      */
     public function edit($id)
     {
-        $item = InventoryItem::with('category')->find($id);
-        return response()->json($item);
+        return response()->json($this->service->getItemForEdit($id));
     }
 
     /**
@@ -188,21 +136,7 @@ class InventoryItemController extends Controller
             'category_id.required' => __('inventory.category_required'),
         ])->validate();
 
-        $status = InventoryItem::where('id', $id)->update([
-            'item_code' => $request->item_code,
-            'name' => $request->name,
-            'specification' => $request->specification,
-            'unit' => $request->unit,
-            'category_id' => $request->category_id,
-            'brand' => $request->brand,
-            'reference_price' => $request->reference_price ?? 0,
-            'selling_price' => $request->selling_price ?? 0,
-            'track_expiry' => $request->track_expiry ?? false,
-            'stock_warning_level' => $request->stock_warning_level ?? 10,
-            'storage_location' => $request->storage_location,
-            'notes' => $request->notes,
-            'is_active' => $request->is_active ?? true,
-        ]);
+        $status = $this->service->updateItem($id, $request->all());
 
         if ($status) {
             return response()->json(['message' => __('inventory.item_updated_successfully'), 'status' => true]);
@@ -218,20 +152,8 @@ class InventoryItemController extends Controller
      */
     public function destroy($id)
     {
-        // Check if item has stock movements
-        $item = InventoryItem::find($id);
-        if ($item && ($item->stockInItems()->count() > 0 || $item->stockOutItems()->count() > 0)) {
-            return response()->json([
-                'message' => __('inventory.item_has_movements'),
-                'status' => false
-            ]);
-        }
-
-        $status = InventoryItem::where('id', $id)->delete();
-        if ($status) {
-            return response()->json(['message' => __('inventory.item_deleted_successfully'), 'status' => true]);
-        }
-        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
+        $result = $this->service->deleteItem($id);
+        return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 
     /**
@@ -243,11 +165,7 @@ class InventoryItemController extends Controller
     public function stockWarnings(Request $request)
     {
         if ($request->ajax()) {
-            $data = InventoryItem::lowStock()
-                ->active()
-                ->with('category')
-                ->orderBy('current_stock')
-                ->get();
+            $data = $this->service->getLowStockItems();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -274,14 +192,7 @@ class InventoryItemController extends Controller
     {
         if ($request->ajax()) {
             $warningDays = $request->warning_days ?? 30;
-
-            $data = InventoryBatch::with(['inventoryItem', 'inventoryItem.category'])
-                ->where('status', 'available')
-                ->where('qty', '>', 0)
-                ->whereNotNull('expiry_date')
-                ->where('expiry_date', '<=', Carbon::now()->addDays($warningDays))
-                ->orderBy('expiry_date')
-                ->get();
+            $data = $this->service->getExpiryWarningBatches($warningDays);
 
             return Datatables::of($data)
                 ->addIndexColumn()

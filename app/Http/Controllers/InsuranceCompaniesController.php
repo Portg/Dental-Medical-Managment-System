@@ -2,34 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Helper\FunctionsHelper;
-use App\InsuranceCompany;
+use App\Services\InsuranceCompanyService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class InsuranceCompaniesController extends Controller
 {
+    private InsuranceCompanyService $insuranceCompanyService;
+
+    public function __construct(InsuranceCompanyService $insuranceCompanyService)
+    {
+        $this->insuranceCompanyService = $insuranceCompanyService;
+    }
+
     /**
      * Display a listing of the resource.
      *
      * @param Request $request
-     * @return Response
+     * @return \Illuminate\Http\Response
      * @throws \Exception
      */
     public function index(Request $request)
     {
         if ($request->ajax()) {
 
-            $data = DB::table('insurance_companies')
-                ->leftJoin('users', 'users.id', 'insurance_companies._who_added')
-                ->whereNull('insurance_companies.deleted_at')
-                ->select(['insurance_companies.*', 'users.surname'])
-                ->OrderBy('insurance_companies.id', 'desc')
-                ->get();
+            $data = $this->insuranceCompanyService->getCompanyList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -64,7 +62,7 @@ class InsuranceCompaniesController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function create()
     {
@@ -75,7 +73,7 @@ class InsuranceCompaniesController extends Controller
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
@@ -84,24 +82,19 @@ class InsuranceCompaniesController extends Controller
         ], [
             'name.required' => __('validation.attributes.insurance_company_name') . ' ' . __('validation.required'),
         ])->validate();
-        $status = InsuranceCompany::create([
-            'name' => $request->name,
-            'phone_no' => $request->phone_no,
-            'email' => $request->email,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->insuranceCompanyService->createCompany($request->all());
         if ($status) {
             return response()->json(['message' => __('insurance_companies.added_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
      * Display the specified resource.
      *
      * @param int $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function show($id)
     {
@@ -112,12 +105,11 @@ class InsuranceCompaniesController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param int $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $company = InsuranceCompany::where('id', $id)->first();
-        return response()->json($company);
+        return response()->json($this->insuranceCompanyService->getCompanyForEdit($id));
     }
 
     /**
@@ -125,7 +117,7 @@ class InsuranceCompaniesController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param int $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
     {
@@ -134,34 +126,20 @@ class InsuranceCompaniesController extends Controller
         ], [
             'name.required' => __('validation.attributes.insurance_company_name') . ' ' . __('validation.required'),
         ])->validate();
-        $status = InsuranceCompany::where('id', $id)->update([
-            'name' => $request->name,
-            'phone_no' => $request->phone_no,
-            'email' => $request->email,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->insuranceCompanyService->updateCompany($id, $request->all());
         if ($status) {
             return response()->json(['message' => __('insurance_companies.updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     public function filterCompanies(Request $request)
     {
-        $data = [];
         $name = $request->q;
 
         if ($name) {
-            $search = $name;
-            $data =
-                InsuranceCompany::where('name', 'LIKE', "%$search%")->get();
-
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->name];
-            }
-            return \Response::json($formatted_tags);
+            return \Response::json($this->insuranceCompanyService->filterCompanies($name));
         }
     }
 
@@ -169,16 +147,14 @@ class InsuranceCompaniesController extends Controller
      * Remove the specified resource from storage.
      *
      * @param int $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = InsuranceCompany::where('id', $id)->delete();
+        $status = $this->insuranceCompanyService->deleteCompany($id);
         if ($status) {
             return response()->json(['message' => __('insurance_companies.deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
-
 }

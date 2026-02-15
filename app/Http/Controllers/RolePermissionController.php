@@ -2,19 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\RolePermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
-use App\RolePermission;
-use App\Role;
-use App\Permission;
 
 class RolePermissionController extends Controller
 {
+    private RolePermissionService $rolePermissionService;
+
+    public function __construct(RolePermissionService $rolePermissionService)
+    {
+        $this->rolePermissionService = $rolePermissionService;
+    }
+
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = RolePermission::with(['role', 'permission'])->get();
+            $data = $this->rolePermissionService->getAllRolePermissions();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -39,8 +44,8 @@ class RolePermissionController extends Controller
                 ->make(true);
         }
 
-        $data['roles'] = Role::all();
-        $data['permissions'] = Permission::all();
+        $data['roles'] = $this->rolePermissionService->getAllRoles();
+        $data['permissions'] = $this->rolePermissionService->getAllPermissions();
         return view('role-permissions.index')->with($data);
     }
 
@@ -52,18 +57,11 @@ class RolePermissionController extends Controller
         ])->validate();
 
         // 检查是否已存在
-        $exists = RolePermission::where('role_id', $request->role_id)
-            ->where('permission_id', $request->permission_id)
-            ->exists();
-
-        if ($exists) {
+        if ($this->rolePermissionService->exists($request->role_id, $request->permission_id)) {
             return response()->json(['message' => __('role_permissions.permission_already_assigned'), 'status' => false]);
         }
 
-        $status = RolePermission::create([
-            'role_id' => $request->role_id,
-            'permission_id' => $request->permission_id
-        ]);
+        $status = $this->rolePermissionService->createRolePermission($request->role_id, $request->permission_id);
 
         if ($status) {
             return response()->json(['message' => __('role_permissions.role_permission_added_successfully'), 'status' => true]);
@@ -73,8 +71,7 @@ class RolePermissionController extends Controller
 
     public function edit($id)
     {
-        $rolePermission = RolePermission::with(['role', 'permission'])->where('id', $id)->first();
-        return response()->json($rolePermission);
+        return response()->json($this->rolePermissionService->findRolePermission($id));
     }
 
     public function update(Request $request, $id)
@@ -85,19 +82,11 @@ class RolePermissionController extends Controller
         ])->validate();
 
         // 检查是否已存在(排除当前记录)
-        $exists = RolePermission::where('role_id', $request->role_id)
-            ->where('permission_id', $request->permission_id)
-            ->where('id', '!=', $id)
-            ->exists();
-
-        if ($exists) {
+        if ($this->rolePermissionService->exists($request->role_id, $request->permission_id, $id)) {
             return response()->json(['message' => __('role_permissions.permission_already_assigned'), 'status' => false]);
         }
 
-        $status = RolePermission::where('id', $id)->update([
-            'role_id' => $request->role_id,
-            'permission_id' => $request->permission_id
-        ]);
+        $status = $this->rolePermissionService->updateRolePermission($id, $request->role_id, $request->permission_id);
 
         if ($status) {
             return response()->json(['message' => __('role_permissions.role_permission_updated_successfully'), 'status' => true]);
@@ -107,7 +96,7 @@ class RolePermissionController extends Controller
 
     public function destroy($id)
     {
-        $status = RolePermission::where('id', $id)->delete();
+        $status = $this->rolePermissionService->deleteRolePermission($id);
         if ($status) {
             return response()->json(['message' => __('role_permissions.role_permission_deleted_successfully'), 'status' => true]);
         }

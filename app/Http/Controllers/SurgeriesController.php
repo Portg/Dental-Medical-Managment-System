@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Surgery;
+use App\Services\SurgeryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class SurgeriesController extends Controller
 {
+    private SurgeryService $surgeryService;
+
+    public function __construct(SurgeryService $surgeryService)
+    {
+        $this->surgeryService = $surgeryService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -21,7 +27,7 @@ class SurgeriesController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = Surgery::where('patient_id', $patient_id)->get();
+            $data = $this->surgeryService->getListByPatient($patient_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -69,13 +75,14 @@ class SurgeriesController extends Controller
             'surgery.required' => __('validation.custom.surgery.required'),
             'surgery_date.required' => __('validation.custom.surgery_date.required')
         ])->validate();
-        $status = Surgery::create([
-            'surgery' => $request->surgery,
-            'surgery_date' => $request->surgery_date,
-            'description' => $request->description,
-            'patient_id' => $request->patient_id,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->surgeryService->create(
+            $request->surgery,
+            $request->surgery_date,
+            $request->description,
+            $request->patient_id
+        );
+
         if ($status) {
             return response()->json(['message' => __('medical_history.surgery_added_successfully'), 'status' => true]);
         }
@@ -101,8 +108,7 @@ class SurgeriesController extends Controller
      */
     public function edit($id)
     {
-        $surgery = Surgery::where('id', $id)->first();
-        return response()->json($surgery);
+        return response()->json($this->surgeryService->find($id));
     }
 
     /**
@@ -121,17 +127,18 @@ class SurgeriesController extends Controller
             'surgery.required' => __('validation.custom.surgery.required'),
             'surgery_date.required' => __('validation.custom.surgery_date.required')
         ])->validate();
-        $status = Surgery::where('id', $id)->update([
-            'surgery' => $request->surgery,
-            'surgery_date' => $request->surgery_date,
-            'description' => $request->description,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->surgeryService->update(
+            $id,
+            $request->surgery,
+            $request->surgery_date,
+            $request->description
+        );
+
         if ($status) {
             return response()->json(['message' => __('medical_history.surgery_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 
     /**
@@ -142,7 +149,8 @@ class SurgeriesController extends Controller
      */
     public function destroy($id)
     {
-        $status = Surgery::where('id', $id)->delete();
+        $status = $this->surgeryService->delete($id);
+
         if ($status) {
             return response()->json(['message' => __('medical_history.surgery_deleted_successfully'), 'status' => true]);
         }

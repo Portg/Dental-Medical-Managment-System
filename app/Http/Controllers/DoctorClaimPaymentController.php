@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\DoctorClaimPayment;
+use App\Services\DoctorClaimPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class DoctorClaimPaymentController extends Controller
 {
+    private DoctorClaimPaymentService $claimPaymentService;
+
+    public function __construct(DoctorClaimPaymentService $claimPaymentService)
+    {
+        $this->claimPaymentService = $claimPaymentService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,12 +29,7 @@ class DoctorClaimPaymentController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = DB::table('doctor_claim_payments')
-                ->whereNull('doctor_claim_payments.deleted_at')
-                ->where('doctor_claim_payments.doctor_claim_id', $claim_id)
-                ->select('doctor_claim_payments.*')
-                ->orderBy('doctor_claim_payments.updated_at', 'desc')
-                ->get();
+            $data = $this->claimPaymentService->getPaymentsByClaim($claim_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -47,10 +48,7 @@ class DoctorClaimPaymentController extends Controller
                 ->make(true);
         }
         $data['claim_id'] = $claim_id;
-        $data['doctor'] = DB::table('doctor_claims')
-            ->join('users', 'users.id', 'doctor_claims._who_added')
-            ->where('doctor_claims.id', $claim_id)
-            ->first();
+        $data['doctor'] = $this->claimPaymentService->getDoctorForClaim($claim_id);
         return view('doctor_claims.payments.index')->with($data);
     }
 
@@ -76,12 +74,14 @@ class DoctorClaimPaymentController extends Controller
             'amount' => 'required',
             'payment_date' => 'required'
         ])->validate();
-        $status = DoctorClaimPayment::create([
-            'payment_date' => $request->payment_date,
-            'amount' => $request->amount,
-            'doctor_claim_id' => $request->claim_id,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->claimPaymentService->createPayment(
+            $request->payment_date,
+            $request->amount,
+            $request->claim_id,
+            Auth::User()->id
+        );
+
         if ($status) {
             return response()->json(['message' => __('doctor_claims.payments.payment_added_successfully'), 'status' => true]);
         }
@@ -91,10 +91,10 @@ class DoctorClaimPaymentController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\DoctorClaimPayment $doctorClaimPayment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(DoctorClaimPayment $doctorClaimPayment)
+    public function show($id)
     {
         //
     }
@@ -102,13 +102,12 @@ class DoctorClaimPaymentController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\DoctorClaimPayment $doctorClaimPayment
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $payment = DoctorClaimPayment::where('id', $id)->first();
-        return response()->json($payment);
+        return response()->json($this->claimPaymentService->findPayment($id));
     }
 
     /**
@@ -124,11 +123,14 @@ class DoctorClaimPaymentController extends Controller
             'amount' => 'required',
             'payment_date' => 'required'
         ])->validate();
-        $status = DoctorClaimPayment::where('id', $id)->update([
-            'payment_date' => $request->payment_date,
-            'amount' => $request->amount,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->claimPaymentService->updatePayment(
+            $id,
+            $request->payment_date,
+            $request->amount,
+            Auth::User()->id
+        );
+
         if ($status) {
             return response()->json(['message' => __('doctor_claims.payments.payment_updated_successfully'), 'status' => true]);
         }
@@ -144,7 +146,7 @@ class DoctorClaimPaymentController extends Controller
      */
     public function destroy($id)
     {
-        $status = DoctorClaimPayment::where('id', $id)->delete();
+        $status = $this->claimPaymentService->deletePayment($id);
         if ($status) {
             return response()->json(['message' => __('doctor_claims.payments.payment_deleted_successfully'), 'status' => true]);
         }

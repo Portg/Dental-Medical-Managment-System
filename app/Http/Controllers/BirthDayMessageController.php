@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\BirthDayMessage;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\BirthDayMessageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class BirthDayMessageController extends Controller
 {
+    private BirthDayMessageService $birthDayMessageService;
+
+    public function __construct(BirthDayMessageService $birthDayMessageService)
+    {
+        $this->birthDayMessageService = $birthDayMessageService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -21,22 +26,7 @@ class BirthDayMessageController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['search'])) {
-                $data = DB::table('birth_day_messages')
-                    ->leftJoin('users', 'users.id', 'birth_day_messages._who_added')
-                    ->whereNull('birth_day_messages.deleted_at')
-                    ->where('birth_day_messages.message', 'like', '%' . $request->get('search') . '%')
-                    ->select(['birth_day_messages.*', 'users.surname'])
-                    ->OrderBy('birth_day_messages.id', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('birth_day_messages')
-                    ->leftJoin('users', 'users.id', 'birth_day_messages._who_added')
-                    ->whereNull('birth_day_messages.deleted_at')
-                    ->select(['birth_day_messages.*', 'users.surname'])
-                    ->OrderBy('birth_day_messages.id', 'desc')
-                    ->get();
-            }
+            $data = $this->birthDayMessageService->getList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -83,20 +73,19 @@ class BirthDayMessageController extends Controller
         ], [
             'message.required' => __('validation.custom.message.required')
         ])->validate();
-        $success = BirthDayMessage::create([
-            'message' => $request->message,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $success = $this->birthDayMessageService->create($request->message);
+
         return FunctionsHelper::messageResponse(__("messages.message_added_successfully"), $success);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\BirthDayMessage $birthDayMessage
+     * @param int $id
      * @return Response
      */
-    public function show(BirthDayMessage $birthDayMessage)
+    public function show($id)
     {
         //
     }
@@ -109,8 +98,7 @@ class BirthDayMessageController extends Controller
      */
     public function edit($id)
     {
-        $wish = BirthDayMessage::where('id', $id)->first();
-        return response()->json($wish);
+        return response()->json($this->birthDayMessageService->find($id));
     }
 
     /**
@@ -127,10 +115,9 @@ class BirthDayMessageController extends Controller
         ], [
             'message.required' => __('validation.custom.message.required')
         ])->validate();
-        $success = BirthDayMessage::where('id', $id)->update([
-            'message' => $request->message,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $success = $this->birthDayMessageService->update($id, $request->message);
+
         return FunctionsHelper::messageResponse(__("messages.message_updated_successfully"), $success);
     }
 
@@ -142,7 +129,8 @@ class BirthDayMessageController extends Controller
      */
     public function destroy($id)
     {
-        $success = BirthDayMessage::where('id', $id)->delete();
+        $success = $this->birthDayMessageService->delete($id);
+
         return FunctionsHelper::messageResponse(__("messages.message_deleted_successfully"), $success);
     }
 }

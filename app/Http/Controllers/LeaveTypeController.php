@@ -3,15 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
-use App\LeaveType;
+use App\Services\LeaveTypeService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class LeaveTypeController extends Controller
 {
+    private LeaveTypeService $leaveTypeService;
+
+    public function __construct(LeaveTypeService $leaveTypeService)
+    {
+        $this->leaveTypeService = $leaveTypeService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -21,12 +26,7 @@ class LeaveTypeController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = DB::table('leave_types')
-                ->leftJoin('users', 'users.id', 'leave_types._who_added')
-                ->whereNull('leave_types.deleted_at')
-                ->select(['leave_types.*', 'users.surname'])
-                ->OrderBy('leave_types.id', 'desc')
-                ->get();
+            $data = $this->leaveTypeService->getLeaveTypeList();
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -53,37 +53,18 @@ class LeaveTypeController extends Controller
         $name = $request->q;
 
         if ($name) {
-            $search = $name;
-            $data = LeaveType::where('name', 'LIKE', "%$search%")->get();
-
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->name];
-            }
-            return \Response::json($formatted_tags);
+            return \Response::json($this->leaveTypeService->filterLeaveTypes($name));
         }
     }
 
     /**
-     * 获取所有休假类型列表（用于下拉选择）
+     * Get all leave types for dropdown.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function getAll()
     {
-        $data = LeaveType::whereNull('deleted_at')
-            ->orderBy('id', 'asc')
-            ->get();
-
-        $formatted = [];
-        foreach ($data as $item) {
-            $formatted[] = [
-                'id' => $item->id,
-                'text' => $item->name,
-                'max_days' => $item->max_days
-            ];
-        }
-        return \Response::json($formatted);
+        return \Response::json($this->leaveTypeService->getAllLeaveTypes());
     }
 
     /**
@@ -91,8 +72,7 @@ class LeaveTypeController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public
-    function create()
+    public function create()
     {
         //
     }
@@ -103,8 +83,7 @@ class LeaveTypeController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
-    public
-    function store(Request $request)
+    public function store(Request $request)
     {
         Validator::make($request->all(),
             [
@@ -115,23 +94,17 @@ class LeaveTypeController extends Controller
                 'max_days.required' => __('validation.custom.max_days.required')
             ])->validate();
 
-        $success = LeaveType::create(
-            [
-                'name' => $request->name,
-                'max_days' => $request->max_days,
-                '_who_added' => Auth::User()->id
-            ]);
+        $success = $this->leaveTypeService->createLeaveType($request->all());
         return FunctionsHelper::messageResponse(__('messages.leave_type_added_successfully'), $success);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\LeaveType $leaveType
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public
-    function show(LeaveType $leaveType)
+    public function show($id)
     {
         //
     }
@@ -142,11 +115,9 @@ class LeaveTypeController extends Controller
      * @param $id
      * @return void
      */
-    public
-    function edit($id)
+    public function edit($id)
     {
-        $leaveType = LeaveType::where('id', $id)->first();
-        return response()->json($leaveType);
+        return response()->json($this->leaveTypeService->getLeaveTypeForEdit($id));
     }
 
     /**
@@ -156,8 +127,7 @@ class LeaveTypeController extends Controller
      * @param $id
      * @return \Illuminate\Http\Response
      */
-    public
-    function update(Request $request, $id)
+    public function update(Request $request, $id)
     {
         Validator::make($request->all(),
             [
@@ -168,12 +138,7 @@ class LeaveTypeController extends Controller
                 'max_days.required' => __('validation.custom.max_days.required')
             ])->validate();
 
-        $success = LeaveType::where('id', $id)->update(
-            [
-                'name' => $request->name,
-                'max_days' => $request->max_days,
-                '_who_added' => Auth::User()->id
-            ]);
+        $success = $this->leaveTypeService->updateLeaveType($id, $request->all());
         return FunctionsHelper::messageResponse(__('messages.leave_type_updated_successfully'), $success);
     }
 
@@ -183,10 +148,9 @@ class LeaveTypeController extends Controller
      * @param $id
      * @return \Illuminate\Http\Response
      */
-    public
-    function destroy($id)
+    public function destroy($id)
     {
-        $success = LeaveType::where('id', $id)->delete();
+        $success = $this->leaveTypeService->deleteLeaveType($id);
         return FunctionsHelper::messageResponse(__('messages.leave_type_deleted_successfully'), $success);
     }
 }

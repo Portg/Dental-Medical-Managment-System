@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\QuotationItem;
+use App\Services\QuotationItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class QuotationItemController extends Controller
 {
+    private QuotationItemService $service;
+
+    public function __construct(QuotationItemService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -22,15 +27,8 @@ class QuotationItemController extends Controller
     public function index(Request $request, $quotation_id)
     {
         if ($request->ajax()) {
+            $data = $this->service->getListByQuotation($quotation_id);
 
-            $data = DB::table('quotation_items')
-                ->join('medical_services', 'medical_services.id', 'quotation_items.medical_service_id')
-                ->join('users', 'users.id', 'quotation_items._who_added')
-                ->whereNull('quotation_items.deleted_at')
-                ->where('quotation_items.quotation_id', $quotation_id)
-                ->select('quotation_items.*', 'medical_services.name', 'users.othername')
-                ->OrderBy('quotation_items.id', 'desc')
-                ->get();
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -86,30 +84,22 @@ class QuotationItemController extends Controller
             'qty' => 'required',
             'medical_service_id' => 'required'
         ])->validate();
-        $status = QuotationItem::create(
-            [
-                'qty' => $request->qty,
-                'price' => $request->price,
-                'medical_service_id' => $request->medical_service_id,
-                'tooth_no' => $request->tooth_no,
-                'quotation_id' => $request->quotation_id,
-                '_who_added' => Auth::User()->id
-            ]
-        );
+
+        $status = $this->service->create($request->all());
+
         if ($status) {
             return response()->json(['message' => __('invoices.quotation_item_added_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\quotationItem $quotationItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(quotationItem $quotationItem)
+    public function show($id)
     {
         //
     }
@@ -122,12 +112,7 @@ class QuotationItemController extends Controller
      */
     public function edit($quotationItem_id)
     {
-        $item = DB::table('quotation_items')
-            ->join('medical_services', 'medical_services.id', 'quotation_items.medical_service_id')
-            ->where('quotation_items.id', $quotationItem_id)
-            ->select('quotation_items.*', 'medical_services.name')
-            ->first();
-        return response()->json($item);
+        return response()->json($this->service->find($quotationItem_id));
     }
 
     /**
@@ -144,21 +129,14 @@ class QuotationItemController extends Controller
             'price' => 'required',
             'medical_service_id' => 'required'
         ])->validate();
-        $status = QuotationItem::where('id', $id)->update(
-            [
-                'qty' => $request->qty,
-                'price' => $request->price,
-                'medical_service_id' => $request->medical_service_id,
-                'tooth_no' => $request->tooth_no,
-                '_who_added' => Auth::User()->id
-            ]
-        );
+
+        $status = $this->service->update($id, $request->all());
+
         if ($status) {
             return response()->json(['message' => __('invoices.quotation_item_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
-
 
     /**
      * Remove the specified resource from storage.
@@ -168,12 +146,11 @@ class QuotationItemController extends Controller
      */
     public function destroy($quotationItem_id)
     {
-        $status = QuotationItem::where('id', $quotationItem_id)->delete();
+        $status = $this->service->delete($quotationItem_id);
+
         if ($status) {
-            return response()->json(['message' => __('invoices.quotation_item_deleted_successfully'), 'status' =>
-                true]);
+            return response()->json(['message' => __('invoices.quotation_item_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 }

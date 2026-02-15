@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\PatientSource;
+use App\Services\PatientSourceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class PatientSourceController extends Controller
 {
+    private PatientSourceService $service;
+
+    public function __construct(PatientSourceService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -20,29 +26,7 @@ class PatientSourceController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = DB::table('patient_sources')
-                ->leftJoin('users', 'users.id', 'patient_sources._who_added')
-                ->whereNull('patient_sources.deleted_at')
-                ->select(
-                    'patient_sources.*',
-                    'users.surname as added_by_name'
-                );
-
-            // Quick search filter
-            if ($request->has('quick_search') && !empty($request->quick_search)) {
-                $search = $request->quick_search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('patient_sources.name', 'like', '%' . $search . '%')
-                      ->orWhere('patient_sources.code', 'like', '%' . $search . '%');
-                });
-            }
-
-            // Status filter (use is_numeric to handle '0' correctly)
-            if ($request->has('status') && is_numeric($request->status)) {
-                $query->where('patient_sources.is_active', $request->status);
-            }
-
-            $data = $query->orderBy('patient_sources.name', 'asc')->get();
+            $data = $this->service->getSourceList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -89,22 +73,7 @@ class PatientSourceController extends Controller
      */
     public function list(Request $request)
     {
-        $query = PatientSource::active()->orderBy('name', 'asc');
-
-        // Support search
-        if ($request->has('q') && !empty($request->q)) {
-            $query->where('name', 'like', '%' . $request->q . '%');
-        }
-
-        $sources = $query->select('id', 'name', 'code')->get();
-
-        // Format for Select2
-        $results = $sources->map(function ($source) {
-            return [
-                'id' => $source->id,
-                'text' => $source->name
-            ];
-        });
+        $results = $this->service->getActiveSourcesForSelect($request->q);
 
         return response()->json($results);
     }
@@ -122,12 +91,11 @@ class PatientSourceController extends Controller
             'code' => 'required|string|max:20|unique:patient_sources,code',
         ])->validate();
 
-        $source = PatientSource::create([
+        $source = $this->service->createSource([
             'name' => $request->name,
             'code' => $request->code,
             'description' => $request->description,
             'is_active' => $request->has('is_active') ? $request->is_active : true,
-            '_who_added' => Auth::user()->id,
         ]);
 
         if ($source) {
@@ -152,7 +120,7 @@ class PatientSourceController extends Controller
      */
     public function show($id)
     {
-        $source = PatientSource::findOrFail($id);
+        $source = $this->service->getSource($id);
         return response()->json([
             'status' => true,
             'data' => $source
@@ -173,7 +141,7 @@ class PatientSourceController extends Controller
             'code' => 'required|string|max:20|unique:patient_sources,code,' . $id,
         ])->validate();
 
-        $status = PatientSource::where('id', $id)->update([
+        $status = $this->service->updateSource($id, [
             'name' => $request->name,
             'code' => $request->code,
             'description' => $request->description,
@@ -201,20 +169,14 @@ class PatientSourceController extends Controller
      */
     public function destroy($id)
     {
-        // Check if any patients are using this source
-        $patientsCount = DB::table('patients')
-            ->where('source_id', $id)
-            ->whereNull('deleted_at')
-            ->count();
-
-        if ($patientsCount > 0) {
+        if ($this->service->isSourceInUse($id)) {
             return response()->json([
                 'message' => __('messages.source_in_use'),
                 'status' => false
             ]);
         }
 
-        $status = PatientSource::where('id', $id)->delete();
+        $status = $this->service->deleteSource($id);
 
         if ($status) {
             return response()->json([

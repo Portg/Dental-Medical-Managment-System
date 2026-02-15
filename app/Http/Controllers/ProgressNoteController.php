@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\ProgressNote;
+use App\Services\ProgressNoteService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class ProgressNoteController extends Controller
 {
+    private ProgressNoteService $progressNoteService;
+
+    public function __construct(ProgressNoteService $progressNoteService)
+    {
+        $this->progressNoteService = $progressNoteService;
+    }
+
     /**
      * Display a listing of the resource for a specific patient.
      *
@@ -22,21 +27,7 @@ class ProgressNoteController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = DB::table('progress_notes')
-                ->leftJoin('medical_cases', 'medical_cases.id', 'progress_notes.medical_case_id')
-                ->leftJoin('appointments', 'appointments.id', 'progress_notes.appointment_id')
-                ->leftJoin('users', 'users.id', 'progress_notes._who_added')
-                ->whereNull('progress_notes.deleted_at')
-                ->where('progress_notes.patient_id', $patient_id)
-                ->orderBy('progress_notes.note_date', 'desc')
-                ->select(
-                    'progress_notes.*',
-                    'medical_cases.case_no',
-                    'medical_cases.title as case_title',
-                    'appointments.appointment_no',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
-                )
-                ->get();
+            $data = $this->progressNoteService->getNotesByPatient($patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -72,18 +63,7 @@ class ProgressNoteController extends Controller
     public function caseIndex(Request $request, $case_id)
     {
         if ($request->ajax()) {
-            $data = DB::table('progress_notes')
-                ->leftJoin('appointments', 'appointments.id', 'progress_notes.appointment_id')
-                ->leftJoin('users', 'users.id', 'progress_notes._who_added')
-                ->whereNull('progress_notes.deleted_at')
-                ->where('progress_notes.medical_case_id', $case_id)
-                ->orderBy('progress_notes.note_date', 'desc')
-                ->select(
-                    'progress_notes.*',
-                    'appointments.appointment_no',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
-                )
-                ->get();
+            $data = $this->progressNoteService->getNotesByCase($case_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -124,18 +104,10 @@ class ProgressNoteController extends Controller
             'patient_id.required' => __('validation.custom.patient_id.required'),
         ])->validate();
 
-        $status = ProgressNote::create([
-            'subjective' => $request->subjective,
-            'objective' => $request->objective,
-            'assessment' => $request->assessment,
-            'plan' => $request->plan,
-            'note_date' => $request->note_date,
-            'note_type' => $request->note_type ?? 'SOAP',
-            'appointment_id' => $request->appointment_id,
-            'medical_case_id' => $request->medical_case_id,
-            'patient_id' => $request->patient_id,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->progressNoteService->createNote($request->only([
+            'subjective', 'objective', 'assessment', 'plan',
+            'note_date', 'note_type', 'appointment_id', 'medical_case_id', 'patient_id',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.progress_note_added_successfully'), 'status' => true]);
@@ -151,8 +123,7 @@ class ProgressNoteController extends Controller
      */
     public function show($id)
     {
-        $note = ProgressNote::with(['patient', 'medicalCase', 'appointment', 'addedBy'])->findOrFail($id);
-        return response()->json($note);
+        return response()->json($this->progressNoteService->getNoteWithRelations($id));
     }
 
     /**
@@ -163,8 +134,7 @@ class ProgressNoteController extends Controller
      */
     public function edit($id)
     {
-        $note = ProgressNote::where('id', $id)->first();
-        return response()->json($note);
+        return response()->json($this->progressNoteService->getNoteForEdit($id));
     }
 
     /**
@@ -182,14 +152,9 @@ class ProgressNoteController extends Controller
             'note_date.required' => __('validation.custom.note_date.required'),
         ])->validate();
 
-        $status = ProgressNote::where('id', $id)->update([
-            'subjective' => $request->subjective,
-            'objective' => $request->objective,
-            'assessment' => $request->assessment,
-            'plan' => $request->plan,
-            'note_date' => $request->note_date,
-            'note_type' => $request->note_type,
-        ]);
+        $status = $this->progressNoteService->updateNote($id, $request->only([
+            'subjective', 'objective', 'assessment', 'plan', 'note_date', 'note_type',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.progress_note_updated_successfully'), 'status' => true]);
@@ -205,7 +170,7 @@ class ProgressNoteController extends Controller
      */
     public function destroy($id)
     {
-        $status = ProgressNote::where('id', $id)->delete();
+        $status = $this->progressNoteService->deleteNote($id);
         if ($status) {
             return response()->json(['message' => __('medical_cases.progress_note_deleted_successfully'), 'status' => true]);
         }
