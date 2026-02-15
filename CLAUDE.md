@@ -1,267 +1,225 @@
 # Dental Medical Management System
 
-## System Overview
+## Overview
 
-This is a comprehensive dental medical management system built with Laravel framework, featuring modular architecture for different user roles (Doctor, Nurse, Receptionist, SuperAdmin). composer.json:47-56
+Laravel 11.x dental clinic management system with modular architecture (Doctor, Nurse, Receptionist, SuperAdmin, Pharmacy).
+
+- **PHP**: 8.2+
+- **Database**: MySQL 5.7+ (135 tables, soft deletes via `deleted_at`)
+- **i18n**: zh-CN (primary), en
 
 ## Architecture
 
-### Modular Structure
-
-The system uses Laravel Modules package for modular architecture: modules.php:16-17
+### Modular Structure (`nwidart/laravel-modules` v11)
 
 ```
-Modules/  
-├── Doctor/  
-│   ├── Http/Controllers/  
-│   │   ├── AppointmentsController.php  
-│   │   ├── DoctorClaimController.php  
-│   │   └── DoctorController.php  
-│   └── Resources/views/  
-├── Nurse/  
-├── Receptionist/  
-└── SuperAdmin/  
+Modules/
+├── Doctor/
+├── Nurse/
+├── Receptionist/
+├── SuperAdmin/
+└── Pharmacy/
 ```
 
-### Core Controllers
-
-- **AppointmentsController**: Manages appointments with DataTables and FullCalendar integration AppointmentsController.php:277-296
-- **PatientController**: Handles patient management with search and filtering PatientController.php:28-60
-- **InvoiceController**: Manages invoicing and payments InvoiceController.php:43-90
-
-## Setup Instructions
-
-### Prerequisites
-
-- PHP 8.2+
-- MySQL 5.7+
-- Composer
-- Node.js (for assets)
-- Framework: Laravel 11.x
-
-### Installation
-
-1. **Clone and install dependencies**:
-
-```
-composer install  
-npm install
-```
-
-1. **Environment setup**:
-
-```
-cp .env.example .env  
-php artisan key:generate
-```
-
-1. **Database configuration**:
-   Configure database connection in `.env` file
-2. **Run migrations and seeders**:
-
-```
-php artisan migrate  
-php artisan db:seed
-```
-
-1. **Start development server**:
-
-```
-php artisan serve
-```
-
-## Database Schema
+Each module has its own `Http/Controllers/`, `Resources/views/`, and route files.
 
 ### Key Tables
 
-- **users**: User authentication and role management
-- **patients**: Patient information and medical history
-- **appointments**: Appointment scheduling with `sort_by` field for ordering AppointmentsController.php:277-289
-- **invoices**: Billing and payment management
-- **doctor_claims**: Doctor commission claims
+| Table                        | Purpose                              |
+| ---------------------------- | ------------------------------------ |
+| `users`                      | Auth & roles, `is_doctor` enum       |
+| `patients`                   | Patient info & medical history       |
+| `appointments`               | Scheduling, `sort_by` for ordering   |
+| `invoices` / `invoice_items` | Billing                              |
+| `doctor_claims`              | Doctor commissions                   |
 
-### Important Fields
+## Authentication
 
-- `sort_by` in appointments table: DateTime field for sorting appointments
-- `is_doctor` in users table: Enum('Yes', 'No') to identify doctors
-- `deleted_at`: Soft deletes implementation across tables
+### Web (Session)
+
+Role-based via `AuthServiceProvider`:
+
+- Super Administrator, Administrator, Doctor, Nurse, Receptionist
+- Middleware: `->middleware('can:permission-slug')`
+
+### API (Sanctum)
+
+Token + SPA cookie authentication at `/api/v1/`.
+
+```php
+// Login (no auth required)
+POST /api/v1/auth/login   {email, password}
+
+// Authenticated endpoints
+GET  /api/v1/auth/me
+POST /api/v1/auth/logout
+```
+
+## API v1 Endpoints
+
+Base: `/api/v1/` | Auth: `auth:sanctum` | Response: `{success, data, message, meta?}`
+
+### Patients
+
+```
+GET    /patients           # List (paginated)
+POST   /patients           # Create
+GET    /patients/{id}      # Show
+PUT    /patients/{id}      # Update
+DELETE /patients/{id}      # Soft delete
+GET    /patients/search?q= # Search by name/phone
+GET    /patients/{id}/medical-history
+```
+
+### Appointments
+
+```
+GET    /appointments
+POST   /appointments
+GET    /appointments/{id}
+PUT    /appointments/{id}
+DELETE /appointments/{id}
+GET    /appointments/calendar-events  # FullCalendar format
+GET    /appointments/chairs
+GET    /appointments/doctor-time-slots?doctor_id=&date=
+POST   /appointments/{id}/reschedule
+```
+
+### Invoices
+
+```
+GET    /invoices
+POST   /invoices
+GET    /invoices/{id}
+DELETE /invoices/{id}
+GET    /invoices/search?q=
+GET    /invoices/{id}/amount
+GET    /invoices/{id}/procedures
+POST   /invoices/{id}/approve-discount
+POST   /invoices/{id}/reject-discount
+POST   /invoices/{id}/set-credit
+```
+
+### Medical Cases
+
+```
+GET    /medical-cases
+POST   /medical-cases
+GET    /medical-cases/{id}
+PUT    /medical-cases/{id}
+DELETE /medical-cases/{id}
+GET    /medical-cases/icd10-search?q=
+GET    /medical-cases/patient/{patientId}
+```
 
 ## Routing
 
-All routes are defined in `routes/web.php` with authentication middleware: web.php:23-228
+- Web routes: [routes/web.php](routes/web.php)
+- API v1 routes: [routes/api/v1.php](routes/api/v1.php)
 
-Key route groups:
+Key web prefixes: `/patients`, `/appointments`, `/invoices`, `/doctor-appointments`
 
-- `/patients` - Patient management
-- `/appointments` - Appointment scheduling
-- `/invoices` - Billing system
-- `/doctor-appointments` - Doctor-specific appointments
+## i18n
 
-## Authentication & Authorization
-
-### Role-Based Access Control
-
-System implements role-based permissions via `AuthServiceProvider`:
-
-Roles:
-
-- Super Administrator
-- Administrator
-- Doctor
-- Nurse
-- Receptionist
-
-### Permission System
-
-Extended with database-driven permissions:
-
-- `permissions` table: Define individual permissions
-- `role_permissions` table: Map permissions to roles
-- Middleware protection: `->middleware('can:permission-slug')`
-
-## Internationalization (i18n)
-
-### Supported Languages
-
-- English (default)
-- Chinese (zh-CN)
-
-### Language Files Structure
+### Structure
 
 ```
-resources/lang/  
-├── zh-CN/  
-│   ├── auth.php  
-│   ├── pagination.php  
-│   ├── validation.php  
-│   ├── common.php  
-│   └── tasks.php  
-└── modules/  
-    ├── doctor/zh-CN/  
-    ├── nurse/zh-CN/  
-    ├── receptionist/zh-CN/  
-    └── superadmin/zh-CN/  
+resources/lang/
+├── en/
+├── zh-CN/
+│   ├── common.php
+│   ├── validation.php
+│   └── ...
+└── modules/
+    ├── doctor/zh-CN/
+    ├── nurse/zh-CN/
+    └── ...
 ```
 
-### JavaScript i18n
+### JavaScript
 
-Frontend translations via `LanguageManager.trans()` function:
-
-```
-// Example usage  
-const message = LanguageManager.trans('common.save');  
-const validation = LanguageManager.trans('validation.max', {max: 10});
+```javascript
+LanguageManager.trans('common.save');
+LanguageManager.trans('validation.max', {max: 10});
 ```
 
-## Common Issues & Solutions
+## Code Patterns
 
-### Missing Database Fields
+### Validation
 
-Several fields may be missing from initial migrations:
-
-1. **is_doctor field**:
-
-```
-php artisan make:migration add_is_doctor_to_users_table
-```
-
-1. **sort_by field for appointments**:
-
-```
-php artisan make:migration add_sort_by_to_appointments_table
+```php
+$validator = Validator::make($request->all(), [
+    'field' => 'required|string|max:255',
+]);
+if ($validator->fails()) {
+    return response()->json(['message' => $validator->errors()->first(), 'status' => 0]);
+}
 ```
 
-1. **price field for invoice_items**:
+### JSON Response
 
-```
-php artisan make:migration add_price_to_invoice_items_table
-```
-
-### Circular Foreign Key Dependencies
-
-When seeding data, resolve circular dependencies between `users` and `branches` tables by making `_who_added` nullable:
-
-### DataTables AJAX Errors
-
-Ensure controller methods return proper JSON responses:
-
-```
-return Datatables::of($data)->make(true);
+```php
+return response()->json([
+    'message' => 'Success',
+    'status'  => 1,
+    'data'    => $result,
+]);
 ```
 
-## Frontend Components
+### Soft Deletes
 
-### DataTables Integration
+Always include `whereNull('deleted_at')` or use model's `SoftDeletes` trait.
 
-All list views use Yajra DataTables with server-side processing: index.blade.php:128-144
+## Frontend
 
-### FullCalendar
+- **DataTables**: Yajra server-side processing
+- **Calendar**: FullCalendar for appointments
+- **UI**: Bootstrap, Select2, Datepicker (all with zh-CN locale)
 
-Appointment calendar visualization using FullCalendar.
+## Quick Start
 
-### Bootstrap Components
-
-- Datepicker with localization
-- Select2 with Chinese translations
-- WYSIHTML5 editor
-
-## API Endpoints
-
-### RESTful Resources
-
-Most controllers follow RESTful patterns:
-
-- `GET /resource` - List
-- `POST /resource` - Create
-- `GET /resource/{id}` - Show
-- `PUT /resource/{id}` - Update
-- `DELETE /resource/{id}` - Delete
-
-### Custom Endpoints
-
-- `/search-patient` - Patient search
-- `/export-invoices` - Invoice export
-- `/doctor-performance-report` - Performance analytics
-
-## Development Guidelines
-
-### Code Patterns
-
-1. **Validation**: Use `Validator::make()` for input validation AppointmentsController.php:200-202
-2. **JSON Responses**: Standard format with `message` and `status` fields AppointmentsController.php:155-158
-3. **Soft Deletes**: Include `whereNull('deleted_at')` in queries
-4. **Authentication**: Use `Auth::User()->id` for user-specific data
-
-### Testing
-
-Run tests with:
-
-```
-php artisan test
+```bash
+composer install && npm install
+cp .env.example .env
+php artisan key:generate
+# Configure DB in .env
+php artisan migrate --seed
+php artisan serve
 ```
 
-## Deployment
+## Architecture Principles
 
-### Production Setup
+- Module dependencies flow: `app/` → `Modules/*`. Never create reverse dependencies.
+- When unsure about class placement, verify the module dependency graph before proposing.
+- For cross-module interfaces, prefer Service Provider or event-based decoupling.
+- One class = one responsibility. Do not merge multiple unrelated concerns into a single class.
 
-1. Set environment to production:
+## Implementation Approach
 
-```
-APP_ENV=production  
-APP_DEBUG=false
-```
+- When given a task, **implement actual code changes**. Do not stop at planning/exploration unless explicitly asked to only plan.
+- Bias toward action over analysis. If a plan exists and is approved, proceed to implementation immediately.
+- Never spend an entire session exploring and planning when the user asked for implementation.
 
-1. Optimize application:
+## Debugging & Root Cause Analysis
 
-```
-php artisan config:cache  
-php artisan route:cache  
-php artisan view:cache
-```
+- When diagnosing errors from logs, trace the **full call chain** through config/template/data before blaming code logic.
+- Do not guess at root causes. Verify by reading the actual configuration, template definitions, and runtime data paths.
+- If the user pushes back on a diagnosis, start fresh from the evidence rather than defending the initial theory.
 
-1. Set up file permissions:
+## Code Changes Discipline
 
-```markdown
-chmod -R 755 storage  
-chmod -R 755 bootstrap/cache
-```
+- After editing files, always run the project build/compile command to verify changes before reporting completion.
+- Never remove existing imports, annotations (`@Transactional`, providers, aliases) unless you have explicitly verified they are unused.
+- When refactoring, check for post-refactor breakages in dependent files before marking the task as done.
+
+## Design Document Edits
+
+- When asked to rewrite or fix a section in a design document, rewrite the **entire section** as requested. Do not attempt inline patches unless explicitly told to.
+- Respect the user's language preferences — this project uses Chinese (中文) for documentation and UI labels. Never substitute technical English terms where Chinese labels are expected.
+
+## Technology Stack
+
+- **Backend**: PHP 8.2+, Laravel 11.x, MySQL 5.7+
+- **Frontend**: Bootstrap, jQuery, Yajra DataTables, FullCalendar, Select2
+- **Packages**: nwidart/laravel-modules v11, laravel/sanctum v4, barryvdh/laravel-dompdf v2, maatwebsite/excel v3.1
+- Always verify version compatibility before proposing dependency changes.
