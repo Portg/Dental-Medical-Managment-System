@@ -4,6 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 
 class Role extends Model
 {
@@ -27,6 +28,10 @@ class Role extends Model
 
     public function hasPermission($permissionSlug)
     {
-        return $this->permissions()->where('slug', $permissionSlug)->exists();
+        $slugs = Cache::remember("role:{$this->id}:permissions", 3600, function () {
+            return $this->permissions()->pluck('slug')->toArray();
+        });
+
+        return in_array($permissionSlug, $slugs);
     }
 }

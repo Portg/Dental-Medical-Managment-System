@@ -4,17 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
+use App\Services\SmsLoggingService;
 use App\SmsLogging;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
-use Haruncpi\LaravelIdGenerator\IdGenerator;
 use App\Exports\SmsLoggingExport;
 use Maatwebsite\Excel\Facades\Excel;
 
-
 class SmsLoggingController extends Controller
 {
+    private SmsLoggingService $smsLoggingService;
+
+    public function __construct(SmsLoggingService $smsLoggingService)
+    {
+        $this->smsLoggingService = $smsLoggingService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -25,39 +30,18 @@ class SmsLoggingController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['search'])) {
-                $data = DB::table('sms_loggings')
-                    ->leftJoin('patients', 'patients.id', 'sms_loggings.patient_id')
-                    ->where(function($q) use ($request) {
-                        NameHelper::addNameSearch($q, $request->get('search'), 'patients');
-                    })
-                    ->select('sms_loggings.*', 'patients.surname', 'patients.othername')
-                    ->OrderBy('sms_loggings.id', 'desc')
-                    ->get();
-            } else if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
-                //store filtered dates
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
-
-                $data = DB::table('sms_loggings')
-                    ->leftJoin('patients', 'patients.id', 'sms_loggings.patient_id')
-                    ->whereBetween(DB::raw('DATE(sms_loggings.created_at)'), array($request->start_date, $request->end_date))
-                    ->select('sms_loggings.*', 'patients.surname', 'patients.othername')
-                    ->OrderBy('sms_loggings.id', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('sms_loggings')
-                    ->leftJoin('patients', 'patients.id', 'sms_loggings.patient_id')
-                    ->select('sms_loggings.*', 'patients.surname', 'patients.othername')
-                    ->OrderBy('sms_loggings.id', 'desc')
-                    ->get();
             }
+
+            $data = $this->smsLoggingService->getList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('message_receiver', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('type', function ($row) {
                     $type = '';
@@ -76,19 +60,10 @@ class SmsLoggingController extends Controller
 
     public function exportReport(Request $request)
     {
-        if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $data = DB::table('sms_loggings')
-                ->whereBetween(DB::raw('DATE(sms_loggings.created_at)'), array($request->session()->get('from'),
-                    $request->session()->get('to')))
-                ->select('sms_loggings.*')
-                ->OrderBy('sms_loggings.id', 'desc')
-                ->get();
-        } else {
-            $data = DB::table('sms_loggings')
-                ->select('sms_loggings.*')
-                ->OrderBy('sms_loggings.id', 'desc')
-                ->get();
-        }
+        $from = $request->session()->get('from') ?: null;
+        $to = $request->session()->get('to') ?: null;
+
+        $data = $this->smsLoggingService->getExportData($from, $to);
 
         return Excel::download(new SmsLoggingExport($data), 'sms-logging-report-' . date('Y-m-d') . '.xlsx');
     }
@@ -98,8 +73,7 @@ class SmsLoggingController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public
-    function create()
+    public function create()
     {
         //
     }
@@ -110,8 +84,7 @@ class SmsLoggingController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
-    public
-    function store(Request $request)
+    public function store(Request $request)
     {
         //
     }
@@ -122,8 +95,7 @@ class SmsLoggingController extends Controller
      * @param \App\SmsLogging $smsLogging
      * @return \Illuminate\Http\Response
      */
-    public
-    function show(SmsLogging $smsLogging)
+    public function show(SmsLogging $smsLogging)
     {
         //
     }
@@ -134,8 +106,7 @@ class SmsLoggingController extends Controller
      * @param \App\SmsLogging $smsLogging
      * @return \Illuminate\Http\Response
      */
-    public
-    function edit(SmsLogging $smsLogging)
+    public function edit(SmsLogging $smsLogging)
     {
         //
     }
@@ -147,8 +118,7 @@ class SmsLoggingController extends Controller
      * @param \App\SmsLogging $smsLogging
      * @return \Illuminate\Http\Response
      */
-    public
-    function update(Request $request, SmsLogging $smsLogging)
+    public function update(Request $request, SmsLogging $smsLogging)
     {
         //
     }
@@ -159,8 +129,7 @@ class SmsLoggingController extends Controller
      * @param \App\SmsLogging $smsLogging
      * @return \Illuminate\Http\Response
      */
-    public
-    function destroy(SmsLogging $smsLogging)
+    public function destroy(SmsLogging $smsLogging)
     {
         //
     }

@@ -2,16 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Branch;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\BranchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class BranchController extends Controller
 {
+    private BranchService $branchService;
+
+    public function __construct(BranchService $branchService)
+    {
+        $this->branchService = $branchService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,12 +29,8 @@ class BranchController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = DB::table('branches')
-                ->leftJoin('users', 'users.id', 'branches._who_added')
-                ->whereNull('branches.deleted_at')
-                ->select(['branches.*', 'users.surname'])
-                ->OrderBy('branches.id', 'desc')
-                ->get();
+            $data = $this->branchService->getBranchList();
+
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -60,18 +62,10 @@ class BranchController extends Controller
 
     public function filterBranches(Request $request)
     {
-        $data = [];
         $name = $request->q;
 
         if ($name) {
-            $search = $name;
-            $data = Branch::where('name', 'LIKE', "%$search%")->get();
-
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->name];
-            }
-            return \Response::json($formatted_tags);
+            return \Response::json($this->branchService->searchBranches($name));
         }
     }
 
@@ -94,17 +88,17 @@ class BranchController extends Controller
     public function store(Request $request)
     {
         Validator::make($request->all(), ['name' => 'required'])->validate();
-        $success = Branch::create(['name' => $request->name, '_who_added' => Auth::User()->id]);
+        $success = $this->branchService->createBranch($request->name, Auth::User()->id);
         return FunctionsHelper::messageResponse(__('branches.branch_added_successfully'), $success);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\Branch $branch
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(Branch $branch)
+    public function show($id)
     {
         //
     }
@@ -112,20 +106,19 @@ class BranchController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\Branch $branch
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $branch = Branch::where('id', $id)->first();
-        return response()->json($branch);
+        return response()->json($this->branchService->findBranch($id));
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\Branch $branch
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
@@ -133,7 +126,7 @@ class BranchController extends Controller
         Validator::make($request->all(), [
             'name' => 'required'
         ])->validate();
-        $success = Branch::where('id', $id)->update(['name' => $request->name, '_who_added' => Auth::User()->id]);
+        $success = $this->branchService->updateBranch($id, $request->name, Auth::User()->id);
         return FunctionsHelper::messageResponse(__('branches.branch_updated_successfully'), $success);
     }
 
@@ -145,9 +138,7 @@ class BranchController extends Controller
      */
     public function destroy($id)
     {
-        $success = Branch::where('id', $id)->delete();
+        $success = $this->branchService->deleteBranch($id);
         return FunctionsHelper::messageResponse(__('branches.branch_deleted_successfully'), $success);
     }
-
-
 }

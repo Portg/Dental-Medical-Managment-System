@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\PatientTag;
+use App\Services\PatientTagService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class PatientTagController extends Controller
 {
+    private PatientTagService $service;
+
+    public function __construct(PatientTagService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -20,28 +25,7 @@ class PatientTagController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = DB::table('patient_tags')
-                ->leftJoin('users', 'users.id', 'patient_tags._who_added')
-                ->whereNull('patient_tags.deleted_at')
-                ->select(
-                    'patient_tags.*',
-                    'users.surname as added_by_name'
-                );
-
-            // Quick search filter
-            if ($request->has('quick_search') && !empty($request->quick_search)) {
-                $search = $request->quick_search;
-                $query->where('patient_tags.name', 'like', '%' . $search . '%');
-            }
-
-            // Status filter (use is_numeric to handle '0' correctly)
-            if ($request->has('status') && is_numeric($request->status)) {
-                $query->where('patient_tags.is_active', $request->status);
-            }
-
-            $data = $query->orderBy('patient_tags.sort_order', 'asc')
-                ->orderBy('patient_tags.name', 'asc')
-                ->get();
+            $data = $this->service->getTagList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -49,7 +33,7 @@ class PatientTagController extends Controller
                     return '<span class="label" style="background-color: ' . $row->color . ';">' . $row->name . '</span>';
                 })
                 ->addColumn('patients_count', function ($row) {
-                    return DB::table('patient_tag_pivot')
+                    return \Illuminate\Support\Facades\DB::table('patient_tag_pivot')
                         ->where('tag_id', $row->id)
                         ->count();
                 })
@@ -90,24 +74,7 @@ class PatientTagController extends Controller
      */
     public function list(Request $request)
     {
-        $query = PatientTag::active()->ordered();
-
-        // Support search
-        if ($request->has('q') && !empty($request->q)) {
-            $query->where('name', 'like', '%' . $request->q . '%');
-        }
-
-        $tags = $query->select('id', 'name', 'color', 'icon')->get();
-
-        // Format for Select2
-        $results = $tags->map(function ($tag) {
-            return [
-                'id' => $tag->id,
-                'text' => $tag->name,
-                'color' => $tag->color,
-                'icon' => $tag->icon
-            ];
-        });
+        $results = $this->service->getActiveTagsForSelect($request->q);
 
         return response()->json($results);
     }
@@ -125,14 +92,13 @@ class PatientTagController extends Controller
             'color' => 'required|string|max:7',
         ])->validate();
 
-        $tag = PatientTag::create([
+        $tag = $this->service->createTag([
             'name' => $request->name,
             'color' => $request->color,
             'icon' => $request->icon,
             'description' => $request->description,
             'sort_order' => $request->sort_order ?? 0,
             'is_active' => $request->has('is_active') ? $request->is_active : true,
-            '_who_added' => Auth::user()->id,
         ]);
 
         if ($tag) {
@@ -157,7 +123,7 @@ class PatientTagController extends Controller
      */
     public function show($id)
     {
-        $tag = PatientTag::findOrFail($id);
+        $tag = $this->service->getTag($id);
         return response()->json([
             'status' => true,
             'data' => $tag
@@ -178,7 +144,7 @@ class PatientTagController extends Controller
             'color' => 'required|string|max:7',
         ])->validate();
 
-        $status = PatientTag::where('id', $id)->update([
+        $status = $this->service->updateTag($id, [
             'name' => $request->name,
             'color' => $request->color,
             'icon' => $request->icon,
@@ -208,10 +174,7 @@ class PatientTagController extends Controller
      */
     public function destroy($id)
     {
-        // Remove pivot entries first
-        DB::table('patient_tag_pivot')->where('tag_id', $id)->delete();
-
-        $status = PatientTag::where('id', $id)->delete();
+        $status = $this->service->deleteTag($id);
 
         if ($status) {
             return response()->json([

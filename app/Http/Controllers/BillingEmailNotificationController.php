@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\BillingEmailNotification;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\BillingEmailNotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 
 class BillingEmailNotificationController extends Controller
 {
+    private BillingEmailNotificationService $billingEmailNotificationService;
+
+    public function __construct(BillingEmailNotificationService $billingEmailNotificationService)
+    {
+        $this->billingEmailNotificationService = $billingEmailNotificationService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -18,27 +24,11 @@ class BillingEmailNotificationController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['search'])) {
-                $data = DB::table('billing_email_notifications')
-                    ->where('billing_email_notifications.message', 'like', '%' . $request->get('search') . '%')
-                    ->select('billing_email_notifications.*', DB::raw('DATE_FORMAT(billing_email_notifications.created_at, "%d-%b-%Y") as created_at'))
-                    ->OrderBy('billing_email_notifications.id', 'desc')
-                    ->get();
-            } else if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
-                //store filtered dates
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
-
-                $data = DB::table('billing_email_notifications')
-                    ->whereBetween(DB::raw('DATE(billing_email_notifications.created_at)'), array($request->start_date, $request->end_date))
-                    ->select('billing_email_notifications.*', DB::raw('DATE_FORMAT(billing_email_notifications.created_at, "%d-%b-%Y") as created_at'))
-                    ->OrderBy('billing_email_notifications.id', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('billing_email_notifications')
-                    ->select('billing_email_notifications.*', DB::raw('DATE_FORMAT(billing_email_notifications.created_at, "%d-%b-%Y") as created_at'))
-                    ->OrderBy('billing_email_notifications.id', 'desc')
-                    ->get();
             }
+
+            $data = $this->billingEmailNotificationService->getList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -88,10 +78,10 @@ class BillingEmailNotificationController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\BillingEmailNotification $billingEmailNotification
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(BillingEmailNotification $billingEmailNotification)
+    public function show($id)
     {
         //
     }
@@ -99,10 +89,10 @@ class BillingEmailNotificationController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\BillingEmailNotification $billingEmailNotification
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function edit(BillingEmailNotification $billingEmailNotification)
+    public function edit($id)
     {
         //
     }
@@ -111,10 +101,10 @@ class BillingEmailNotificationController extends Controller
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\BillingEmailNotification $billingEmailNotification
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, BillingEmailNotification $billingEmailNotification)
+    public function update(Request $request, $id)
     {
         //
     }
@@ -122,10 +112,10 @@ class BillingEmailNotificationController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\BillingEmailNotification $billingEmailNotification
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(BillingEmailNotification $billingEmailNotification)
+    public function destroy($id)
     {
         //
     }

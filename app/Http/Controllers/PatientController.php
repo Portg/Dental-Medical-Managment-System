@@ -2,24 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\ChronicDisease;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
-use App\InsuranceCompany;
-use App\Patient;
+use App\Services\PatientService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Yajra\DataTables\DataTables;
-use Haruncpi\LaravelIdGenerator\IdGenerator;
 use App\Exports\PatientExport;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class PatientController extends Controller
 {
+    private PatientService $patientService;
+
+    public function __construct(PatientService $patientService)
+    {
+        $this->patientService = $patientService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -30,70 +30,18 @@ class PatientController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = DB::table('patients')
-                ->leftJoin('insurance_companies', 'insurance_companies.id', 'patients.insurance_company_id')
-                ->leftJoin('patient_sources', 'patient_sources.id', 'patients.source_id')
-                ->leftJoin('users', 'users.id', 'patients._who_added')
-                ->whereNull('patients.deleted_at')
-                ->select('patients.*', 'patients.surname', 'patients.othername',
-                    'insurance_companies.name', 'patient_sources.name as source_name', 'users.surname as addedBy');
-
-            // Quick search filter (from custom search box)
-            if (!empty($request->get('quick_search'))) {
-                $search = $request->get('quick_search');
-                $query->where(function($q) use ($search) {
-                    NameHelper::addNameSearch($q, $search, 'patients');
-                    $q->orWhere('patients.phone_no', 'like', '%' . $search . '%')
-                      ->orWhere('patients.patient_no', 'like', '%' . $search . '%');
-                });
-            }
-
-            // Search filter (DataTables default search)
-            if (!empty($request->get('search'))) {
-                $search = $request->get('search');
-                if (is_array($search) && !empty($search['value'])) {
-                    $searchValue = $search['value'];
-                    $query->where(function($q) use ($searchValue) {
-                        NameHelper::addNameSearch($q, $searchValue, 'patients');
-                        $q->orWhere('patients.phone_no', 'like', '%' . $searchValue . '%');
-                    });
-                }
-            }
-
-            // Date range filter
             if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
-                $query->whereBetween(DB::raw('DATE(patients.created_at)'), array($request->start_date, $request->end_date));
             }
 
-            // Insurance company filter
-            if (!empty($request->insurance_company)) {
-                $query->where('patients.insurance_company_id', $request->insurance_company);
-            }
-
-            // Source filter
-            if (!empty($request->filter_source)) {
-                $query->where('patients.source_id', $request->filter_source);
-            }
-
-            // Tags filter
-            if (!empty($request->filter_tags) && is_array($request->filter_tags)) {
-                $tagIds = $request->filter_tags;
-                $query->whereIn('patients.id', function($subquery) use ($tagIds) {
-                    $subquery->select('patient_id')
-                        ->from('patient_tag_pivot')
-                        ->whereIn('tag_id', $tagIds);
-                });
-            }
-
-            $data = $query->orderBy('patients.id', 'desc')->get();
+            $data = $this->patientService->getPatientList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('full_name', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('gender', function ($row) {
                     if ($row->gender == 'Male') {
@@ -128,8 +76,7 @@ class PatientController extends Controller
                     }
                 })
                 ->addColumn('Medical_History', function ($row) {
-                    $btn = '<a href="' . url('/medical-history/' . $row->id) . '" class="btn btn-success">' . __('patient.medical_history') . '</a>';
-                    return $btn;
+                    return '<a href="' . url('/medical-history/' . $row->id) . '" class="btn btn-success">' . __('patient.medical_history') . '</a>';
                 })
                 ->addColumn('addedBy', function ($row) {
                     return $row->addedBy;
@@ -142,7 +89,7 @@ class PatientController extends Controller
                     }
                 })
                 ->addColumn('action', function ($row) {
-                    $btn = '
+                    return '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
                                 aria-expanded="false"> ' . __('common.action') . '
@@ -163,7 +110,6 @@ class PatientController extends Controller
                         </ul>
                     </div>
                     ';
-                    return $btn;
                 })
                 ->rawColumns(['patient_no', 'medical_insurance', 'Medical_History', 'status', 'action'])
                 ->make(true);
@@ -171,74 +117,32 @@ class PatientController extends Controller
         return view('patients.index');
     }
 
-
     public function exportPatients(Request $request)
     {
-        if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $data = DB::table('patients')
-                ->leftJoin('insurance_companies', 'insurance_companies.id', 'patients.insurance_company_id')
-                ->whereBetween(DB::raw('DATE(patients.created_at)'), array($request->session()->get('from'),
-                    $request->session()->get('to')))
-                ->select('patients.*', 'insurance_companies.name as insurance_company')
-                ->orderBy('created_at', 'ASC')
-                ->get();
-        } else {
-            $data = DB::table('patients')
-                ->leftJoin('insurance_companies', 'insurance_companies.id', 'patients.insurance_company_id')
-                ->select('patients.*', 'insurance_companies.name as insurance_company')
-                ->orderBy('created_at', 'ASC')
-                ->get();
-        }
+        $from = $request->session()->get('from') ?: null;
+        $to = $request->session()->get('to') ?: null;
+
+        $data = $this->patientService->getExportData($from, $to);
 
         return Excel::download(new PatientExport($data), 'patients-' . date('Y-m-d') . '.xlsx');
     }
 
     public function filterPatients(Request $request)
     {
-        $data = [];
-        $name = $request->q;
-        $fullData = $request->has('full'); // Return full patient data if 'full' parameter is set
+        $keyword = $request->q;
 
-        if ($name) {
-            $search = $name;
-            $data = Patient::where(function($query) use ($search) {
-                    NameHelper::addNameSearch($query, $search);
-                    $query->orWhere('phone_no', 'LIKE', "%$search%")
-                        ->orWhere('email', 'LIKE', "%$search%")
-                        ->orWhere('patient_no', 'LIKE', "%$search%");
-                })
-                ->whereNull('deleted_at')
-                ->limit(20)
-                ->get();
-
-            if ($fullData) {
-                // Return full patient data for medical case creation
-                return \Response::json($data);
-            }
-
-            // Return simple format for other uses
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->full_name];
-            }
-            return \Response::json($formatted_tags);
+        if (!$keyword) {
+            return \Response::json([]);
         }
 
-        return \Response::json([]);
+        $result = $this->patientService->searchPatients($keyword, $request->has('full'));
+
+        return \Response::json($result);
     }
 
     public function patientMedicalHistory($patientId)
     {
-        $medicalHistory = DB::table('treatments')
-            ->leftJoin('appointments', 'appointments.id', 'treatments.appointment_id')
-            ->leftJoin('users', 'users.id', 'treatments._who_added')
-            ->whereNull('treatments.deleted_at')
-            ->where('appointments.patient_id', $patientId)
-            ->orderBy('treatments.updated_at', 'desc')
-            ->select('treatments.id', 'clinical_notes', 'treatment', 'treatments.created_at')
-            ->get();
-        $patient = Patient::findOrfail($patientId);
-        return Response()->json(['patientInfor' => $patient, 'treatmentHistory' => $medicalHistory]);
+        return response()->json($this->patientService->getMedicalHistory($patientId));
     }
 
     /**
@@ -259,130 +163,9 @@ class PatientController extends Controller
      */
     public function store(Request $request)
     {
-        // Locale-adaptive validation: zh-CN uses full_name, en uses surname+othername
-        if ($request->filled('full_name')) {
-            Validator::make($request->all(), [
-                'full_name' => 'required|min:2',
-                'gender' => 'required',
-                'telephone' => 'required'
-            ], [
-                'full_name.required' => __('validation.required', ['attribute' => __('patient.full_name')]),
-                'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
-                'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
-            ])->validate();
-
-            $nameParts = NameHelper::split($request->full_name);
-        } else {
-            Validator::make($request->all(), [
-                'surname' => 'required',
-                'othername' => 'required',
-                'gender' => 'required',
-                'telephone' => 'required'
-            ], [
-                'surname.required' => __('validation.required', ['attribute' => __('patient.surname')]),
-                'othername.required' => __('validation.required', ['attribute' => __('patient.othername')]),
-                'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
-                'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
-            ])->validate();
-
-            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
-        }
-
-        // Build data array, only include fields with values
-        $data = [
-            'patient_no' => Patient::PatientNumber(),
-            'surname' => $nameParts['surname'],
-            'othername' => $nameParts['othername'],
-            'gender' => $request->gender,
-            'telephone' => $request->telephone,
-            '_who_added' => Auth::User()->id
-        ];
-
-        // Optional fields - only include if they have values
-        // Form field 'dob' maps to database column 'date_of_birth'
-        if ($request->filled('dob')) {
-            $data['date_of_birth'] = $request->dob;
-        }
-        if ($request->filled('age')) {
-            $data['age'] = $request->age;
-        }
-        if ($request->filled('ethnicity')) {
-            $data['ethnicity'] = $request->ethnicity;
-        }
-        if ($request->filled('marital_status')) {
-            $data['marital_status'] = $request->marital_status;
-        }
-        if ($request->filled('education')) {
-            $data['education'] = $request->education;
-        }
-        if ($request->filled('blood_type')) {
-            $data['blood_type'] = $request->blood_type;
-        }
-        if ($request->filled('email')) {
-            $data['email'] = $request->email;
-        }
-        if ($request->filled('phone_no')) {
-            $data['phone_no'] = $request->phone_no;
-        }
-        if ($request->filled('alternative_no')) {
-            $data['alternative_no'] = $request->alternative_no;
-        }
-        if ($request->filled('address')) {
-            $data['address'] = $request->address;
-        }
-        if ($request->filled('medication_history')) {
-            $data['medication_history'] = $request->medication_history;
-        }
-        if ($request->filled('nin')) {
-            $data['nin'] = $request->nin;
-        }
-        if ($request->filled('profession')) {
-            $data['profession'] = $request->profession;
-        }
-        if ($request->filled('next_of_kin')) {
-            $data['next_of_kin'] = $request->next_of_kin;
-        }
-        if ($request->filled('next_of_kin_no')) {
-            $data['next_of_kin_no'] = $request->next_of_kin_no;
-        }
-        if ($request->filled('next_of_kin_address')) {
-            $data['next_of_kin_address'] = $request->next_of_kin_address;
-        }
-        if ($request->filled('insurance_company_id')) {
-            $data['insurance_company_id'] = $request->insurance_company_id;
-        }
-        if ($request->filled('source_id')) {
-            $data['source_id'] = $request->source_id;
-        }
-        if ($request->filled('notes')) {
-            $data['notes'] = $request->notes;
-        }
-
-        // Health info fields
-        if ($request->has('drug_allergies')) {
-            $data['drug_allergies'] = $request->drug_allergies;
-        }
-        if ($request->filled('drug_allergies_other')) {
-            $data['drug_allergies_other'] = $request->drug_allergies_other;
-        }
-        if ($request->has('systemic_diseases')) {
-            $data['systemic_diseases'] = $request->systemic_diseases;
-        }
-        if ($request->filled('systemic_diseases_other')) {
-            $data['systemic_diseases_other'] = $request->systemic_diseases_other;
-        }
-        if ($request->filled('current_medication')) {
-            $data['current_medication'] = $request->current_medication;
-        }
-        $data['is_pregnant'] = $request->has('is_pregnant') ? true : false;
-        $data['is_breastfeeding'] = $request->has('is_breastfeeding') ? true : false;
-
-        $patient = Patient::create($data);
-
-        // Sync tags if provided
-        if ($patient && $request->has('tags')) {
-            $patient->patientTags()->sync($request->tags);
-        }
+        $nameParts = $this->patientService->validateAndParseInput($request->all());
+        $data = $this->patientService->buildPatientData($request->all(), $nameParts);
+        $patient = $this->patientService->createPatient($data, $request->tags);
 
         if ($patient) {
             return response()->json(['message' => __('messages.patient_added_successfully'), 'status' => true]);
@@ -398,166 +181,39 @@ class PatientController extends Controller
      */
     public function show($id)
     {
-        $patient = Patient::with(['InsuranceCompany'])->findOrFail($id);
+        $detail = $this->patientService->getPatientDetail($id);
 
-        // Get related data counts for tabs
-        $appointmentsCount = DB::table('appointments')
-            ->where('patient_id', $id)
-            ->whereNull('deleted_at')
-            ->count();
-
-        $medicalCasesCount = DB::table('medical_cases')
-            ->where('patient_id', $id)
-            ->whereNull('deleted_at')
-            ->count();
-
-        $imagesCount = DB::table('patient_images')
-            ->where('patient_id', $id)
-            ->whereNull('deleted_at')
-            ->count();
-
-        $followupsCount = DB::table('patient_followups')
-            ->where('patient_id', $id)
-            ->whereNull('deleted_at')
-            ->count();
-
-        $invoicesCount = DB::table('invoices')
-            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->where('appointments.patient_id', $id)
-            ->whereNull('invoices.deleted_at')
-            ->count();
-
-        return view('patients.show', compact(
-            'patient',
-            'appointmentsCount',
-            'medicalCasesCount',
-            'imagesCount',
-            'followupsCount',
-            'invoicesCount'
-        ));
+        return view('patients.show', $detail);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\Patient $patient
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $company = '';
-        $patient = Patient::with(['patientTags', 'source'])->where('id', $id)->first();
-        if ($patient->insurance_company_id != null) {
-            //now get the insurance company
-            $row = InsuranceCompany::where('id', $patient->insurance_company_id)->first();
-            $company = $row->name;
-        } else {
-            $company = '';
-        }
-        // Return source as object for select2
-        $source = $patient->source ? ['id' => $patient->source->id, 'name' => $patient->source->name] : null;
-        // Return tags as objects for select2
-        $tags = $patient->patientTags->map(function($tag) {
-            return ['id' => $tag->id, 'name' => $tag->name];
-        });
-        return response()->json([
-            'patient' => $patient,
-            'company' => $company,
-            'source' => $source,
-            'tags' => $tags
-        ]);
+        return response()->json($this->patientService->getPatientForEdit($id));
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\Patient $patient
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
     {
-        // Locale-adaptive validation
-        if ($request->filled('full_name')) {
-            Validator::make($request->all(), [
-                'full_name' => 'required|min:2',
-                'gender' => 'required',
-                'telephone' => 'required'
-            ], [
-                'full_name.required' => __('validation.required', ['attribute' => __('patient.full_name')]),
-                'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
-                'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
-            ])->validate();
-
-            $nameParts = NameHelper::split($request->full_name);
-        } else {
-            Validator::make($request->all(), [
-                'surname' => 'required',
-                'othername' => 'required',
-                'gender' => 'required',
-                'telephone' => 'required'
-            ], [
-                'surname.required' => __('validation.required', ['attribute' => __('patient.surname')]),
-                'othername.required' => __('validation.required', ['attribute' => __('patient.othername')]),
-                'gender.required' => __('validation.required', ['attribute' => __('patient.gender')]),
-                'telephone.required' => __('validation.required', ['attribute' => __('patient.phone_no')])
-            ])->validate();
-
-            $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
-        }
-
-        // Build data array with required fields
-        $data = [
-            'surname' => $nameParts['surname'],
-            'othername' => $nameParts['othername'],
-            'gender' => $request->gender,
-            'telephone' => $request->telephone,
-        ];
-
-        // Optional fields - Form field 'dob' maps to database column 'date_of_birth'
-        // For update, we set null if empty to allow clearing values
-        $data['date_of_birth'] = $request->filled('dob') ? $request->dob : null;
-        $data['age'] = $request->filled('age') ? $request->age : null;
-        $data['ethnicity'] = $request->filled('ethnicity') ? $request->ethnicity : null;
-        $data['marital_status'] = $request->filled('marital_status') ? $request->marital_status : null;
-        $data['education'] = $request->filled('education') ? $request->education : null;
-        $data['blood_type'] = $request->filled('blood_type') ? $request->blood_type : null;
-        $data['email'] = $request->filled('email') ? $request->email : null;
-        $data['phone_no'] = $request->filled('phone_no') ? $request->phone_no : null;
-        $data['alternative_no'] = $request->filled('alternative_no') ? $request->alternative_no : null;
-        $data['address'] = $request->filled('address') ? $request->address : null;
-        $data['medication_history'] = $request->filled('medication_history') ? $request->medication_history : null;
-        $data['nin'] = $request->filled('nin') ? $request->nin : null;
-        $data['profession'] = $request->filled('profession') ? $request->profession : null;
-        $data['next_of_kin'] = $request->filled('next_of_kin') ? $request->next_of_kin : null;
-        $data['next_of_kin_no'] = $request->filled('next_of_kin_no') ? $request->next_of_kin_no : null;
-        $data['next_of_kin_address'] = $request->filled('next_of_kin_address') ? $request->next_of_kin_address : null;
-        $data['insurance_company_id'] = $request->filled('insurance_company_id') ? $request->insurance_company_id : null;
-        $data['source_id'] = $request->filled('source_id') ? $request->source_id : null;
-        $data['notes'] = $request->filled('notes') ? $request->notes : null;
-
-        // Health info fields
-        $data['drug_allergies'] = $request->has('drug_allergies') ? $request->drug_allergies : [];
-        $data['drug_allergies_other'] = $request->filled('drug_allergies_other') ? $request->drug_allergies_other : null;
-        $data['systemic_diseases'] = $request->has('systemic_diseases') ? $request->systemic_diseases : [];
-        $data['systemic_diseases_other'] = $request->filled('systemic_diseases_other') ? $request->systemic_diseases_other : null;
-        $data['current_medication'] = $request->filled('current_medication') ? $request->current_medication : null;
-        $data['is_pregnant'] = $request->has('is_pregnant') ? true : false;
-        $data['is_breastfeeding'] = $request->has('is_breastfeeding') ? true : false;
-
-        $status = Patient::where('id', $id)->update($data);
-
-        // Sync tags if provided
-        $patient = Patient::find($id);
-        if ($patient) {
-            $patient->patientTags()->sync($request->tags ?? []);
-        }
+        $nameParts = $this->patientService->validateAndParseInput($request->all());
+        $data = $this->patientService->buildPatientData($request->all(), $nameParts, isUpdate: true);
+        $status = $this->patientService->updatePatient($id, $data, $request->tags);
 
         if ($status) {
             return response()->json(['message' => __('messages.patient_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
 
     /**
@@ -568,12 +224,11 @@ class PatientController extends Controller
      */
     public function destroy($id)
     {
-        $status = Patient::where('id', $id)->delete();
+        $status = $this->patientService->deletePatient($id);
+
         if ($status) {
             return response()->json(['message' => __('messages.patient_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
-
 }

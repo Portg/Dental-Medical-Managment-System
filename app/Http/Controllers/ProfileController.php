@@ -3,14 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\NameHelper;
-use App\User;
+use App\Services\ProfileService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
+    private ProfileService $profileService;
+
+    public function __construct(ProfileService $profileService)
+    {
+        $this->profileService = $profileService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -18,8 +23,7 @@ class ProfileController extends Controller
      */
     public function index()
     {
-
-        $user = User::where('id', Auth::User()->id)->first();
+        $user = $this->profileService->getCurrentUser();
         return view('profile.index', compact('user'));
     }
 
@@ -41,16 +45,15 @@ class ProfileController extends Controller
             $nameParts = ['surname' => $request->surname, 'othername' => $request->othername];
         }
 
-        $user = User::where('id', Auth::User()->id)->update(
-            [
-                'surname' => $nameParts['surname'],
-                'othername' => $nameParts['othername'],
-                'email' => $request->email,
-                'phone_no' => $request->phone_number,
-                'alternative_no' => $request->alternative_no,
-                'nin' => $request->national_id,
-            ]);
-        if ($user) {
+        $status = $this->profileService->updateBio(
+            $nameParts,
+            $request->email,
+            $request->phone_number,
+            $request->alternative_no,
+            $request->national_id
+        );
+
+        if ($status) {
             return response()->json(['message' => __('messages.profile_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
@@ -63,18 +66,9 @@ class ProfileController extends Controller
             'avatar' => ['required', 'mimes:jpeg,bmp,png,jpg'],
         ])->validate();
 
-        $file = $request->file('avatar');
-        //generate hashed string
-        $hashed = time();
+        $this->profileService->updateAvatar($request->file('avatar'));
 
-        $filename = $hashed . '_' . $file->getClientOriginalName();
-        $file->move('uploads/users', $filename);
-        //now update the photo
-        $updated_user = User::where('id', Auth::User()->id)->update(['photo' => $filename]);
-
-        $user = User::where('id', $updated_user)->first();
         return redirect('/profile');
-
     }
 
     public function changePassword(Request $request)
@@ -87,12 +81,10 @@ class ProfileController extends Controller
             'confirm_password.required_with' => __('validation.required_with', ['attribute' => __('users.confirm_password')])
         ])->validate();
 
-        //now update password
-        $user = User::where('id', Auth::User()->id)->update(['password' => Hash::make($request->new_password)]);
-        if ($user) {
+        $status = $this->profileService->changePassword($request->new_password);
+        if ($status) {
             return response()->json(['message' => __('messages.password_changed_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
-
 }

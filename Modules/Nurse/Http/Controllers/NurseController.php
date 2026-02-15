@@ -2,12 +2,20 @@
 
 namespace Modules\Nurse\Http\Controllers;
 
+use App\Services\NurseDashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 class NurseController extends Controller
 {
+    private NurseDashboardService $service;
+
+    public function __construct(NurseDashboardService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response

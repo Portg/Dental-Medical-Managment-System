@@ -191,6 +191,11 @@ return [
     'group_basic_config' => 'Basic Config',
     'group_accounting' => 'Accounting',
 
+    // Lab Case Management
+    'group_lab_management' => 'Lab Case Management',
+    'lab_cases' => 'Lab Cases',
+    'labs' => 'Labs',
+
     // Search
     'search_placeholder' => 'Search patients...',
     'search' => 'Search',

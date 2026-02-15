@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class QuotationItem extends Model
 {
     use SoftDeletes;
-    protected $fillable = ['qty', 'price', 'quotation_id', 'medical_service_id', 'tooth_no', '_who_added'];
+    protected $fillable = ['qty', 'amount', 'quotation_id', 'medical_service_id', '_who_added'];
 
     public function medical_service()
     {

@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\ExpenseCategory;
-use App\ExpenseItem;
+use App\Services\ExpenseItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class ExpenseItemController extends Controller
 {
+    private ExpenseItemService $service;
+
+    public function __construct(ExpenseItemService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,16 +27,7 @@ class ExpenseItemController extends Controller
     public function index(Request $request, $expense_id)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('expense_items')
-                ->join('expense_categories', 'expense_categories.id', 'expense_items.expense_category_id')
-                ->join('users', 'users.id', 'expense_items._who_added')
-                ->whereNull('expense_items.deleted_at')
-                ->where('expense_items.expense_id', '=', $expense_id)
-                ->select('expense_items.*', 'expense_categories.name', 'users.othername as added_by')
-                ->OrderBy('expense_items.updated_at', 'desc')
-                ->get();
-
+            $data = $this->service->getListByExpense($expense_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -49,7 +44,6 @@ class ExpenseItemController extends Controller
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
                     $btn = '<a href="#" onclick="deleteItemRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
@@ -58,7 +52,6 @@ class ExpenseItemController extends Controller
         }
         return view('expense_items.index');
     }
-
 
     /**
      * Show the form for creating a new resource.
@@ -87,41 +80,22 @@ class ExpenseItemController extends Controller
             'qty.required' => __('validation.attributes.qty') . ' ' . __('validation.required'),
             'price.required' => __('validation.attributes.price') . ' ' . __('validation.required'),
         ])->validate();
-        $item_category = $this->createOrGetExpenseCategory($request->item); // chech if the item category// exits or create new item category
 
-        $status = ExpenseItem::create([
-            'expense_category_id' => $item_category,
-            'qty' => $request->qty,
-            'price' => $request->price,
-            'expense_id' => $request->expense_id,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->service->create($request->all());
+
         if ($status) {
             return response()->json(['message' => __('expense_items.added_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }
 
-
-    private function createOrGetExpenseCategory($expense_category)
-    {
-        $existing_item = ExpenseCategory::where('name', $expense_category)->first();
-        if ($existing_item != null) {
-            return $existing_item->id;
-        } else {
-            // insert new expense item category
-            $new_item = ExpenseCategory::create(['name' => $expense_category, '_who_added' => Auth::User()->id]);
-            return $new_item->id;
-        }
-    }
-
     /**
      * Display the specified resource.
      *
-     * @param \App\ExpenseItem $expenseItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(ExpenseItem $expenseItem)
+    public function show($id)
     {
         //
     }
@@ -129,18 +103,12 @@ class ExpenseItemController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\ExpenseItem $expenseItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $expenseItem = DB::table('expense_items')
-            ->leftJoin('expense_categories', 'expense_categories.id', 'expense_items.expense_category_id')
-            ->whereNull('expense_items.deleted_at')
-            ->where('expense_items.id', $id)
-            ->select('expense_items.*', 'expense_categories.name')
-            ->first();
-        return response()->json($expenseItem);
+        return response()->json($this->service->find($id));
     }
 
     /**
@@ -162,30 +130,24 @@ class ExpenseItemController extends Controller
             'price.required' => __('validation.attributes.price') . ' ' . __('validation.required'),
         ])->validate();
 
-        $item_category = $this->createOrGetExpenseCategory($request->item); // chech if the item category// exits or create new item category
+        $status = $this->service->update($id, $request->all());
 
-        $status = ExpenseItem::where('id', $id)->update([
-            'expense_category_id' => $item_category,
-            'qty' => $request->qty,
-            'price' => $request->price,
-            '_who_added' => Auth::User()->id
-        ]);
         if ($status) {
             return response()->json(['message' => __('expense_items.updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\ExpenseItem $expenseItem
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = ExpenseItem::where('id', $id)->delete();
+        $status = $this->service->delete($id);
+
         if ($status) {
             return response()->json(['message' => __('expense_items.deleted_successfully'), 'status' => true]);
         }

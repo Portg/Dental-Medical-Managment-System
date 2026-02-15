@@ -2,36 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use App\ClaimRate;
-use Exception;
+use App\Services\ClaimRateService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class ClaimRateController extends Controller
 {
+    private ClaimRateService $claimRateService;
+
+    public function __construct(ClaimRateService $claimRateService)
+    {
+        $this->claimRateService = $claimRateService;
+    }
+
     /**
      * Display a listing of the resource.
      *
      * @param Request $request
-     * @return Response
-     * @throws Exception
+     * @return \Illuminate\Http\Response
+     * @throws \Exception
      */
     public function index(Request $request)
     {
         if ($request->ajax()) {
 
-            $data = DB::table('claim_rates')
-                ->join('users', 'users.id', 'claim_rates.doctor_id')
-                ->whereNull('claim_rates.deleted_at')
-                ->where('claim_rates.status', 'active')
-                ->select('claim_rates.*', 'users.surname', 'users.othername')
-                ->groupBy('claim_rates.doctor_id')
-                ->orderBy('claim_rates.updated_at', 'desc')
-                ->get();
+            $data = $this->claimRateService->getClaimRateList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -43,7 +39,7 @@ class ClaimRateController extends Controller
                     $btn = '
                       <div class="btn-group">
                         <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> ' . __('common.action') . ' 
+                                aria-expanded="false"> ' . __('common.action') . '
                             <i class="fa fa-angle-down"></i>
                         </button>
                         <ul class="dropdown-menu" role="menu">
@@ -91,19 +87,8 @@ class ClaimRateController extends Controller
             'insurance_rate' => 'required',
             'insurance_rate' => 'required'
         ])->validate();
-        //check if there is a previous rate for this doctor and de-active it
-        $has_claim = ClaimRate::where('doctor_id', $request->doctor_id)->first();
-        if ($has_claim != null) {
-            // de-active the old rate
-            ClaimRate::where('doctor_id', $request->doctor_id)->update(['status' => 'deactivated']);
-        }
-        //now insert the new rate
-        $status = ClaimRate::create([
-            'doctor_id' => $request->doctor_id,
-            'cash_rate' => $request->cash_rate,
-            'insurance_rate' => $request->insurance_rate,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->claimRateService->createClaimRate($request->all());
         if ($status) {
             return response()->json(['message' => __('claim_rates.claim_rates_added_successfully'),
                 'status' => true]);
@@ -115,10 +100,10 @@ class ClaimRateController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\ClaimRate $claimRate
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(ClaimRate $claimRate)
+    public function show($id)
     {
         //
     }
@@ -126,25 +111,19 @@ class ClaimRateController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\ClaimRate $claimRate
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $rate = DB::table('claim_rates')
-            ->join('users', 'users.id', 'claim_rates.doctor_id')
-            ->where('claim_rates.id', $id)
-            ->select('claim_rates.*', 'users.surname', 'users.othername')
-            ->first();
-        return response()->json($rate);
-
+        return response()->json($this->claimRateService->getClaimRateForEdit($id));
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\ClaimRate $claimRate
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
@@ -155,12 +134,7 @@ class ClaimRateController extends Controller
             'insurance_rate' => 'required',
         ])->validate();
 
-        $status = ClaimRate::where('id', $id)->update([
-            'doctor_id' => $request->doctor_id,
-            'cash_rate' => $request->cash_rate,
-            'insurance_rate' => $request->insurance_rate,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->claimRateService->updateClaimRate($id, $request->all());
         if ($status) {
             return response()->json(['message' => __('claim_rates.claim_rates_updated_successfully'),
                 'status' => true]);
@@ -173,12 +147,11 @@ class ClaimRateController extends Controller
      * Remove the specified resource from storage.
      *
      * @param $id
-     * @return Response
-     * @throws Exception
+     * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = ClaimRate::where('id', $id)->delete();
+        $status = $this->claimRateService->deleteClaimRate($id);
         if ($status) {
             return response()->json(['message' => __('claim_rates.claim_rates_deleted_successfully'),
                 'status' => true]);

@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\EmployeeContract;
 use App\Http\Helper\FunctionsHelper;
-use App\InvoiceItem;
-use App\PaySlip;
-use App\SalaryAdvance;
-use App\SalaryAllowance;
-use App\SalaryDeduction;
+use App\Http\Helper\NameHelper;
+use App\Services\PaySlipService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class PaySlipController extends Controller
 {
+    private PaySlipService $service;
+
+    public function __construct(PaySlipService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -28,13 +29,7 @@ class PaySlipController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = DB::table('pay_slips')
-                ->leftJoin('users', 'users.id', 'pay_slips.employee_id')
-                ->leftJoin('employee_contracts', 'employee_contracts.id', 'pay_slips.employee_contract_id')
-                ->whereNull('pay_slips.deleted_at')
-                ->select('pay_slips.*', 'employee_contracts.payroll_type', 'employee_contracts.gross_salary', 'employee_contracts.commission_percentage', 'users.surname', 'users.othername')
-                ->orderBy('pay_slips.id', 'desc')
-                ->get();
+            $data = $this->service->getPaySlipList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -44,29 +39,29 @@ class PaySlipController extends Controller
                     return '';
                 })
                 ->addColumn('employee', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('basic_salary', function ($row) {
-                    $wage = $this->calculateWage($row);
+                    $wage = $this->service->calculateWage($row);
                     return '<span class="text-primary">' . number_format($wage) . '</span>';
                 })
                 ->addColumn('total_advances', function ($row) {
-                    $advances = $this->employeeAdvances($row);
+                    $advances = $this->service->employeeAdvances($row);
                     return '<span class="text-primary">' . number_format($advances) . '</span>';
                 })
                 ->addColumn('total_allowances', function ($row) {
-                    $allowances = $this->employeeAllowances($row);
+                    $allowances = $this->service->employeeAllowances($row);
                     return '<span class="text-primary">' . number_format($allowances) . '</span>';
                 })
                 ->addColumn('total_deductions', function ($row) {
-                    $deductions = $this->employeeDeductions($row);
+                    $deductions = $this->service->employeeDeductions($row);
                     return '<span class="text-primary">' . number_format($deductions) . '</span>';
                 })
                 ->addColumn('due_balance', function ($row) {
-                    $deductions = $this->employeeDeductions($row);
-                    $allowance = $this->employeeAllowances($row);
-                    $advances = $this->employeeAdvances($row);
-                    $wage = $this->calculateWage($row);
+                    $deductions = $this->service->employeeDeductions($row);
+                    $allowance = $this->service->employeeAllowances($row);
+                    $advances = $this->service->employeeAdvances($row);
+                    $wage = $this->service->calculateWage($row);
                     $balance = ($allowance + $wage) - ($deductions + $advances);
                     return '<span class="text-primary">' . number_format($balance) . '</span>';
                 })
@@ -96,23 +91,6 @@ class PaySlipController extends Controller
         return view('payslips.index');
     }
 
-
-    private function employeeAdvances($row)
-    {
-        return SalaryAdvance::where(['advance_month' => $row->payslip_month,
-            'employee_id' => $row->employee_id])->sum('advance_amount');
-    }
-
-    private function employeeAllowances($row)
-    {
-        return SalaryAllowance::where('pay_slip_id', $row->id)->sum('allowance_amount');
-    }
-
-    private function employeeDeductions($row)
-    {
-        return SalaryDeduction::where('pay_slip_id', $row->id)->sum('deduction_amount');
-    }
-
     /**
      * Show the form for creating a new resource.
      *
@@ -135,63 +113,26 @@ class PaySlipController extends Controller
             'employee' => 'required',
             'payslip_month' => 'required'
         ])->validate();
-        //get employee contract
-        $employee = EmployeeContract::where(['employee_id' => $request->employee, 'status' => 'Active'])->first();
-        if ($employee == null) {
-            return response()->json(['message' => __('payslips.employee_no_contract'), 'status' => false]);
-        }
 
-        $payslip = PaySlip::create([
-            'payslip_month' => $request->payslip_month,
-            'employee_id' => $request->employee,
-            'employee_contract_id' => $employee->id,
-            '_who_added' => Auth::User()->id
-        ]);
-        if ($payslip) {
-            //now add the allowances of the payslip for this month selected
-            foreach ($request->addAllowance as $key => $value) {
-                //check if amount is not null
-                if ($value['allowance_amount'] != null) {
-                    SalaryAllowance::create([
-                        'allowance' => $value['allowance'],
-                        'allowance_amount' => $value['allowance_amount'],
-                        'pay_slip_id' => $payslip->id,
-                        '_who_added' => Auth::User()->id
-                    ]);
-                }
-            }
-            //add the deductions of the pay slip of the month selected
-            foreach ($request->addDeduction as $key => $value) {
-                //check if amount is not null
-                if ($value['deduction_amount'] != null) {
-                    SalaryDeduction::create([
-                        'deduction' => $value['deduction'],
-                        'deduction_amount' => $value['deduction_amount'],
-                        'pay_slip_id' => $payslip->id,
-                        '_who_added' => Auth::User()->id
-                    ]);
-                }
-            }
-            return response()->json(['message' => __('payslips.payslip_generated_successfully'), 'status' => true]);
-        }
+        $result = $this->service->createPaySlip(
+            $request->employee,
+            $request->payslip_month,
+            $request->addAllowance ?? [],
+            $request->addDeduction ?? []
+        );
 
-        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
+        return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\PaySlip $paySlip
+     * @param int $pay_slip_id
      * @return \Illuminate\Http\Response
      */
     public function show($pay_slip_id)
     {
-        $data['employee'] = DB::table('pay_slips')
-            ->join('users', 'users.id', 'pay_slips.employee_id')
-            ->where('pay_slips.id', $pay_slip_id)
-            ->select('pay_slips.*', 'users.surname', 'users.othername')
-            ->first();
+        $data['employee'] = $this->service->getPaySlipDetail($pay_slip_id);
         $data['pay_slip_id'] = $pay_slip_id;
         return view('payslips.show.index')->with($data);
     }
@@ -202,7 +143,7 @@ class PaySlipController extends Controller
      * @param \App\PaySlip $paySlip
      * @return \Illuminate\Http\Response
      */
-    public function edit(PaySlip $paySlip)
+    public function edit(\App\PaySlip $paySlip)
     {
         //
     }
@@ -214,7 +155,7 @@ class PaySlipController extends Controller
      * @param \App\PaySlip $paySlip
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, PaySlip $paySlip)
+    public function update(Request $request, \App\PaySlip $paySlip)
     {
         //
     }
@@ -228,57 +169,15 @@ class PaySlipController extends Controller
      */
     public function destroy($id)
     {
-        $success = PaySlip::where('id', $id)->delete();
+        $success = $this->service->deletePaySlip($id);
         return FunctionsHelper::messageResponse(__('payslips.payslip_deleted_successfully'), $success);
-    }
-
-    private function calculateWage($row)
-    {
-        //check payroll type
-        if ($row->payroll_type == "Salary") {
-            return $row->gross_salary;
-        } else {
-            //get how much the doctor has been thru invoices
-            return $this->fetchDoctorInvoices($row->employee_id, $row->payslip_month, $row->commission_percentage);
-        }
-    }
-
-    //helper for calculating the employee  commission amount
-    private function fetchDoctorInvoices($doctor_id, $month, $commission_percentage)
-    {
-        //get all doctor invoices
-        $invoices = DB::table('invoices')
-            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->whereNull('invoices.deleted_at')
-            ->where('appointments.doctor_id', $doctor_id)
-            ->whereBetween(DB::raw('DATE_FORMAT(invoices.updated_at, \'%Y-%m\')'), array($month,
-                $month))
-            ->select('invoices.id')
-            ->get();
-        $total_amount = 0;
-        foreach ($invoices as $item) {
-            // get the invoice items amount sum
-            $sum_items_amount = InvoiceItem::where('invoice_id', $item->id)->sum(DB::raw('price*qty'));
-            $total_amount = $total_amount + $sum_items_amount;
-        }
-
-        //get the commission
-        $commission = ($commission_percentage / 100) * $total_amount;
-        return $commission;
     }
 
     public function individualPaySlip(Request $request)
     {
-        $data['employee'] = DB::table('pay_slips')
-            ->join('users', 'users.id', 'pay_slips.employee_id')
-            ->where('pay_slips.id', $request->pay_slip_id)
-            ->select('pay_slips.*', 'users.surname', 'users.othername')
-            ->first();
+        $data['employee'] = $this->service->getPaySlipDetail($request->pay_slip_id);
         $data['pay_slip_id'] = $request->pay_slip_id;
 
         return view('payslips.individual_payslips');
-
-//        $pdf = \PDF::loadView('payslips.individual_payslips', $data);
-//        return $pdf->stream('medium', array("attachment" => false))->header('Content-Type', 'application/pdf');
     }
 }

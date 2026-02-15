@@ -3,17 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\MedicalCard;
-use App\MedicalCardItem;
-use App\Patient;
+use App\Services\MedicalCardService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Yajra\DataTables\DataTables;
 
 class MedicalCardController extends Controller
 {
+    private MedicalCardService $medicalCardService;
+
+    public function __construct(MedicalCardService $medicalCardService)
+    {
+        $this->medicalCardService = $medicalCardService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -22,19 +25,11 @@ class MedicalCardController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('medical_cards')
-                ->join('patients', 'patients.id', 'medical_cards.patient_id')
-                ->join('users', 'users.id', 'medical_cards._who_added')
-                ->whereNull('medical_cards.deleted_at')
-                ->select('medical_cards.*', 'patients.surname', 'patients.othername', 'users.othername as added_by')
-                ->orderBY('created_at', 'desc')
-                ->get();
+            $data = $this->medicalCardService->getMedicalCardList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
-
                     if (!empty($request->get('search'))) {
                         $instance->collection = $instance->collection->filter(function ($row) use ($request) {
                             if (Str::contains(Str::lower(\App\Http\Helper\NameHelper::join($row['surname'], $row['othername'])), Str::lower($request->get('search'))
@@ -52,12 +47,10 @@ class MedicalCardController extends Controller
                     return $row->added_by;
                 })
                 ->addColumn('view_cards', function ($row) {
-
                     $btn = '<a href="' . url('medical-cards/' . $row->id) . '" class="btn btn-primary">' . __('medical_cards.view_cards') . '</a>';
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
                     $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
@@ -71,13 +64,7 @@ class MedicalCardController extends Controller
     public function individualMedicalCards(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('medical_cards')
-                ->join('patients', 'patients.id', 'medical_cards.patient_id')
-                ->whereNull('medical_cards.deleted_at')
-                ->where('medical_cards.patient_id', $patient_id)
-                ->select('medical_cards.*', 'patients.surname', 'patients.othername')
-                ->get();
+            $data = $this->medicalCardService->getIndividualMedicalCards($patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -121,28 +108,14 @@ class MedicalCardController extends Controller
             'card_type' => 'required',
             'uploadFile' => 'required',
         ]);
-//        |image|mimes:jpeg,png,jpg,gif,svg|max:2048
 
-        // first insert the cards details
-        $status = MedicalCard::create([
-            'card_type' => $request->card_type,
-            'patient_id' => $request->patient_id,
-            '_who_added' => Auth::User()->id
-        ]);
-        if ($status) {
-            foreach ($request->file('uploadFile') as $key => $value) {
-                $imageName = time() . $key . '.' . $value->getClientOriginalExtension();
-                $value->move('uploads/medical_cards', $imageName);
-                //now insert the card details into the medical cards
-                MedicalCardItem::create([
-                    'medical_card_id' => $status->id,
-                    'card_photo' => $imageName,
-                    '_who_added' => Auth::User()->id
-                ]);
-            }
-        }
-        if ($status) {
-            return redirect('/medical-cards/' . $status->id);
+        $card = $this->medicalCardService->createMedicalCard(
+            $request->only('card_type', 'patient_id'),
+            $request->file('uploadFile')
+        );
+
+        if ($card) {
+            return redirect('/medical-cards/' . $card->id);
         }
         return Response()->json(["message" => __('messages.error_occurred_later'), "status" => true]);
     }
@@ -150,35 +123,24 @@ class MedicalCardController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\MedicalCard $medicalCard
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function show($id)
     {
-        $data['images'] = MedicalCardItem::where('medical_card_id', $id)->get();
-        $data['patient'] = DB::table('medical_cards')
-            ->join('patients', 'patients.id', 'medical_cards.patient_id')
-            ->whereNull('medical_cards.deleted_at')
-            ->where('medical_cards.id', $id)
-            ->select('patients.*')
-            ->first();
+        $data = $this->medicalCardService->getMedicalCardDetail($id);
         return view('medical_cards.show')->with($data);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\MedicalCard $medicalCard
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $card = DB::table('medical_cards')
-            ->join('patients', 'patients.id', 'medical_cards.patient_id')
-            ->where('medical_cards.id', $id)
-            ->select('medical_cards.*', 'patients.surname', 'patients.othername')
-            ->first();
-        return response()->json($card);
+        return response()->json($this->medicalCardService->getMedicalCardForEdit($id));
     }
 
     /**
@@ -196,18 +158,16 @@ class MedicalCardController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\MedicalCard $medicalCard
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = MedicalCard::where('id', $id)->delete();
+        $status = $this->medicalCardService->deleteMedicalCard($id);
         if ($status) {
-            return Response()->json(["message" => __('medical_cards.medical_card_deleted_successfully'), "status" => true
-            ]);
+            return Response()->json(["message" => __('medical_cards.medical_card_deleted_successfully'), "status" => true]);
         }
         return Response()->json(["message" => __('messages.error_occurred_later'), "status" => true]);
-
     }
 
     function massremove(Request $request)

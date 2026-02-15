@@ -60,7 +60,57 @@
       "Bash(git rm:*)",
       "Bash(git commit:*)",
       "Bash(php:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(test:*)",
+      "Bash(head:*)",
+      "Bash(git tag:*)",
+      "Bash(composer update:*)",
+      "Bash(composer show:*)",
+      "Bash(COMPOSER_PROCESS_TIMEOUT=600 composer install:*)",
+      "Bash(brew list:*)",
+      "Bash(brew search:*)",
+      "Bash(brew install:*)",
+      "Bash(brew unlink:*)",
+      "Bash(brew link:*)",
+      "Bash(export PATH=\"/usr/local/opt/php@8.1/bin:$PATH\")",
+      "Bash(export PATH=\"/usr/local/opt/php@8.1/bin:/usr/bin:/bin:$PATH\")",
+      "Bash(export PATH=\"/usr/local/opt/php@8.1/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH\":*)",
+      "Bash(export:*)",
+      "Bash(git status:*)",
+      "Bash(/usr/local/opt/php@8.1/bin/php:*)",
+      "Bash(composer config:*)",
+      "Bash(/usr/local/opt/php@8.2/bin/php:*)",
+      "Bash(file:*)",
+      "Bash(gh pr create --title \"upgrade: Laravel 5.8 → 11.x 全版本升级\" --body \"$\\(cat <<''EOF''\n## Summary\n\n- 完成 Laravel 5.8 → 6.x → 8.x → 9.x → 10.x → 11.x 全链路升级（跳过 7.x）\n- PHP 版本要求从 7.2+ 提升至 8.2+\n- 升级所有主要依赖包（nwidart/laravel-modules v11、yajra/datatables v10、maatwebsite/excel v3.1、spatie/laravel-backup v8、barryvdh/laravel-dompdf v2 等）\n- 移除 africastalking/africastalking，升级 Guzzle 至 7.x\n- 重写所有 Export 类适配 maatwebsite/excel v3.1 接口\n- 清理未使用的 Vue 2.5 脚手架（从未实际集成到前端）\n- 迁移 database/seeds → database/seeders，Model Factory 适配新语法\n- 适配 Laravel 11 配置格式（Facade::defaultAliases、partitioned cookie、env-based hashing 等）\n\n## 涉及的升级步骤\n\n| 步骤 | Commit |\n|---|---|\n| 5.8 → 6.x（含 Export 重写） | `3a2f44b` |\n| 6.x → 8.x | `188ee67` |\n| 移除 africastalking，Guzzle 7.x | `c89e9bb` |\n| 8.x → 9.x（PHP 8.1） | `bb07ab1` |\n| 9.x → 10.x | `7062d90` |\n| TrustProxies 适配 | `6cca1ea` |\n| 10.x → 11.x（PHP 8.2） | `2474899` |\n| 清理未使用 Vue 2.5 | `4d9a48b` |\n\n## Test plan\n\n- [x] `php artisan --version` 确认 Laravel 11.48.0\n- [x] `php artisan route:list` 路由加载正常\n- [x] `php artisan test` 测试通过（2 passed）\n- [ ] 手动验证核心页面：登录、患者列表、预约日历、发票\n- [ ] 验证 DataTables 数据加载正常\n- [ ] 验证 PDF/Excel 导出功能\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\nEOF\n\\)\")",
+      "Bash(gh pr merge:*)",
+      "Bash(git merge:*)",
+      "Bash(gh pr close:*)",
+      "Bash(wc:*)",
+      "Bash(while read f)",
+      "Bash(composer require:*)",
+      "Bash(npm run development:*)",
+      "Bash(chmod:*)",
+      "Bash(mysql:*)",
+      "Bash(docker compose config:*)",
+      "Bash(1 <<'SCRIPT'\n\\\\Illuminate\\\\Support\\\\Facades\\\\Route::get\\('/test', function\\(\\) {\n    return view\\('auth.login'\\);\n}\\)->middleware\\('web'\\);\n\necho 'Route added successfully';\nSCRIPT)",
+      "Bash(curl:*)",
+      "Bash(ln:*)",
+      "Bash(CSRF_TOKEN=\"b48tO8kjlZMkVJXA5Fynfr9qpsXryCZWCTyBUblA\")",
+      "Bash(# Check if public/img has large files du -sh public/img/ && find public/img/ -type f)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/php-lint.sh",
+            "statusMessage": "Checking PHP syntax..."
+          }
+        ]
+      }
     ]
   },
   "sandbox": {

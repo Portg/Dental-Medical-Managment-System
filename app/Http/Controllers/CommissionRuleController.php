@@ -2,34 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\CommissionRule;
-use App\MedicalService;
-use App\Branch;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\CommissionRuleService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class CommissionRuleController extends Controller
 {
+    private CommissionRuleService $service;
+
+    public function __construct(CommissionRuleService $service)
+    {
+        $this->service = $service;
+    }
+
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = DB::table('commission_rules')
-                ->leftJoin('medical_services', 'medical_services.id', 'commission_rules.medical_service_id')
-                ->leftJoin('branches', 'branches.id', 'commission_rules.branch_id')
-                ->leftJoin('users', 'users.id', 'commission_rules._who_added')
-                ->whereNull('commission_rules.deleted_at')
-                ->select([
-                    'commission_rules.*',
-                    'medical_services.name as service_name',
-                    'branches.name as branch_name',
-                    'users.surname as added_by'
-                ])
-                ->orderBy('commission_rules.id', 'desc')
-                ->get();
+            $data = $this->service->getList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -65,10 +56,9 @@ class CommissionRuleController extends Controller
                 ->make(true);
         }
 
-        $services = MedicalService::whereNull('deleted_at')->get();
-        $branches = Branch::whereNull('deleted_at')->get();
+        $viewData = $this->service->getViewData();
 
-        return view('commission_rules.index', compact('services', 'branches'));
+        return view('commission_rules.index', $viewData);
     }
 
     public function store(Request $request)
@@ -81,33 +71,14 @@ class CommissionRuleController extends Controller
             'commission_mode.required' => __('commission_rules.mode_required'),
         ])->validate();
 
-        $data = [
-            'rule_name' => $request->rule_name,
-            'commission_mode' => $request->commission_mode,
-            'target_service_type' => $request->target_service_type,
-            'medical_service_id' => $request->medical_service_id ?: null,
-            'base_commission_rate' => $request->base_commission_rate ?: 0,
-            'tier1_threshold' => $request->tier1_threshold ?: null,
-            'tier1_rate' => $request->tier1_rate ?: null,
-            'tier2_threshold' => $request->tier2_threshold ?: null,
-            'tier2_rate' => $request->tier2_rate ?: null,
-            'tier3_threshold' => $request->tier3_threshold ?: null,
-            'tier3_rate' => $request->tier3_rate ?: null,
-            'bonus_amount' => $request->bonus_amount ?: 0,
-            'is_active' => $request->is_active ? true : false,
-            'branch_id' => $request->branch_id ?: null,
-            '_who_added' => Auth::user()->id,
-        ];
-
-        $success = CommissionRule::create($data);
+        $success = $this->service->create($request->all());
 
         return FunctionsHelper::messageResponse(__('commission_rules.added_successfully'), $success);
     }
 
     public function edit($id)
     {
-        $rule = CommissionRule::where('id', $id)->first();
-        return response()->json($rule);
+        return response()->json($this->service->find($id));
     }
 
     public function update(Request $request, $id)
@@ -120,29 +91,14 @@ class CommissionRuleController extends Controller
             'commission_mode.required' => __('commission_rules.mode_required'),
         ])->validate();
 
-        $success = CommissionRule::where('id', $id)->update([
-            'rule_name' => $request->rule_name,
-            'commission_mode' => $request->commission_mode,
-            'target_service_type' => $request->target_service_type,
-            'medical_service_id' => $request->medical_service_id ?: null,
-            'base_commission_rate' => $request->base_commission_rate ?: 0,
-            'tier1_threshold' => $request->tier1_threshold ?: null,
-            'tier1_rate' => $request->tier1_rate ?: null,
-            'tier2_threshold' => $request->tier2_threshold ?: null,
-            'tier2_rate' => $request->tier2_rate ?: null,
-            'tier3_threshold' => $request->tier3_threshold ?: null,
-            'tier3_rate' => $request->tier3_rate ?: null,
-            'bonus_amount' => $request->bonus_amount ?: 0,
-            'is_active' => $request->is_active ? true : false,
-            'branch_id' => $request->branch_id ?: null,
-        ]);
+        $success = $this->service->update($id, $request->all());
 
         return FunctionsHelper::messageResponse(__('commission_rules.updated_successfully'), $success);
     }
 
     public function destroy($id)
     {
-        $success = CommissionRule::where('id', $id)->delete();
+        $success = $this->service->delete($id);
         return FunctionsHelper::messageResponse(__('commission_rules.deleted_successfully'), $success);
     }
 
@@ -151,24 +107,12 @@ class CommissionRuleController extends Controller
      */
     public function calculate(Request $request)
     {
-        $serviceId = $request->service_id;
-        $revenue = $request->revenue;
+        $result = $this->service->calculateCommission(
+            $request->service_id,
+            $request->service_type,
+            $request->revenue
+        );
 
-        $rule = CommissionRule::where('medical_service_id', $serviceId)
-            ->orWhere('target_service_type', $request->service_type)
-            ->active()
-            ->first();
-
-        if (!$rule) {
-            return response()->json(['commission' => 0, 'message' => __('commission_rules.no_rule_found')]);
-        }
-
-        $commission = $rule->calculateCommission($revenue);
-
-        return response()->json([
-            'commission' => round($commission, 2),
-            'rule_name' => $rule->rule_name,
-            'mode' => $rule->commission_mode
-        ]);
+        return response()->json($result);
     }
 }

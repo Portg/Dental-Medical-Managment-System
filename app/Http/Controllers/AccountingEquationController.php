@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\AccountingEquation;
 use App\Http\Helper\FunctionsHelper;
+use App\Services\AccountingEquationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class AccountingEquationController extends Controller
 {
+    private AccountingEquationService $accountingEquationService;
+
+    public function __construct(AccountingEquationService $accountingEquationService)
+    {
+        $this->accountingEquationService = $accountingEquationService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -18,7 +24,7 @@ class AccountingEquationController extends Controller
      */
     public function index()
     {
-        $data['AccountingEquations'] = AccountingEquation::OrderBy('sort_by')->get();
+        $data['AccountingEquations'] = $this->accountingEquationService->getAllEquations();
         return view('charts_of_accounts.index')->with($data);
     }
 
@@ -49,12 +55,7 @@ class AccountingEquationController extends Controller
             'sort_by.integer' => __('validation.custom.sort_by.integer')
         ])->validate();
 
-        $success = AccountingEquation::create([
-            'name' => $request->name,
-            'sort_by' => $request->sort_by,
-            'active_tab' => $request->active_tab ?? 'no',
-            '_who_added' => Auth::User()->id
-        ]);
+        $success = $this->accountingEquationService->createEquation($request->all());
 
         return FunctionsHelper::messageResponse(__('messages.accounting_equation_added_successfully'), $success);
     }
@@ -62,10 +63,10 @@ class AccountingEquationController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param \App\AccountingEquation $accountingEquation
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(AccountingEquation $accountingEquation)
+    public function show($id)
     {
         //
     }
@@ -78,7 +79,7 @@ class AccountingEquationController extends Controller
      */
     public function edit($id)
     {
-        $data = AccountingEquation::where('id', $id)->first();
+        $data = $this->accountingEquationService->findEquation($id);
         return response()->json($data);
     }
 
@@ -100,12 +101,7 @@ class AccountingEquationController extends Controller
             'sort_by.integer' => __('validation.custom.sort_by.integer')
         ])->validate();
 
-        $success = AccountingEquation::where('id', $id)->update([
-            'name' => $request->name,
-            'sort_by' => $request->sort_by,
-            'active_tab' => $request->active_tab ?? 'no',
-            '_who_added' => Auth::User()->id
-        ]);
+        $success = $this->accountingEquationService->updateEquation($id, $request->all());
 
         return FunctionsHelper::messageResponse(__('messages.accounting_equation_updated_successfully'), $success);
     }
@@ -119,7 +115,7 @@ class AccountingEquationController extends Controller
      */
     public function destroy($id)
     {
-        $success = AccountingEquation::where('id', $id)->delete();
+        $success = $this->accountingEquationService->deleteEquation($id);
         return FunctionsHelper::messageResponse(__('messages.accounting_equation_deleted_successfully'), $success);
     }
 }

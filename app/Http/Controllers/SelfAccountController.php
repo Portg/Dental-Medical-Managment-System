@@ -2,19 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Helper\FunctionsHelper;
-use App\InvoicePayment;
-use App\SelfAccount;
-use App\SelfAccountDeposit;
+use App\Services\SelfAccountService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class SelfAccountController extends Controller
 {
+    private SelfAccountService $service;
+
+    public function __construct(SelfAccountService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -25,22 +27,8 @@ class SelfAccountController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['search'])) {
-                $data = DB::table('self_accounts')
-                    ->leftJoin('users', 'users.id', 'self_accounts._who_added')
-                    ->whereNull('self_accounts.deleted_at')
-                    ->where('self_accounts.account_holder', 'like', '%' . $request->get('search') . '%')
-                    ->select(['self_accounts.*', 'users.surname'])
-                    ->OrderBy('self_accounts.id', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('self_accounts')
-                    ->leftJoin('users', 'users.id', 'self_accounts._who_added')
-                    ->whereNull('self_accounts.deleted_at')
-                    ->select(['self_accounts.*', 'users.surname'])
-                    ->OrderBy('self_accounts.id', 'desc')
-                    ->get();
-            }
+            $search = !empty($_GET['search']) ? $request->get('search') : null;
+            $data = $this->service->getAccountList($search);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -50,11 +38,7 @@ class SelfAccountController extends Controller
                     return ' <a href="' . url('self-accounts/' . $row->id) . '"  >' . $row->account_holder . '</a>';
                 })
                 ->addColumn('account_balance', function ($row) {
-                    //get the bill payments on this account
-                    $payments = InvoicePayment::where('self_account_id', $row->id)->sum('amount');
-                    //get total account deposits
-                    $deposits = SelfAccountDeposit::where('self_account_id', $row->id)->sum('amount');
-                    $account_balance = $deposits - $payments;
+                    $account_balance = $this->service->getAccountBalance($row->id);
                     return '<span class="text-primary">' . number_format($account_balance) . '</span>';
                 })
                 ->addColumn('addedBy', function ($row) {
@@ -85,20 +69,13 @@ class SelfAccountController extends Controller
 
     public function filterAccounts(Request $request)
     {
-        $data = [];
         $name = $request->q;
 
         if ($name) {
-            $search = $name;
-            $data =
-                SelfAccount::where('account_holder', 'LIKE', "%$search%")->get();
-
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->account_holder];
-            }
-            return \Response::json($formatted_tags);
+            return \Response::json($this->service->searchAccounts($name));
         }
+
+        return \Response::json([]);
     }
 
     /**
@@ -121,22 +98,14 @@ class SelfAccountController extends Controller
     {
         Validator::make($request->all(), [
             'name' => 'required',
-//            'phone_no' => 'required'
         ])->validate();
-        $status = SelfAccount::create([
-            'account_no' => SelfAccount::AccountNo(),
-            'account_holder' => $request->name,
-            'holder_phone_no' => $request->phone_no,
-            'holder_email' => $request->email,
-            'holder_address' => $request->address,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->service->createAccount($request->all());
+
         if ($status) {
             return response()->json(['message' => __('financial.self_account_created_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
-
     }
 
     /**
@@ -147,19 +116,19 @@ class SelfAccountController extends Controller
      */
     public function show($id)
     {
-        $data['account_info'] = SelfAccount::where('id', $id)->first();
+        $data['account_info'] = $this->service->find($id);
         return view('self_accounts.preview_account')->with($data);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\SelfAccount $selfAccount
+     * @param $id
      * @return Response
      */
     public function edit($id)
     {
-        $self_account = SelfAccount::where('id', $id)->first();
+        $self_account = $this->service->find($id);
         return response()->json($self_account);
     }
 
@@ -167,29 +136,21 @@ class SelfAccountController extends Controller
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\SelfAccount $selfAccount
+     * @param $id
      * @return Response
      */
     public function update(Request $request, $id)
     {
         Validator::make($request->all(), [
             'name' => 'required',
-//            'phone_no' => 'required'
         ])->validate();
-        $status = SelfAccount::where('id', $id)->update([
-            'account_no' => SelfAccount::AccountNo(),
-            'account_holder' => $request->name,
-            'holder_phone_no' => $request->phone_no,
-            'holder_email' => $request->email,
-            'holder_address' => $request->address,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->service->updateAccount($id, $request->all());
+
         if ($status) {
             return response()->json(['message' => __('financial.self_account_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
-
     }
 
     /**
@@ -200,12 +161,10 @@ class SelfAccountController extends Controller
      */
     public function destroy($id)
     {
-        $status = SelfAccount::where('id', $id)->delete();
+        $status = $this->service->deleteAccount($id);
         if ($status) {
             return response()->json(['message' => __('financial.self_account_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
-
     }
-
 }

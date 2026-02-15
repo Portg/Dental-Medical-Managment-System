@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Patient;
+use App\Services\MedicalTreatmentService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class MedicalTreatmentController extends Controller
 {
+    private MedicalTreatmentService $service;
+
+    public function __construct(MedicalTreatmentService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -15,29 +21,10 @@ class MedicalTreatmentController extends Controller
      * @param $appointment_id
      * @return \Illuminate\Http\Response
      */
-    //appointment id
-//    to..do
     public function index(Request $request, $appointment_id)
     {
-        $patient = DB::table('appointments')
-            ->join('patients', 'patients.id', 'appointments.patient_id')
-            ->where('appointments.id', $appointment_id)
-            ->select('patients.*')
-            ->first();
-        $patient_id = '';
-        if ($patient != null) {
-            $patient_id = $patient->id;
-        }
-        //patient medical cards
-        $data['medical_cards'] = DB::table('medical_card_items')
-            ->join('medical_cards', 'medical_cards.id', 'medical_card_items.medical_card_id')
-            ->whereNull('medical_card_items.deleted_at')
-            ->where('medical_cards.patient_id', $patient_id)
-            ->get();
+        $data = $this->service->getTreatmentDataForAppointment($appointment_id);
 
-        $data['patient'] = $patient;
-
-        $data['appointment_id'] = $appointment_id;
         return view('medical_treatment.index')->with($data);
     }
 

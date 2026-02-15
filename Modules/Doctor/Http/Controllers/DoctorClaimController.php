@@ -2,18 +2,23 @@
 
 namespace Modules\Doctor\Http\Controllers;
 
-use App\ClaimRate;
-use App\DoctorClaim;
+use App\Http\Helper\NameHelper;
+use App\Services\DoctorModuleClaimService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class DoctorClaimController extends Controller
 {
+    private DoctorModuleClaimService $service;
+
+    public function __construct(DoctorModuleClaimService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      * @param Request $request
@@ -23,39 +28,23 @@ class DoctorClaimController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('doctor_claims')
-                ->join('appointments', 'appointments.id', 'doctor_claims.appointment_id')
-                ->join('patients', 'patients.id', 'appointments.patient_id')
-                ->whereNull('doctor_claims.deleted_at')
-                ->where('doctor_claims._who_added', Auth::User()->id)
-                ->select('doctor_claims.*', 'patients.surname', 'patients.othername')
-                ->orderBy('doctor_claims.updated_at', 'desc')
-                ->get();
+            $data = $this->service->getClaimsList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('patient', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('insurance_amount', function ($row) {
-                    return $this->insurance_claim($row->insurance_amount);
+                    return $this->service->calculateInsuranceClaim($row->insurance_amount);
                 })
                 ->addColumn('cash_amount', function ($row) {
-                    return $this->cash_claim($row->cash_amount);
+                    return $this->service->calculateCashClaim($row->cash_amount);
                 })
                 ->addColumn('total_claim_amount', function ($row) {
-                    //calculate claims amount
-                    $claim_rate = ClaimRate::where(['doctor_id' => Auth::User()->id, 'status' => 'active'])->first();
-                    //insurance claim
-                    $insurance = $this->insurance_claim($row->insurance_amount);
-                    //cash claim
-                    $cash = $this->cash_claim($row->cash_amount);
-                    // over all total amount
-                    $total_amount = $insurance + $cash;
-                    return number_format($total_amount);
+                    return number_format($this->service->calculateTotalClaim($row->insurance_amount, $row->cash_amount));
                 })
                 ->addColumn('action', function ($row) {
                     $action_btn='';
@@ -89,21 +78,6 @@ class DoctorClaimController extends Controller
         return view('doctor::claims.index');
     }
 
-    private function insurance_claim($insurance_amount)
-    {
-        $claim_rate = ClaimRate::where(['doctor_id' => Auth::User()->id, 'status' => 'active'])->first();
-        return $claim_rate->insurance_rate / 100 * $insurance_amount;
-
-    }
-
-
-    private function cash_claim($cash_amount)
-    {
-        $claim_rate = ClaimRate::where(['doctor_id' => Auth::User()->id, 'status' => 'active'])->first();
-        return $claim_rate->cash_rate / 100 * $cash_amount;
-    }
-
-
     /**
      * Show the form for creating a new resource.
      * @return Response
@@ -125,21 +99,12 @@ class DoctorClaimController extends Controller
             'amount' => 'required'
         ])->validate();
 
-        //get the doctor claim rate
-        $claim_rate = ClaimRate::where(['doctor_id' => Auth::User()->id, 'status' => 'active'])->first();
-        if ($claim_rate == null) {
+        $claim = $this->service->createClaim($request->appointment_id, $request->amount);
+
+        if ($claim === null) {
             return response()->json(['message' => __('doctor_claims.no_claim_rate_in_system'), 'status' => false]);
         }
-        $status = DoctorClaim::create([
-            'claim_amount' => $request->amount,
-            'appointment_id' => $request->appointment_id,
-            'claim_rate_id' => $claim_rate->id,
-            '_who_added' => Auth::User()->id
-        ]);
-        if ($status) {
-            return response()->json(['message' => __('doctor_claims.claim_submitted_successfully'), 'status' => true]);
-        }
-        return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
+        return response()->json(['message' => __('doctor_claims.claim_submitted_successfully'), 'status' => true]);
     }
 
     /**
@@ -159,7 +124,7 @@ class DoctorClaimController extends Controller
      */
     public function edit($id)
     {
-        $claim = DoctorClaim::where('id', $id)->first();
+        $claim = $this->service->getClaimForEdit($id);
         return response()->json($claim);
     }
 
@@ -175,10 +140,8 @@ class DoctorClaimController extends Controller
             'amount' => 'required'
         ])->validate();
 
-        $status = DoctorClaim::where('id', $id)->update([
-            'claim_amount' => $request->amount,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->service->updateClaim($id, $request->amount);
+
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_updated_successfully'), 'status' => true]);
         }
@@ -192,11 +155,11 @@ class DoctorClaimController extends Controller
      */
     public function destroy($id)
     {
-        $status = DoctorClaim::where('id', $id)->delete();
+        $status = $this->service->deleteClaim($id);
+
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_try_again'), 'status' => false]);
-
     }
 }

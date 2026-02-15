@@ -15,6 +15,11 @@ use PDF;
 class ShareEmailQuotation implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $tries = 3;
+    public int $backoff = 30;
+    public int $timeout = 60;
+
     protected $data;
     protected $email;
     protected $message;

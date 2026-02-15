@@ -3,54 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\InvoiceItem;
-use App\InvoicePayment;
-use Exception;
+use App\Services\InsuranceReportService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 
 class InsuranceReportsController extends Controller
 {
+    private InsuranceReportService $insuranceReportService;
+
+    public function __construct(InsuranceReportService $insuranceReportService)
+    {
+        $this->insuranceReportService = $insuranceReportService;
+    }
+
     /**
      * Display a listing of the resource.
      *
      * @param Request $request
      * @return Response
-     * @throws Exception
+     * @throws \Exception
      */
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
-
-            if (!empty($_GET['start_date']) && !empty($_GET['end_date']) && !empty($_GET['company'])) {
-                $from_date = date('Y-m-d', strtotime($request->start_date));
-                $to_date = date('Y-m-d', strtotime($request->end_date));
-
-                $data = DB::table('invoice_payments')
-                    ->leftJoin('invoices', 'invoices.id', 'invoice_payments.invoice_id')
-                    ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-                    ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-                    ->leftJoin('insurance_companies', 'insurance_companies.id', 'invoice_payments.insurance_company_id')
-                    ->whereNull('invoice_payments.deleted_at')
-                    ->where('invoice_payments.payment_method', 'Insurance')
-                    ->where('invoice_payments.insurance_company_id', $request->get('company'))
-                    ->whereBetween(DB::raw('DATE(invoice_payments.created_at)'), array($from_date, $to_date))
-                    ->select('invoice_payments.*', 'invoices.invoice_no', 'patients.surname', 'patients.othername', 'insurance_companies.name as insurance_company')
-                    ->get();
-            } else {
-                $data = DB::table('invoice_payments')
-                    ->leftJoin('invoices', 'invoices.id', 'invoice_payments.invoice_id')
-                    ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-                    ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-                    ->leftJoin('insurance_companies', 'insurance_companies.id', 'invoice_payments.insurance_company_id')
-                    ->whereNull('invoice_payments.deleted_at')
-                    ->where('invoice_payments.payment_method', 'Insurance')
-                    ->select('invoice_payments.*', 'invoices.invoice_no', 'patients.surname', 'patients.othername', 'insurance_companies.name as insurance_company')
-                    ->get();
-            }
-
+            $data = $this->insuranceReportService->getInsurancePayments($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -156,9 +133,7 @@ class InsuranceReportsController extends Controller
      */
     public function claims(Request $request)
     {
-        $payment = InvoicePayment::find($request->invoice_id);
-        $payment->is_claimed = 1;
-        $status = $payment->save();
+        $status = $this->insuranceReportService->claimPayment($request->invoice_id);
         if ($status) {
             return response()->json(['message' => __('insurance_reports.data_loaded_successfully'), 'status' => true]);
         }

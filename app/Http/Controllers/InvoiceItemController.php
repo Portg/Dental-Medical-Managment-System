@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\InvoiceItem;
-use App\MedicalService;
+use App\Services\InvoiceItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class InvoiceItemController extends Controller
 {
+    private InvoiceItemService $invoiceItemService;
+
+    public function __construct(InvoiceItemService $invoiceItemService)
+    {
+        $this->invoiceItemService = $invoiceItemService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -24,7 +28,7 @@ class InvoiceItemController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = InvoiceItem::where('invoice_id', $invoice_id)->get();
+            $data = $this->invoiceItemService->getItemsByInvoice($invoice_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -62,13 +66,7 @@ class InvoiceItemController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = DB::table('invoice_items')
-                ->leftJoin('medical_services', 'medical_services.id', 'invoice_items.medical_service_id')
-                ->leftJoin('invoices', 'invoices.id', 'invoice_items.invoice_id')
-                ->whereNull('invoice_items.deleted_at')
-                ->where('invoices.appointment_id', $appointment_id)
-                ->select('invoice_items.*', 'medical_services.name as service_name')
-                ->get();
+            $data = $this->invoiceItemService->getItemsByAppointment($appointment_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -132,13 +130,7 @@ class InvoiceItemController extends Controller
      */
     public function edit($id)
     {
-        $item = DB::table('invoice_items')
-            ->join('medical_services', 'medical_services.id', 'invoice_items.medical_service_id')
-            ->join('users', 'users.id', 'invoice_items.doctor_id')
-            ->where('invoice_items.id', $id)
-            ->select('invoice_items.*', 'medical_services.name', 'users.surname', 'users.othername')
-            ->first();
-        return response()->json($item);
+        return response()->json($this->invoiceItemService->getItemForEdit($id));
     }
 
     /**
@@ -156,16 +148,8 @@ class InvoiceItemController extends Controller
             'doctor_id' => 'required',
             'medical_service_id' => 'required'
         ])->validate();
-        $status = InvoiceItem::where('id', $id)->update(
-            [
-                'qty' => $request->qty,
-                'price' => $request->price,
-                'medical_service_id' => $request->medical_service_id,
-                'doctor_id' => $request->doctor_id,
-                'tooth_no' => $request->tooth_no,
-                '_who_added' => Auth::User()->id
-            ]
-        );
+
+        $status = $this->invoiceItemService->updateItem($id, $request->all());
         if ($status) {
             return response()->json(['message' => __('invoices.invoice_item_updated_successfully'), 'status' => true]);
         }
@@ -180,11 +164,10 @@ class InvoiceItemController extends Controller
      */
     public function destroy($id)
     {
-        $status = InvoiceItem::where('id', $id)->delete();
+        $status = $this->invoiceItemService->deleteItem($id);
         if ($status) {
             return response()->json(['message' => __('invoices.invoice_item_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 }

@@ -2,27 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Appointment;
 use App\Http\Helper\FunctionsHelper;
-use App\InsuranceCompany;
 use App\Jobs\SendAppointmentSms;
-use App\OnlineBooking;
-use App\Patient;
+use App\Services\OnlineBookingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class OnlineBookingController extends Controller
 {
+    private OnlineBookingService $onlineBookingService;
+
+    public function __construct(OnlineBookingService $onlineBookingService)
+    {
+        $this->onlineBookingService = $onlineBookingService;
+    }
 
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
     public function frontend()
     {
-        $data['insurance_providers'] = InsuranceCompany::all();
+        $data['insurance_providers'] = $this->onlineBookingService->getInsuranceProviders();
         return view('frontend.index')->with($data);
     }
 
@@ -36,31 +38,11 @@ class OnlineBookingController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['search'])) {
-                $data = DB::table('online_bookings')
-                    ->whereNull('online_bookings.deleted_at')
-                    ->where('online_bookings.full_name', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('online_bookings.email', 'like', '%' . $request->get('search') . '%')
-                    ->orWhere('online_bookings.phone_no', 'like', '%' . $request->get('search') . '%')
-                    ->select('online_bookings.*', DB::raw('DATE_FORMAT(online_bookings.start_date, "%d-%b-%Y") as start_date'),DB::raw('DATE_FORMAT(online_bookings.created_at, "%d-%b-%Y") as booking_date'))
-                    ->orderBy('sort_by', 'desc')
-                    ->get();
-            } else if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
-                $data = DB::table('online_bookings')
-                    ->whereNull('online_bookings.deleted_at')
-                    ->whereBetween(DB::raw('DATE_FORMAT(sort_by, \'%Y-%m-%d\')'), array($request->start_date,
-                        $request->end_date))
-                    ->select('online_bookings.*', DB::raw('DATE_FORMAT(online_bookings.start_date, "%d-%b-%Y") as start_date'),DB::raw('DATE_FORMAT(online_bookings.created_at, "%d-%b-%Y") as booking_date'))
-                    ->orderBy('sort_by', 'desc')
-                    ->get();
-            } else {
-                $data = DB::table('online_bookings')
-                    ->whereNull('appointments.deleted_at')
-                    ->select('online_bookings.*', DB::raw('DATE_FORMAT(online_bookings.start_date, "%d-%b-%Y") as start_date'),DB::raw('DATE_FORMAT(online_bookings.created_at, "%d-%b-%Y") as booking_date'))
-                    ->orderBy('sort_by', 'desc')
-                    ->get();
             }
+
+            $data = $this->onlineBookingService->getBookingList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -131,17 +113,7 @@ class OnlineBookingController extends Controller
             'visit_reason' => 'required'
         ])->validate();
 
-        $success = OnlineBooking::create([
-            'full_name' => $request->full_name,
-            'phone_no' => $request->phone_number,
-            'email' => $request->email,
-            'start_date' => FunctionsHelper::convert_date($request->appointment_date),
-            'end_date' => FunctionsHelper::convert_date($request->appointment_date),
-            'start_time' => $request->appointment_time,
-            'message' => $request->visit_reason,
-            'insurance_company_id' => $request->insurance_provider,
-            'visit_history' => $request->visit_history
-        ]);
+        $success = $this->onlineBookingService->createBooking($request->all());
         if ($success) {
             return $this->formResponse();
         }
@@ -160,12 +132,7 @@ class OnlineBookingController extends Controller
      */
     public function show($id)
     {
-        $onlineBooking = DB::table('online_bookings')
-            ->leftJoin('insurance_companies', 'insurance_companies.id', 'online_bookings.insurance_company_id')
-            ->whereNull('online_bookings.deleted_at')
-            ->where('online_bookings.id', '=', $id)
-            ->select('online_bookings.*', 'insurance_companies.name')->first();
-        return response()->json($onlineBooking);
+        return response()->json($this->onlineBookingService->getBookingDetail($id));
     }
 
     /**
@@ -174,7 +141,7 @@ class OnlineBookingController extends Controller
      * @param \App\OnlineBooking $onlineBooking
      * @return \Illuminate\Http\Response
      */
-    public function edit(OnlineBooking $onlineBooking)
+    public function edit($onlineBooking)
     {
         //
     }
@@ -196,74 +163,22 @@ class OnlineBookingController extends Controller
             'doctor_id' => 'required'
         ])->validate();
 
-        //accept the booking
-        $success = OnlineBooking::where('id', $id)->update(['status' => 'Accepted']);
-        if ($success) {
-            //check if the patient exists in the system
-            $patient_id = $this->PatientExists($request);
-            if ($patient_id != null) {
-                //now generate the appointment for the patient
-                $status = $this->generateAppointment($request, $patient_id);
-                if ($status) {
-                    //now generate the message to send to the patient
-                    $message = __('sms.appointment_scheduled', [
-                        'name' => $request->full_name,
-                        'company' => env('CompanyName', null),
-                        'date' => $request->appointment_date,
-                        'time' => $request->appointment_time
-                    ]);
-                    //sms/email to the patient
-                    if ($request->phone_number != null) {
-                        $sendJob = new SendAppointmentSms($request->phone_number, $message,"Appointment");
-                        $this->dispatch($sendJob);
-                    }
-                    return FunctionsHelper::messageResponse(__('messages.booking_approved_successfully'),
-                        $status);
-                }
+        $result = $this->onlineBookingService->acceptBooking(
+            $request->all(),
+            $id,
+            Auth::User()->id,
+            Auth::User()->branch_id
+        );
+
+        if ($result['success']) {
+            if ($result['phone']) {
+                $sendJob = new SendAppointmentSms($result['phone'], $result['message'], "Appointment");
+                $this->dispatch($sendJob);
             }
-        }
-    }
-
-    private function generateAppointment(Request $request, $patient_id)
-    {
-        $time_24_hours = date("H:i:s", strtotime($request->appointment_time));
-
-        $success = Appointment::create([
-            'appointment_no' => Appointment::AppointmentNo(),
-            'patient_id' => $patient_id,
-            'doctor_id' => $request->doctor_id,
-            'start_date' => $request->appointment_date,
-            'end_date' => $request->appointment_date,
-            'start_time' => $request->appointment_time,
-            'branch_id' => Auth::User()->branch_id,
-            'sort_by' => $request->appointment_date . " " . $time_24_hours,
-            '_who_added' => Auth::User()->id
-        ]);
-        return $success;
-    }
-
-    private function PatientExists(Request $request)
-    {
-        $patient = Patient::where('phone_no', $request->phone_number)->Orwhere('email', $request->email)->first();
-        if ($patient != null) {
-            return $patient->id;
-        } else {
-            $has_insurance = "No";
-            if ($request->insurance_company_id != null) {
-                $has_insurance = "Yes";
-            }
-            //create new patient
-            $new_patient = Patient::create([
-                'patient_no' => Patient::PatientNumber(),
-                'surname' => $request->full_name,
-                //'othername' => $request->othername,// To...do
-                'email' => $request->email,
-                'phone_no' => $request->phone_number,
-                'has_insurance' => $has_insurance,
-                'insurance_company_id' => $request->insurance_company_id,
-                '_who_added' => Auth::User()->id
-            ]);
-            return $new_patient->id; //return the newly generated patient
+            return FunctionsHelper::messageResponse(
+                __('messages.booking_approved_successfully'),
+                true
+            );
         }
     }
 
@@ -274,9 +189,9 @@ class OnlineBookingController extends Controller
      * @param $id
      * @return void
      */
-    public function destroy($id) //use delete to reject the booking
+    public function destroy($id)
     {
-        $reject = OnlineBooking::where('id', $id)->update(['status' => 'Rejected']);
-        return FunctionsHelper::messageResponse(__('messages.booking_rejected_successfully'), $reject);
+        $status = $this->onlineBookingService->rejectBooking($id);
+        return FunctionsHelper::messageResponse(__('messages.booking_rejected_successfully'), $status);
     }
 }

@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\InventoryItem;
-use App\StockOut;
-use App\StockOutItem;
+use App\Services\StockOutItemService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class StockOutItemController extends Controller
 {
+    private StockOutItemService $service;
+
+    public function __construct(StockOutItemService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of items for a stock out.
      *
@@ -21,10 +25,7 @@ class StockOutItemController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax() && $request->stock_out_id) {
-            $data = StockOutItem::with('inventoryItem')
-                ->where('stock_out_id', $request->stock_out_id)
-                ->orderBy('id')
-                ->get();
+            $data = $this->service->getItemsByStockOut($request->stock_out_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -73,9 +74,9 @@ class StockOutItemController extends Controller
     public function store(Request $request)
     {
         // Verify stock out is draft
-        $stockOut = StockOut::find($request->stock_out_id);
-        if (!$stockOut || !$stockOut->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_edit_confirmed'), 'status' => false]);
+        $draftError = $this->service->verifyDraftStatus($request->stock_out_id);
+        if ($draftError) {
+            return response()->json($draftError);
         }
 
         Validator::make($request->all(), [
@@ -89,32 +90,18 @@ class StockOutItemController extends Controller
         ])->validate();
 
         // Check stock availability
-        $inventoryItem = InventoryItem::find($request->inventory_item_id);
-        if ($inventoryItem->current_stock < $request->qty) {
-            return response()->json([
-                'message' => __('inventory.insufficient_stock', ['item' => $inventoryItem->name]),
-                'status' => false
-            ]);
+        $stockError = $this->service->checkStockAvailability($request->inventory_item_id, $request->qty);
+        if ($stockError) {
+            return response()->json($stockError);
         }
 
-        // Use average cost as unit cost
-        $unitCost = $inventoryItem->average_cost;
-
-        $item = StockOutItem::create([
-            'stock_out_id' => $request->stock_out_id,
-            'inventory_item_id' => $request->inventory_item_id,
-            'qty' => $request->qty,
-            'unit_cost' => $unitCost,
-            'amount' => $request->qty * $unitCost,
-            'batch_no' => $request->batch_no,
-            '_who_added' => Auth::User()->id
-        ]);
+        $item = $this->service->createItem($request->all());
 
         if ($item) {
             return response()->json([
                 'message' => __('inventory.item_added_successfully'),
                 'status' => true,
-                'item' => $item
+                'item' => $item,
             ]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
@@ -128,7 +115,7 @@ class StockOutItemController extends Controller
      */
     public function edit($id)
     {
-        $item = StockOutItem::with('inventoryItem')->find($id);
+        $item = $this->service->find($id);
         return response()->json($item);
     }
 
@@ -141,15 +128,15 @@ class StockOutItemController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $item = StockOutItem::find($id);
+        $item = $this->service->findBasic($id);
         if (!$item) {
             return response()->json(['message' => __('common.not_found'), 'status' => false]);
         }
 
         // Verify stock out is draft
-        $stockOut = $item->stockOut;
-        if (!$stockOut || !$stockOut->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_edit_confirmed'), 'status' => false]);
+        $draftError = $this->service->verifyItemDraftStatus($item);
+        if ($draftError) {
+            return response()->json($draftError);
         }
 
         Validator::make($request->all(), [
@@ -157,19 +144,12 @@ class StockOutItemController extends Controller
         ])->validate();
 
         // Check stock availability
-        $inventoryItem = $item->inventoryItem;
-        if ($inventoryItem->current_stock < $request->qty) {
-            return response()->json([
-                'message' => __('inventory.insufficient_stock', ['item' => $inventoryItem->name]),
-                'status' => false
-            ]);
+        $stockError = $this->service->checkItemStockAvailability($item, $request->qty);
+        if ($stockError) {
+            return response()->json($stockError);
         }
 
-        $status = $item->update([
-            'qty' => $request->qty,
-            'amount' => $request->qty * $item->unit_cost,
-            'batch_no' => $request->batch_no,
-        ]);
+        $status = $this->service->updateItem($item, $request->all());
 
         if ($status) {
             return response()->json(['message' => __('inventory.item_updated_successfully'), 'status' => true]);
@@ -185,18 +165,18 @@ class StockOutItemController extends Controller
      */
     public function destroy($id)
     {
-        $item = StockOutItem::find($id);
+        $item = $this->service->findBasic($id);
         if (!$item) {
             return response()->json(['message' => __('common.not_found'), 'status' => false]);
         }
 
         // Verify stock out is draft
-        $stockOut = $item->stockOut;
-        if (!$stockOut || !$stockOut->isDraft()) {
-            return response()->json(['message' => __('inventory.cannot_edit_confirmed'), 'status' => false]);
+        $draftError = $this->service->verifyItemDraftStatus($item);
+        if ($draftError) {
+            return response()->json($draftError);
         }
 
-        $status = $item->delete();
+        $status = $this->service->deleteItem($item);
         if ($status) {
             return response()->json(['message' => __('inventory.item_deleted_successfully'), 'status' => true]);
         }

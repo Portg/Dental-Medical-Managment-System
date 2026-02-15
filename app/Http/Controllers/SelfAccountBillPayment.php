@@ -2,13 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Helper\NameHelper;
+use App\Services\SelfAccountBillPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 
 class SelfAccountBillPayment extends Controller
 {
+    private SelfAccountBillPaymentService $selfAccountBillPaymentService;
+
+    public function __construct(SelfAccountBillPaymentService $selfAccountBillPaymentService)
+    {
+        $this->selfAccountBillPaymentService = $selfAccountBillPaymentService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -20,27 +28,16 @@ class SelfAccountBillPayment extends Controller
     public function index(Request $request, $self_account_id)
     {
         if ($request->ajax()) {
-
-            $data = DB::table('invoice_payments')
-                ->leftJoin('invoices', 'invoices.id', 'invoice_payments.invoice_id')
-                ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-                ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-                ->leftJoin('users', 'users.id', 'invoice_payments._who_added')
-                ->whereNull('invoice_payments.deleted_at')
-                ->where('invoice_payments.self_account_id', $self_account_id)
-                ->select('invoice_payments.*', 'invoices.invoice_no', 'patients.surname', 'patients.othername', 'users.surname as  added_by')
-                ->orderBy('invoice_payments.updated_at', 'DESC')
-                ->get();
-
+            $data = $this->selfAccountBillPaymentService->getList($self_account_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
-
                 })
                 ->addColumn('patient', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
-                })->addColumn('amount', function ($row) {
+                    return NameHelper::join($row->surname, $row->othername);
+                })
+                ->addColumn('amount', function ($row) {
                     return number_format($row->amount);
                 })
                 ->rawColumns([])

@@ -3,15 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\ActionColumnHelper;
-use App\MedicalTemplate;
+use App\Services\MedicalTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class MedicalTemplateController extends Controller
 {
+    private MedicalTemplateService $medicalTemplateService;
+
+    public function __construct(MedicalTemplateService $medicalTemplateService)
+    {
+        $this->medicalTemplateService = $medicalTemplateService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -21,25 +27,7 @@ class MedicalTemplateController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = DB::table('medical_templates')
-                ->leftJoin('users', 'users.id', 'medical_templates.created_by')
-                ->whereNull('medical_templates.deleted_at')
-                ->select(
-                    'medical_templates.*',
-                    'users.surname as creator_name'
-                );
-
-            // Filter by category
-            if ($request->has('category') && $request->category) {
-                $query->where('medical_templates.category', $request->category);
-            }
-
-            // Filter by type
-            if ($request->has('type') && $request->type) {
-                $query->where('medical_templates.type', $request->type);
-            }
-
-            $data = $query->orderBy('medical_templates.usage_count', 'desc')->get();
+            $data = $this->medicalTemplateService->getTemplateList($request->all());
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -96,23 +84,7 @@ class MedicalTemplateController extends Controller
             'content' => 'required',
         ])->validate();
 
-        $content = $request->content;
-        if (is_array($content)) {
-            $content = json_encode($content);
-        }
-
-        $template = MedicalTemplate::create([
-            'name' => $request->name,
-            'code' => $request->code,
-            'category' => $request->category,
-            'type' => $request->type,
-            'content' => $content,
-            'department' => $request->department,
-            'description' => $request->description,
-            'is_active' => $request->has('is_active') ? $request->is_active : true,
-            'created_by' => Auth::user()->id,
-            '_who_added' => Auth::user()->id,
-        ]);
+        $template = $this->medicalTemplateService->createTemplate($request->all(), Auth::user()->id);
 
         if ($template) {
             return response()->json([
@@ -136,7 +108,7 @@ class MedicalTemplateController extends Controller
      */
     public function show($id)
     {
-        $template = MedicalTemplate::with('creator')->findOrFail($id);
+        $template = $this->medicalTemplateService->getTemplateDetail($id);
         return response()->json([
             'status' => true,
             'data' => $template
@@ -160,21 +132,7 @@ class MedicalTemplateController extends Controller
             'content' => 'required',
         ])->validate();
 
-        $content = $request->content;
-        if (is_array($content)) {
-            $content = json_encode($content);
-        }
-
-        $status = MedicalTemplate::where('id', $id)->update([
-            'name' => $request->name,
-            'code' => $request->code,
-            'category' => $request->category,
-            'type' => $request->type,
-            'content' => $content,
-            'department' => $request->department,
-            'description' => $request->description,
-            'is_active' => $request->has('is_active') ? $request->is_active : true,
-        ]);
+        $status = $this->medicalTemplateService->updateTemplate($id, $request->all());
 
         if ($status) {
             return response()->json([
@@ -197,7 +155,7 @@ class MedicalTemplateController extends Controller
      */
     public function destroy($id)
     {
-        $status = MedicalTemplate::where('id', $id)->delete();
+        $status = $this->medicalTemplateService->deleteTemplate($id);
 
         if ($status) {
             return response()->json([
@@ -220,26 +178,11 @@ class MedicalTemplateController extends Controller
      */
     public function search(Request $request)
     {
-        $userId = Auth::user()->id;
-        $type = $request->get('type', 'progress_note');
-        $q = $request->get('q', '');
-
-        $query = MedicalTemplate::active()
-            ->availableToUser($userId)
-            ->byType($type)
-            ->select('id', 'name', 'code', 'category', 'content', 'description', 'usage_count');
-
-        if ($q) {
-            $query->where(function ($qb) use ($q) {
-                $qb->where('name', 'like', "%{$q}%")
-                    ->orWhere('code', 'like', "%{$q}%")
-                    ->orWhere('description', 'like', "%{$q}%");
-            });
-        }
-
-        $templates = $query->orderBy('usage_count', 'desc')
-            ->limit(20)
-            ->get();
+        $templates = $this->medicalTemplateService->searchTemplates(
+            Auth::user()->id,
+            $request->get('type', 'progress_note'),
+            $request->get('q', '')
+        );
 
         return response()->json([
             'status' => true,
@@ -255,12 +198,11 @@ class MedicalTemplateController extends Controller
      */
     public function incrementUsage($id)
     {
-        $template = MedicalTemplate::findOrFail($id);
-        $template->incrementUsage();
+        $usageCount = $this->medicalTemplateService->incrementUsage($id);
 
         return response()->json([
             'status' => true,
-            'usage_count' => $template->usage_count
+            'usage_count' => $usageCount
         ]);
     }
 }

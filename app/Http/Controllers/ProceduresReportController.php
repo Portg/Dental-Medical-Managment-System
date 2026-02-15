@@ -3,15 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
+use App\Services\ProceduresReportService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
-use Haruncpi\LaravelIdGenerator\IdGenerator;
 use App\Exports\ProceduresExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ProceduresReportController extends Controller
 {
+    private ProceduresReportService $proceduresReportService;
+
+    public function __construct(ProceduresReportService $proceduresReportService)
+    {
+        $this->proceduresReportService = $proceduresReportService;
+    }
 
     /**
      * @param Request $request
@@ -21,31 +26,18 @@ class ProceduresReportController extends Controller
         if ($request->ajax()) {
             if (!empty($_GET['start_date']) && !empty($_GET['end_date']) && !empty($_GET['search'])) {
                 FunctionsHelper::storeDateFilter($request);
-                //first get
-                $data = DB::table('invoice_items')
-                    ->join('medical_services', 'medical_services.id', 'invoice_items.medical_service_id')
-                    ->whereNull('invoice_items.deleted_at')
-                    ->where('medical_services.name', 'like', '%' . $request->get('search') . '%')
-                    ->whereBetween(DB::raw('DATE_FORMAT(invoice_items.created_at, \'%Y-%m-%d\')'), array
-                    ($request->start_date, $request->end_date))
-                    ->select('medical_services.name', DB::raw('sum(invoice_items.amount*invoice_items.qty) as procedure_income'))
-                    ->groupBy('invoice_items.medical_service_id')
-                    ->orderBy('procedure_income', 'DESC')
-                    ->get();
+                $data = $this->proceduresReportService->getProceduresIncome(
+                    $request->start_date,
+                    $request->end_date,
+                    $request->get('search')
+                );
             } else if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
                 FunctionsHelper::storeDateFilter($request);
-                //first get
-                $data = DB::table('invoice_items')
-                    ->join('medical_services', 'medical_services.id', 'invoice_items.medical_service_id')
-                    ->whereNull('invoice_items.deleted_at')
-                    ->whereBetween(DB::raw('DATE_FORMAT(invoice_items.created_at, \'%Y-%m-%d\')'), array
-                    ($request->start_date, $request->end_date))
-                    ->select('medical_services.name', DB::raw('sum(invoice_items.amount*invoice_items.qty) as procedure_income'))
-                    ->groupBy('invoice_items.medical_service_id')
-                    ->orderBy('procedure_income', 'DESC')
-                    ->get();
+                $data = $this->proceduresReportService->getProceduresIncome(
+                    $request->start_date,
+                    $request->end_date
+                );
             }
-
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -64,22 +56,13 @@ class ProceduresReportController extends Controller
 
     public function downloadProcedureSalesReport(Request $request)
     {
-        $data = collect();
-        if ($request->session()->get('from') != '' && $request->session()->get('to') != '') {
-            $data = DB::table('invoice_items')
-                ->join('medical_services', 'medical_services.id', 'invoice_items.medical_service_id')
-                ->whereNull('invoice_items.deleted_at')
-                ->whereBetween(DB::raw('DATE_FORMAT(invoice_items.created_at, \'%Y-%m-%d\')'),
-                    array($request->session()->get('from'),
-                        $request->session()->get('to')))
-                ->select('medical_services.name', DB::raw('sum(invoice_items.amount*invoice_items.qty) as procedure_income'))
-                ->groupBy('invoice_items.medical_service_id')
-                ->orderBy('procedure_income', 'DESC')
-                ->get();
-        }
+        $from = $request->session()->get('from') ?: null;
+        $to = $request->session()->get('to') ?: null;
 
-        $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
-            date('d-m-Y', strtotime($request->session()->get('to')));
+        $data = $this->proceduresReportService->getExportData($from, $to);
+
+        $sheet_title = "From " . date('d-m-Y', strtotime($from)) . " To " .
+            date('d-m-Y', strtotime($to));
 
         return Excel::download(new ProceduresExport($data, $sheet_title), 'procedures-sales-report-' . date('Y-m-d') . '.xlsx');
     }

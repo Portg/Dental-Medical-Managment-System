@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Diagnosis;
+use App\Services\DiagnosisService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class DiagnosisController extends Controller
 {
+    private DiagnosisService $service;
+
+    public function __construct(DiagnosisService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource for a specific patient.
      *
@@ -22,19 +27,7 @@ class DiagnosisController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = DB::table('diagnoses')
-                ->leftJoin('medical_cases', 'medical_cases.id', 'diagnoses.medical_case_id')
-                ->leftJoin('users', 'users.id', 'diagnoses._who_added')
-                ->whereNull('diagnoses.deleted_at')
-                ->where('diagnoses.patient_id', $patient_id)
-                ->orderBy('diagnoses.diagnosis_date', 'desc')
-                ->select(
-                    'diagnoses.*',
-                    'medical_cases.case_no',
-                    'medical_cases.title as case_title',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
-                )
-                ->get();
+            $data = $this->service->getByPatient($patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -75,16 +68,7 @@ class DiagnosisController extends Controller
     public function caseIndex(Request $request, $case_id)
     {
         if ($request->ajax()) {
-            $data = DB::table('diagnoses')
-                ->leftJoin('users', 'users.id', 'diagnoses._who_added')
-                ->whereNull('diagnoses.deleted_at')
-                ->where('diagnoses.medical_case_id', $case_id)
-                ->orderBy('diagnoses.diagnosis_date', 'desc')
-                ->select(
-                    'diagnoses.*',
-                    DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
-                )
-                ->get();
+            $data = $this->service->getByCase($case_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -132,17 +116,7 @@ class DiagnosisController extends Controller
             'patient_id.required' => __('validation.custom.patient_id.required'),
         ])->validate();
 
-        $status = Diagnosis::create([
-            'diagnosis_name' => $request->diagnosis_name,
-            'icd_code' => $request->icd_code,
-            'diagnosis_date' => $request->diagnosis_date,
-            'status' => $request->status ?? 'Active',
-            'severity' => $request->severity,
-            'notes' => $request->notes,
-            'medical_case_id' => $request->medical_case_id,
-            'patient_id' => $request->patient_id,
-            '_who_added' => Auth::User()->id
-        ]);
+        $status = $this->service->createDiagnosis($request->all());
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.diagnosis_added_successfully'), 'status' => true]);
@@ -158,7 +132,7 @@ class DiagnosisController extends Controller
      */
     public function edit($id)
     {
-        $diagnosis = Diagnosis::where('id', $id)->first();
+        $diagnosis = $this->service->find($id);
         return response()->json($diagnosis);
     }
 
@@ -179,22 +153,7 @@ class DiagnosisController extends Controller
             'diagnosis_date.required' => __('validation.custom.diagnosis_date.required'),
         ])->validate();
 
-        $updateData = [
-            'diagnosis_name' => $request->diagnosis_name,
-            'icd_code' => $request->icd_code,
-            'diagnosis_date' => $request->diagnosis_date,
-            'status' => $request->status,
-            'severity' => $request->severity,
-            'notes' => $request->notes,
-        ];
-
-        if ($request->status == 'Resolved' && !$request->resolved_date) {
-            $updateData['resolved_date'] = now();
-        } elseif ($request->resolved_date) {
-            $updateData['resolved_date'] = $request->resolved_date;
-        }
-
-        $status = Diagnosis::where('id', $id)->update($updateData);
+        $status = $this->service->updateDiagnosis($id, $request->all());
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.diagnosis_updated_successfully'), 'status' => true]);
@@ -210,7 +169,7 @@ class DiagnosisController extends Controller
      */
     public function destroy($id)
     {
-        $status = Diagnosis::where('id', $id)->delete();
+        $status = $this->service->deleteDiagnosis($id);
         if ($status) {
             return response()->json(['message' => __('medical_cases.diagnosis_deleted_successfully'), 'status' => true]);
         }

@@ -11,8 +11,8 @@ class DentalChart extends Model
 
     protected $fillable = [
         'tooth', 'tooth_number', 'tooth_type', 'tooth_status',
-        'position', 'color', 'kind', 'surface', 'notes',
-        'appointment_id', 'medical_case_id', 'patient_id',
+        'section', 'color', 'surface', 'notes',
+        'appointment_id', 'medical_case_id',
         'doctor_id', 'changed_at', 'changed_by', '_who_added'
     ];
 

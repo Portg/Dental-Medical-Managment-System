@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Allergy;
+use App\Services\AllergyService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class AllergyController extends Controller
 {
+    private AllergyService $allergyService;
+
+    public function __construct(AllergyService $allergyService)
+    {
+        $this->allergyService = $allergyService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -22,9 +28,7 @@ class AllergyController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = Allergy::where('patient_id', $patient_id)
-                ->OrderBy('updated_at', 'DESC')
-                ->get();
+            $data = $this->allergyService->getListByPatient($patient_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -73,11 +77,9 @@ class AllergyController extends Controller
         ], [
             'body_reaction.required' => __('validation.custom.body_reaction.required')
         ])->validate();
-        $status = Allergy::create([
-            'body_reaction' => $request->body_reaction,
-            'patient_id' => $request->patient_id,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->allergyService->create($request->body_reaction, $request->patient_id);
+
         if ($status) {
             return response()->json(['message' => __('medical_history.allergy_captured_successfully'), 'status' => true]);
         }
@@ -90,7 +92,7 @@ class AllergyController extends Controller
      * @param \App\Allergy $allergy
      * @return \Illuminate\Http\Response
      */
-    public function show(Allergy $allergy)
+    public function show($id)
     {
         //
     }
@@ -98,20 +100,19 @@ class AllergyController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\Allergy $allergy
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $allergy = Allergy::where('id', $id)->first();
-        return response()->json($allergy);
+        return response()->json($this->allergyService->find($id));
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\Allergy $allergy
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
@@ -121,30 +122,28 @@ class AllergyController extends Controller
         ], [
             'body_reaction.required' => __('validation.custom.body_reaction.required')
         ])->validate();
-        $status = Allergy::where('id', $id)->update([
-            'body_reaction' => $request->body_reaction,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->allergyService->update($id, $request->body_reaction);
+
         if ($status) {
             return response()->json(['message' => __('medical_history.allergy_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\Allergy $allergy
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = Allergy::where('id', $id)->delete();
+        $status = $this->allergyService->delete($id);
+
         if ($status) {
             return response()->json(['message' => __('medical_history.allergy_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 }

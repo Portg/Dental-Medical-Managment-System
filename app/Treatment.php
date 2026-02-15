@@ -10,6 +10,11 @@ class Treatment extends Model
     use SoftDeletes;
     protected $fillable = ['clinical_notes', 'treatment', 'appointment_id', '_who_added'];
 
+    public function appointment()
+    {
+        return $this->belongsTo('App\Appointment', 'appointment_id');
+    }
+
     public function addedBy()
     {
         return $this->belongsTo('App\User', '_who_added');

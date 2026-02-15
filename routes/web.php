@@ -420,4 +420,18 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('commission-rules', 'CommissionRuleController');
     Route::post('commission-rules/calculate', 'CommissionRuleController@calculate');
+
+    // ============================================================
+    // Lab Case Management (技工单管理)
+    // ============================================================
+
+    // Labs (技工厂)
+    Route::resource('labs', 'LabController');
+
+    // Lab Cases (技工单)
+    Route::resource('lab-cases', 'LabCaseController');
+    Route::get('patient-lab-cases/{patient_id}', 'LabCaseController@patientLabCases');
+    Route::post('lab-cases/{id}/update-status', 'LabCaseController@updateStatus');
+    Route::get('api/lab-case/{id}', 'LabCaseController@getCase');
+    Route::get('print-lab-case/{id}', 'LabCaseController@printLabCase');
 });

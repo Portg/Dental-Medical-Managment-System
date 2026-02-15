@@ -3,16 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
-use App\leaveRequest;
-use App\LeaveType;
+use App\Services\LeaveRequestService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class LeaveRequestController extends Controller
 {
+    private LeaveRequestService $service;
+
+    public function __construct(LeaveRequestService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -23,14 +28,8 @@ class LeaveRequestController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
+            $data = $this->service->getLeaveRequestsForUser(Auth::User()->id);
 
-            $data = DB::table('leave_requests')
-                ->leftJoin('leave_types', 'leave_types.id', 'leave_requests.leave_type_id')
-                ->whereNull('leave_requests.deleted_at')
-                ->where('leave_requests._who_added', '=', Auth::User()->id)
-                ->select(['leave_requests.*', 'leave_types.name'])
-                ->OrderBy('leave_requests.id', 'desc')
-                ->get();
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -77,24 +76,8 @@ class LeaveRequestController extends Controller
             'duration.required' => __('validation.attributes.leaves.duration') . ' '.__('validation.required'),
         ])->validate();
 
-        $success = leaveRequest::create([
-            'leave_type_id' => $request->leave_type,
-            'start_date' => $request->start_date,
-            'duration' => $request->duration,
-            '_who_added' => Auth::User()->id
-        ]);
+        $success = $this->service->createLeaveRequest($request->all(), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_request.sent_successfully'), $success);
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param \App\leaveRequest $leaveRequest
-     * @return \Illuminate\Http\Response
-     */
-    public function show(leaveRequest $leaveRequest)
-    {
-        //
     }
 
     /**
@@ -105,13 +88,7 @@ class LeaveRequestController extends Controller
      */
     public function edit($id)
     {
-        $leaveRequest = DB::table('leave_requests')
-            ->leftJoin('leave_types', 'leave_types.id', 'leave_requests.leave_type_id')
-            ->where('leave_requests.id', '=', $id)
-            ->select(['leave_requests.*', 'leave_types.name'])
-            ->OrderBy('leave_requests.id', 'desc')
-            ->first();
-        return response()->json($leaveRequest);
+        return response()->json($this->service->getLeaveRequestForEdit($id));
     }
 
     /**
@@ -133,14 +110,8 @@ class LeaveRequestController extends Controller
             'duration.required' => __('validation.attributes.leaves.duration') . ' '.__('validation.required'),
         ])->validate();
 
-        $success = leaveRequest::where('id', $id)->update([
-            'leave_type_id' => $request->leave_type,
-            'start_date' => $request->start_date,
-            'duration' => $request->duration,
-            '_who_added' => Auth::User()->id
-        ]);
+        $success = $this->service->updateLeaveRequest($id, $request->all(), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_request.updated_successfully'), $success);
-
     }
 
     /**
@@ -151,7 +122,7 @@ class LeaveRequestController extends Controller
      */
     public function destroy($id)
     {
-        $success = leaveRequest::where('id', $id)->delete();
+        $success = $this->service->deleteLeaveRequest($id);
         return FunctionsHelper::messageResponse(__('leaves.leave_request.deleted_successfully'), $success);
     }
 }

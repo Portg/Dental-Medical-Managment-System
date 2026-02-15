@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\ExpenseCategory;
+use App\Services\ExpenseCategoryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
 class ExpenseCategoryController extends Controller
 {
+    private ExpenseCategoryService $service;
+
+    public function __construct(ExpenseCategoryService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -21,9 +26,7 @@ class ExpenseCategoryController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-
-            $data = ExpenseCategory::OrderBy('updated_at', 'DESC')->get();
-
+            $data = $this->service->getList();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -40,54 +43,30 @@ class ExpenseCategoryController extends Controller
                     return $btn;
                 })
                 ->addColumn('deleteBtn', function ($row) {
-
                     $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
                 ->rawColumns(['editBtn', 'deleteBtn'])
                 ->make(true);
         }
-        $data['expense_accounts'] = DB::table('chart_of_account_items')
-            ->leftJoin('chart_of_account_categories', 'chart_of_account_categories.id',
-                'chart_of_account_items.chart_of_account_category_id')
-            ->leftJoin('accounting_equations', 'accounting_equations.id',
-                'chart_of_account_categories.accounting_equation_id')
-            ->whereNull('chart_of_account_items.deleted_at')
-            ->where('accounting_equations.name', 'Expenses')
-            ->select('chart_of_account_items.*')
-            ->get();
+
+        $data['expense_accounts'] = $this->service->getExpenseAccounts();
         return view('expense_categories.index')->with($data);
     }
 
     public function filterExpenseCategories(Request $request)
     {
-        $search = $request->get('term');
-
-        $result = ExpenseCategory::leftjoin('chart_of_account_items', 'chart_of_account_items.id',
-            'expense_categories.chart_of_account_item_id')
-            ->select('expense_categories.*')->get();
-        $data = [];
-        foreach ($result as $row) {
-            $data[] = $row->name;
-        }
+        $data = $this->service->filterCategories();
         echo json_encode($data);
     }
 
     public function searchCategory(Request $request)
     {
-        $data = [];
         $name = $request->q;
 
         if ($name) {
-            $search = $name;
-            $data =
-                ExpenseCategory::where('name', 'LIKE', "%$search%")->get();
-
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->name];
-            }
-            return \Response::json($formatted_tags);
+            $result = $this->service->searchByName($name);
+            return \Response::json($result);
         }
     }
 
@@ -116,25 +95,22 @@ class ExpenseCategoryController extends Controller
             'name.required' => __('validation.attributes.name') . ' ' . __('validation.required'),
             'expense_account.required' => __('validation.attributes.expense_account') . ' ' . __('validation.required')
         ])->validate();
-        $status = ExpenseCategory::create([
-            'name' => $request->name,
-            'chart_of_account_item_id' => $request->expense_account,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->service->create($request->all());
+
         if ($status) {
             return response()->json(['message' => __('expense_categories.added_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\ExpenseCategory $expenseCategory
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
-    public function show(ExpenseCategory $expenseCategory)
+    public function show($id)
     {
         //
     }
@@ -142,21 +118,19 @@ class ExpenseCategoryController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\ExpenseCategory $expenseCategory
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function edit($id)
     {
-        $category = ExpenseCategory::where('id', $id)
-            ->first();
-        return response()->json($category);
+        return response()->json($this->service->find($id));
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
-     * @param \App\ExpenseCategory $expenseCategory
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
@@ -168,32 +142,28 @@ class ExpenseCategoryController extends Controller
             'name.required' => __('validation.attributes.name') . ' ' . __('validation.required'),
             'expense_account.required' => __('validation.attributes.expense_account') . ' ' . __('validation.required')
         ])->validate();
-        $status = ExpenseCategory::where('id', $id)->update([
-            'name' => $request->name,
-            'chart_of_account_item_id' => $request->expense_account,
-            '_who_added' => Auth::User()->id
-        ]);
+
+        $status = $this->service->update($id, $request->all());
+
         if ($status) {
             return response()->json(['message' => __('expense_categories.updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\ExpenseCategory $expenseCategory
+     * @param int $id
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        $status = ExpenseCategory::where('id', $id)->delete();
+        $status = $this->service->delete($id);
+
         if ($status) {
             return response()->json(['message' => __('expense_categories.deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 }

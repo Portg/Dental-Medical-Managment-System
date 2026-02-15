@@ -3,14 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
-use App\leaveRequest;
+use App\Http\Helper\NameHelper;
+use App\Services\LeaveRequestApprovalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 
 class LeaveRequestApprovalController extends Controller
 {
+    private LeaveRequestApprovalService $service;
+
+    public function __construct(LeaveRequestApprovalService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -21,20 +28,14 @@ class LeaveRequestApprovalController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
+            $data = $this->service->getAllLeaveRequests();
 
-            $data = DB::table('leave_requests')
-                ->leftJoin('leave_types', 'leave_types.id', 'leave_requests.leave_type_id')
-                ->leftJoin('users', 'users.id', 'leave_requests._who_added')
-                ->whereNull('leave_requests.deleted_at')
-                ->select(['leave_requests.*', 'leave_types.name', 'users.surname', 'users.othername'])
-                ->OrderBy('leave_requests.id', 'desc')
-                ->get();
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('addedBy', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
+                    return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('action', function ($row) {
                     $btn = '
@@ -64,22 +65,13 @@ class LeaveRequestApprovalController extends Controller
 
     public function approveRequest($id)
     {
-        $success = LeaveRequest::where('id', $id)->update([
-            'action_date' => date('yyy-mm-dd'),
-            'status' => 'Approved',
-            '_approved_by' => Auth::User()->id
-        ]);
+        $success = $this->service->approveRequest($id, Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_requests_approval.approved_successfully'), $success);
     }
 
     public function rejectRequest($id)
     {
-        $success = LeaveRequest::where('id', $id)->update([
-            'action_date' => date('yyy-mm-dd'),
-            'status' => 'Rejected',
-            '_approved_by' => Auth::User()->id
-        ]);
+        $success = $this->service->rejectRequest($id, Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_requests_approval.rejected_successfully'), $success);
     }
-
 }

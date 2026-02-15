@@ -1,0 +1,14 @@
+{
+    "i18n-ally.localesPaths": [
+        "resources/lang",
+        "public/js/i18n",
+        "Modules/Doctor/Resources/lang",
+        "Modules/Nurse/Resources/lang",
+        "Modules/Pharmacy/Resources/lang",
+        "Modules/Receptionist/Resources/lang",
+        "Modules/SuperAdmin/Resources/lang",
+        "public/backend/assets/global/plugins/fullcalendar/lang",
+        "public/backend/assets/global/plugins/bootstrap-datepicker/js/locales",
+        "public/backend/assets/global/plugins/select2/js/i18n"
+    ]
+}

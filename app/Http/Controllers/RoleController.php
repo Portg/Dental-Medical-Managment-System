@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\ActionColumnHelper;
-use App\Role;
+use App\Services\RoleService;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +13,13 @@ use Yajra\DataTables\DataTables;
 
 class RoleController extends Controller
 {
+    private RoleService $roleService;
+
+    public function __construct(RoleService $roleService)
+    {
+        $this->roleService = $roleService;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -24,7 +31,7 @@ class RoleController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = Role::all();
+            $data = $this->roleService->getAllRoles();
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -48,15 +55,7 @@ class RoleController extends Controller
         $name = $request->q;
 
         if ($name) {
-            $search = $name;
-            $data =
-                Role::where('name', 'LIKE', "%$search%")->get();
-
-            $formatted_tags = [];
-            foreach ($data as $tag) {
-                $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->name];
-            }
-            return \Response::json($formatted_tags);
+            return \Response::json($this->roleService->searchRoles($name));
         }
         return response()->json([]);
     }
@@ -84,9 +83,9 @@ class RoleController extends Controller
         ], [
             'name.required' => __('validation.custom.name.required')
         ])->validate();
-        $status = Role::create([
-            'name' => $request->name
-        ]);
+
+        $status = $this->roleService->createRole($request->name);
+
         if ($status) {
             return response()->json(['message' => __('roles.role_added_successfully'), 'status' => true]);
         }
@@ -112,8 +111,7 @@ class RoleController extends Controller
      */
     public function edit($id)
     {
-        $role = Role::where('id', $id)->first();
-        return response()->json($role);
+        return response()->json($this->roleService->findRole($id));
     }
 
     /**
@@ -130,9 +128,9 @@ class RoleController extends Controller
         ], [
             'name.required' => __('validation.custom.name.required')
         ])->validate();
-        $status = Role::where('id', $id)->update([
-            'name' => $request->name
-        ]);
+
+        $status = $this->roleService->updateRole($id, $request->name);
+
         if ($status) {
             return response()->json(['message' => __('roles.role_updated_successfully'), 'status' => true]);
         }
@@ -149,7 +147,7 @@ class RoleController extends Controller
      */
     public function destroy($id)
     {
-        $status = Role::where('id', $id)->delete();
+        $status = $this->roleService->deleteRole($id);
         if ($status) {
             return response()->json(['message' => __('roles.role_deleted_successfully'), 'status' => true]);
         }

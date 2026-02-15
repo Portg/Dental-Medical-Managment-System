@@ -13,10 +13,11 @@ class SendAppointmentSms implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $tries = 3;
+    public int $backoff = 10;
 
     protected $phone_no;
     protected $msg;
-    protected $sms_logger;
     protected $type;
 
     /**
@@ -24,13 +25,13 @@ class SendAppointmentSms implements ShouldQueue
      *
      * @param $phone_number
      * @param $message
+     * @param $type
      */
-    public function __construct($phone_number, $message,$type)
+    public function __construct($phone_number, $message, $type)
     {
         $this->phone_no = $phone_number;
         $this->msg = $message;
-        $this->type=$type;
-        $this->sms_logger = new SmsLogger();
+        $this->type = $type;
     }
 
     /**
@@ -40,8 +41,6 @@ class SendAppointmentSms implements ShouldQueue
      */
     public function handle()
     {
-        $this->sms_logger->SendMessage($this->phone_no, $this->msg,$this->type);
+        (new SmsLogger())->SendMessage($this->phone_no, $this->msg, $this->type);
     }
-
-
 }

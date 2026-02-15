@@ -3,10 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\AppointmentHistory;
+use App\Services\AppointmentHistoryService;
 use Illuminate\Http\Request;
 
 class AppointmentHistoryController extends Controller
 {
+    private AppointmentHistoryService $service;
+
+    public function __construct(AppointmentHistoryService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      *
