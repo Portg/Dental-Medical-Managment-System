@@ -123,6 +123,7 @@ return [
     'roles' => 'Roles',
     'permissions' => 'Permissions',
     'branches' => 'Branches',
+    'chairs' => 'Chairs',
     'holidays' => 'Holidays',
     'leave_types' => 'Leave Types',
     'leave_requests' => 'Leave Requests',

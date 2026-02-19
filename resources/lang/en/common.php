@@ -43,6 +43,7 @@ return [
     'updating' => 'Updating...',
     'yes' => 'Yes',
     'no' => 'No',
+    'unlimited' => 'Unlimited',
     'added_by' => 'Added By',
 
 

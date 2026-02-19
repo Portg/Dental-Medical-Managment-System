@@ -158,6 +158,7 @@ return [
     'roles' => '角色',
     'permissions' => '权限',
     'branches' => '分支机构',
+    'chairs' => '诊椅管理',
     'departments' => '部门',
     'service_items' => '服务项目',
     'holidays' => '节假日',

@@ -22,6 +22,8 @@ return [
     'updated_successfully' => 'Holiday has been updated successfully',
     'deleted_successfully' => 'Holiday has been deleted successfully',
 
+    'updating' => 'Updating...',
+
     // 确认对话框
     'delete_confirm_message' => 'Your will not be able to recover this Holiday!',
 ];
