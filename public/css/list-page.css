@@ -77,6 +77,9 @@
 }
 
 .filter-area-l2 .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
     margin-bottom: 12px;
 }
 
@@ -356,7 +359,8 @@
    Utility
    ========================================================================== */
 .filter-actions {
-    padding-top: 18px;
+    padding-top: 0;
+    margin-left: auto;
 }
 
 /* Action button spacing */

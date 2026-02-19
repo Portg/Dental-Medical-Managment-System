@@ -68,7 +68,6 @@
             let quotation_id = $('#global_quotation_id').val();
 
             var table = $('#quotation-items-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),

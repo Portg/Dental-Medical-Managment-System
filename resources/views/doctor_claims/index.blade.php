@@ -28,7 +28,6 @@
     $(function () {
 
         dataTable = $('#doctor_claims_table').DataTable({
-            destroy: true,
             processing: true,
             serverSide: true,
             language: LanguageManager.getDataTableLang(),

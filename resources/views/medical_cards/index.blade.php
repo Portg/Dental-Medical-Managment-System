@@ -47,7 +47,6 @@
                 'medical': @json(__('medical'))
             });
             dataTable = $('#sample_1').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language : LanguageManager.getDataTableLang(),

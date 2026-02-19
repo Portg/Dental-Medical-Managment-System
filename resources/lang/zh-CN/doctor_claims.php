@@ -13,6 +13,7 @@ return [
     'doctor_claims_payment' => '医生理赔支付',
     'claim_payment_details' => '理赔/支付详情',
     'view_claims' => '查看理赔',
+    'claims_form' => '理赔表单',
 
     // 表单字段
     'claim_amount' => '理赔金额',

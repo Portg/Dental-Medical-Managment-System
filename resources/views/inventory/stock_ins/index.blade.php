@@ -66,7 +66,6 @@
 
         function loadTable() {
             dataTable = $('#stock-ins-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),

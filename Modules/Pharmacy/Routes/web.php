@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('pharmacy')->group(function() {
+Route::group(['middleware' => ['auth'], 'prefix' => 'pharmacy'], function () {
     Route::get('/', 'PharmacyController@index');
 });

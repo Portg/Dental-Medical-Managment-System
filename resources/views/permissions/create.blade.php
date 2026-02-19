@@ -6,6 +6,9 @@
                 <h4 class="modal-title" id="modal_title">{{ __('permissions.add_permission') }}</h4>
             </div>
             <div class="modal-body">
+                <div class="alert alert-danger" style="display:none">
+                    <ul></ul>
+                </div>
                 <input type="hidden" id="permission_id">
                 <div class="form-group">
                     <label>{{ __('permissions.name') }} <span class="text-danger">*</span></label>

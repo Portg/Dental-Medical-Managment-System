@@ -126,7 +126,6 @@
         $(function () {
             default_todays_data();  //filter  data
             dataTable = $('#expenses-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),

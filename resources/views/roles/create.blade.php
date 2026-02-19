@@ -6,7 +6,9 @@
                 <h4 class="modal-title">{{ __('roles.roles_form') }}</h4>
             </div>
             <div class="modal-body">
-                <div class="alert alert-danger" style="display:none"></div>
+                <div class="alert alert-danger" style="display:none">
+                    <ul></ul>
+                </div>
                 <form action="#" id="roles-form" class="form-horizontal" autocomplete="off">
                     @csrf
                     <input type="hidden" id="id" name="id">

@@ -26,7 +26,6 @@
     $(function () {
         dataTable = $('#sample_1').DataTable({
             language: LanguageManager.getDataTableLang(),
-            destroy: true,
             processing: true,
             serverSide: true,
             ajax: {

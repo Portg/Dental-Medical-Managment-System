@@ -93,7 +93,6 @@
 
             default_todays_data();  //filter  date
             dataTable = $('#bookings-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),

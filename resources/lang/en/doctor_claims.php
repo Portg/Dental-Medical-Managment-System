@@ -13,6 +13,7 @@ return [
     'doctor_claims_payment' => 'Doctor Claims Payment',
     'claim_payment_details' => 'Claim /Payment details',
     'view_claims' => 'View Claims',
+    'claims_form' => 'Claims Form',
 
     // 表单字段
     'claim_amount' => 'Claim Amount',

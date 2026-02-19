@@ -119,7 +119,6 @@
 
             dataTable = $('#payment-report').DataTable({
                 language: LanguageManager.getDataTableLang(),
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 ajax: {
