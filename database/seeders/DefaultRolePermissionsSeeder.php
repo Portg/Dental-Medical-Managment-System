@@ -32,11 +32,19 @@ class DefaultRolePermissionsSeeder extends Seeder
         // 管理员权限
         if ($admin) {
             $adminPermissions = Permission::whereIn('slug', [
-                'view-patients', 'create-patients', 'edit-patients',
-                'view-appointments', 'create-appointments', 'edit-appointments',
-                'view-invoices', 'create-invoices', 'edit-invoices',
+                'view-patients', 'create-patients', 'edit-patients', 'delete-patients',
+                'view-appointments', 'create-appointments', 'edit-appointments', 'delete-appointments',
+                'view-invoices', 'create-invoices', 'edit-invoices', 'delete-invoices',
                 'view-users', 'create-users', 'edit-users',
-                'view-branches', 'view-reports', 'export-reports'
+                'view-branches', 'create-branches', 'edit-branches',
+                'view-chairs', 'create-chairs', 'edit-chairs', 'delete-chairs',
+                'view-reports', 'export-reports',
+                'manage-medical-cases', 'manage-treatments', 'manage-medical-services',
+                'manage-quotations', 'manage-refunds', 'manage-doctor-claims', 'manage-expenses',
+                'manage-accounting', 'manage-inventory', 'manage-labs',
+                'manage-payroll', 'manage-leave', 'manage-employees', 'manage-holidays',
+                'manage-schedules', 'manage-insurance', 'manage-members',
+                'manage-patient-settings', 'manage-sms', 'manage-settings',
             ])->get();
 
             foreach ($adminPermissions as $permission) {
@@ -52,7 +60,8 @@ class DefaultRolePermissionsSeeder extends Seeder
             $doctorPermissions = Permission::whereIn('slug', [
                 'view-patients', 'edit-patients',
                 'view-appointments', 'edit-appointments',
-                'view-invoices'
+                'view-invoices',
+                'manage-medical-cases', 'manage-treatments',
             ])->get();
 
             foreach ($doctorPermissions as $permission) {
@@ -83,7 +92,8 @@ class DefaultRolePermissionsSeeder extends Seeder
             $receptionistPermissions = Permission::whereIn('slug', [
                 'view-patients', 'create-patients', 'edit-patients',
                 'view-appointments', 'create-appointments', 'edit-appointments',
-                'view-invoices', 'create-invoices'
+                'view-invoices', 'create-invoices',
+                'manage-quotations', 'manage-schedules',
             ])->get();
 
             foreach ($receptionistPermissions as $permission) {

@@ -31,7 +31,7 @@ class PermissionCacheTest extends TestCase
     {
         parent::setUp();
 
-        $branch = Branch::create(['name' => 'Test Branch', 'is_active' => 'true']);
+        $branch = Branch::create(['name' => 'Test Branch', 'is_active' => true]);
 
         $this->superAdminRole   = Role::create(['name' => 'Super Administrator']);
         $this->adminRole        = Role::create(['name' => 'Administrator']);

@@ -17,6 +17,10 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'company_name' => env('CompanyName', ''),
+    'company_no_reply_email' => env('CompanyNoReplyEmail', ''),
+    'db_backup_email' => env('DB_BACKUP_EMAIL', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

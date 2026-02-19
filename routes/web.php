@@ -228,6 +228,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('branches', 'BranchController');
     Route::get('search-branch', 'BranchController@filterBranches');
 
+    Route::resource('chairs', 'ChairController');
+
     //leave mgt
     Route::resource('holidays', 'HolidayController');
     Route::resource('leave-types', 'LeaveTypeController');

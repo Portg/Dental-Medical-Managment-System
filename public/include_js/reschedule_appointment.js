@@ -2,7 +2,7 @@ function RescheduleAppointment(id) {
     $("#reschedule-appointment-form")[0].reset();
     $('#reschedule_appointment_id').val(''); ///always reset hidden form fields
     $('#BtnSave').attr('disabled', false);
-    $('#BtnSave').text('Save changes');
+    $('#BtnSave').text(LanguageManager.trans('common.save_changes'));
 
     $.LoadingOverlay("show");
     $.ajax({
@@ -27,7 +27,7 @@ function RescheduleAppointment(id) {
 function save_scheduler() {
     $.LoadingOverlay("show");
     $('#BtnSave').attr('disabled', true);
-    $('#BtnSave').text('processing...');
+    $('#BtnSave').text(LanguageManager.trans('common.processing'));
     $.ajax({
         type: 'POST',
         data: $('#reschedule-appointment-form').serialize(),
@@ -44,7 +44,7 @@ function save_scheduler() {
         error: function (request, status, error) {
             $.LoadingOverlay("hide");
             $('#BtnSave').attr('disabled', false);
-            $('#BtnSave').text('Save changes');
+            $('#BtnSave').text(LanguageManager.trans('common.save_changes'));
             $('#reschedule-appointment-modal').modal('show');
             json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {

@@ -22,7 +22,7 @@ class InventoryItemApiTest extends TestCase
     {
         parent::setUp();
 
-        $branch = Branch::create(['name' => 'Main Branch', 'is_active' => 'true']);
+        $branch = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
         $role   = Role::create(['name' => 'Administrator']);
 
         $this->admin = User::factory()->create([

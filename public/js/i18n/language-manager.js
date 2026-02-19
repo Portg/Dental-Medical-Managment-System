@@ -219,7 +219,7 @@ var LanguageManager = (function() {
             ensureLangStorage(currentLang);
 
             if (namespace) {
-                if (!translations[currentLang][namespace]) {
+                if (!translations[currentLang][namespace] || typeof translations[currentLang][namespace] !== 'object') {
                     translations[currentLang][namespace] = {};
                 }
                 deepMerge(translations[currentLang][namespace], data);

@@ -2,14 +2,12 @@
  * Inventory Items Management JavaScript
  */
 
-var table;
-
 $(function () {
     loadTable();
 });
 
 function loadTable() {
-    table = $('#items-table').DataTable({
+    dataTable = $('#items-table').DataTable({
         destroy: true,
         processing: true,
         serverSide: true,
@@ -33,10 +31,8 @@ function loadTable() {
             {data: 'deleteBtn', name: 'deleteBtn', orderable: false, searchable: false}
         ]
     });
-}
 
-function filterTable() {
-    table.ajax.reload();
+    setupEmptyStateHandler();
 }
 
 function createRecord() {
@@ -193,11 +189,4 @@ function deleteRecord(id) {
             }
         });
     });
-}
-
-function alert_dialog(message, status) {
-    swal(LanguageManager.trans('common.alert') || "Alert", message, status);
-    if (status === "success") {
-        table.ajax.reload();
-    }
 }
