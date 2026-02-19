@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'chairs_management' => '诊椅管理',
+    'chairs_form' => '诊椅信息',
+    'chair_code' => '椅位编号',
+    'chair_name' => '椅位名称',
+    'branch' => '所属分院',
+    'status' => '状态',
+    'status_active' => '使用中',
+    'status_maintenance' => '维护中',
+    'status_offline' => '已停用',
+    'notes' => '备注',
+    'added_date' => '添加日期',
+    'added_by' => '添加人',
+    'select_branch' => '请选择分院',
+    'select_status' => '请选择状态',
+    'enter_chair_code' => '请输入椅位编号',
+    'enter_chair_name' => '请输入椅位名称',
+    'chair_added_successfully' => '诊椅添加成功',
+    'chair_updated_successfully' => '诊椅更新成功',
+    'chair_deleted_successfully' => '诊椅删除成功',
+    'chair_has_active_appointments' => '该诊椅有进行中的预约，无法删除',
+    'delete_confirm_message' => '确定要删除该诊椅吗？',
+];
