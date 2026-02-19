@@ -6,6 +6,7 @@ use App\TreatmentPlan;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\DataTables;
 
 class TreatmentPlanService
 {
@@ -95,7 +96,7 @@ class TreatmentPlanService
             'description' => $data['description'] ?? null,
             'planned_procedures' => $data['planned_procedures'] ?? null,
             'estimated_cost' => $data['estimated_cost'] ?? null,
-            'status' => $data['status'] ?? 'Planned',
+            'status' => $data['status'] ?? TreatmentPlan::STATUS_PLANNED,
             'priority' => $data['priority'] ?? 'Medium',
             'start_date' => $data['start_date'] ?? null,
             'target_completion_date' => $data['target_completion_date'] ?? null,
@@ -122,7 +123,7 @@ class TreatmentPlanService
             'target_completion_date' => $data['target_completion_date'] ?? null,
         ];
 
-        if (($data['status'] ?? null) == 'Completed') {
+        if (($data['status'] ?? null) == TreatmentPlan::STATUS_COMPLETED) {
             $updateData['actual_completion_date'] = $data['actual_completion_date'] ?? now();
             $updateData['completion_notes'] = $data['completion_notes'] ?? null;
         }
@@ -136,5 +137,47 @@ class TreatmentPlanService
     public function deletePlan(int $id): bool
     {
         return (bool) TreatmentPlan::where('id', $id)->delete();
+    }
+
+    /**
+     * Build DataTable response for treatment plan listings.
+     *
+     * Shared by listAll(), index(), and caseIndex() since they use identical column definitions.
+     *
+     * @param Collection $data
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
+    public function buildDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('viewBtn', function ($row) {
+                return '<a href="#" onclick="viewTreatmentPlan(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editTreatmentPlan(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteTreatmentPlan(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->addColumn('statusBadge', function ($row) {
+                $class = 'default';
+                if ($row->status == TreatmentPlan::STATUS_PLANNED) $class = 'info';
+                elseif ($row->status == TreatmentPlan::STATUS_IN_PROGRESS) $class = 'warning';
+                elseif ($row->status == TreatmentPlan::STATUS_COMPLETED) $class = 'success';
+                elseif ($row->status == TreatmentPlan::STATUS_CANCELLED) $class = 'danger';
+                return '<span class="label label-' . $class . '">' . __('medical_cases.plan_status_' . strtolower(str_replace(' ', '_', $row->status))) . '</span>';
+            })
+            ->addColumn('priorityBadge', function ($row) {
+                $class = 'default';
+                if ($row->priority == 'Low') $class = 'success';
+                elseif ($row->priority == 'Medium') $class = 'info';
+                elseif ($row->priority == 'High') $class = 'warning';
+                elseif ($row->priority == 'Urgent') $class = 'danger';
+                return '<span class="label label-' . $class . '">' . __('medical_cases.priority_' . strtolower($row->priority)) . '</span>';
+            })
+            ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'statusBadge', 'priorityBadge'])
+            ->make(true);
     }
 }

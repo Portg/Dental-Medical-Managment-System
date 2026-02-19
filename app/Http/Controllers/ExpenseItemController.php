@@ -14,6 +14,7 @@ class ExpenseItemController extends Controller
     public function __construct(ExpenseItemService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-expenses');
     }
 
     /**
@@ -81,7 +82,7 @@ class ExpenseItemController extends Controller
             'price.required' => __('validation.attributes.price') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->service->create($request->all());
+        $status = $this->service->create($request->only(['item', 'qty', 'price']));
 
         if ($status) {
             return response()->json(['message' => __('expense_items.added_successfully'), 'status' => true]);
@@ -130,7 +131,7 @@ class ExpenseItemController extends Controller
             'price.required' => __('validation.attributes.price') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->service->update($id, $request->all());
+        $status = $this->service->update($id, $request->only(['item', 'qty', 'price']));
 
         if ($status) {
             return response()->json(['message' => __('expense_items.updated_successfully'), 'status' => true]);

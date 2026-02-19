@@ -16,6 +16,7 @@ class SalaryDeductionController extends Controller
     public function __construct(SalaryDeductionService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-payroll');
     }
 
     /**
@@ -78,7 +79,7 @@ class SalaryDeductionController extends Controller
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
 
-        $success = $this->service->createDeduction($request->all(), Auth::User()->id);
+        $success = $this->service->createDeduction($request->only(['deduction', 'amount']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('messages.salary_deduction_added_successfully'), $success);
     }
 
@@ -121,7 +122,7 @@ class SalaryDeductionController extends Controller
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
 
-        $success = $this->service->updateDeduction($id, $request->all(), Auth::User()->id);
+        $success = $this->service->updateDeduction($id, $request->only(['deduction', 'amount']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('messages.salary_deduction_updated_successfully'), $success);
     }
 

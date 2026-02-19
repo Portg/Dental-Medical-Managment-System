@@ -75,12 +75,17 @@ class AuthServiceProvider extends ServiceProvider
             return true;
         });
 
-        // 添加动态权限 Gate
-//        $permissions = Permission::all();
-//        foreach ($permissions as $permission) {
-//            Gate::define($permission->slug, function ($user) use ($permission) {
-//                return $user->hasPermission($permission->slug);
-//            });
-//        }
+        // 动态权限检查 — 使用 Gate::before 避免 boot 阶段查询 DB
+        Gate::before(function ($user, $ability) {
+            // Super Administrator 跳过所有权限检查
+            if ($user->UserRole && $user->UserRole->name === 'Super Administrator') {
+                return true;
+            }
+
+            // 检查用户角色是否拥有该权限 slug（已缓存）
+            if ($user->hasPermission($ability)) {
+                return true;
+            }
+        });
     }
 }

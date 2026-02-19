@@ -55,7 +55,7 @@ class DiagnosisService
             'diagnosis_name' => $data['diagnosis_name'],
             'icd_code' => $data['icd_code'] ?? null,
             'diagnosis_date' => $data['diagnosis_date'],
-            'status' => $data['status'] ?? 'Active',
+            'status' => $data['status'] ?? Diagnosis::STATUS_ACTIVE,
             'severity' => $data['severity'] ?? null,
             'notes' => $data['notes'] ?? null,
             'medical_case_id' => $data['medical_case_id'] ?? null,
@@ -86,7 +86,7 @@ class DiagnosisService
             'notes' => $data['notes'] ?? null,
         ];
 
-        if (($data['status'] ?? null) == 'Resolved' && empty($data['resolved_date'])) {
+        if (($data['status'] ?? null) == Diagnosis::STATUS_RESOLVED && empty($data['resolved_date'])) {
             $updateData['resolved_date'] = now();
         } elseif (!empty($data['resolved_date'])) {
             $updateData['resolved_date'] = $data['resolved_date'];

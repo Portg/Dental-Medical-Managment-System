@@ -6,7 +6,6 @@ use App\Http\Helper\NameHelper;
 use App\Quotation;
 use App\QuotationItem;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class QuotationService
@@ -20,7 +19,10 @@ class QuotationService
             ->join('patients', 'patients.id', 'quotations.patient_id')
             ->join('users', 'users.id', 'quotations._who_added')
             ->whereNull('quotations.deleted_at')
-            ->select('quotations.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy');
+            ->select(
+                'quotations.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy',
+                DB::raw("(SELECT COALESCE(SUM(qi.qty * qi.price), 0) FROM quotation_items qi WHERE qi.quotation_id = quotations.id AND qi.deleted_at IS NULL) as total_amount")
+            );
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];

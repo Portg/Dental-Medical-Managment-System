@@ -16,6 +16,7 @@ class PaySlipController extends Controller
     public function __construct(PaySlipService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-payroll');
     }
 
     /**

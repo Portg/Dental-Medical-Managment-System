@@ -12,6 +12,7 @@ class MedicalCardItemController extends Controller
     public function __construct(MedicalCardItemService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-medical-services');
     }
 
     /**

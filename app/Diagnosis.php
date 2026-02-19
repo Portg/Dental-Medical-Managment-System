@@ -9,6 +9,10 @@ class Diagnosis extends Model
 {
     use SoftDeletes;
 
+    const STATUS_ACTIVE = 'Active';
+    const STATUS_RESOLVED = 'Resolved';
+    const STATUS_CHRONIC = 'Chronic';
+
     protected $table = 'diagnoses';
 
     protected $fillable = [

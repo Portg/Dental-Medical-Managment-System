@@ -243,7 +243,7 @@ class WaitingQueue extends Model
         ]);
 
         // 更新预约状态为已到院
-        $appointment->update(['status' => 'checked_in']);
+        $appointment->update(['status' => Appointment::STATUS_CHECKED_IN]);
 
         return $queue;
     }
@@ -275,7 +275,7 @@ class WaitingQueue extends Model
 
         // 更新预约状态
         if ($this->appointment) {
-            $this->appointment->update(['status' => 'in_progress']);
+            $this->appointment->update(['status' => Appointment::STATUS_IN_PROGRESS]);
         }
 
         return $this;
@@ -293,7 +293,7 @@ class WaitingQueue extends Model
 
         // 更新预约状态
         if ($this->appointment) {
-            $this->appointment->update(['status' => 'completed']);
+            $this->appointment->update(['status' => Appointment::STATUS_COMPLETED]);
         }
 
         return $this;

@@ -11,7 +11,9 @@ class LabController extends Controller
 {
     public function __construct(
         private LabService $labService,
-    ) {}
+    ) {
+        $this->middleware('can:manage-labs');
+    }
 
     public function index(Request $request)
     {

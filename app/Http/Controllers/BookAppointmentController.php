@@ -14,6 +14,7 @@ class BookAppointmentController extends Controller
     public function __construct(BookAppointmentService $bookAppointmentService)
     {
         $this->bookAppointmentService = $bookAppointmentService;
+        $this->middleware('can:create-appointments');
     }
 
     /**

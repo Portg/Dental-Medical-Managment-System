@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Helper\NameHelper;
 use App\MemberLevel;
 use App\Services\MemberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 
 class MemberController extends Controller
 {
@@ -16,6 +14,7 @@ class MemberController extends Controller
     public function __construct(MemberService $memberService)
     {
         $this->memberService = $memberService;
+        $this->middleware('can:manage-members');
     }
 
     /**
@@ -24,39 +23,9 @@ class MemberController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->memberService->getMemberList($request->all());
+            $data = $this->memberService->getMemberList($request->only(['level_id', 'status']));
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('patient_name', function ($row) {
-                    return NameHelper::join($row->surname, $row->othername);
-                })
-                ->addColumn('levelBadge', function ($row) {
-                    if ($row->level_name) {
-                        return '<span class="label" style="background-color:' . $row->level_color . '">' . $row->level_name . '</span>';
-                    }
-                    return '-';
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->member_status == 'Active') $class = 'success';
-                    elseif ($row->member_status == 'Expired') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('members.status_' . strtolower($row->member_status)) . '</span>';
-                })
-                ->addColumn('balance', function ($row) {
-                    return number_format($row->member_balance, 2);
-                })
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="' . url('members/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('depositBtn', function ($row) {
-                    return '<a href="#" onclick="depositMember(' . $row->id . ')" class="btn btn-success btn-sm">' . __('members.deposit') . '</a>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editMember(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->rawColumns(['levelBadge', 'statusBadge', 'viewBtn', 'depositBtn', 'editBtn'])
-                ->make(true);
+            return $this->memberService->buildIndexDataTable($data);
         }
 
         $levels = MemberLevel::active()->ordered()->get();
@@ -87,7 +56,9 @@ class MemberController extends Controller
             'member_level_id.required' => __('validation.custom.member_level_id.required'),
         ])->validate();
 
-        return response()->json($this->memberService->registerMember($request->all()));
+        return response()->json($this->memberService->registerMember($request->only([
+            'patient_id', 'member_level_id', 'initial_balance', 'payment_method', 'member_expiry',
+        ])));
     }
 
     /**
@@ -99,7 +70,9 @@ class MemberController extends Controller
             'member_level_id' => 'required|exists:member_levels,id',
         ])->validate();
 
-        return response()->json($this->memberService->updateMember($id, $request->all()));
+        return response()->json($this->memberService->updateMember($id, $request->only([
+            'member_level_id', 'member_expiry', 'member_status',
+        ])));
     }
 
     /**
@@ -112,7 +85,9 @@ class MemberController extends Controller
             'payment_method' => 'required',
         ])->validate();
 
-        return response()->json($this->memberService->deposit($id, $request->all()));
+        return response()->json($this->memberService->deposit($id, $request->only([
+            'amount', 'payment_method', 'description',
+        ])));
     }
 
     /**
@@ -123,22 +98,7 @@ class MemberController extends Controller
         if ($request->ajax()) {
             $data = $this->memberService->getTransactions($id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('typeBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->transaction_type == 'Deposit') $class = 'success';
-                    elseif ($row->transaction_type == 'Consumption') $class = 'warning';
-                    elseif ($row->transaction_type == 'Refund') $class = 'info';
-                    return '<span class="label label-' . $class . '">' . __('members.type_' . strtolower($row->transaction_type)) . '</span>';
-                })
-                ->addColumn('amountFormatted', function ($row) {
-                    $prefix = in_array($row->transaction_type, ['Deposit', 'Refund']) ? '+' : '-';
-                    $class = in_array($row->transaction_type, ['Deposit', 'Refund']) ? 'text-success' : 'text-danger';
-                    return '<span class="' . $class . '">' . $prefix . number_format($row->amount, 2) . '</span>';
-                })
-                ->rawColumns(['typeBadge', 'amountFormatted'])
-                ->make(true);
+            return $this->memberService->buildTransactionsDataTable($data);
         }
     }
 
@@ -152,30 +112,7 @@ class MemberController extends Controller
         if ($request->ajax()) {
             $data = $this->memberService->getLevelList();
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('colorBadge', function ($row) {
-                    return '<span class="label" style="background-color:' . $row->color . '">' . $row->name . '</span>';
-                })
-                ->addColumn('discountDisplay', function ($row) {
-                    if ($row->discount_rate < 100) {
-                        return (100 - $row->discount_rate) . '%';
-                    }
-                    return __('members.no_discount');
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $class = $row->is_active ? 'success' : 'default';
-                    $text = $row->is_active ? __('common.active') : __('common.inactive');
-                    return '<span class="label label-' . $class . '">' . $text . '</span>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editLevel(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteLevel(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->rawColumns(['colorBadge', 'statusBadge', 'editBtn', 'deleteBtn'])
-                ->make(true);
+            return $this->memberService->buildLevelsDataTable($data);
         }
 
         return view('members.levels.index');
@@ -192,7 +129,10 @@ class MemberController extends Controller
             'discount_rate' => 'required|numeric|min:0|max:100',
         ])->validate();
 
-        return response()->json($this->memberService->createLevel($request->all()));
+        return response()->json($this->memberService->createLevel($request->only([
+            'name', 'code', 'discount_rate', 'color', 'min_consumption',
+            'points_rate', 'benefits', 'sort_order', 'is_default', 'is_active',
+        ])));
     }
 
     /**
@@ -214,7 +154,10 @@ class MemberController extends Controller
             'discount_rate' => 'required|numeric|min:0|max:100',
         ])->validate();
 
-        return response()->json($this->memberService->updateLevel($id, $request->all()));
+        return response()->json($this->memberService->updateLevel($id, $request->only([
+            'name', 'code', 'discount_rate', 'color', 'min_consumption',
+            'points_rate', 'benefits', 'sort_order', 'is_default', 'is_active',
+        ])));
     }
 
     /**

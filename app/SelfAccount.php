@@ -10,6 +10,10 @@ class SelfAccount extends Model
     use SoftDeletes;
     protected $fillable = ['account_no', 'account_holder', 'holder_phone_no', 'holder_email', 'holder_address', 'is_active', '_who_added'];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
     public static function AccountNo()
     {
         $latest = self::latest()->first();

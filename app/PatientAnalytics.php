@@ -3,6 +3,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Appointment;
 
 class PatientAnalytics extends Model
 {
@@ -57,11 +58,11 @@ class PatientAnalytics extends Model
 
         $firstVisit = $patient->appointments()->orderBy('appointment_date')->first();
         $lastVisit = $patient->appointments()
-            ->where('status', 'completed')
+            ->where('status', Appointment::STATUS_COMPLETED)
             ->orderBy('appointment_date', 'desc')
             ->first();
 
-        $visitCount = $patient->appointments()->where('status', 'completed')->count();
+        $visitCount = $patient->appointments()->where('status', Appointment::STATUS_COMPLETED)->count();
         $totalSpent = $patient->invoices()->sum('total_amount');
 
         $analytics = static::updateOrCreate(

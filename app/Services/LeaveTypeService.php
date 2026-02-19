@@ -42,8 +42,7 @@ class LeaveTypeService
      */
     public function getAllLeaveTypes(): array
     {
-        $data = LeaveType::whereNull('deleted_at')
-            ->orderBy('id', 'asc')
+        $data = LeaveType::orderBy('id', 'asc')
             ->get();
 
         $formatted = [];

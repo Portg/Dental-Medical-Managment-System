@@ -12,6 +12,7 @@ class PatientSourceReportController extends Controller
     public function __construct(PatientSourceReportService $patientSourceReportService)
     {
         $this->patientSourceReportService = $patientSourceReportService;
+        $this->middleware('can:view-reports');
     }
 
     /**

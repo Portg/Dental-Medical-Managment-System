@@ -2,6 +2,7 @@
 
 namespace Modules\Doctor\Http\Controllers;
 
+use App\DoctorClaim;
 use App\Http\Helper\NameHelper;
 use App\Services\DoctorModuleClaimService;
 use Illuminate\Http\Request;
@@ -34,6 +35,9 @@ class DoctorClaimController extends Controller
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
+                })
                 ->addColumn('patient', function ($row) {
                     return NameHelper::join($row->surname, $row->othername);
                 })
@@ -48,7 +52,7 @@ class DoctorClaimController extends Controller
                 })
                 ->addColumn('action', function ($row) {
                     $action_btn='';
-                    if ($row->status == "Pending") {
+                    if ($row->status == DoctorClaim::STATUS_PENDING) {
                         $action_btn = '
                        <li>
                                 <a href="#" onclick="editRecord(' . $row->id . ')"> ' . __('common.edit') . '</a>

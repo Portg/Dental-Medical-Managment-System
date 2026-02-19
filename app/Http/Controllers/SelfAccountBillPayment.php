@@ -15,6 +15,7 @@ class SelfAccountBillPayment extends Controller
     public function __construct(SelfAccountBillPaymentService $selfAccountBillPaymentService)
     {
         $this->selfAccountBillPaymentService = $selfAccountBillPaymentService;
+        $this->middleware('can:manage-accounting');
     }
 
     /**

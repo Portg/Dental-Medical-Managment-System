@@ -14,6 +14,7 @@ class LanguageController extends Controller
     public function __construct(LanguageService $languageService)
     {
         $this->languageService = $languageService;
+        $this->middleware('can:manage-settings');
     }
 
     /**

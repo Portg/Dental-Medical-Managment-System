@@ -9,6 +9,10 @@ class MedicalCase extends Model
 {
     use SoftDeletes;
 
+    const STATUS_OPEN = 'Open';
+    const STATUS_CLOSED = 'Closed';
+    const STATUS_FOLLOW_UP = 'Follow-up';
+
     protected $fillable = [
         'case_no', 'title', 'chief_complaint', 'history_of_present_illness',
         'examination', 'examination_teeth', // SOAP: O - Objective
@@ -151,7 +155,7 @@ class MedicalCase extends Model
      */
     public function scopeOpen($query)
     {
-        return $query->where('status', 'open');
+        return $query->where('status', self::STATUS_OPEN);
     }
 
     /**
@@ -159,7 +163,7 @@ class MedicalCase extends Model
      */
     public function scopeClosed($query)
     {
-        return $query->where('status', 'closed');
+        return $query->where('status', self::STATUS_CLOSED);
     }
 
     /**

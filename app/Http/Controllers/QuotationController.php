@@ -5,12 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
 use App\Jobs\ShareEmailQuotation;
-use App\QuotationItem;
 use App\Services\QuotationService;
 use PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -21,6 +19,7 @@ class QuotationController extends Controller
     public function __construct(QuotationService $quotationService)
     {
         $this->quotationService = $quotationService;
+        $this->middleware('can:manage-quotations');
     }
 
     /**
@@ -37,20 +36,30 @@ class QuotationController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->quotationService->getQuotationList($request->all());
+            $data = $this->quotationService->getQuotationList([
+                'search'     => $request->input('search.value', ''),
+                'status'     => $request->input('status'),
+                'start_date' => $request->input('start_date'),
+                'end_date'   => $request->input('end_date'),
+                'page'       => $request->input('page'),
+                'per_page'   => $request->input('per_page'),
+            ]);
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
+                })
                 ->addColumn('quotation_no', function ($row) {
-                    return '<a href="' . url('quotations/' . $row->id) . '">' . $row->quotation_no . '</a>';
+                    return '<a href="' . url('quotations/' . $row->id) . '">' . e($row->quotation_no) . '</a>';
                 })
                 ->addColumn('customer', function ($row) {
                     return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('amount', function ($row) {
-                    return number_format(QuotationItem::where('quotation_id', $row->id)->sum(DB::raw('qty*price')));
+                    return number_format($row->total_amount);
                 })
                 ->addColumn('action', function ($row) {
                     $btn = '

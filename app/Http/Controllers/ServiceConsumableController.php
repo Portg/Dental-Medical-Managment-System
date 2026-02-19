@@ -15,6 +15,7 @@ class ServiceConsumableController extends Controller
     public function __construct(ServiceConsumableService $serviceConsumableService)
     {
         $this->serviceConsumableService = $serviceConsumableService;
+        $this->middleware('can:manage-medical-services');
     }
 
     /**
@@ -100,7 +101,7 @@ class ServiceConsumableController extends Controller
             ]);
         }
 
-        $consumable = $this->serviceConsumableService->create($request->all());
+        $consumable = $this->serviceConsumableService->create($request->only(['medical_service_id', 'inventory_item_id', 'qty']));
 
         if ($consumable) {
             return response()->json(['message' => __('inventory.consumable_added_successfully'), 'status' => true]);
@@ -121,7 +122,7 @@ class ServiceConsumableController extends Controller
             'qty' => 'required|numeric|min:0.01',
         ])->validate();
 
-        $status = $this->serviceConsumableService->update($id, $request->all());
+        $status = $this->serviceConsumableService->update($id, $request->only(['qty']));
 
         if ($status) {
             return response()->json(['message' => __('inventory.consumable_updated_successfully'), 'status' => true]);

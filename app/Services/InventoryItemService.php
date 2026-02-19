@@ -8,6 +8,7 @@ use App\InventoryItem;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Yajra\DataTables\DataTables;
 
 class InventoryItemService
 {
@@ -169,5 +170,99 @@ class InventoryItemService
     public function getActiveCategories(): Collection
     {
         return InventoryCategory::active()->ordered()->get();
+    }
+
+    /**
+     * Build DataTable response for the inventory items index listing.
+     *
+     * @param Collection $data
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
+    public function buildIndexDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('category_name', function ($row) {
+                return $row->category ? $row->category->name : '-';
+            })
+            ->addColumn('stock_status', function ($row) {
+                if ($row->isLowStock()) {
+                    return '<span class="badge badge-danger">' . __('inventory.low_stock') . '</span>';
+                }
+                return '<span class="badge badge-success">' . __('inventory.in_stock') . '</span>';
+            })
+            ->addColumn('status', function ($row) {
+                if ($row->is_active) {
+                    return '<span class="badge badge-success">' . __('common.active') . '</span>';
+                }
+                return '<span class="badge badge-secondary">' . __('common.inactive') . '</span>';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->rawColumns(['stock_status', 'status', 'editBtn', 'deleteBtn'])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTable response for the stock warnings listing.
+     *
+     * @param Collection $data
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
+    public function buildStockWarningsDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('category_name', function ($row) {
+                return $row->category ? $row->category->name : '-';
+            })
+            ->addColumn('shortage', function ($row) {
+                return $row->stock_warning_level - $row->current_stock;
+            })
+            ->rawColumns([])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTable response for the expiry warnings listing.
+     *
+     * @param Collection $data
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
+    public function buildExpiryWarningsDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('item_code', function ($row) {
+                return $row->inventoryItem ? $row->inventoryItem->item_code : '-';
+            })
+            ->addColumn('item_name', function ($row) {
+                return $row->inventoryItem ? $row->inventoryItem->name : '-';
+            })
+            ->addColumn('category_name', function ($row) {
+                return $row->inventoryItem && $row->inventoryItem->category
+                    ? $row->inventoryItem->category->name : '-';
+            })
+            ->addColumn('days_to_expiry', function ($row) {
+                return $row->days_to_expiry;
+            })
+            ->addColumn('expiry_status', function ($row) {
+                if ($row->isExpired()) {
+                    return '<span class="badge badge-danger">' . __('inventory.expired') . '</span>';
+                }
+                if ($row->days_to_expiry <= 7) {
+                    return '<span class="badge badge-warning">' . __('inventory.expiring_soon') . '</span>';
+                }
+                return '<span class="badge badge-info">' . __('inventory.near_expiry') . '</span>';
+            })
+            ->rawColumns(['expiry_status'])
+            ->make(true);
     }
 }

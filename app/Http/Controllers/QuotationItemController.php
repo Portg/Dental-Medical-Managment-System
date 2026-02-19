@@ -14,6 +14,7 @@ class QuotationItemController extends Controller
     public function __construct(QuotationItemService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-quotations');
     }
 
     /**
@@ -85,7 +86,7 @@ class QuotationItemController extends Controller
             'medical_service_id' => 'required'
         ])->validate();
 
-        $status = $this->service->create($request->all());
+        $status = $this->service->create($request->only(['price', 'qty', 'medical_service_id']));
 
         if ($status) {
             return response()->json(['message' => __('invoices.quotation_item_added_successfully'), 'status' => true]);
@@ -130,7 +131,7 @@ class QuotationItemController extends Controller
             'medical_service_id' => 'required'
         ])->validate();
 
-        $status = $this->service->update($id, $request->all());
+        $status = $this->service->update($id, $request->only(['qty', 'price', 'medical_service_id']));
 
         if ($status) {
             return response()->json(['message' => __('invoices.quotation_item_updated_successfully'), 'status' => true]);

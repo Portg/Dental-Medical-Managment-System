@@ -13,7 +13,9 @@ class LabCaseController extends ApiController
 {
     public function __construct(
         protected LabCaseService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-labs');
+    }
 
     public function index(Request $request): JsonResponse
     {

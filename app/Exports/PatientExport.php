@@ -29,7 +29,7 @@ class PatientExport implements FromArray, WithHeadings, ShouldAutoSize
                 $row->address ?? '',
                 $row->profession ?? '',
                 $row->next_of_kin ?? '',
-                $row->has_insurance ?? '',
+                $row->has_insurance ? __('common.yes') : __('common.no'),
                 $row->insurance_company ?? '',
             ];
         }

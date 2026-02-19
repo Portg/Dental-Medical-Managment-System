@@ -37,8 +37,8 @@ class DoctorScheduleService
      */
     public function getFormData(): array
     {
-        $doctors = User::where('is_doctor', 'Yes')->whereNull('deleted_at')->get();
-        $branches = Branch::whereNull('deleted_at')->get();
+        $doctors = User::where('is_doctor', true)->whereNull('deleted_at')->get();
+        $branches = Branch::all();
 
         return compact('doctors', 'branches');
     }
@@ -115,7 +115,6 @@ class DoctorScheduleService
     {
         return DoctorSchedule::with('doctor')
             ->whereBetween('schedule_date', [$start, $end])
-            ->whereNull('deleted_at')
             ->get()
             ->map(function ($schedule) {
                 return [

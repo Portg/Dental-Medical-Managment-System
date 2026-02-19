@@ -14,6 +14,7 @@ class StockOutItemController extends Controller
     public function __construct(StockOutItemService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-inventory');
     }
 
     /**
@@ -95,7 +96,9 @@ class StockOutItemController extends Controller
             return response()->json($stockError);
         }
 
-        $item = $this->service->createItem($request->all());
+        $item = $this->service->createItem($request->only([
+            'stock_out_id', 'inventory_item_id', 'qty', 'batch_no',
+        ]));
 
         if ($item) {
             return response()->json([
@@ -149,7 +152,9 @@ class StockOutItemController extends Controller
             return response()->json($stockError);
         }
 
-        $status = $this->service->updateItem($item, $request->all());
+        $status = $this->service->updateItem($item, $request->only([
+            'qty', 'batch_no',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('inventory.item_updated_successfully'), 'status' => true]);

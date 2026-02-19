@@ -14,6 +14,8 @@ class InvoicePaymentController extends Controller
     public function __construct(InvoicePaymentService $invoicePaymentService)
     {
         $this->invoicePaymentService = $invoicePaymentService;
+
+        $this->middleware('can:edit-invoices');
     }
 
     /**
@@ -77,7 +79,7 @@ class InvoicePaymentController extends Controller
             'invoice_id' => 'required'
         ])->validate();
 
-        $status = $this->invoicePaymentService->createPayment($request->all());
+        $status = $this->invoicePaymentService->createPayment($request->only(['amount', 'payment_date', 'payment_method', 'invoice_id']));
         if ($status) {
             return response()->json(['message' => __('messages.payment_recorded_successfully'), 'status' => true]);
         }
@@ -122,7 +124,7 @@ class InvoicePaymentController extends Controller
             'payment_method' => 'required'
         ])->validate();
 
-        $status = $this->invoicePaymentService->updatePayment($id, $request->all());
+        $status = $this->invoicePaymentService->updatePayment($id, $request->only(['amount', 'payment_date', 'payment_method']));
         if ($status) {
             return response()->json(['message' => __('messages.payment_updated_successfully'), 'status' => true]);
         }

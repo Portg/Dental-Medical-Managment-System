@@ -8,7 +8,6 @@ use App\OnlineBooking;
 use App\Patient;
 use App\Http\Helper\FunctionsHelper;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class OnlineBookingService
@@ -91,7 +90,7 @@ class OnlineBookingService
      */
     public function acceptBooking(array $data, int $id, int $userId, int $branchId): array
     {
-        $success = OnlineBooking::where('id', $id)->update(['status' => 'Accepted']);
+        $success = OnlineBooking::where('id', $id)->update(['status' => OnlineBooking::STATUS_ACCEPTED]);
 
         if (!$success) {
             return ['success' => false, 'message' => null, 'phone' => null];
@@ -107,7 +106,7 @@ class OnlineBookingService
 
         $message = __('sms.appointment_scheduled', [
             'name' => $data['full_name'],
-            'company' => env('CompanyName', null),
+            'company' => config('app.company_name'),
             'date' => $data['appointment_date'],
             'time' => $data['appointment_time'],
         ]);
@@ -124,7 +123,7 @@ class OnlineBookingService
      */
     public function rejectBooking(int $id): bool
     {
-        return (bool) OnlineBooking::where('id', $id)->update(['status' => 'Rejected']);
+        return (bool) OnlineBooking::where('id', $id)->update(['status' => OnlineBooking::STATUS_REJECTED]);
     }
 
     /**
@@ -140,9 +139,9 @@ class OnlineBookingService
             return $patient->id;
         }
 
-        $hasInsurance = 'No';
+        $hasInsurance = false;
         if (!empty($data['insurance_company_id'])) {
-            $hasInsurance = 'Yes';
+            $hasInsurance = true;
         }
 
         $newPatient = Patient::create([

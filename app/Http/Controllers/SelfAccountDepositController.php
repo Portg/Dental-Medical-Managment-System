@@ -15,6 +15,7 @@ class SelfAccountDepositController extends Controller
     public function __construct(SelfAccountDepositService $selfAccountDepositService)
     {
         $this->selfAccountDepositService = $selfAccountDepositService;
+        $this->middleware('can:manage-accounting');
     }
 
     /**
@@ -72,7 +73,7 @@ class SelfAccountDepositController extends Controller
             'payment_method' => 'required',
         ])->validate();
 
-        $status = $this->selfAccountDepositService->create($request->all());
+        $status = $this->selfAccountDepositService->create($request->only(['payment_date', 'amount', 'payment_method']));
 
         if ($status) {
             return response()->json(['message' => __('deposits.deposit_success'), 'status' => true]);
@@ -118,7 +119,7 @@ class SelfAccountDepositController extends Controller
             'payment_method' => 'required',
         ])->validate();
 
-        $status = $this->selfAccountDepositService->update($id, $request->all());
+        $status = $this->selfAccountDepositService->update($id, $request->only(['payment_date', 'amount', 'payment_method']));
 
         if ($status) {
             return response()->json(['message' => __('messages.record_updated'), 'status' => true]);

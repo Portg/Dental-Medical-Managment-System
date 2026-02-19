@@ -15,6 +15,7 @@ class DoctorClaimPaymentController extends Controller
     public function __construct(DoctorClaimPaymentService $claimPaymentService)
     {
         $this->claimPaymentService = $claimPaymentService;
+        $this->middleware('can:manage-doctor-claims');
     }
 
     /**

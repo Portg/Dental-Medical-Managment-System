@@ -18,6 +18,7 @@ class ExpenseController extends Controller
     public function __construct(ExpenseService $expenseService)
     {
         $this->expenseService = $expenseService;
+        $this->middleware('can:manage-expenses');
     }
 
     /**
@@ -34,14 +35,21 @@ class ExpenseController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->expenseService->getExpenseList($request->all());
+            $data = $this->expenseService->getExpenseList([
+                'search'     => $request->input('search.value', ''),
+                'status'     => $request->input('status'),
+                'start_date' => $request->input('start_date'),
+                'end_date'   => $request->input('end_date'),
+                'page'       => $request->input('page'),
+                'per_page'   => $request->input('per_page'),
+            ]);
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('purchase_no', function ($row) {
-                    return '<a href="' . url('expenses/' . $row->id) . '">' . $row->purchase_no . '</a>';
+                    return '<a href="' . url('expenses/' . $row->id) . '">' . e($row->purchase_no) . '</a>';
                 })
                 ->addColumn('amount', function ($row) {
                     return number_format($this->expenseService->totalAmount($row->id));

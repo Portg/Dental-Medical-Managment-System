@@ -13,6 +13,7 @@ class MedicalHistoryController extends Controller
     public function __construct(MedicalHistoryService $service)
     {
         $this->service = $service;
+        $this->middleware('can:view-patients');
     }
 
     /**

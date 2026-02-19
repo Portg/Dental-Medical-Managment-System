@@ -14,6 +14,7 @@ class VitalSignController extends Controller
     public function __construct(VitalSignService $service)
     {
         $this->service = $service;
+        $this->middleware('can:edit-patients');
     }
 
     /**

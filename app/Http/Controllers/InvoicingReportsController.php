@@ -16,16 +16,26 @@ class InvoicingReportsController extends Controller
     public function __construct(InvoicingReportService $invoicingReportService)
     {
         $this->invoicingReportService = $invoicingReportService;
+        $this->middleware('can:view-reports');
     }
 
     public function invoicePaymentReport(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->invoicingReportService->getInvoicePayments($request->all());
+            $data = $this->invoicingReportService->getInvoicePayments([
+                'search'             => $request->input('search.value', ''),
+                'status'             => $request->input('status'),
+                'start_date'         => $request->input('start_date'),
+                'end_date'           => $request->input('end_date'),
+                'insurance_provider' => $request->input('insurance_provider'),
+                'payment_method'     => $request->input('payment_method'),
+                'page'               => $request->input('page'),
+                'per_page'           => $request->input('per_page'),
+            ]);
 
             return Datatables::of($data)
                 ->addIndexColumn()

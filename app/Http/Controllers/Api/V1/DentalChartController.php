@@ -13,7 +13,9 @@ class DentalChartController extends ApiController
 {
     public function __construct(
         protected DentalChartService $service
-    ) {}
+    ) {
+        $this->middleware('can:edit-patients');
+    }
 
     public function index(Request $request): JsonResponse
     {

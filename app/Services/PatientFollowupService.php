@@ -7,6 +7,7 @@ use App\PatientFollowup;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\DataTables;
 
 class PatientFollowupService
 {
@@ -55,7 +56,7 @@ class PatientFollowupService
         return DB::table('patient_followups')
             ->leftJoin('patients', 'patients.id', 'patient_followups.patient_id')
             ->whereNull('patient_followups.deleted_at')
-            ->where('patient_followups.status', 'Pending')
+            ->where('patient_followups.status', PatientFollowup::STATUS_PENDING)
             ->whereBetween('patient_followups.scheduled_date', [now()->toDateString(), now()->addDays($days)->toDateString()])
             ->orderBy('patient_followups.scheduled_date', 'asc')
             ->select(
@@ -74,7 +75,7 @@ class PatientFollowupService
         return DB::table('patient_followups')
             ->leftJoin('patients', 'patients.id', 'patient_followups.patient_id')
             ->whereNull('patient_followups.deleted_at')
-            ->where('patient_followups.status', 'Pending')
+            ->where('patient_followups.status', PatientFollowup::STATUS_PENDING)
             ->where('patient_followups.scheduled_date', '<', now()->toDateString())
             ->orderBy('patient_followups.scheduled_date', 'asc')
             ->select(
@@ -110,7 +111,7 @@ class PatientFollowupService
             'followup_no' => PatientFollowup::generateFollowupNo(),
             'followup_type' => $data['followup_type'],
             'scheduled_date' => $data['scheduled_date'],
-            'status' => 'Pending',
+            'status' => PatientFollowup::STATUS_PENDING,
             'purpose' => $data['purpose'],
             'notes' => $data['notes'] ?? null,
             'next_followup_date' => $data['next_followup_date'] ?? null,
@@ -136,7 +137,7 @@ class PatientFollowupService
             'next_followup_date' => $data['next_followup_date'] ?? null,
         ];
 
-        if ($data['status'] == 'Completed') {
+        if ($data['status'] == PatientFollowup::STATUS_COMPLETED) {
             $updateData['completed_date'] = now();
         }
 
@@ -149,7 +150,7 @@ class PatientFollowupService
     public function completeFollowup(int $id, ?string $outcome = null): bool
     {
         return (bool) PatientFollowup::where('id', $id)->update([
-            'status' => 'Completed',
+            'status' => PatientFollowup::STATUS_COMPLETED,
             'completed_date' => now(),
             'outcome' => $outcome,
         ]);
@@ -169,5 +170,90 @@ class PatientFollowupService
     public function getAllPatients(): Collection
     {
         return Patient::whereNull('deleted_at')->orderBy('surname')->get();
+    }
+
+    /**
+     * Build the DataTables response for the followup index listing.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->addColumn('viewBtn', function ($row) {
+                return '<a href="#" onclick="viewFollowup(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editFollowup(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteFollowup(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->addColumn('completeBtn', function ($row) {
+                if ($row->status == PatientFollowup::STATUS_PENDING) {
+                    return '<a href="#" onclick="completeFollowup(' . $row->id . ')" class="btn btn-success btn-sm">' . __('patient_followups.mark_complete') . '</a>';
+                }
+                return '';
+            })
+            ->addColumn('statusBadge', function ($row) {
+                $class = 'default';
+                if ($row->status == PatientFollowup::STATUS_PENDING) $class = 'warning';
+                elseif ($row->status == PatientFollowup::STATUS_COMPLETED) $class = 'success';
+                elseif ($row->status == PatientFollowup::STATUS_CANCELLED) $class = 'danger';
+                elseif ($row->status == PatientFollowup::STATUS_NO_RESPONSE) $class = 'info';
+                return '<span class="label label-' . $class . '">' . __('patient_followups.status_' . strtolower(str_replace(' ', '_', $row->status))) . '</span>';
+            })
+            ->addColumn('typeBadge', function ($row) {
+                return '<span class="label label-default">' . __('patient_followups.type_' . strtolower($row->followup_type)) . '</span>';
+            })
+            ->addColumn('overdueFlag', function ($row) {
+                if ($row->status == PatientFollowup::STATUS_PENDING && $row->scheduled_date < date('Y-m-d')) {
+                    return '<span class="label label-danger">' . __('patient_followups.overdue') . '</span>';
+                }
+                return '';
+            })
+            ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'completeBtn', 'statusBadge', 'typeBadge', 'overdueFlag'])
+            ->make(true);
+    }
+
+    /**
+     * Build the DataTables response for a specific patient's followups.
+     */
+    public function buildPatientFollowupsDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->addColumn('viewBtn', function ($row) {
+                return '<a href="#" onclick="viewFollowup(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editFollowup(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteFollowup(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->addColumn('completeBtn', function ($row) {
+                if ($row->status == PatientFollowup::STATUS_PENDING) {
+                    return '<a href="#" onclick="completeFollowup(' . $row->id . ')" class="btn btn-success btn-sm">' . __('patient_followups.mark_complete') . '</a>';
+                }
+                return '';
+            })
+            ->addColumn('typeBadge', function ($row) {
+                $class = 'default';
+                if ($row->followup_type == 'Phone') $class = 'primary';
+                elseif ($row->followup_type == 'SMS') $class = 'info';
+                elseif ($row->followup_type == 'Email') $class = 'warning';
+                elseif ($row->followup_type == 'Visit') $class = 'success';
+                return '<span class="label label-' . $class . '">' . __('patient_followups.type_' . strtolower($row->followup_type)) . '</span>';
+            })
+            ->addColumn('statusBadge', function ($row) {
+                $class = 'default';
+                if ($row->status == PatientFollowup::STATUS_PENDING) $class = 'warning';
+                elseif ($row->status == PatientFollowup::STATUS_COMPLETED) $class = 'success';
+                elseif ($row->status == PatientFollowup::STATUS_CANCELLED) $class = 'danger';
+                elseif ($row->status == PatientFollowup::STATUS_NO_RESPONSE) $class = 'info';
+                return '<span class="label label-' . $class . '">' . __('patient_followups.status_' . strtolower(str_replace(' ', '_', $row->status))) . '</span>';
+            })
+            ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'completeBtn', 'typeBadge', 'statusBadge'])
+            ->make(true);
     }
 }

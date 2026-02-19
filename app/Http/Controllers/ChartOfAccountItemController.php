@@ -14,6 +14,7 @@ class ChartOfAccountItemController extends Controller
     public function __construct(ChartOfAccountItemService $chartOfAccountItemService)
     {
         $this->chartOfAccountItemService = $chartOfAccountItemService;
+        $this->middleware('can:manage-accounting');
     }
 
     /**
@@ -49,7 +50,7 @@ class ChartOfAccountItemController extends Controller
             'account_type' => 'required'
         ])->validate();
 
-        $success = $this->chartOfAccountItemService->createItem($request->all());
+        $success = $this->chartOfAccountItemService->createItem($request->only(['name', 'account_type']));
         if ($success) {
             return FunctionsHelper::messageResponse(__('charts_of_accounts.chart_of_accounts_added_successfully'), $success);
         }
@@ -92,7 +93,7 @@ class ChartOfAccountItemController extends Controller
             'account_type' => 'required'
         ])->validate();
 
-        $success = $this->chartOfAccountItemService->updateItem($id, $request->all());
+        $success = $this->chartOfAccountItemService->updateItem($id, $request->only(['name', 'account_type']));
         if ($success) {
             return FunctionsHelper::messageResponse(__('charts_of_accounts.chart_of_accounts_updated_successfully'), $success);
         }

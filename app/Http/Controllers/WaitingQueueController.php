@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\WaitingQueueService;
-use App\WaitingQueue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Yajra\DataTables\DataTables;
 
 class WaitingQueueController extends Controller
 {
@@ -15,6 +13,7 @@ class WaitingQueueController extends Controller
     public function __construct(WaitingQueueService $waitingQueueService)
     {
         $this->waitingQueueService = $waitingQueueService;
+        $this->middleware('can:manage-schedules');
     }
 
     /**
@@ -37,78 +36,7 @@ class WaitingQueueController extends Controller
         $status = ($request->has('status') && $request->status !== '') ? $request->status : null;
         $query = $this->waitingQueueService->getQueueQuery($branchId, $status);
 
-        return DataTables::of($query)
-            ->addColumn('patient_name', function ($row) {
-                return $row->patient->name ?? '-';
-            })
-            ->addColumn('patient_phone', function ($row) {
-                $phone = $row->patient->telephone ?? '';
-                if (strlen($phone) >= 11) {
-                    return substr($phone, 0, 3) . '****' . substr($phone, -4);
-                }
-                return $phone;
-            })
-            ->addColumn('doctor_name', function ($row) {
-                return $row->doctor->surname ?? '-';
-            })
-            ->addColumn('chair_name', function ($row) {
-                return $row->chair->chair_name ?? '-';
-            })
-            ->addColumn('check_in_time_formatted', function ($row) {
-                return $row->check_in_time ? $row->check_in_time->format('H:i') : '-';
-            })
-            ->addColumn('waited_minutes', function ($row) {
-                return $row->waited_minutes;
-            })
-            ->addColumn('status_text', function ($row) {
-                return $row->status_text;
-            })
-            ->addColumn('status_badge', function ($row) {
-                $badges = [
-                    'waiting' => 'warning',
-                    'called' => 'info',
-                    'in_treatment' => 'primary',
-                    'completed' => 'success',
-                    'cancelled' => 'default',
-                    'no_show' => 'danger'
-                ];
-                $badge = $badges[$row->status] ?? 'default';
-                return '<span class="label label-' . $badge . '">' . $row->status_text . '</span>';
-            })
-            ->addColumn('action', function ($row) {
-                $actions = '';
-
-                if ($row->status === WaitingQueue::STATUS_WAITING) {
-                    $actions .= '<button class="btn btn-xs btn-info" onclick="callPatient(' . $row->id . ')">
-                        <i class="icon-volume-2"></i> ' . __('waiting_queue.call') . '
-                    </button> ';
-                }
-
-                if ($row->status === WaitingQueue::STATUS_CALLED) {
-                    $actions .= '<button class="btn btn-xs btn-primary" onclick="startTreatment(' . $row->id . ')">
-                        <i class="icon-control-play"></i> ' . __('waiting_queue.start_treatment') . '
-                    </button> ';
-                    $actions .= '<button class="btn btn-xs btn-warning" onclick="recallPatient(' . $row->id . ')">
-                        <i class="icon-volume-2"></i> ' . __('waiting_queue.recall') . '
-                    </button> ';
-                }
-
-                if ($row->status === WaitingQueue::STATUS_IN_TREATMENT) {
-                    $actions .= '<button class="btn btn-xs btn-success" onclick="completeTreatment(' . $row->id . ')">
-                        <i class="icon-check"></i> ' . __('waiting_queue.complete') . '
-                    </button> ';
-                }
-
-                if (in_array($row->status, [WaitingQueue::STATUS_WAITING, WaitingQueue::STATUS_CALLED])) {
-                    $actions .= '<button class="btn btn-xs btn-danger" onclick="cancelQueue(' . $row->id . ')">
-                        <i class="icon-close"></i> ' . __('common.cancel') . '
-                    </button>';
-                }
-
-                return $actions;
-            })
-            ->rawColumns(['status_badge', 'action'])
-            ->make(true);
+        return $this->waitingQueueService->buildQueueDataTable($query);
     }
 
     /**

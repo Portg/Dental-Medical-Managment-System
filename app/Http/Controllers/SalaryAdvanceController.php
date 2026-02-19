@@ -14,6 +14,7 @@ class SalaryAdvanceController extends Controller
     public function __construct(SalaryAdvanceService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-payroll');
     }
 
     /**
@@ -82,7 +83,10 @@ class SalaryAdvanceController extends Controller
             'payment_date' => 'required'
         ])->validate();
 
-        $status = $this->service->create($request->all());
+        $status = $this->service->create($request->only([
+            'payment_classification', 'employee', 'advance_month', 'amount',
+            'payment_method', 'payment_date',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('salary_advances.payment_captured_successfully'), 'status' => true]);
@@ -130,7 +134,10 @@ class SalaryAdvanceController extends Controller
             'payment_date' => 'required'
         ])->validate();
 
-        $status = $this->service->update($id, $request->all());
+        $status = $this->service->update($id, $request->only([
+            'payment_classification', 'employee', 'advance_month', 'amount',
+            'payment_method', 'payment_date',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('salary_advances.payment_updated_successfully'), 'status' => true]);

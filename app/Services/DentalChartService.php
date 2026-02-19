@@ -34,11 +34,9 @@ class DentalChartService
     /**
      * Get the latest appointment for a patient.
      */
-    public function getLatestAppointment(int $patientId): ?object
+    public function getLatestAppointment(int $patientId): ?Appointment
     {
-        return DB::table('appointments')
-            ->where('patient_id', $patientId)
-            ->whereNull('deleted_at')
+        return Appointment::where('patient_id', $patientId)
             ->orderBy('id', 'desc')
             ->first();
     }

@@ -12,6 +12,7 @@ class RevisitRateReportController extends Controller
     public function __construct(RevisitRateReportService $revisitRateReportService)
     {
         $this->revisitRateReportService = $revisitRateReportService;
+        $this->middleware('can:view-reports');
     }
 
     /**

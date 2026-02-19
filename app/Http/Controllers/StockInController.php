@@ -14,6 +14,7 @@ class StockInController extends Controller
     public function __construct(StockInService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-inventory');
     }
 
     /**
@@ -26,7 +27,7 @@ class StockInController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->service->getStockInList($request->all());
+            $data = $this->service->getStockInList($request->only(['status', 'start_date', 'end_date']));
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -95,7 +96,9 @@ class StockInController extends Controller
             'stock_in_date.required' => __('inventory.stock_in_date_required'),
         ])->validate();
 
-        $stockIn = $this->service->createStockIn($request->all());
+        $stockIn = $this->service->createStockIn($request->only([
+            'stock_in_date', 'supplier_id', 'notes', 'branch_id',
+        ]));
 
         if ($stockIn) {
             return response()->json([
@@ -150,7 +153,9 @@ class StockInController extends Controller
             'stock_in_date' => 'required|date',
         ])->validate();
 
-        $result = $this->service->updateStockIn($id, $request->all());
+        $result = $this->service->updateStockIn($id, $request->only([
+            'stock_in_date', 'supplier_id', 'notes', 'branch_id',
+        ]));
         return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 

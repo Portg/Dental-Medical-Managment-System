@@ -14,6 +14,7 @@ class ExpensePaymentController extends Controller
     public function __construct(ExpensePaymentService $expensePaymentService)
     {
         $this->expensePaymentService = $expensePaymentService;
+        $this->middleware('can:manage-expenses');
     }
 
     /**
@@ -94,7 +95,7 @@ class ExpensePaymentController extends Controller
             'payment_account.required' => __('validation.attributes.payment_account') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->expensePaymentService->createPayment($request->all());
+        $status = $this->expensePaymentService->createPayment($request->only(['payment_date', 'amount', 'payment_method', 'payment_account']));
         if ($status) {
             return response()->json(['message' => __('expense_items.payments.payment_captured_successfully'), 'status' => true]);
         }
@@ -144,7 +145,7 @@ class ExpensePaymentController extends Controller
             'payment_account.required' => __('validation.attributes.payment_account') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->expensePaymentService->updatePayment($id, $request->all());
+        $status = $this->expensePaymentService->updatePayment($id, $request->only(['payment_date', 'amount', 'payment_method', 'payment_account']));
         if ($status) {
             return response()->json(['message' => __('expense_items.payments.payment_updated_successfully'), 'status' => true]);
         }

@@ -24,7 +24,7 @@ class AccountingEquationService
         return AccountingEquation::create([
             'name' => $data['name'],
             'sort_by' => $data['sort_by'],
-            'active_tab' => $data['active_tab'] ?? 'no',
+            'active_tab' => !empty($data['active_tab']),
             '_who_added' => Auth::User()->id,
         ]);
     }
@@ -45,7 +45,7 @@ class AccountingEquationService
         return (bool) AccountingEquation::where('id', $id)->update([
             'name' => $data['name'],
             'sort_by' => $data['sort_by'],
-            'active_tab' => $data['active_tab'] ?? 'no',
+            'active_tab' => !empty($data['active_tab']),
             '_who_added' => Auth::User()->id,
         ]);
     }

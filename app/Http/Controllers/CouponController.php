@@ -14,6 +14,7 @@ class CouponController extends Controller
     public function __construct(CouponService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-members');
     }
 
     /**
@@ -109,7 +110,10 @@ class CouponController extends Controller
             ]);
         }
 
-        $coupon = $this->service->createCoupon(array_merge($request->all(), [
+        $coupon = $this->service->createCoupon(array_merge($request->only([
+            'code', 'name', 'type', 'value', 'min_order_amount', 'max_discount',
+            'max_uses', 'max_uses_per_user', 'starts_at', 'expires_at',
+        ]), [
             'is_active' => $request->has('is_active') ? 1 : 0,
         ]));
 
@@ -168,7 +172,10 @@ class CouponController extends Controller
             ]);
         }
 
-        $this->service->updateCoupon($id, array_merge($request->all(), [
+        $this->service->updateCoupon($id, array_merge($request->only([
+            'code', 'name', 'type', 'value', 'min_order_amount', 'max_discount',
+            'max_uses', 'max_uses_per_user', 'starts_at', 'expires_at',
+        ]), [
             'is_active' => $request->has('is_active') ? 1 : 0,
         ]));
 

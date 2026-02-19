@@ -6,7 +6,6 @@ use App\Services\PatientImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 
 class PatientImageController extends Controller
 {
@@ -15,6 +14,7 @@ class PatientImageController extends Controller
     public function __construct(PatientImageService $patientImageService)
     {
         $this->patientImageService = $patientImageService;
+        $this->middleware('can:edit-patients');
     }
 
     /**
@@ -29,27 +29,7 @@ class PatientImageController extends Controller
         if ($request->ajax()) {
             $data = $this->patientImageService->getAllImages();
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="#" onclick="viewImage(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editImage(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteImage(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->addColumn('typeBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->image_type == 'X-Ray') $class = 'primary';
-                    elseif ($row->image_type == 'CT') $class = 'warning';
-                    elseif ($row->image_type == 'Intraoral') $class = 'success';
-                    elseif ($row->image_type == 'Extraoral') $class = 'info';
-                    return '<span class="label label-' . $class . '">' . __('patient_images.type_' . strtolower(str_replace('-', '_', $row->image_type))) . '</span>';
-                })
-                ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'typeBadge'])
-                ->make(true);
+            return $this->patientImageService->buildIndexDataTable($data);
         }
 
         $patients = $this->patientImageService->getActivePatients();
@@ -69,27 +49,7 @@ class PatientImageController extends Controller
         if ($request->ajax()) {
             $data = $this->patientImageService->getPatientImages($patient_id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="#" onclick="viewImage(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editImage(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteImage(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->addColumn('typeBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->image_type == 'X-Ray') $class = 'primary';
-                    elseif ($row->image_type == 'CT') $class = 'warning';
-                    elseif ($row->image_type == 'Intraoral') $class = 'success';
-                    elseif ($row->image_type == 'Extraoral') $class = 'info';
-                    return '<span class="label label-' . $class . '">' . __('patient_images.type_' . strtolower(str_replace('-', '_', $row->image_type))) . '</span>';
-                })
-                ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'typeBadge'])
-                ->make(true);
+            return $this->patientImageService->buildPatientImagesDataTable($data);
         }
     }
 
@@ -132,7 +92,7 @@ class PatientImageController extends Controller
             ];
 
             $status = $this->patientImageService->createImage(
-                $request->all(),
+                $request->only(['title', 'patient_id', 'image_date', 'image_type']),
                 $fileInfo,
                 Auth::User()->id
             );
@@ -208,7 +168,7 @@ class PatientImageController extends Controller
             ];
         }
 
-        $status = $this->patientImageService->updateImage($id, $request->all(), $fileInfo);
+        $status = $this->patientImageService->updateImage($id, $request->only(['title', 'image_date', 'image_type']), $fileInfo);
 
         if ($status) {
             return response()->json(['message' => __('patient_images.image_updated_successfully'), 'status' => true]);

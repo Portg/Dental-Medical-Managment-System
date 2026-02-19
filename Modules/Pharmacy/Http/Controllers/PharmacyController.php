@@ -22,7 +22,8 @@ class PharmacyController extends Controller
      */
     public function index()
     {
-        return view('pharmacy::index');
+        $data = $this->service->getDashboardData();
+        return view('pharmacy::index')->with($data);
     }
 
     /**

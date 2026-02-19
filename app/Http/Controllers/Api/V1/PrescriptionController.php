@@ -14,7 +14,9 @@ class PrescriptionController extends ApiController
 {
     public function __construct(
         protected PrescriptionService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-treatments');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -71,7 +73,11 @@ class PrescriptionController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $data = $request->all();
+        $data = $request->only([
+            'drug', 'qty', 'directions', 'appointment_id', 'status',
+            'prescription_date', 'expiry_date', 'refills_allowed',
+            'doctor_signature', 'notes', 'medical_case_id', 'patient_id', 'doctor_id',
+        ]);
         $data['prescription_no'] = Prescription::generatePrescriptionNo();
         $data['_who_added'] = Auth::id();
 
@@ -94,7 +100,7 @@ class PrescriptionController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->service->updatePrescription($id, $request->all());
+        $status = $this->service->updatePrescription($id, $request->only(['drug', 'qty', 'directions']));
 
         if (!$status) {
             return $this->error('Failed to update prescription', 500);

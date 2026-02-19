@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\MedicalCase;
 use App\VitalSign;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +34,7 @@ class VitalSignService
      */
     public function getPatientIdFromCase(int $caseId): ?int
     {
-        $medicalCase = DB::table('medical_cases')->where('id', $caseId)->first();
+        $medicalCase = MedicalCase::find($caseId);
 
         return $medicalCase ? (int) $medicalCase->patient_id : null;
     }
@@ -78,7 +79,6 @@ class VitalSignService
     public function getLatestForPatient(int $patientId): ?VitalSign
     {
         return VitalSign::where('patient_id', $patientId)
-            ->whereNull('deleted_at')
             ->orderBy('recorded_at', 'desc')
             ->first();
     }

@@ -13,7 +13,12 @@ class PatientController extends ApiController
 {
     public function __construct(
         protected PatientService $patientService
-    ) {}
+    ) {
+        $this->middleware('can:view-patients')->only(['index', 'show', 'search', 'medicalHistory']);
+        $this->middleware('can:create-patients')->only(['store']);
+        $this->middleware('can:edit-patients')->only(['update']);
+        $this->middleware('can:delete-patients')->only(['destroy']);
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -61,13 +66,24 @@ class PatientController extends ApiController
 
     public function store(Request $request): JsonResponse
     {
+        $patientFields = $request->only([
+            'full_name', 'surname', 'othername', 'gender', 'telephone',
+            'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
+            'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
+            'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
+            'insurance_company_id', 'source_id', 'notes',
+            'drug_allergies', 'systemic_diseases',
+            'drug_allergies_other', 'systemic_diseases_other', 'current_medication',
+            'is_pregnant', 'is_breastfeeding',
+        ]);
+
         try {
-            $nameParts = $this->patientService->validateAndParseInput($request->all());
+            $nameParts = $this->patientService->validateAndParseInput($patientFields);
         } catch (ValidationException $e) {
             return $this->error('Validation failed', 422, $e->errors());
         }
 
-        $data    = $this->patientService->buildPatientData($request->all(), $nameParts, false);
+        $data    = $this->patientService->buildPatientData($patientFields, $nameParts, false);
         $patient = $this->patientService->createPatient($data, $request->input('tags'));
 
         if (!$patient) {
@@ -79,13 +95,24 @@ class PatientController extends ApiController
 
     public function update(Request $request, int $id): JsonResponse
     {
+        $patientFields = $request->only([
+            'full_name', 'surname', 'othername', 'gender', 'telephone',
+            'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
+            'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
+            'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
+            'insurance_company_id', 'source_id', 'notes',
+            'drug_allergies', 'systemic_diseases',
+            'drug_allergies_other', 'systemic_diseases_other', 'current_medication',
+            'is_pregnant', 'is_breastfeeding',
+        ]);
+
         try {
-            $nameParts = $this->patientService->validateAndParseInput($request->all());
+            $nameParts = $this->patientService->validateAndParseInput($patientFields);
         } catch (ValidationException $e) {
             return $this->error('Validation failed', 422, $e->errors());
         }
 
-        $data   = $this->patientService->buildPatientData($request->all(), $nameParts, true);
+        $data   = $this->patientService->buildPatientData($patientFields, $nameParts, true);
         $status = $this->patientService->updatePatient($id, $data, $request->input('tags'));
 
         if (!$status) {

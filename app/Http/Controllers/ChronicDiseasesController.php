@@ -14,6 +14,7 @@ class ChronicDiseasesController extends Controller
     public function __construct(ChronicDiseaseService $chronicDiseaseService)
     {
         $this->chronicDiseaseService = $chronicDiseaseService;
+        $this->middleware('can:edit-patients');
     }
 
     /**

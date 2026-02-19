@@ -14,6 +14,7 @@ class ProgressNoteController extends Controller
     public function __construct(ProgressNoteService $progressNoteService)
     {
         $this->progressNoteService = $progressNoteService;
+        $this->middleware('can:edit-patients');
     }
 
     /**

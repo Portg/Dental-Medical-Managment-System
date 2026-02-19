@@ -14,6 +14,8 @@ class InvoiceItemController extends Controller
     public function __construct(InvoiceItemService $invoiceItemService)
     {
         $this->invoiceItemService = $invoiceItemService;
+
+        $this->middleware('can:edit-invoices');
     }
 
     /**
@@ -149,7 +151,7 @@ class InvoiceItemController extends Controller
             'medical_service_id' => 'required'
         ])->validate();
 
-        $status = $this->invoiceItemService->updateItem($id, $request->all());
+        $status = $this->invoiceItemService->updateItem($id, $request->only(['price', 'qty', 'doctor_id', 'medical_service_id']));
         if ($status) {
             return response()->json(['message' => __('invoices.invoice_item_updated_successfully'), 'status' => true]);
         }

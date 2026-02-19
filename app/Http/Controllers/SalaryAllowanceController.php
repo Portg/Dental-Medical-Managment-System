@@ -16,6 +16,7 @@ class SalaryAllowanceController extends Controller
     public function __construct(SalaryAllowanceService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-payroll');
     }
 
     /**
@@ -78,7 +79,7 @@ class SalaryAllowanceController extends Controller
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
 
-        $success = $this->service->createAllowance($request->all(), Auth::User()->id);
+        $success = $this->service->createAllowance($request->only(['allowance', 'amount']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('messages.salary_allowance_added_successfully'), $success);
     }
 
@@ -121,7 +122,7 @@ class SalaryAllowanceController extends Controller
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
 
-        $success = $this->service->updateAllowance($id, $request->all(), Auth::User()->id);
+        $success = $this->service->updateAllowance($id, $request->only(['allowance', 'amount']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('messages.salary_allowance_updated_successfully'), $success);
     }
 

@@ -13,7 +13,9 @@ class InvoicePaymentController extends ApiController
 {
     public function __construct(
         protected InvoicePaymentService $service
-    ) {}
+    ) {
+        $this->middleware('can:edit-invoices');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -58,7 +60,7 @@ class InvoicePaymentController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $payment = $this->service->createPayment($request->all());
+        $payment = $this->service->createPayment($request->only(['amount', 'payment_method', 'payment_date', 'invoice_id', 'account_name', 'cheque_no', 'bank_name', 'insurance_company_id', 'self_account_id']));
 
         if (!$payment) {
             return $this->error('Failed to create payment', 500);
@@ -86,7 +88,7 @@ class InvoicePaymentController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->service->updatePayment($id, $request->all());
+        $status = $this->service->updatePayment($id, $request->only(['amount', 'payment_method', 'payment_date', 'account_name', 'cheque_no', 'bank_name', 'insurance_company_id', 'self_account_id']));
 
         if (!$status) {
             return $this->error('Failed to update payment', 500);

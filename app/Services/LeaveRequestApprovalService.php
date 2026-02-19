@@ -29,7 +29,7 @@ class LeaveRequestApprovalService
     {
         return (bool) leaveRequest::where('id', $id)->update([
             'action_date' => date('yyy-mm-dd'),
-            'status' => 'Approved',
+            'status' => leaveRequest::STATUS_APPROVED,
             '_approved_by' => $approvedBy,
         ]);
     }
@@ -41,7 +41,7 @@ class LeaveRequestApprovalService
     {
         return (bool) leaveRequest::where('id', $id)->update([
             'action_date' => date('yyy-mm-dd'),
-            'status' => 'Rejected',
+            'status' => leaveRequest::STATUS_REJECTED,
             '_approved_by' => $approvedBy,
         ]);
     }

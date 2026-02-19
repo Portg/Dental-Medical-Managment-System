@@ -14,6 +14,7 @@ class AllergyController extends Controller
     public function __construct(AllergyService $allergyService)
     {
         $this->allergyService = $allergyService;
+        $this->middleware('can:edit-patients');
     }
 
     /**

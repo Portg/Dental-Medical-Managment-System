@@ -15,6 +15,7 @@ class CommissionRuleController extends Controller
     public function __construct(CommissionRuleService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-doctor-claims');
     }
 
     public function index(Request $request)
@@ -71,7 +72,7 @@ class CommissionRuleController extends Controller
             'commission_mode.required' => __('commission_rules.mode_required'),
         ])->validate();
 
-        $success = $this->service->create($request->all());
+        $success = $this->service->create($request->only(['rule_name', 'commission_mode']));
 
         return FunctionsHelper::messageResponse(__('commission_rules.added_successfully'), $success);
     }
@@ -91,7 +92,7 @@ class CommissionRuleController extends Controller
             'commission_mode.required' => __('commission_rules.mode_required'),
         ])->validate();
 
-        $success = $this->service->update($id, $request->all());
+        $success = $this->service->update($id, $request->only(['rule_name', 'commission_mode']));
 
         return FunctionsHelper::messageResponse(__('commission_rules.updated_successfully'), $success);
     }

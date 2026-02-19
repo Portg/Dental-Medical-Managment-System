@@ -13,7 +13,9 @@ class MedicalCaseController extends ApiController
 {
     public function __construct(
         protected MedicalCaseService $medicalCaseService
-    ) {}
+    ) {
+        $this->middleware('can:manage-medical-cases');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -81,7 +83,13 @@ class MedicalCaseController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $data = $this->medicalCaseService->buildCaseData($request->all());
+        $data = $this->medicalCaseService->buildCaseData($request->only([
+            'patient_id', 'case_date', 'chief_complaint', 'history_of_present_illness',
+            'examination', 'examination_teeth', 'auxiliary_examination', 'related_images',
+            'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
+            'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
+            'visit_type', 'doctor_id',
+        ]));
         $case = $this->medicalCaseService->createCase($data, $isDraft);
 
         if (!$case) {
@@ -114,7 +122,13 @@ class MedicalCaseController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $data   = $this->medicalCaseService->buildCaseData($request->all(), true);
+        $data   = $this->medicalCaseService->buildCaseData($request->only([
+            'patient_id', 'case_date', 'chief_complaint', 'history_of_present_illness',
+            'examination', 'examination_teeth', 'auxiliary_examination', 'related_images',
+            'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
+            'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
+            'visit_type', 'doctor_id',
+        ]), true);
         $result = $this->medicalCaseService->updateCase(
             $id,
             $data,

@@ -9,6 +9,7 @@ use App\Refund;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\DataTables;
 
 class RefundService
 {
@@ -79,7 +80,7 @@ class RefundService
         $refund = Refund::with(['invoice', 'patient', 'approvedBy', 'whoAdded', 'branch'])
             ->findOrFail($id);
 
-        if ($refund->approval_status !== 'approved') {
+        if ($refund->approval_status !== Refund::APPROVAL_APPROVED) {
             abort(403, __('invoices.refund_not_approved_for_print'));
         }
 
@@ -116,7 +117,7 @@ class RefundService
 
         // BR-040: Check existing refund
         $existingRefund = Refund::where('invoice_id', $data['invoice_id'])
-            ->whereIn('approval_status', ['pending', 'approved'])
+            ->whereIn('approval_status', [Refund::APPROVAL_PENDING, Refund::APPROVAL_APPROVED])
             ->first();
         if ($existingRefund) {
             return ['message' => __('invoices.refund_already_exists'), 'status' => false];
@@ -134,12 +135,12 @@ class RefundService
         DB::beginTransaction();
         try {
             // BR-037, BR-038: Determine approval status
-            $approvalStatus = 'pending';
+            $approvalStatus = Refund::APPROVAL_PENDING;
             $approvedBy = null;
             $approvedAt = null;
 
             if ($data['refund_amount'] <= self::REFUND_APPROVAL_THRESHOLD) {
-                $approvalStatus = 'approved';
+                $approvalStatus = Refund::APPROVAL_APPROVED;
                 $approvedBy = Auth::id();
                 $approvedAt = now();
             }
@@ -159,13 +160,13 @@ class RefundService
                 '_who_added' => Auth::id(),
             ]);
 
-            if ($approvalStatus === 'approved') {
+            if ($approvalStatus === Refund::APPROVAL_APPROVED) {
                 $this->executeRefund($refund, $invoice);
             }
 
             DB::commit();
 
-            $message = $approvalStatus === 'approved'
+            $message = $approvalStatus === Refund::APPROVAL_APPROVED
                 ? __('invoices.refund_processed_successfully')
                 : __('invoices.refund_pending_approval');
 
@@ -173,7 +174,7 @@ class RefundService
                 'message' => $message,
                 'status' => true,
                 'refund_id' => $refund->id,
-                'needs_approval' => $approvalStatus === 'pending',
+                'needs_approval' => $approvalStatus === Refund::APPROVAL_PENDING,
             ];
         } catch (\Exception $e) {
             DB::rollBack();
@@ -190,13 +191,13 @@ class RefundService
     {
         $refund = Refund::findOrFail($id);
 
-        if ($refund->approval_status !== 'pending') {
+        if ($refund->approval_status !== Refund::APPROVAL_PENDING) {
             return ['message' => __('invoices.refund_not_pending'), 'status' => false];
         }
 
         DB::beginTransaction();
         try {
-            $refund->approval_status = 'approved';
+            $refund->approval_status = Refund::APPROVAL_APPROVED;
             $refund->approved_by = $approverId;
             $refund->approved_at = now();
             $refund->save();
@@ -221,11 +222,11 @@ class RefundService
     {
         $refund = Refund::findOrFail($id);
 
-        if ($refund->approval_status !== 'pending') {
+        if ($refund->approval_status !== Refund::APPROVAL_PENDING) {
             return ['message' => __('invoices.refund_not_pending'), 'status' => false];
         }
 
-        $refund->approval_status = 'rejected';
+        $refund->approval_status = Refund::APPROVAL_REJECTED;
         $refund->approved_by = $approverId;
         $refund->approved_at = now();
         $refund->rejection_reason = $reason;
@@ -243,13 +244,118 @@ class RefundService
     {
         $refund = Refund::findOrFail($id);
 
-        if ($refund->approval_status === 'approved') {
+        if ($refund->approval_status === Refund::APPROVAL_APPROVED) {
             return ['message' => __('invoices.cannot_delete_approved_refund'), 'status' => false];
         }
 
         $refund->delete();
 
         return ['message' => __('invoices.refund_deleted_successfully'), 'status' => true];
+    }
+
+    // ─── Private helpers ─────────────────────────────────────────
+
+    // ─── DataTable builders ─────────────────────────────────────
+
+    /**
+     * Build DataTables response for the refund index page.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('refund_no', function ($row) {
+                return '<a href="' . url('refunds/' . $row->id) . '">' . e($row->refund_no) . '</a>';
+            })
+            ->addColumn('patient_name', function ($row) {
+                return $row->patient ? $row->patient->full_name : '-';
+            })
+            ->addColumn('invoice_no', function ($row) {
+                return $row->invoice ? '<a href="' . url('invoices/' . $row->invoice_id) . '">' . e($row->invoice->invoice_no) . '</a>' : '-';
+            })
+            ->addColumn('refund_amount', function ($row) {
+                return number_format($row->refund_amount, 2);
+            })
+            ->addColumn('refund_date', function ($row) {
+                return $row->refund_date ? $row->refund_date->format('Y-m-d') : '-';
+            })
+            ->addColumn('status', function ($row) {
+                $statusClasses = [
+                    Refund::APPROVAL_PENDING => 'label-warning',
+                    Refund::APPROVAL_APPROVED => 'label-success',
+                    Refund::APPROVAL_REJECTED => 'label-danger',
+                ];
+                $statusLabels = [
+                    Refund::APPROVAL_PENDING => __('invoices.refund_pending'),
+                    Refund::APPROVAL_APPROVED => __('invoices.refund_approved'),
+                    Refund::APPROVAL_REJECTED => __('invoices.refund_rejected'),
+                ];
+                $class = $statusClasses[$row->approval_status] ?? 'label-default';
+                $label = $statusLabels[$row->approval_status] ?? $row->approval_status;
+                return '<span class="label ' . $class . '">' . $label . '</span>';
+            })
+            ->addColumn('action', function ($row) {
+                $btn = '<div class="btn-group">';
+                $btn .= '<button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown">';
+                $btn .= __('common.action') . ' <i class="fa fa-angle-down"></i></button>';
+                $btn .= '<ul class="dropdown-menu" role="menu">';
+                $btn .= '<li><a href="' . url('refunds/' . $row->id) . '">' . __('common.view') . '</a></li>';
+
+                if ($row->approval_status === Refund::APPROVAL_PENDING) {
+                    $btn .= '<li><a href="#" onclick="approveRefund(' . $row->id . ')">' . __('invoices.approve_refund') . '</a></li>';
+                    $btn .= '<li><a href="#" onclick="rejectRefund(' . $row->id . ')">' . __('invoices.reject_refund') . '</a></li>';
+                }
+
+                if ($row->approval_status === Refund::APPROVAL_APPROVED) {
+                    $btn .= '<li><a href="' . url('refunds/' . $row->id . '/print') . '" target="_blank">' . __('print.print_refund') . '</a></li>';
+                }
+
+                $btn .= '<li class="divider"></li>';
+                $btn .= '<li><a href="#" onclick="deleteRefund(' . $row->id . ')" class="text-danger">' . __('common.delete') . '</a></li>';
+                $btn .= '</ul></div>';
+                return $btn;
+            })
+            ->rawColumns(['refund_no', 'invoice_no', 'status', 'action'])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTables response for pending refund approvals.
+     */
+    public function buildPendingApprovalsDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('refund_no', function ($row) {
+                return $row->refund_no;
+            })
+            ->addColumn('patient_name', function ($row) {
+                return $row->patient ? $row->patient->full_name : '-';
+            })
+            ->addColumn('refund_amount', function ($row) {
+                return number_format($row->refund_amount, 2);
+            })
+            ->addColumn('refund_reason', function ($row) {
+                return $row->refund_reason;
+            })
+            ->addColumn('requested_by', function ($row) {
+                return $row->whoAdded ? $row->whoAdded->othername : '-';
+            })
+            ->addColumn('requested_at', function ($row) {
+                return $row->created_at->format('Y-m-d H:i');
+            })
+            ->addColumn('action', function ($row) {
+                return '
+                        <button class="btn btn-sm btn-success" onclick="approveRefund(' . $row->id . ')">
+                            <i class="fa fa-check"></i> ' . __('invoices.approve') . '
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectRefund(' . $row->id . ')">
+                            <i class="fa fa-times"></i> ' . __('invoices.reject') . '
+                        </button>
+                    ';
+            })
+            ->rawColumns(['action'])
+            ->make(true);
     }
 
     // ─── Private helpers ─────────────────────────────────────────

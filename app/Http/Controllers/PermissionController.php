@@ -20,6 +20,8 @@ class PermissionController extends Controller
     public function __construct(PermissionService $permissionService)
     {
         $this->permissionService = $permissionService;
+
+        $this->middleware('can:manage-permissions');
     }
 
     /**

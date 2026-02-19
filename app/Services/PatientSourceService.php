@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Patient;
 use App\PatientSource;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +24,8 @@ class PatientSourceService
             ->whereNull('patient_sources.deleted_at')
             ->select(
                 'patient_sources.*',
-                'users.surname as added_by_name'
+                'users.surname as added_by_name',
+                DB::raw("(SELECT COUNT(*) FROM patients WHERE source_id = patient_sources.id AND deleted_at IS NULL) as patients_count")
             );
 
         // Quick search filter
@@ -109,10 +111,7 @@ class PatientSourceService
      */
     public function isSourceInUse(int $id): bool
     {
-        return DB::table('patients')
-            ->where('source_id', $id)
-            ->whereNull('deleted_at')
-            ->count() > 0;
+        return Patient::where('source_id', $id)->exists();
     }
 
     /**

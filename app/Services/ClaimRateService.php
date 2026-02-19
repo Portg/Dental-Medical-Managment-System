@@ -44,7 +44,7 @@ class ClaimRateService
         // Check if there is a previous rate for this doctor and deactivate it
         $hasClaim = ClaimRate::where('doctor_id', $data['doctor_id'])->first();
         if ($hasClaim !== null) {
-            ClaimRate::where('doctor_id', $data['doctor_id'])->update(['status' => 'deactivated']);
+            ClaimRate::where('doctor_id', $data['doctor_id'])->update(['status' => ClaimRate::STATUS_DEACTIVATED]);
         }
 
         return ClaimRate::create([

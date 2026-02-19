@@ -19,7 +19,8 @@ class PatientTagService
             ->whereNull('patient_tags.deleted_at')
             ->select(
                 'patient_tags.*',
-                'users.surname as added_by_name'
+                'users.surname as added_by_name',
+                DB::raw("(SELECT COUNT(*) FROM patient_tag_pivot WHERE tag_id = patient_tags.id) as patients_count")
             );
 
         // Quick search filter

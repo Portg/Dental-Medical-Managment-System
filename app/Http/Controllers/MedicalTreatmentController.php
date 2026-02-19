@@ -12,6 +12,7 @@ class MedicalTreatmentController extends Controller
     public function __construct(MedicalTreatmentService $service)
     {
         $this->service = $service;
+        $this->middleware('can:edit-patients');
     }
 
     /**

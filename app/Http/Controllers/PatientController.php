@@ -3,12 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
-use App\Http\Helper\NameHelper;
 use App\Services\PatientService;
 use Illuminate\Http\Request;
-use Yajra\DataTables\DataTables;
 use App\Exports\PatientExport;
-use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class PatientController extends Controller
@@ -18,6 +15,11 @@ class PatientController extends Controller
     public function __construct(PatientService $patientService)
     {
         $this->patientService = $patientService;
+
+        $this->middleware('can:view-patients')->only(['index', 'show', 'filterPatients', 'patientMedicalHistory', 'exportPatients']);
+        $this->middleware('can:create-patients')->only(['create', 'store']);
+        $this->middleware('can:edit-patients')->only(['edit', 'update']);
+        $this->middleware('can:delete-patients')->only(['destroy']);
     }
 
     /**
@@ -34,85 +36,12 @@ class PatientController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->patientService->getPatientList($request->all());
+            $data = $this->patientService->getPatientList($request->only([
+                'quick_search', 'search', 'start_date', 'end_date',
+                'insurance_company', 'filter_source', 'filter_tags',
+            ]));
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->filter(function ($instance) use ($request) {
-                })
-                ->addColumn('full_name', function ($row) {
-                    return NameHelper::join($row->surname, $row->othername);
-                })
-                ->addColumn('gender', function ($row) {
-                    if ($row->gender == 'Male') {
-                        return __('patient.male');
-                    } elseif ($row->gender == 'Female') {
-                        return __('patient.female');
-                    }
-                    return $row->gender ?: '';
-                })
-                ->addColumn('patient_no', function ($row) {
-                    return '<a href="#"> ' . $row->patient_no . '</a>';
-                })
-                ->addColumn('tags_badges', function ($row) {
-                    $tags = DB::table('patient_tag_pivot')
-                        ->join('patient_tags', 'patient_tags.id', 'patient_tag_pivot.tag_id')
-                        ->where('patient_tag_pivot.patient_id', $row->id)
-                        ->select('patient_tags.name')
-                        ->pluck('name')
-                        ->toArray();
-                    return count($tags) > 0 ? implode(', ', $tags) : '';
-                })
-                ->addColumn('source_name', function ($row) {
-                    return $row->source_name ?: '';
-                })
-                ->addColumn('medical_insurance', function ($row) {
-                    if ($row->has_insurance == "Yes" && $row->insurance_company_id != null) {
-                        return $row->name;
-                    } elseif ($row->has_insurance == "Yes") {
-                        return __('common.yes');
-                    } else {
-                        return __('common.no');
-                    }
-                })
-                ->addColumn('Medical_History', function ($row) {
-                    return '<a href="' . url('/medical-history/' . $row->id) . '" class="btn btn-success">' . __('patient.medical_history') . '</a>';
-                })
-                ->addColumn('addedBy', function ($row) {
-                    return $row->addedBy;
-                })
-                ->addColumn('status', function ($row) {
-                    if ($row->deleted_at != null) {
-                        return '<span class="text-danger">' . __('common.inactive') . '</span>';
-                    } else {
-                        return '<span class="text-primary">' . __('common.active') . '</span>';
-                    }
-                })
-                ->addColumn('action', function ($row) {
-                    return '
-                      <div class="btn-group">
-                        <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> ' . __('common.action') . '
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                            <li>
-                                <a href="' . url('patients/' . $row->id) . '">' . __('patient.patient_details') . '</a>
-                            </li>
-                            <li>
-                                <a href="#" onclick="editRecord(' . $row->id . ')">' . __('patient.patient_profile') . '</a>
-                            </li>
-                             <li>
-                               <a href="#" onclick="getPatientMedicalHistory(' . $row->id . ')" >' . __('patient.patient_history') . '</a>
-                            </li>
-                             <li>
-                               <a href="#" onclick="deleteRecord(' . $row->id . ')" >' . __('patient.delete_patient') . '</a>
-                            </li>
-                        </ul>
-                    </div>
-                    ';
-                })
-                ->rawColumns(['patient_no', 'medical_insurance', 'Medical_History', 'status', 'action'])
-                ->make(true);
+            return $this->patientService->buildIndexDataTable($data);
         }
         return view('patients.index');
     }
@@ -163,8 +92,18 @@ class PatientController extends Controller
      */
     public function store(Request $request)
     {
-        $nameParts = $this->patientService->validateAndParseInput($request->all());
-        $data = $this->patientService->buildPatientData($request->all(), $nameParts);
+        $patientFields = $request->only([
+            'full_name', 'surname', 'othername', 'gender', 'telephone',
+            'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
+            'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
+            'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
+            'insurance_company_id', 'source_id', 'notes',
+            'drug_allergies', 'systemic_diseases',
+            'drug_allergies_other', 'systemic_diseases_other', 'current_medication',
+            'is_pregnant', 'is_breastfeeding',
+        ]);
+        $nameParts = $this->patientService->validateAndParseInput($patientFields);
+        $data = $this->patientService->buildPatientData($patientFields, $nameParts);
         $patient = $this->patientService->createPatient($data, $request->tags);
 
         if ($patient) {
@@ -206,8 +145,18 @@ class PatientController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $nameParts = $this->patientService->validateAndParseInput($request->all());
-        $data = $this->patientService->buildPatientData($request->all(), $nameParts, isUpdate: true);
+        $patientFields = $request->only([
+            'full_name', 'surname', 'othername', 'gender', 'telephone',
+            'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
+            'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
+            'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
+            'insurance_company_id', 'source_id', 'notes',
+            'drug_allergies', 'systemic_diseases',
+            'drug_allergies_other', 'systemic_diseases_other', 'current_medication',
+            'is_pregnant', 'is_breastfeeding',
+        ]);
+        $nameParts = $this->patientService->validateAndParseInput($patientFields);
+        $data = $this->patientService->buildPatientData($patientFields, $nameParts, isUpdate: true);
         $status = $this->patientService->updatePatient($id, $data, $request->tags);
 
         if ($status) {

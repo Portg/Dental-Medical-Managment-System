@@ -14,6 +14,7 @@ class SurgeriesController extends Controller
     public function __construct(SurgeryService $surgeryService)
     {
         $this->surgeryService = $surgeryService;
+        $this->middleware('can:edit-patients');
     }
 
     /**

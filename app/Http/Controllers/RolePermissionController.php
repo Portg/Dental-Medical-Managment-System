@@ -14,6 +14,8 @@ class RolePermissionController extends Controller
     public function __construct(RolePermissionService $rolePermissionService)
     {
         $this->rolePermissionService = $rolePermissionService;
+
+        $this->middleware('can:manage-role-permissions');
     }
 
     public function index(Request $request)

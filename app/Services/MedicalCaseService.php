@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Diagnosis;
+use App\Http\Helper\ActionColumnHelper;
 use App\MedicalCase;
 use App\Patient;
 use App\TreatmentPlan;
@@ -11,6 +12,7 @@ use App\VitalSign;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\DataTables;
 
 class MedicalCaseService
 {
@@ -156,7 +158,7 @@ class MedicalCaseService
             ->limit(10)
             ->get();
 
-        $hasExistingCase = MedicalCase::where('patient_id', $patientId)->whereNull('deleted_at')->exists();
+        $hasExistingCase = MedicalCase::where('patient_id', $patientId)->exists();
 
         return compact('patient', 'doctors', 'historyRecords', 'hasExistingCase');
     }
@@ -195,7 +197,7 @@ class MedicalCaseService
 
         if (!$isUpdate) {
             $data['case_no'] = MedicalCase::CaseNumber();
-            $data['status'] = 'Open';
+            $data['status'] = MedicalCase::STATUS_OPEN;
             $data['_who_added'] = Auth::user()->id;
         }
 
@@ -235,8 +237,8 @@ class MedicalCaseService
 
         $data['is_draft'] = $isDraft;
 
-        if ($closingStatus == 'Closed') {
-            $data['status'] = 'Closed';
+        if ($closingStatus == MedicalCase::STATUS_CLOSED) {
+            $data['status'] = MedicalCase::STATUS_CLOSED;
             $data['closed_date'] = now();
             $data['closing_notes'] = $closingNotes;
         }
@@ -337,10 +339,65 @@ class MedicalCaseService
     }
 
     /**
+     * Build DataTable response for the medical cases index listing.
+     *
+     * @param Collection $data
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
+    public function buildIndexDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('statusBadge', function ($row) {
+                $class = 'default';
+                if ($row->status == MedicalCase::STATUS_OPEN) $class = 'success';
+                elseif ($row->status == 'In Progress') $class = 'info'; // NOTE: no STATUS_IN_PROGRESS constant; value kept as-is
+                elseif ($row->status == MedicalCase::STATUS_CLOSED) $class = 'danger';
+                elseif ($row->status == MedicalCase::STATUS_FOLLOW_UP) $class = 'warning';
+                $statusKey = strtolower(str_replace([' ', '-'], '_', $row->status));
+                return '<span class="label label-' . $class . '">' . __('medical_cases.status_' . $statusKey) . '</span>';
+            })
+            ->addColumn('action', function ($row) {
+                return ActionColumnHelper::make($row->id)
+                    ->primaryIf($row->deleted_at == null, 'edit')
+                    ->add('delete')
+                    ->render();
+            })
+            ->rawColumns(['statusBadge', 'action'])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTable response for a patient's medical cases listing.
+     *
+     * @param Collection $data
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
+    public function buildPatientCasesDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('viewBtn', function ($row) {
+                return '<a href="' . url('medical-cases/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+            })
+            ->addColumn('statusBadge', function ($row) {
+                $class = 'default';
+                if ($row->status == MedicalCase::STATUS_OPEN) $class = 'success';
+                elseif ($row->status == MedicalCase::STATUS_CLOSED) $class = 'danger';
+                elseif ($row->status == MedicalCase::STATUS_FOLLOW_UP) $class = 'warning';
+                return '<span class="label label-' . $class . '">' . __('medical_cases.status_' . strtolower(str_replace('-', '_', $row->status))) . '</span>';
+            })
+            ->rawColumns(['viewBtn', 'statusBadge'])
+            ->make(true);
+    }
+
+    /**
      * Get active doctors.
      */
     private function getDoctors(): Collection
     {
-        return User::where('is_doctor', 'Yes')->whereNull('deleted_at')->orderBy('surname')->get();
+        return User::where('is_doctor', true)->whereNull('deleted_at')->orderBy('surname')->get();
     }
 }

@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Helper\NameHelper;
 use App\Invoice;
 use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 use PDF;
 
 /**
@@ -22,6 +20,7 @@ class RefundController extends Controller
     public function __construct(RefundService $refundService)
     {
         $this->refundService = $refundService;
+        $this->middleware('can:manage-refunds');
     }
 
     /**
@@ -30,63 +29,16 @@ class RefundController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->refundService->getRefundList($request->all());
+            $data = $this->refundService->getRefundList([
+                'search'     => $request->input('search.value', ''),
+                'status'     => $request->input('status'),
+                'start_date' => $request->input('start_date'),
+                'end_date'   => $request->input('end_date'),
+                'page'       => $request->input('page'),
+                'per_page'   => $request->input('per_page'),
+            ]);
 
-            return DataTables::of($data)
-                ->addIndexColumn()
-                ->addColumn('refund_no', function ($row) {
-                    return '<a href="' . url('refunds/' . $row->id) . '">' . $row->refund_no . '</a>';
-                })
-                ->addColumn('patient_name', function ($row) {
-                    return $row->patient ? $row->patient->full_name : '-';
-                })
-                ->addColumn('invoice_no', function ($row) {
-                    return $row->invoice ? '<a href="' . url('invoices/' . $row->invoice_id) . '">' . $row->invoice->invoice_no . '</a>' : '-';
-                })
-                ->addColumn('refund_amount', function ($row) {
-                    return number_format($row->refund_amount, 2);
-                })
-                ->addColumn('refund_date', function ($row) {
-                    return $row->refund_date ? $row->refund_date->format('Y-m-d') : '-';
-                })
-                ->addColumn('status', function ($row) {
-                    $statusClasses = [
-                        'pending' => 'label-warning',
-                        'approved' => 'label-success',
-                        'rejected' => 'label-danger',
-                    ];
-                    $statusLabels = [
-                        'pending' => __('invoices.refund_pending'),
-                        'approved' => __('invoices.refund_approved'),
-                        'rejected' => __('invoices.refund_rejected'),
-                    ];
-                    $class = $statusClasses[$row->approval_status] ?? 'label-default';
-                    $label = $statusLabels[$row->approval_status] ?? $row->approval_status;
-                    return '<span class="label ' . $class . '">' . $label . '</span>';
-                })
-                ->addColumn('action', function ($row) {
-                    $btn = '<div class="btn-group">';
-                    $btn .= '<button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown">';
-                    $btn .= __('common.action') . ' <i class="fa fa-angle-down"></i></button>';
-                    $btn .= '<ul class="dropdown-menu" role="menu">';
-                    $btn .= '<li><a href="' . url('refunds/' . $row->id) . '">' . __('common.view') . '</a></li>';
-
-                    if ($row->approval_status === 'pending') {
-                        $btn .= '<li><a href="#" onclick="approveRefund(' . $row->id . ')">' . __('invoices.approve_refund') . '</a></li>';
-                        $btn .= '<li><a href="#" onclick="rejectRefund(' . $row->id . ')">' . __('invoices.reject_refund') . '</a></li>';
-                    }
-
-                    if ($row->approval_status === 'approved') {
-                        $btn .= '<li><a href="' . url('refunds/' . $row->id . '/print') . '" target="_blank">' . __('print.print_refund') . '</a></li>';
-                    }
-
-                    $btn .= '<li class="divider"></li>';
-                    $btn .= '<li><a href="#" onclick="deleteRefund(' . $row->id . ')" class="text-danger">' . __('common.delete') . '</a></li>';
-                    $btn .= '</ul></div>';
-                    return $btn;
-                })
-                ->rawColumns(['refund_no', 'invoice_no', 'status', 'action'])
-                ->make(true);
+            return $this->refundService->buildIndexDataTable($data);
         }
 
         return view('refunds.index');
@@ -127,7 +79,7 @@ class RefundController extends Controller
             return response()->json(['message' => $validator->errors()->first(), 'status' => false]);
         }
 
-        return response()->json($this->refundService->createRefund($request->all()));
+        return response()->json($this->refundService->createRefund($request->only(['invoice_id', 'refund_amount', 'refund_reason', 'refund_method'])));
     }
 
     /**
@@ -192,38 +144,7 @@ class RefundController extends Controller
         if ($request->ajax()) {
             $data = $this->refundService->getPendingApprovals();
 
-            return DataTables::of($data)
-                ->addIndexColumn()
-                ->addColumn('refund_no', function ($row) {
-                    return $row->refund_no;
-                })
-                ->addColumn('patient_name', function ($row) {
-                    return $row->patient ? $row->patient->full_name : '-';
-                })
-                ->addColumn('refund_amount', function ($row) {
-                    return number_format($row->refund_amount, 2);
-                })
-                ->addColumn('refund_reason', function ($row) {
-                    return $row->refund_reason;
-                })
-                ->addColumn('requested_by', function ($row) {
-                    return $row->whoAdded ? $row->whoAdded->othername : '-';
-                })
-                ->addColumn('requested_at', function ($row) {
-                    return $row->created_at->format('Y-m-d H:i');
-                })
-                ->addColumn('action', function ($row) {
-                    return '
-                        <button class="btn btn-sm btn-success" onclick="approveRefund(' . $row->id . ')">
-                            <i class="fa fa-check"></i> ' . __('invoices.approve') . '
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectRefund(' . $row->id . ')">
-                            <i class="fa fa-times"></i> ' . __('invoices.reject') . '
-                        </button>
-                    ';
-                })
-                ->rawColumns(['action'])
-                ->make(true);
+            return $this->refundService->buildPendingApprovalsDataTable($data);
         }
 
         return view('refunds.pending_approvals');

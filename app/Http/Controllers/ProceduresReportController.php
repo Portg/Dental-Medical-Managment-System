@@ -16,6 +16,7 @@ class ProceduresReportController extends Controller
     public function __construct(ProceduresReportService $proceduresReportService)
     {
         $this->proceduresReportService = $proceduresReportService;
+        $this->middleware('can:view-reports');
     }
 
     /**
@@ -24,14 +25,14 @@ class ProceduresReportController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['start_date']) && !empty($_GET['end_date']) && !empty($_GET['search'])) {
+            if (!empty($request->start_date) && !empty($request->end_date) && !empty($request->search)) {
                 FunctionsHelper::storeDateFilter($request);
                 $data = $this->proceduresReportService->getProceduresIncome(
                     $request->start_date,
                     $request->end_date,
                     $request->get('search')
                 );
-            } else if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
+            } else if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
                 $data = $this->proceduresReportService->getProceduresIncome(
                     $request->start_date,

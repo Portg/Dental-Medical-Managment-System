@@ -19,7 +19,7 @@ class RevisitRateReportService
         $endDate = $endDateStr ? Carbon::parse($endDateStr) : Carbon::now()->endOfMonth();
 
         $currentPeriodPatients = Appointment::whereBetween('start_date', [$startDate, $endDate])
-            ->whereIn('status', ['completed', 'checked_in', 'in_progress'])
+            ->whereIn('status', [Appointment::STATUS_COMPLETED, Appointment::STATUS_CHECKED_IN, Appointment::STATUS_IN_PROGRESS])
             ->distinct('patient_id')
             ->count('patient_id');
 
@@ -60,11 +60,11 @@ class RevisitRateReportService
     {
         return Patient::whereHas('appointments', function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('start_date', [$startDate, $endDate])
-                    ->whereIn('status', ['completed', 'checked_in', 'in_progress']);
+                    ->whereIn('status', [Appointment::STATUS_COMPLETED, Appointment::STATUS_CHECKED_IN, Appointment::STATUS_IN_PROGRESS]);
             })
             ->whereDoesntHave('appointments', function ($query) use ($startDate) {
                 $query->where('start_date', '<', $startDate)
-                    ->whereIn('status', ['completed', 'checked_in', 'in_progress']);
+                    ->whereIn('status', [Appointment::STATUS_COMPLETED, Appointment::STATUS_CHECKED_IN, Appointment::STATUS_IN_PROGRESS]);
             })
             ->count();
     }
@@ -82,7 +82,7 @@ class RevisitRateReportService
             $monthEnd = $now->copy()->subMonths($i)->endOfMonth();
 
             $totalPatients = Appointment::whereBetween('start_date', [$monthStart, $monthEnd])
-                ->whereIn('status', ['completed', 'checked_in', 'in_progress'])
+                ->whereIn('status', [Appointment::STATUS_COMPLETED, Appointment::STATUS_CHECKED_IN, Appointment::STATUS_IN_PROGRESS])
                 ->distinct('patient_id')
                 ->count('patient_id');
 
@@ -124,7 +124,7 @@ class RevisitRateReportService
                 DB::raw('COUNT(a.id) as total_appointments')
             )
             ->whereBetween('a.start_date', [$startDate, $endDate])
-            ->whereIn('a.status', ['completed', 'checked_in', 'in_progress'])
+            ->whereIn('a.status', [Appointment::STATUS_COMPLETED, Appointment::STATUS_CHECKED_IN, Appointment::STATUS_IN_PROGRESS])
             ->whereNull('a.deleted_at')
             ->groupBy('u.id', 'u.surname')
             ->orderByDesc('total_patients')
@@ -171,7 +171,7 @@ class RevisitRateReportService
         $cutoffDate = Carbon::now()->subDays($days);
 
         return Patient::select('patients.*')
-            ->join(DB::raw('(SELECT patient_id, MAX(start_date) as last_visit FROM appointments WHERE status IN ("completed", "checked_in", "in_progress") AND deleted_at IS NULL GROUP BY patient_id) as last_appointments'),
+            ->join(DB::raw('(SELECT patient_id, MAX(start_date) as last_visit FROM appointments WHERE status IN ("' . Appointment::STATUS_COMPLETED . '", "' . Appointment::STATUS_CHECKED_IN . '", "' . Appointment::STATUS_IN_PROGRESS . '") AND deleted_at IS NULL GROUP BY patient_id) as last_appointments'),
                 'patients.id', '=', 'last_appointments.patient_id')
             ->where('last_appointments.last_visit', '<', $cutoffDate)
             ->orderBy('last_appointments.last_visit', 'asc')
@@ -179,7 +179,7 @@ class RevisitRateReportService
             ->get()
             ->map(function ($patient) {
                 $lastAppointment = Appointment::where('patient_id', $patient->id)
-                    ->whereIn('status', ['completed', 'checked_in', 'in_progress'])
+                    ->whereIn('status', [Appointment::STATUS_COMPLETED, Appointment::STATUS_CHECKED_IN, Appointment::STATUS_IN_PROGRESS])
                     ->orderBy('start_date', 'desc')
                     ->first();
 

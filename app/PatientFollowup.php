@@ -9,6 +9,11 @@ class PatientFollowup extends Model
 {
     use SoftDeletes;
 
+    const STATUS_PENDING = 'Pending';
+    const STATUS_COMPLETED = 'Completed';
+    const STATUS_CANCELLED = 'Cancelled';
+    const STATUS_NO_RESPONSE = 'No Response';
+
     protected $fillable = [
         'followup_no',
         'followup_type',
@@ -90,7 +95,7 @@ class PatientFollowup extends Model
      */
     public function scopePending($query)
     {
-        return $query->where('status', 'Pending');
+        return $query->where('status', self::STATUS_PENDING);
     }
 
     /**
@@ -98,7 +103,7 @@ class PatientFollowup extends Model
      */
     public function scopeOverdue($query)
     {
-        return $query->where('status', 'Pending')
+        return $query->where('status', self::STATUS_PENDING)
             ->where('scheduled_date', '<', now()->toDateString());
     }
 
@@ -107,7 +112,7 @@ class PatientFollowup extends Model
      */
     public function scopeUpcoming($query, $days = 7)
     {
-        return $query->where('status', 'Pending')
+        return $query->where('status', self::STATUS_PENDING)
             ->whereBetween('scheduled_date', [now()->toDateString(), now()->addDays($days)->toDateString()]);
     }
 
@@ -116,6 +121,6 @@ class PatientFollowup extends Model
      */
     public function getIsOverdueAttribute()
     {
-        return $this->status === 'Pending' && $this->scheduled_date < now()->toDateString();
+        return $this->status === self::STATUS_PENDING && $this->scheduled_date < now()->toDateString();
     }
 }

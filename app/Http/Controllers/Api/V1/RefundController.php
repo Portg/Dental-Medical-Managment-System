@@ -13,7 +13,9 @@ class RefundController extends ApiController
 {
     public function __construct(
         protected RefundService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-refunds');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -43,7 +45,7 @@ class RefundController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $result = $this->service->createRefund($request->all());
+        $result = $this->service->createRefund($request->only(['invoice_id', 'refund_amount', 'refund_reason', 'refund_method']));
 
         if (!$result['status']) {
             return $this->error($result['message']);

@@ -22,7 +22,8 @@ class NurseController extends Controller
      */
     public function index()
     {
-        return view('nurse::index');
+        $data = $this->service->getDashboardData();
+        return view('nurse::index')->with($data);
     }
 
     /**

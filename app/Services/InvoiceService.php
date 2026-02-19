@@ -10,7 +10,7 @@ use App\MedicalService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use Yajra\DataTables\DataTables;
 
 class InvoiceService
 {
@@ -69,7 +69,13 @@ class InvoiceService
             ->join('appointments', 'appointments.id', 'invoices.appointment_id')
             ->join('patients', 'patients.id', 'appointments.patient_id')
             ->join('users', 'users.id', 'invoices._who_added')
-            ->select('invoices.*', 'patients.surname', 'patients.othername', 'patients.email', 'users.othername as addedBy');
+            ->select(
+                'invoices.*',
+                'patients.surname', 'patients.othername', 'patients.email',
+                'users.othername as addedBy',
+                DB::raw('(SELECT COALESCE(SUM(ii.price * ii.qty), 0) FROM invoice_items ii WHERE ii.invoice_id = invoices.id AND ii.deleted_at IS NULL) as computed_total'),
+                DB::raw('(SELECT COALESCE(SUM(ip.amount), 0) FROM invoice_payments ip WHERE ip.invoice_id = invoices.id) as computed_paid')
+            );
     }
 
     /**
@@ -106,7 +112,12 @@ class InvoiceService
             ->join('patients', 'patients.id', 'appointments.patient_id')
             ->whereNull('invoices.deleted_at')
             ->where('patients.id', $patientId)
-            ->select('invoices.*', 'appointments.status as appointment_status')
+            ->select(
+                'invoices.*',
+                'appointments.status as appointment_status',
+                DB::raw('(SELECT COALESCE(SUM(ii.price * ii.qty), 0) FROM invoice_items ii WHERE ii.invoice_id = invoices.id AND ii.deleted_at IS NULL) as computed_total'),
+                DB::raw('(SELECT COALESCE(SUM(ip.amount), 0) FROM invoice_payments ip WHERE ip.invoice_id = invoices.id) as computed_paid')
+            )
             ->orderBy('invoices.created_at', 'desc')
             ->get();
     }
@@ -142,14 +153,13 @@ class InvoiceService
      */
     public function getInvoiceDetail(int $invoiceId): array
     {
-        $patient = DB::table('invoices')
-            ->join('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->join('patients', 'patients.id', 'appointments.patient_id')
-            ->where('invoices.id', $invoiceId)
+        $invoice = Invoice::findOrFail($invoiceId);
+
+        $patient = DB::table('patients')
+            ->join('appointments', 'appointments.patient_id', 'patients.id')
+            ->where('appointments.id', $invoice->appointment_id)
             ->select('patients.*')
             ->first();
-
-        $invoice = Invoice::where('id', $invoiceId)->first();
 
         return [
             'patient' => $patient,
@@ -163,9 +173,11 @@ class InvoiceService
      */
     public function getPreviewData(int $invoiceId): array
     {
+        $invoice = Invoice::with('items')->findOrFail($invoiceId);
+
         return [
-            'invoice' => Invoice::where('id', $invoiceId)->first(),
-            'invoice_items' => InvoiceItem::where('invoice_id', $invoiceId)->get(),
+            'invoice' => $invoice,
+            'invoice_items' => $invoice->items,
         ];
     }
 
@@ -174,10 +186,11 @@ class InvoiceService
      */
     public function getReceiptData(int $invoiceId): array
     {
-        $patient = DB::table('invoices')
-            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-            ->where('invoices.id', $invoiceId)
+        $invoice = Invoice::with(['items', 'payments'])->findOrFail($invoiceId);
+
+        $patient = DB::table('patients')
+            ->join('appointments', 'appointments.patient_id', 'patients.id')
+            ->where('appointments.id', $invoice->appointment_id)
             ->select('patients.*', DB::raw(
                 app()->getLocale() === 'zh-CN'
                     ? "CONCAT(patients.surname, patients.othername) as full_name"
@@ -187,9 +200,9 @@ class InvoiceService
 
         return [
             'patient' => $patient,
-            'invoice' => Invoice::where('id', $invoiceId)->first(),
-            'invoice_items' => InvoiceItem::where('invoice_id', $invoiceId)->get(),
-            'payments' => InvoicePayment::where('invoice_id', $invoiceId)->get(),
+            'invoice' => $invoice,
+            'invoice_items' => $invoice->items,
+            'payments' => $invoice->payments,
         ];
     }
 
@@ -216,14 +229,7 @@ class InvoiceService
      */
     public function getInvoiceProcedureNames(int $invoiceId): string
     {
-        $procedures = DB::table('invoice_items')
-            ->leftJoin('medical_services', 'medical_services.id', 'invoice_items.medical_service_id')
-            ->whereNull('invoice_items.deleted_at')
-            ->where('invoice_items.invoice_id', $invoiceId)
-            ->select('medical_services.name', 'invoice_items.*')
-            ->get();
-
-        return $procedures->pluck('name')->implode('');
+        return $this->getInvoiceProcedures($invoiceId)->pluck('name')->implode('');
     }
 
     // ─── Export ───────────────────────────────────────────────────
@@ -311,18 +317,24 @@ class InvoiceService
      */
     public function sendInvoiceEmail(int $invoiceId, string $email, ?string $message = null): void
     {
-        $data = [];
+        $invoice = Invoice::with(['items', 'payments'])->findOrFail($invoiceId);
 
-        $data['patient'] = DB::table('invoices')
-            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-            ->where('invoices.id', $invoiceId)
-            ->select('surname', 'othername', 'email', 'phone_no')
+        $patient = DB::table('patients')
+            ->join('appointments', 'appointments.patient_id', 'patients.id')
+            ->where('appointments.id', $invoice->appointment_id)
+            ->select('patients.surname', 'patients.othername', 'patients.email', 'patients.phone_no', DB::raw(
+                app()->getLocale() === 'zh-CN'
+                    ? "CONCAT(patients.surname, patients.othername) as full_name"
+                    : "CONCAT(patients.surname, ' ', patients.othername) as full_name"
+            ))
             ->first();
 
-        $data['invoice'] = Invoice::where('id', $invoiceId)->first();
-        $data['invoice_items'] = InvoiceItem::where('invoice_id', $invoiceId)->get();
-        $data['payments'] = InvoicePayment::where('invoice_id', $invoiceId)->get();
+        $data = [
+            'patient' => $patient,
+            'invoice' => $invoice,
+            'invoice_items' => $invoice->items,
+            'payments' => $invoice->payments,
+        ];
 
         dispatch(new \App\Jobs\ShareEmailInvoice($data, $email, $message));
     }
@@ -349,7 +361,7 @@ class InvoiceService
     {
         $invoice = Invoice::findOrFail($id);
 
-        if ($invoice->discount_approval_status !== 'pending') {
+        if ($invoice->discount_approval_status !== Invoice::DISCOUNT_PENDING) {
             return ['message' => __('invoices.discount_not_pending'), 'status' => false];
         }
 
@@ -367,7 +379,7 @@ class InvoiceService
     {
         $invoice = Invoice::findOrFail($id);
 
-        if ($invoice->discount_approval_status !== 'pending') {
+        if ($invoice->discount_approval_status !== Invoice::DISCOUNT_PENDING) {
             return ['message' => __('invoices.discount_not_pending'), 'status' => false];
         }
 
@@ -385,7 +397,7 @@ class InvoiceService
     {
         $invoice = Invoice::findOrFail($id);
 
-        if ($invoice->payment_status === 'paid') {
+        if ($invoice->payment_status === Invoice::PAYMENT_PAID) {
             return ['message' => __('invoices.invoice_already_paid'), 'status' => false];
         }
 
@@ -418,5 +430,149 @@ class InvoiceService
             )
             ->limit(20)
             ->get();
+    }
+
+    // ─── DataTable builders ─────────────────────────────────────
+
+    /**
+     * Build DataTables response for the invoice index page.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->editColumn('created_at', function ($row) {
+                return $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('Y-m-d') : '-';
+            })
+            ->filter(function ($instance) {
+            })
+            ->addColumn('invoice_no', function ($row) {
+                return '<a href="' . url('invoices/' . $row->id) . '">' . e($row->invoice_no) . '</a>';
+            })
+            ->addColumn('customer', function ($row) {
+                return NameHelper::join($row->surname, $row->othername);
+            })
+            ->addColumn('amount', function ($row) {
+                return number_format($row->computed_total);
+            })
+            ->addColumn('paid_amount', function ($row) {
+                return number_format($row->computed_paid);
+            })
+            ->addColumn('due_amount', function ($row) {
+                $balance = $row->computed_total - $row->computed_paid;
+                if ($balance <= 0) {
+                    return number_format($balance);
+                }
+                return number_format($balance) . '<br>
+                    <a href="#" onclick="record_payment(' . $row->id . ')" class="text-primary">' . __('invoices.record_payment') . '</a>
+                    ';
+            })
+            ->addColumn('action', function ($row) {
+                return '
+                      <div class="btn-group">
+                        <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
+                                aria-expanded="false"> ' . __('common.action') . '
+                            <i class="fa fa-angle-down"></i>
+                        </button>
+                        <ul class="dropdown-menu" role="menu">
+                        <li>
+                        <a href="#" onClick="viewInvoiceProcedures('.$row->id.')"> ' . __('invoices.view_procedures_done') . '</a>
+                    </li>
+                    <li>
+                                <a href="' . url('invoices/' . $row->id) . '"> ' . __('invoices.view_invoice_details') . '</a>
+                            </li>
+                             <li>
+                                <a target="_blank" href="' . url('print-receipt/' . $row->id) . '"  > ' . __('invoices.print') . ' </a>
+                            </li>
+                              <li>
+                         <a  href="#" onClick="shareInvoiceView(' . $row->id . ')"> ' . __('invoices.share_invoice') . ' </a>
+                            </li>
+                            <li class="divider"></li>
+                            <li>
+                                <a href="#" onClick="deleteInvoice(' . $row->id . ')" class="text-danger"> ' . __('invoices.delete_invoice') . '</a>
+                            </li>
+                        </ul>
+                    </div>
+                    ';
+            })
+            ->rawColumns(['invoice_no', 'due_amount', 'payment_classification', 'action', 'status'])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTables response for patient-specific invoices.
+     */
+    public function buildPatientInvoicesDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->editColumn('created_at', function ($row) {
+                return $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('Y-m-d') : '-';
+            })
+            ->addColumn('amount', function ($row) {
+                return number_format($row->computed_total);
+            })
+            ->addColumn('statusBadge', function ($row) {
+                $balance = $row->computed_total - $row->computed_paid;
+                $total = $row->computed_total;
+                if ($total <= 0) {
+                    $class = 'default';
+                    $text = '-';
+                } elseif ($balance <= 0) {
+                    $class = 'success';
+                    $text = __('invoices.paid');
+                } elseif ($balance < $total) {
+                    $class = 'warning';
+                    $text = __('invoices.partially_paid');
+                } else {
+                    $class = 'danger';
+                    $text = __('invoices.unpaid');
+                }
+                return '<span class="label label-' . $class . '">' . $text . '</span>';
+            })
+            ->addColumn('viewBtn', function ($row) {
+                return '<a href="' . url('invoices/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+            })
+            ->rawColumns(['statusBadge', 'viewBtn'])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTables response for pending discount approvals.
+     */
+    public function buildDiscountApprovalsDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('invoice_no', function ($row) {
+                return '<a href="' . url('invoices/' . $row->id) . '">' . e($row->invoice_no) . '</a>';
+            })
+            ->addColumn('patient_name', function ($row) {
+                return $row->patient ? $row->patient->full_name : '-';
+            })
+            ->addColumn('subtotal', function ($row) {
+                return number_format($row->subtotal, 2);
+            })
+            ->addColumn('discount_amount', function ($row) {
+                return number_format($row->discount_amount, 2);
+            })
+            ->addColumn('total_amount', function ($row) {
+                return number_format($row->total_amount, 2);
+            })
+            ->addColumn('added_by', function ($row) {
+                return $row->addedBy ? $row->addedBy->othername : '-';
+            })
+            ->addColumn('action', function ($row) {
+                return '
+                        <button class="btn btn-sm btn-success" onclick="approveDiscount(' . $row->id . ')">
+                            <i class="fa fa-check"></i> ' . __('invoices.approve') . '
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejectDiscount(' . $row->id . ')">
+                            <i class="fa fa-times"></i> ' . __('invoices.reject') . '
+                        </button>
+                    ';
+            })
+            ->rawColumns(['invoice_no', 'action'])
+            ->make(true);
     }
 }

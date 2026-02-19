@@ -16,6 +16,7 @@ class BirthDayMessageController extends Controller
     public function __construct(BirthDayMessageService $birthDayMessageService)
     {
         $this->birthDayMessageService = $birthDayMessageService;
+        $this->middleware('can:manage-settings');
     }
 
     /**
@@ -26,7 +27,9 @@ class BirthDayMessageController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->birthDayMessageService->getList($request->all());
+            $data = $this->birthDayMessageService->getList([
+                'search' => $request->input('search.value', ''),
+            ]);
 
             return Datatables::of($data)
                 ->addIndexColumn()

@@ -14,6 +14,7 @@ class PatientTagController extends Controller
     public function __construct(PatientTagService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-patient-settings');
     }
 
     /**
@@ -25,17 +26,15 @@ class PatientTagController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->service->getTagList($request->all());
+            $data = $this->service->getTagList($request->only(['quick_search', 'status']));
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('color_badge', function ($row) {
-                    return '<span class="label" style="background-color: ' . $row->color . ';">' . $row->name . '</span>';
+                    return '<span class="label" style="background-color: ' . e($row->color) . ';">' . e($row->name) . '</span>';
                 })
                 ->addColumn('patients_count', function ($row) {
-                    return \Illuminate\Support\Facades\DB::table('patient_tag_pivot')
-                        ->where('tag_id', $row->id)
-                        ->count();
+                    return (int) $row->patients_count;
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->is_active) {

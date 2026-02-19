@@ -52,7 +52,7 @@ class ShareEmailQuotation implements ShouldQueue
         $email_to = $this->email;
         if ($this->message == null) {
             $this->message = __('emails.thank_you_message', [
-                'company_name' => env('CompanyName', null),
+                'company_name' => config('app.company_name'),
                 'document_type' => __('emails.quotation_attached')
             ]);
         }
@@ -67,9 +67,9 @@ class ShareEmailQuotation implements ShouldQueue
         $email_to = $this->email;
 
         Mail::send('emails.quotation', $other_data, function ($message) use ($pdf, $email_to) {
-            $message->from(env('CompanyNoReplyEmail',null));
+            $message->from(config('app.company_no_reply_email'));
             $message->to($email_to);
-            $message->subject(env('CompanyName',null) . ' - ' . __('emails.quotation_subject'));
+            $message->subject(config('app.company_name') . ' - ' . __('emails.quotation_subject'));
             $message->attachData($pdf->output(), date("Y-m-d H:i:s") . 'quotation.pdf');
         });
         if (!Mail::failures()) {

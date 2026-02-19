@@ -21,8 +21,11 @@ class UserService
             ->whereNull('users.deleted_at')
             ->select(['users.*', 'roles.name as user_role', 'branches.name as branch']);
 
-        if (!empty($filters['search'])) {
-            $search = $filters['search'];
+        $search = $filters['search'] ?? '';
+        if (is_array($search)) {
+            $search = $search['value'] ?? '';
+        }
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 NameHelper::addNameSearch($q, $search, 'users');
                 $q->orWhere('users.email', 'like', '%' . $search . '%')
@@ -40,7 +43,7 @@ class UserService
     {
         $query = DB::table('users')
             ->whereNull('users.deleted_at')
-            ->where('users.is_doctor', '=', 'Yes');
+            ->where('users.is_doctor', true);
 
         if ($keyword) {
             $query->where(function ($q) use ($keyword) {
