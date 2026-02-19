@@ -1,5 +1,5 @@
 {{-- Image Upload Modal --}}
-<div class="modal fade" id="image_upload_modal" tabindex="-1" role="dialog">
+<div class="modal fade modal-form" id="image_upload_modal" tabindex="-1" role="dialog">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -43,11 +43,11 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="btn-upload-image" onclick="uploadImage()">
-                    {{ __('common.upload') }}
-                </button>
                 <button type="button" class="btn btn-default" data-dismiss="modal">
                     {{ __('common.cancel') }}
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-upload-image" onclick="uploadImage()">
+                    {{ __('common.upload') }}
                 </button>
             </div>
         </div>

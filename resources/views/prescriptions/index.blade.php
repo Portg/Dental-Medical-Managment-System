@@ -1,43 +1,23 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
+@extends('layouts.list-page')
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption">
-                    <i class="icon-note font-green"></i>
-                    <span class="caption-subject font-green bold uppercase">{{ __('prescriptions.prescription_list') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <table class="table table-striped table-bordered table-hover table-checkable order-column" id="prescriptions_table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>{{ __('patient.patient_no') }}</th>
-                            <th>{{ __('patient.patient_name') }}</th>
-                            <th>{{ __('prescriptions.drug_name') }}</th>
-                            <th>{{ __('prescriptions.quantity') }}</th>
-                            <th>{{ __('medical_treatment.directions') }}</th>
-                            <th>{{ __('common.created_at') }}</th>
-                            <th>{{ __('common.view') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+@section('page_title', __('prescriptions.prescription_list'))
+@section('table_id', 'prescriptions_table')
 
+@section('table_headers')
+    <th>#</th>
+    <th>{{ __('patient.patient_no') }}</th>
+    <th>{{ __('patient.patient_name') }}</th>
+    <th>{{ __('prescriptions.drug_name') }}</th>
+    <th>{{ __('prescriptions.quantity') }}</th>
+    <th>{{ __('medical_treatment.directions') }}</th>
+    <th>{{ __('common.created_at') }}</th>
+    <th>{{ __('common.view') }}</th>
 @endsection
 
-@section('js')
+@section('page_js')
 <script type="text/javascript">
 $(document).ready(function() {
-    $('#prescriptions_table').DataTable({
+    dataTable = $('#prescriptions_table').DataTable({
         processing: true,
         serverSide: true,
         ajax: "{{ url('prescriptions') }}",
@@ -58,9 +38,11 @@ $(document).ready(function() {
             }},
             {data: 'viewBtn', name: 'viewBtn', orderable: false, searchable: false}
         ],
-        language: LanguageManager.getDataTableLanguage(),
+        dom: 'rtip',
+        language: LanguageManager.getDataTableLang(),
         order: [[6, 'desc']]
     });
+    setupEmptyStateHandler();
 });
 </script>
 @endsection

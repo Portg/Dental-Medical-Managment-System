@@ -14,7 +14,9 @@ class QuotationController extends ApiController
 {
     public function __construct(
         protected QuotationService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-quotations');
+    }
 
     public function index(Request $request): JsonResponse
     {

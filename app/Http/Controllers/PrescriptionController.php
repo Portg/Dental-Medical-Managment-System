@@ -14,6 +14,7 @@ class PrescriptionController extends Controller
     public function __construct(PrescriptionService $prescriptionService)
     {
         $this->prescriptionService = $prescriptionService;
+        $this->middleware('can:manage-treatments');
     }
 
     /**

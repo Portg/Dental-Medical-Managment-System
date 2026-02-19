@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\InventoryItemService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 
 class InventoryItemController extends Controller
 {
@@ -14,6 +13,7 @@ class InventoryItemController extends Controller
     public function __construct(InventoryItemService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-inventory');
     }
 
     /**
@@ -26,33 +26,9 @@ class InventoryItemController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->service->getItemList($request->all());
+            $data = $this->service->getItemList($request->only(['category_id', 'is_active']));
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('category_name', function ($row) {
-                    return $row->category ? $row->category->name : '-';
-                })
-                ->addColumn('stock_status', function ($row) {
-                    if ($row->isLowStock()) {
-                        return '<span class="badge badge-danger">' . __('inventory.low_stock') . '</span>';
-                    }
-                    return '<span class="badge badge-success">' . __('inventory.in_stock') . '</span>';
-                })
-                ->addColumn('status', function ($row) {
-                    if ($row->is_active) {
-                        return '<span class="badge badge-success">' . __('common.active') . '</span>';
-                    }
-                    return '<span class="badge badge-secondary">' . __('common.inactive') . '</span>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->rawColumns(['stock_status', 'status', 'editBtn', 'deleteBtn'])
-                ->make(true);
+            return $this->service->buildIndexDataTable($data);
         }
 
         $data['categories'] = $this->service->getActiveCategories();
@@ -95,7 +71,11 @@ class InventoryItemController extends Controller
             'category_id.required' => __('inventory.category_required'),
         ])->validate();
 
-        $item = $this->service->createItem($request->all());
+        $item = $this->service->createItem($request->only([
+            'item_code', 'name', 'unit', 'category_id', 'specification', 'brand',
+            'reference_price', 'selling_price', 'track_expiry', 'stock_warning_level',
+            'storage_location', 'notes', 'is_active',
+        ]));
 
         if ($item) {
             return response()->json(['message' => __('inventory.item_added_successfully'), 'status' => true]);
@@ -136,7 +116,11 @@ class InventoryItemController extends Controller
             'category_id.required' => __('inventory.category_required'),
         ])->validate();
 
-        $status = $this->service->updateItem($id, $request->all());
+        $status = $this->service->updateItem($id, $request->only([
+            'item_code', 'name', 'unit', 'category_id', 'specification', 'brand',
+            'reference_price', 'selling_price', 'track_expiry', 'stock_warning_level',
+            'storage_location', 'notes', 'is_active',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('inventory.item_updated_successfully'), 'status' => true]);
@@ -167,16 +151,7 @@ class InventoryItemController extends Controller
         if ($request->ajax()) {
             $data = $this->service->getLowStockItems();
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('category_name', function ($row) {
-                    return $row->category ? $row->category->name : '-';
-                })
-                ->addColumn('shortage', function ($row) {
-                    return $row->stock_warning_level - $row->current_stock;
-                })
-                ->rawColumns([])
-                ->make(true);
+            return $this->service->buildStockWarningsDataTable($data);
         }
 
         return view('inventory.items.stock_warnings');
@@ -194,32 +169,7 @@ class InventoryItemController extends Controller
             $warningDays = $request->warning_days ?? 30;
             $data = $this->service->getExpiryWarningBatches($warningDays);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('item_code', function ($row) {
-                    return $row->inventoryItem ? $row->inventoryItem->item_code : '-';
-                })
-                ->addColumn('item_name', function ($row) {
-                    return $row->inventoryItem ? $row->inventoryItem->name : '-';
-                })
-                ->addColumn('category_name', function ($row) {
-                    return $row->inventoryItem && $row->inventoryItem->category
-                        ? $row->inventoryItem->category->name : '-';
-                })
-                ->addColumn('days_to_expiry', function ($row) {
-                    return $row->days_to_expiry;
-                })
-                ->addColumn('expiry_status', function ($row) {
-                    if ($row->isExpired()) {
-                        return '<span class="badge badge-danger">' . __('inventory.expired') . '</span>';
-                    }
-                    if ($row->days_to_expiry <= 7) {
-                        return '<span class="badge badge-warning">' . __('inventory.expiring_soon') . '</span>';
-                    }
-                    return '<span class="badge badge-info">' . __('inventory.near_expiry') . '</span>';
-                })
-                ->rawColumns(['expiry_status'])
-                ->make(true);
+            return $this->service->buildExpiryWarningsDataTable($data);
         }
 
         return view('inventory.items.expiry_warnings');

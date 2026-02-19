@@ -10,6 +10,7 @@
 @section('css')
     @include('layouts.page_loader')
     <link rel="stylesheet" href="{{ asset('css/medical-record-edit.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/tooth-selector.css') }}">
 @endsection
 
 @section('content')

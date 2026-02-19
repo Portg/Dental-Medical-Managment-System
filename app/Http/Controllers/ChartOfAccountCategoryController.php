@@ -16,6 +16,7 @@ class ChartOfAccountCategoryController extends Controller
     public function __construct(ChartOfAccountCategoryService $chartOfAccountCategoryService)
     {
         $this->chartOfAccountCategoryService = $chartOfAccountCategoryService;
+        $this->middleware('can:manage-accounting');
     }
 
     /**
@@ -75,7 +76,7 @@ class ChartOfAccountCategoryController extends Controller
             'accounting_equation_id.required' => __('validation.custom.accounting_equation_id.required')
         ])->validate();
 
-        $success = $this->chartOfAccountCategoryService->createCategory($request->all());
+        $success = $this->chartOfAccountCategoryService->createCategory($request->only(['name', 'accounting_equation_id']));
 
         return FunctionsHelper::messageResponse(__('messages.chart_account_category_added_successfully'), $success);
     }
@@ -120,7 +121,7 @@ class ChartOfAccountCategoryController extends Controller
             'accounting_equation_id.required' => __('validation.custom.accounting_equation_id.required')
         ])->validate();
 
-        $success = $this->chartOfAccountCategoryService->updateCategory($id, $request->all());
+        $success = $this->chartOfAccountCategoryService->updateCategory($id, $request->only(['name', 'accounting_equation_id']));
 
         return FunctionsHelper::messageResponse(__('messages.chart_account_category_updated_successfully'), $success);
     }

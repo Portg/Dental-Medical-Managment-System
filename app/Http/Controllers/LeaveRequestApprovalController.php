@@ -16,6 +16,7 @@ class LeaveRequestApprovalController extends Controller
     public function __construct(LeaveRequestApprovalService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-leave');
     }
 
     /**
@@ -33,6 +34,9 @@ class LeaveRequestApprovalController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('addedBy', function ($row) {
                     return NameHelper::join($row->surname, $row->othername);

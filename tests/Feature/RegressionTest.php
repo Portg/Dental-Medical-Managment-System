@@ -36,7 +36,7 @@ class RegressionTest extends TestCase
 
         Bus::fake();
 
-        $branch = Branch::create(['name' => 'Test Branch', 'is_active' => 'true']);
+        $branch = Branch::create(['name' => 'Test Branch', 'is_active' => true]);
         $role   = Role::create(['name' => 'Administrator']);
 
         $this->admin = User::factory()->create([

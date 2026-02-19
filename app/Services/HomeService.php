@@ -8,10 +8,8 @@ use App\Charts\MonthlyExpensesChart;
 use App\Charts\MonthlyOverRollIncomeChart;
 use App\Charts\MonthlyOverRollIncomeExpenseChart;
 use App\ExpensePayment;
-use App\InsuranceCompany;
+use App\Invoice;
 use App\InvoicePayment;
-use App\Patient;
-use App\User;
 use Illuminate\Support\Facades\DB;
 
 class HomeService
@@ -21,155 +19,165 @@ class HomeService
      */
     public function getDashboardData(): array
     {
-        $data = [];
-        $data['total_patients'] = Patient::count();
-        $data['total_users'] = User::count();
-        $data['total_insurance_company'] = InsuranceCompany::count();
-
-        $data['today_appointments'] = Appointment::where('start_date', '=', date('Y-m-d'))->count();
-
-        $data['today_cash_amount'] = InvoicePayment::where('payment_method', 'Cash')
-            ->whereDate('payment_date', date('Y-m-d'))->sum('amount');
-
-        $data['today_Insurance_amount'] = InvoicePayment::where('payment_method', 'Insurance')
-            ->whereDate('payment_date', date('Y-m-d'))->sum('amount');
-
-        $data['today_expense_amount'] = ExpensePayment::whereDate('payment_date', date('Y-m-d'))->sum('amount');
-
-        $data['monthlyCashFlows'] = $this->buildMonthlyCashFlows();
-        $data['monthlyExpenses'] = $this->buildMonthlyExpenses();
-        $data['monthlyOverRollIncome'] = $this->buildMonthlyOverRollIncomeChart();
-        $data['MonthlyOverRollIncomeExpense'] = $this->buildMonthlyOverRollIncomeExpense();
-
-        return $data;
+        return [
+            'today_appointments' => Appointment::today()->count(),
+            'today_cash_amount' => InvoicePayment::where('payment_method', 'Cash')
+                ->whereDate('payment_date', date('Y-m-d'))->sum('amount'),
+            'pending_receivable_amount' => Invoice::whereIn('payment_status', [Invoice::PAYMENT_UNPAID, Invoice::PAYMENT_PARTIAL])
+                ->sum('outstanding_amount'),
+            'today_expense_amount' => ExpensePayment::whereDate('payment_date', date('Y-m-d'))->sum('amount'),
+            'monthlyCashFlows' => $this->buildMonthlyCashFlows(),
+            'monthlyExpenses' => $this->buildMonthlyExpenses(),
+            'monthlyOverRollIncome' => $this->buildMonthlyOverRollIncomeChart(),
+            'MonthlyOverRollIncomeExpense' => $this->buildMonthlyOverRollIncomeExpense(),
+        ];
     }
 
     /**
-     * Build the monthly cash flows chart.
+     * Build the monthly cash flows chart (current month only).
      */
     private function buildMonthlyCashFlows(): MonthlyCashFlows
     {
-        // Daily cash earnings
-        $daily_cash = DB::table('invoice_payments')
-            ->select(DB::raw('sum(amount) as cash_amount'), DB::raw('date(payment_date) as dates'))
-            ->whereNull('deleted_at')
+        $currentMonth = date('m');
+        $currentYear = date('Y');
+        $monthFilter = function ($query) use ($currentMonth, $currentYear) {
+            $query->whereNull('deleted_at')
+                ->whereRaw('MONTH(payment_date) = ? AND YEAR(payment_date) = ?', [$currentMonth, $currentYear]);
+        };
+
+        $dailyCash = DB::table('invoice_payments')
+            ->select(DB::raw('sum(amount) as total'), DB::raw('date(payment_date) as dates'))
             ->where('payment_method', 'Cash')
+            ->tap($monthFilter)
             ->groupBy('dates')
             ->orderBy('dates', 'asc')
             ->get();
 
-        $cashFlows_labels = [];
-        $cashFlows_data = [];
-        foreach ($daily_cash as $item) {
-            $cashFlows_labels[] = $item->dates;
-            $cashFlows_data[] = $item->cash_amount;
-        }
-
-        // Daily insurance earnings
-        $daily_insurance = DB::table('invoice_payments')
-            ->select(DB::raw('sum(amount) as insurance_amount'), DB::raw('date(payment_date) as dates'))
-            ->whereNull('deleted_at')
-            ->where('payment_method', 'Insurance')
+        $dailyNonCash = DB::table('invoice_payments')
+            ->select(DB::raw('sum(amount) as total'), DB::raw('date(payment_date) as dates'))
+            ->where('payment_method', '!=', 'Cash')
+            ->tap($monthFilter)
             ->groupBy('dates')
             ->orderBy('dates', 'asc')
             ->get();
 
-        $InsuranceFlows_labels = [];
-        $InsuranceFlows_data = [];
-        foreach ($daily_insurance as $item) {
-            $InsuranceFlows_labels[] = $item->dates;
-            $InsuranceFlows_data[] = $item->insurance_amount;
-        }
-
-        $monthlyCashFlows = new MonthlyCashFlows;
-        $monthlyCashFlows->labels($cashFlows_labels);
-        $monthlyCashFlows->dataset('Daily Cash Payments', 'line', $cashFlows_data)->options([
+        $chart = new MonthlyCashFlows;
+        $chart->labels($dailyCash->pluck('dates')->toArray());
+        $chart->dataset(__('dashboard.cash_payments'), 'line', $dailyCash->pluck('total')->toArray())->options([
             'fill' => false,
         ]);
+        $chart->labels($dailyNonCash->pluck('dates')->toArray());
+        $chart->dataset(__('dashboard.non_cash_payments'), 'line', $dailyNonCash->pluck('total')->toArray())->options([]);
 
-        $monthlyCashFlows->labels($InsuranceFlows_labels);
-        $monthlyCashFlows->dataset('Daily Insurance Payments', 'line', $InsuranceFlows_data)->options([]);
-
-        return $monthlyCashFlows;
+        return $chart;
     }
 
     /**
-     * Build the monthly expenses chart.
+     * Build the monthly expenses chart (current month only).
      */
     private function buildMonthlyExpenses(): MonthlyExpensesChart
     {
-        $daily_expenses = DB::table('expense_payments')
+        $currentMonth = date('m');
+        $currentYear = date('Y');
+
+        $dailyExpenses = DB::table('expense_payments')
             ->select(DB::raw('sum(amount) as total_amount'), DB::raw('date(payment_date) as dates'))
             ->whereNull('deleted_at')
+            ->whereRaw('MONTH(payment_date) = ? AND YEAR(payment_date) = ?', [$currentMonth, $currentYear])
             ->groupBy('dates')
             ->orderBy('dates', 'asc')
             ->get();
 
         $labels = [];
-        $expense_data = [];
-        foreach ($daily_expenses as $item) {
+        $expenseData = [];
+        foreach ($dailyExpenses as $item) {
             $labels[] = $item->dates;
-            $expense_data[] = $item->total_amount;
+            $expenseData[] = $item->total_amount;
         }
 
-        $monthlyExpenses = new MonthlyExpensesChart;
-        $monthlyExpenses->labels($labels);
-        $monthlyExpenses->dataset('Daily Expenses', 'line', $expense_data)->options([
+        $chart = new MonthlyExpensesChart;
+        $chart->labels($labels);
+        $chart->dataset(__('dashboard.expense'), 'line', $expenseData)->options([
             'backgroundColor' => '#DBF2F2',
         ]);
 
-        return $monthlyExpenses;
+        return $chart;
     }
 
     /**
-     * Build the monthly overall income pie chart.
+     * Build the monthly overall income pie chart (current month only).
      */
     private function buildMonthlyOverRollIncomeChart(): MonthlyOverRollIncomeChart
     {
-        $monthly_cash = DB::table('invoice_payments')
-            ->whereNull('deleted_at')
-            ->where('payment_method', 'Cash')
-            ->whereRaw('MONTH(created_at) = ?', [date('m')])
-            ->sum('amount');
+        $currentMonth = date('m');
+        $currentYear = date('Y');
 
-        $monthly_insurance = DB::table('invoice_payments')
-            ->select(DB::raw('sum(amount) as insurance_amount'))
+        $methodTotals = DB::table('invoice_payments')
+            ->select('payment_method', DB::raw('sum(amount) as total'))
             ->whereNull('deleted_at')
-            ->where('payment_method', 'Insurance')
-            ->whereRaw('MONTH(created_at) = ?', [date('m')])
-            ->sum('amount');
+            ->whereRaw('MONTH(payment_date) = ? AND YEAR(payment_date) = ?', [$currentMonth, $currentYear])
+            ->groupBy('payment_method')
+            ->pluck('total', 'payment_method');
 
-        $monthlyOverRollIncomeChart = new MonthlyOverRollIncomeChart;
-        $monthlyOverRollIncomeChart->labels(['Cash', 'Insurance']);
-        $monthlyOverRollIncomeChart->dataset('Over Roll ', 'pie', [$monthly_cash, $monthly_insurance])->options([
-            'backgroundColor' => ['#3598DC', '#78CC66'],
+        $colorMap = [
+            'Cash' => '#3598DC',
+            'WeChat' => '#09BB07',
+            'Alipay' => '#1677FF',
+            'BankCard' => '#F5A623',
+            'StoredValue' => '#8E44AD',
+            'Credit' => '#E74C3C',
+        ];
+        $labelMap = [
+            'Cash' => __('invoices.cash'),
+            'WeChat' => __('invoices.wechat_pay'),
+            'Alipay' => __('invoices.alipay'),
+            'BankCard' => __('invoices.bank_card'),
+            'StoredValue' => __('invoices.stored_value'),
+            'Credit' => __('invoices.credit'),
+        ];
+
+        $labels = [];
+        $data = [];
+        $bgColors = [];
+        foreach ($methodTotals as $method => $total) {
+            $labels[] = $labelMap[$method] ?? $method;
+            $data[] = $total;
+            $bgColors[] = $colorMap[$method] ?? '#BDC3C7';
+        }
+
+        $chart = new MonthlyOverRollIncomeChart;
+        $chart->labels($labels);
+        $chart->dataset(__('dashboard.income_by_payment_method'), 'pie', $data)->options([
+            'backgroundColor' => $bgColors,
         ]);
 
-        return $monthlyOverRollIncomeChart;
+        return $chart;
     }
 
     /**
-     * Build the monthly overall income vs expense doughnut chart.
+     * Build the monthly overall income vs expense bar chart (current month only).
      */
     private function buildMonthlyOverRollIncomeExpense(): MonthlyOverRollIncomeExpenseChart
     {
-        $monthly_income = DB::table('invoice_payments')
+        $currentMonth = date('m');
+        $currentYear = date('Y');
+
+        $monthlyIncome = DB::table('invoice_payments')
             ->whereNull('deleted_at')
-            ->whereRaw('MONTH(created_at) = ?', [date('m')])
+            ->whereRaw('MONTH(payment_date) = ? AND YEAR(payment_date) = ?', [$currentMonth, $currentYear])
             ->sum('amount');
 
-        $monthly_expenses = DB::table('expense_payments')
-            ->select(DB::raw('sum(amount) as insurance_amount'))
+        $monthlyExpenses = DB::table('expense_payments')
             ->whereNull('deleted_at')
-            ->whereRaw('MONTH(created_at) = ?', [date('m')])
+            ->whereRaw('MONTH(payment_date) = ? AND YEAR(payment_date) = ?', [$currentMonth, $currentYear])
             ->sum('amount');
 
-        $monthlyOverRollIncomeExpenseChart = new MonthlyOverRollIncomeExpenseChart;
-        $monthlyOverRollIncomeExpenseChart->labels(['Income', 'Expenditure']);
-        $monthlyOverRollIncomeExpenseChart->dataset('Over Roll ', 'doughnut', [$monthly_income, $monthly_expenses])->options([
-            'backgroundColor' => ['rgba(233, 180, 195, 0.86)', 'rgba(215, 201, 15, 0.73)'],
+        $chart = new MonthlyOverRollIncomeExpenseChart;
+        $chart->labels([__('dashboard.income'), __('dashboard.expense')]);
+        $chart->dataset(__('dashboard.income_vs_expense'), 'bar', [$monthlyIncome, $monthlyExpenses])->options([
+            'backgroundColor' => ['#3598DC', '#E9B4C3'],
         ]);
 
-        return $monthlyOverRollIncomeExpenseChart;
+        return $chart;
     }
 }

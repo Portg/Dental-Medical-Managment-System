@@ -15,6 +15,7 @@ class AccountingEquationController extends Controller
     public function __construct(AccountingEquationService $accountingEquationService)
     {
         $this->accountingEquationService = $accountingEquationService;
+        $this->middleware('can:manage-accounting');
     }
 
     /**
@@ -55,7 +56,7 @@ class AccountingEquationController extends Controller
             'sort_by.integer' => __('validation.custom.sort_by.integer')
         ])->validate();
 
-        $success = $this->accountingEquationService->createEquation($request->all());
+        $success = $this->accountingEquationService->createEquation($request->only(['name', 'sort_by']));
 
         return FunctionsHelper::messageResponse(__('messages.accounting_equation_added_successfully'), $success);
     }
@@ -101,7 +102,7 @@ class AccountingEquationController extends Controller
             'sort_by.integer' => __('validation.custom.sort_by.integer')
         ])->validate();
 
-        $success = $this->accountingEquationService->updateEquation($id, $request->all());
+        $success = $this->accountingEquationService->updateEquation($id, $request->only(['name', 'sort_by']));
 
         return FunctionsHelper::messageResponse(__('messages.accounting_equation_updated_successfully'), $success);
     }

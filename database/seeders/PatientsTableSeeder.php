@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,6 +16,8 @@ class PatientsTableSeeder extends Seeder
      */
     public function run()
     {
+        $adminId = User::first()->id;
+
         for ($i = 0; $i < 200; $i++) {
             DB::table('patients')->insert([
                 'surname' => Str::random(10),
@@ -22,7 +25,7 @@ class PatientsTableSeeder extends Seeder
                 'gender' => 'Male',
                 'date_of_birth' => '2019-03-12',
                 'email' => Str::random(10) . '@gmail.com',
-                '_who_added' => '2',
+                '_who_added' => $adminId,
             ]);
         }
     }

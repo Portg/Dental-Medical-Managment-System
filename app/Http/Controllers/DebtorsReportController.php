@@ -16,6 +16,7 @@ class DebtorsReportController extends Controller
     public function __construct(DebtorsReportService $debtorsReportService)
     {
         $this->debtorsReportService = $debtorsReportService;
+        $this->middleware('can:view-reports');
     }
 
     /**

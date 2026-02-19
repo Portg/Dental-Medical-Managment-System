@@ -46,6 +46,20 @@ class Invoice extends Model
         'is_credit' => 'boolean',
     ];
 
+    // Payment status constants
+    const PAYMENT_UNPAID = 'unpaid';
+    const PAYMENT_PARTIAL = 'partial';
+    const PAYMENT_PAID = 'paid';
+    const PAYMENT_REFUNDED = 'refunded';
+    const PAYMENT_OVERDUE = 'overdue';
+    const PAYMENT_WRITTEN_OFF = 'written_off';
+
+    // Discount approval status constants
+    const DISCOUNT_NONE = 'none';
+    const DISCOUNT_PENDING = 'pending';
+    const DISCOUNT_APPROVED = 'approved';
+    const DISCOUNT_REJECTED = 'rejected';
+
     // 折扣审批阈值 (BR-035)
     const DISCOUNT_APPROVAL_THRESHOLD = 500;
 
@@ -62,11 +76,11 @@ class Invoice extends Model
 
             // Auto-update payment status
             if ($model->paid_amount <= 0) {
-                $model->payment_status = 'unpaid';
+                $model->payment_status = self::PAYMENT_UNPAID;
             } elseif ($model->paid_amount >= $model->total_amount) {
-                $model->payment_status = 'paid';
+                $model->payment_status = self::PAYMENT_PAID;
             } else {
-                $model->payment_status = 'partial';
+                $model->payment_status = self::PAYMENT_PARTIAL;
             }
         });
     }
@@ -111,7 +125,7 @@ class Invoice extends Model
      */
     public function scopeUnpaid($query)
     {
-        return $query->where('payment_status', 'unpaid');
+        return $query->where('payment_status', self::PAYMENT_UNPAID);
     }
 
     /**
@@ -119,7 +133,7 @@ class Invoice extends Model
      */
     public function scopePaid($query)
     {
-        return $query->where('payment_status', 'paid');
+        return $query->where('payment_status', self::PAYMENT_PAID);
     }
 
     /**
@@ -127,7 +141,7 @@ class Invoice extends Model
      */
     public function scopePartial($query)
     {
-        return $query->where('payment_status', 'partial');
+        return $query->where('payment_status', self::PAYMENT_PARTIAL);
     }
 
     /**
@@ -135,7 +149,7 @@ class Invoice extends Model
      */
     public function scopeOverdue($query)
     {
-        return $query->where('payment_status', '!=', 'paid')
+        return $query->where('payment_status', '!=', self::PAYMENT_PAID)
                      ->where('due_date', '<', now());
     }
 
@@ -144,7 +158,7 @@ class Invoice extends Model
      */
     public function getIsOverdueAttribute()
     {
-        return $this->payment_status !== 'paid'
+        return $this->payment_status !== self::PAYMENT_PAID
             && $this->due_date
             && $this->due_date->lt(now());
     }
@@ -290,9 +304,9 @@ class Invoice extends Model
 
         // BR-035: 折扣超过500元需要审批
         if ($discounts['total_discount'] > self::DISCOUNT_APPROVAL_THRESHOLD) {
-            $this->discount_approval_status = 'pending';
+            $this->discount_approval_status = self::DISCOUNT_PENDING;
         } else {
-            $this->discount_approval_status = 'none';
+            $this->discount_approval_status = self::DISCOUNT_NONE;
         }
 
         $this->save();
@@ -312,7 +326,7 @@ class Invoice extends Model
      */
     public function approveDiscount($approvedBy, $reason = null)
     {
-        $this->discount_approval_status = 'approved';
+        $this->discount_approval_status = self::DISCOUNT_APPROVED;
         $this->discount_approved_by = $approvedBy;
         $this->discount_approved_at = now();
         $this->discount_approval_reason = $reason;
@@ -325,7 +339,7 @@ class Invoice extends Model
      */
     public function rejectDiscount($rejectedBy, $reason)
     {
-        $this->discount_approval_status = 'rejected';
+        $this->discount_approval_status = self::DISCOUNT_REJECTED;
         $this->discount_approved_by = $rejectedBy;
         $this->discount_approved_at = now();
         $this->discount_approval_reason = $reason;
@@ -358,7 +372,7 @@ class Invoice extends Model
     public function canAcceptPayment()
     {
         // 如果折扣需要审批且未审批通过，不允许收款
-        if ($this->needsDiscountApproval() && $this->discount_approval_status !== 'approved') {
+        if ($this->needsDiscountApproval() && $this->discount_approval_status !== self::DISCOUNT_APPROVED) {
             return false;
         }
         return true;
@@ -369,7 +383,7 @@ class Invoice extends Model
      */
     public function scopePendingDiscountApproval($query)
     {
-        return $query->where('discount_approval_status', 'pending');
+        return $query->where('discount_approval_status', self::DISCOUNT_PENDING);
     }
 
     /**
@@ -385,6 +399,6 @@ class Invoice extends Model
      */
     public function getTotalRefundedAttribute()
     {
-        return $this->refunds()->where('approval_status', 'approved')->sum('refund_amount');
+        return $this->refunds()->where('approval_status', Refund::APPROVAL_APPROVED)->sum('refund_amount');
     }
 }

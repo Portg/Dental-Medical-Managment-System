@@ -1,37 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .survey-card { background: #fff; border-radius: 8px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .survey-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #f0f0f0; }
-    .survey-header .patient-info h3 { margin: 0 0 5px 0; }
-    .survey-header .patient-info .meta { color: #999; font-size: 13px; }
-    .survey-header .status { padding: 5px 15px; border-radius: 15px; font-size: 13px; }
-    .survey-header .status.pending { background: #FFF3E0; color: #E65100; }
-    .survey-header .status.completed { background: #E8F5E9; color: #2E7D32; }
-    .survey-header .status.expired { background: #f0f0f0; color: #999; }
-    .rating-section { margin-bottom: 25px; }
-    .rating-section .section-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: #333; }
-    .rating-item { display: flex; align-items: center; margin-bottom: 12px; }
-    .rating-item .label { width: 120px; color: #666; }
-    .rating-item .stars { color: #FFD700; font-size: 20px; letter-spacing: 2px; }
-    .rating-item .value { margin-left: 10px; font-weight: bold; color: #1A237E; }
-    .nps-section { background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%); border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px; }
-    .nps-section .nps-value { font-size: 48px; font-weight: bold; color: #1A237E; }
-    .nps-section .nps-label { font-size: 14px; color: #666; }
-    .nps-section .nps-type { margin-top: 10px; padding: 3px 12px; border-radius: 12px; font-size: 12px; display: inline-block; }
-    .nps-section .nps-type.promoter { background: #E8F5E9; color: #2E7D32; }
-    .nps-section .nps-type.passive { background: #FFF3E0; color: #E65100; }
-    .nps-section .nps-type.detractor { background: #FFEBEE; color: #C62828; }
-    .feedback-section { background: #f9f9f9; border-radius: 8px; padding: 20px; }
-    .feedback-section .feedback-title { font-weight: 600; margin-bottom: 10px; color: #333; }
-    .feedback-section .feedback-content { color: #666; line-height: 1.6; }
-    .feedback-section .feedback-content.empty { font-style: italic; color: #999; }
-    .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-    .info-item { display: flex; }
-    .info-item .info-label { width: 100px; color: #999; font-size: 13px; }
-    .info-item .info-value { flex: 1; color: #333; }
-</style>
+    <link rel="stylesheet" href="{{ asset('css/satisfaction-surveys.css') }}">
 @endsection
 
 <div class="row">

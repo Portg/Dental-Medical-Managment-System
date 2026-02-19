@@ -16,6 +16,7 @@ class MedicalTemplateController extends Controller
     public function __construct(MedicalTemplateService $medicalTemplateService)
     {
         $this->medicalTemplateService = $medicalTemplateService;
+        $this->middleware('can:manage-medical-services');
     }
 
     /**
@@ -27,7 +28,11 @@ class MedicalTemplateController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->medicalTemplateService->getTemplateList($request->all());
+            $data = $this->medicalTemplateService->getTemplateList([
+                'search'   => $request->input('search.value', ''),
+                'category' => $request->input('category'),
+                'type'     => $request->input('type'),
+            ]);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -84,7 +89,7 @@ class MedicalTemplateController extends Controller
             'content' => 'required',
         ])->validate();
 
-        $template = $this->medicalTemplateService->createTemplate($request->all(), Auth::user()->id);
+        $template = $this->medicalTemplateService->createTemplate($request->only(['name', 'code', 'category', 'type', 'content']), Auth::user()->id);
 
         if ($template) {
             return response()->json([
@@ -132,7 +137,7 @@ class MedicalTemplateController extends Controller
             'content' => 'required',
         ])->validate();
 
-        $status = $this->medicalTemplateService->updateTemplate($id, $request->all());
+        $status = $this->medicalTemplateService->updateTemplate($id, $request->only(['name', 'code', 'category', 'type', 'content']));
 
         if ($status) {
             return response()->json([

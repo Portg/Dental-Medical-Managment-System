@@ -2,14 +2,19 @@
 
 namespace App\Services;
 
+use App\Appointment;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
 use App\InsuranceCompany;
+use App\MedicalCase;
 use App\Patient;
+use App\PatientFollowup;
+use App\PatientImage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Yajra\DataTables\DataTables;
 
 class PatientService
 {
@@ -68,7 +73,8 @@ class PatientService
             ->select(
                 'patients.*', 'patients.surname', 'patients.othername',
                 'insurance_companies.name', 'patient_sources.name as source_name',
-                'users.surname as addedBy'
+                'users.surname as addedBy',
+                DB::raw("(SELECT GROUP_CONCAT(pt.name SEPARATOR ', ') FROM patient_tag_pivot ptp JOIN patient_tags pt ON pt.id = ptp.tag_id WHERE ptp.patient_id = patients.id) as tags_badges")
             );
 
         // Quick search filter (from custom search box)
@@ -192,22 +198,19 @@ class PatientService
     {
         $patient = Patient::with(['InsuranceCompany'])->findOrFail($id);
 
-        $appointmentsCount = DB::table('appointments')
-            ->where('patient_id', $id)->whereNull('deleted_at')->count();
+        $appointmentsCount = Appointment::where('patient_id', $id)->count();
 
-        $medicalCasesCount = DB::table('medical_cases')
-            ->where('patient_id', $id)->whereNull('deleted_at')->count();
+        $medicalCasesCount = MedicalCase::where('patient_id', $id)->count();
 
-        $imagesCount = DB::table('patient_images')
-            ->where('patient_id', $id)->whereNull('deleted_at')->count();
+        $imagesCount = PatientImage::where('patient_id', $id)->count();
 
-        $followupsCount = DB::table('patient_followups')
-            ->where('patient_id', $id)->whereNull('deleted_at')->count();
+        $followupsCount = PatientFollowup::where('patient_id', $id)->count();
 
         $invoicesCount = DB::table('invoices')
             ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
             ->where('appointments.patient_id', $id)
             ->whereNull('invoices.deleted_at')
+            ->whereNull('appointments.deleted_at')
             ->count();
 
         return compact(
@@ -378,5 +381,83 @@ class PatientService
     public function deletePatient(int $id): bool
     {
         return (bool) Patient::where('id', $id)->delete();
+    }
+
+    /**
+     * Build the DataTables response for the patient index listing.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->filter(function ($instance) {
+            })
+            ->addColumn('full_name', function ($row) {
+                return NameHelper::join($row->surname, $row->othername);
+            })
+            ->addColumn('gender', function ($row) {
+                if ($row->gender == 'Male') {
+                    return __('patient.male');
+                } elseif ($row->gender == 'Female') {
+                    return __('patient.female');
+                }
+                return $row->gender ?: '';
+            })
+            ->addColumn('patient_no', function ($row) {
+                return '<a href="#"> ' . $row->patient_no . '</a>';
+            })
+            ->addColumn('tags_badges', function ($row) {
+                return $row->tags_badges ?: '';
+            })
+            ->addColumn('source_name', function ($row) {
+                return $row->source_name ?: '';
+            })
+            ->addColumn('medical_insurance', function ($row) {
+                if ($row->has_insurance && $row->insurance_company_id != null) {
+                    return $row->name;
+                } elseif ($row->has_insurance) {
+                    return __('common.yes');
+                } else {
+                    return __('common.no');
+                }
+            })
+            ->addColumn('Medical_History', function ($row) {
+                return '<a href="' . url('/medical-history/' . $row->id) . '" class="btn btn-success">' . __('patient.medical_history') . '</a>';
+            })
+            ->addColumn('addedBy', function ($row) {
+                return $row->addedBy;
+            })
+            ->addColumn('status', function ($row) {
+                if ($row->deleted_at != null) {
+                    return '<span class="text-danger">' . __('common.inactive') . '</span>';
+                } else {
+                    return '<span class="text-primary">' . __('common.active') . '</span>';
+                }
+            })
+            ->addColumn('action', function ($row) {
+                return '
+                  <div class="btn-group">
+                    <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
+                            aria-expanded="false"> ' . __('common.action') . '
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li>
+                            <a href="' . url('patients/' . $row->id) . '">' . __('patient.patient_details') . '</a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="editRecord(' . $row->id . ')">' . __('patient.patient_profile') . '</a>
+                        </li>
+                         <li>
+                           <a href="#" onclick="getPatientMedicalHistory(' . $row->id . ')" >' . __('patient.patient_history') . '</a>
+                        </li>
+                         <li>
+                           <a href="#" onclick="deleteRecord(' . $row->id . ')" >' . __('patient.delete_patient') . '</a>
+                        </li>
+                    </ul>
+                </div>
+                ';
+            })
+            ->rawColumns(['patient_no', 'medical_insurance', 'Medical_History', 'status', 'action'])
+            ->make(true);
     }
 }

@@ -1,41 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
-    .stat-card { background: #fff; border-radius: 8px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .stat-card .stat-value { font-size: 36px; font-weight: bold; color: #1A237E; }
-    .stat-card .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
-    .stat-card.highlight { background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
-    .stat-card.highlight .stat-value, .stat-card.highlight .stat-label { color: #fff; }
-    .stat-card.nps-good { background: linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%); }
-    .stat-card.nps-good .stat-value, .stat-card.nps-good .stat-label { color: #fff; }
-    .stat-card.nps-neutral { background: linear-gradient(135deg, #F57C00 0%, #FF9800 100%); }
-    .stat-card.nps-neutral .stat-value, .stat-card.nps-neutral .stat-label { color: #fff; }
-    .stat-card.nps-bad { background: linear-gradient(135deg, #C62828 0%, #F44336 100%); }
-    .stat-card.nps-bad .stat-value, .stat-card.nps-bad .stat-label { color: #fff; }
-    .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-    .rating-bar { display: flex; align-items: center; margin-bottom: 12px; }
-    .rating-bar .label { width: 100px; font-size: 13px; color: #666; }
-    .rating-bar .bar-wrapper { flex: 1; height: 24px; background: #f0f0f0; border-radius: 4px; overflow: hidden; margin: 0 10px; }
-    .rating-bar .bar { height: 100%; border-radius: 4px; background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
-    .rating-bar .value { width: 50px; text-align: right; font-weight: bold; color: #1A237E; }
-    .doctor-rank { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
-    .doctor-rank:last-child { border-bottom: none; }
-    .doctor-rank .rank { width: 30px; height: 30px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; }
-    .doctor-rank .rank.top { background: #FFD700; color: #333; }
-    .doctor-rank .info { flex: 1; }
-    .doctor-rank .name { font-weight: 500; }
-    .doctor-rank .meta { font-size: 12px; color: #999; }
-    .doctor-rank .rating { font-weight: bold; color: #1A237E; }
-    .rating-dist-item { display: flex; align-items: center; margin-bottom: 8px; }
-    .rating-dist-item .stars { width: 80px; color: #FFD700; }
-    .rating-dist-item .bar-wrapper { flex: 1; height: 20px; background: #f0f0f0; border-radius: 4px; overflow: hidden; margin: 0 10px; }
-    .rating-dist-item .bar { height: 100%; border-radius: 4px; }
-    .rating-dist-item .count { width: 40px; text-align: right; font-size: 13px; color: #666; }
-    @media (max-width: 991px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
-</style>
+    <link rel="stylesheet" href="{{ asset('css/satisfaction-surveys.css') }}">
 @endsection
 
 <div class="row">
@@ -206,7 +172,7 @@
 </div>
 
 {{-- 批量发送模态框 --}}
-<div class="modal fade" id="sendBatchModal" tabindex="-1" role="dialog">
+<div class="modal fade modal-form" id="sendBatchModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">

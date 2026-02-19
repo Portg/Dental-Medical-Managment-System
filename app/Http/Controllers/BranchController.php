@@ -16,6 +16,11 @@ class BranchController extends Controller
     public function __construct(BranchService $branchService)
     {
         $this->branchService = $branchService;
+
+        $this->middleware('can:view-branches')->only(['index', 'show', 'filterBranches']);
+        $this->middleware('can:create-branches')->only(['create', 'store']);
+        $this->middleware('can:edit-branches')->only(['edit', 'update']);
+        $this->middleware('can:delete-branches')->only(['destroy']);
     }
 
     /**
@@ -34,6 +39,9 @@ class BranchController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('addedBy', function ($row) {
                     return $row->surname;

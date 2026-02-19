@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
-use App\Http\Helper\NameHelper;
-use App\Invoice;
 use App\Services\AppointmentService;
 use App\Exports\AppointmentExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -12,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 
 class AppointmentsController extends Controller
 {
@@ -21,6 +18,11 @@ class AppointmentsController extends Controller
     public function __construct(AppointmentService $appointmentService)
     {
         $this->appointmentService = $appointmentService;
+
+        $this->middleware('can:view-appointments')->only(['index', 'show', 'calendarEvents', 'exportAppointmentReport', 'getChairs', 'getDoctorTimeSlots']);
+        $this->middleware('can:create-appointments')->only(['create', 'store']);
+        $this->middleware('can:edit-appointments')->only(['edit', 'update', 'sendReschedule']);
+        $this->middleware('can:delete-appointments')->only(['destroy']);
     }
 
     public function index(Request $request)
@@ -30,75 +32,12 @@ class AppointmentsController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->appointmentService->getAppointmentList($request->all());
+            $data = $this->appointmentService->getAppointmentList($request->only([
+                'quick_search', 'appointment_no', 'start_date', 'end_date',
+                'filter_doctor', 'filter_invoice_status', 'search',
+            ]));
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->filter(function ($instance) use ($request) {
-                })
-                ->editColumn('sort_by', function ($row) {
-                    return $row->sort_by ? \Carbon\Carbon::parse($row->sort_by)->format('Y-m-d H:i') : '-';
-                })
-                ->editColumn('status', function ($row) {
-                    $key = 'appointment.' . strtolower(str_replace(' ', '_', $row->status));
-                    $translated = __($key);
-                    return $translated !== $key ? $translated : $row->status;
-                })
-                ->addColumn('patient', function ($row) {
-                    return NameHelper::join($row->surname, $row->othername);
-                })
-                ->addColumn('doctor', function ($row) {
-                    return NameHelper::join($row->d_surname, $row->d_othername);
-                })
-                ->addColumn('visit_information', function ($row) {
-                    $action = '';
-                    if ($row->visit_information == "Review Treatment" && $row->status != "Waiting") {
-                        $action = '<br> <a href="#"  onclick="ReactivateAppointment(' .
-                            $row->id . ')"  class="text-primary">Re-activate Appointment</a>';
-                    }
-                    return $row->visit_information . "" . $action;
-                })
-                ->addColumn('invoice_status', function ($row) {
-                    $has_invoice = Invoice::where('appointment_id', $row->id)->first();
-                    if ($has_invoice == null) {
-                        return '<span class="text-danger">' . __('messages.no_invoice_yet') . '</span>';
-                    }
-                    return '<span class="text-primary">' . __('messages.invoice_already_generated') . '</span>';
-                })
-                ->addColumn('action', function ($row) {
-                    $has_invoice = Invoice::where('appointment_id', $row->id)->first();
-                    $invoice_action = $has_invoice == null
-                        ? '<a href="#" onclick="RecordPayment(' . $row->id . ')" >' . __('invoices.generate_invoice') . '</a>'
-                        : '<a href="' . url('invoices/' . $has_invoice->id) . '">' . __('invoices.view_invoice') . '</a>';
-
-                    return '
-                      <div class="btn-group">
-                        <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> ' . __('common.action') . '
-                            <i class="fa fa-angle-down"></i>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                              <li>
-                                <a href="#" onclick="RescheduleAppointment(' . $row->id . ')" >' . __('appointment.reschedule') . '</a>
-                            </li>
-                             <li>
-                              ' . $invoice_action . '
-                            </li>
-                              <li>
-                                <a href="#" onclick="editRecord(' . $row->id . ')" >' . __('common.edit') . '</a>
-                            </li>
-                              <li>
-                                <a href="' . url('medical-treatment/' . $row->id) . '" >' . __('medical_treatment.treatment_history') . '</a>
-                            </li>
-                             <li>
-                               <a href="#" onclick="deleteRecord(' . $row->id . ')">' . __('common.delete') . '</a>
-                            </li>
-                        </ul>
-                    </div>
-                    ';
-                })
-                ->rawColumns(['visit_information', 'invoice_status', 'action'])
-                ->make(true);
+            return $this->appointmentService->buildIndexDataTable($data);
         }
         return view('appointments.index');
     }
@@ -141,7 +80,11 @@ class AppointmentsController extends Controller
             'doctor_id' => 'required',
         ])->validate();
 
-        $appointment = $this->appointmentService->createAppointment($request->all());
+        $appointment = $this->appointmentService->createAppointment($request->only([
+            'visit_information', 'appointment_date', 'appointment_time',
+            'patient_id', 'doctor_id', 'notes', 'chair_id', 'service_id',
+            'appointment_type', 'duration_minutes',
+        ]));
 
         if ($appointment) {
             return response()->json(['message' => __('messages.appointment_created_successfully'), 'status' => true]);
@@ -178,7 +121,10 @@ class AppointmentsController extends Controller
             'doctor_id' => 'required',
         ])->validate();
 
-        $status = $this->appointmentService->updateAppointment($id, $request->all());
+        $status = $this->appointmentService->updateAppointment($id, $request->only([
+            'visit_information', 'patient_id', 'appointment_date',
+            'appointment_time', 'doctor_id', 'notes',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('messages.appointment_updated_successfully'), 'status' => true]);
@@ -191,7 +137,9 @@ class AppointmentsController extends Controller
      */
     public function sendReschedule(Request $request): JsonResponse
     {
-        $success = $this->appointmentService->rescheduleAppointment($request->id, $request->all());
+        $success = $this->appointmentService->rescheduleAppointment($request->id, $request->only([
+            'appointment_date', 'appointment_time',
+        ]));
 
         if ($success) {
             return FunctionsHelper::messageResponse(__('messages.appointment_rescheduled_successfully'), $success);

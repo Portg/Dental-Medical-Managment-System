@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Helper\NameHelper;
 use App\MemberLevel;
 use App\MemberTransaction;
 use App\Patient;
@@ -9,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\DataTables;
 
 class MemberService
 {
@@ -199,8 +201,7 @@ class MemberService
     public function getLevelList(): Collection
     {
         return Cache::remember(self::CACHE_KEY_LEVELS, self::CACHE_TTL, function () {
-            return MemberLevel::whereNull('deleted_at')
-                ->orderBy('sort_order')
+            return MemberLevel::orderBy('sort_order')
                 ->get();
         });
     }
@@ -281,5 +282,99 @@ class MemberService
         Cache::forget(self::CACHE_KEY_LEVELS);
 
         return ['message' => __('members.level_deleted_successfully'), 'status' => true];
+    }
+
+    // ─── DataTable builders ─────────────────────────────────────
+
+    /**
+     * Build DataTables response for the member index page.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->addColumn('patient_name', function ($row) {
+                return NameHelper::join($row->surname, $row->othername);
+            })
+            ->addColumn('levelBadge', function ($row) {
+                if ($row->level_name) {
+                    return '<span class="label" style="background-color:' . e($row->level_color) . '">' . e($row->level_name) . '</span>';
+                }
+                return '-';
+            })
+            ->addColumn('statusBadge', function ($row) {
+                $class = 'default';
+                if ($row->member_status == 'Active') $class = 'success';
+                elseif ($row->member_status == 'Expired') $class = 'danger';
+                return '<span class="label label-' . $class . '">' . __('members.status_' . strtolower($row->member_status)) . '</span>';
+            })
+            ->addColumn('balance', function ($row) {
+                return number_format($row->member_balance, 2);
+            })
+            ->addColumn('viewBtn', function ($row) {
+                return '<a href="' . url('members/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+            })
+            ->addColumn('depositBtn', function ($row) {
+                return '<a href="#" onclick="depositMember(' . $row->id . ')" class="btn btn-success btn-sm">' . __('members.deposit') . '</a>';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editMember(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->rawColumns(['levelBadge', 'statusBadge', 'viewBtn', 'depositBtn', 'editBtn'])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTables response for member transactions.
+     */
+    public function buildTransactionsDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->addColumn('typeBadge', function ($row) {
+                $class = 'default';
+                if ($row->transaction_type == 'Deposit') $class = 'success';
+                elseif ($row->transaction_type == 'Consumption') $class = 'warning';
+                elseif ($row->transaction_type == 'Refund') $class = 'info';
+                return '<span class="label label-' . $class . '">' . __('members.type_' . strtolower($row->transaction_type)) . '</span>';
+            })
+            ->addColumn('amountFormatted', function ($row) {
+                $prefix = in_array($row->transaction_type, ['Deposit', 'Refund']) ? '+' : '-';
+                $class = in_array($row->transaction_type, ['Deposit', 'Refund']) ? 'text-success' : 'text-danger';
+                return '<span class="' . $class . '">' . $prefix . number_format($row->amount, 2) . '</span>';
+            })
+            ->rawColumns(['typeBadge', 'amountFormatted'])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTables response for member levels.
+     */
+    public function buildLevelsDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->addColumn('colorBadge', function ($row) {
+                return '<span class="label" style="background-color:' . e($row->color) . '">' . e($row->name) . '</span>';
+            })
+            ->addColumn('discountDisplay', function ($row) {
+                if ($row->discount_rate < 100) {
+                    return (100 - $row->discount_rate) . '%';
+                }
+                return __('members.no_discount');
+            })
+            ->addColumn('statusBadge', function ($row) {
+                $class = $row->is_active ? 'success' : 'default';
+                $text = $row->is_active ? __('common.active') : __('common.inactive');
+                return '<span class="label label-' . $class . '">' . $text . '</span>';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editLevel(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteLevel(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->rawColumns(['colorBadge', 'statusBadge', 'editBtn', 'deleteBtn'])
+            ->make(true);
     }
 }

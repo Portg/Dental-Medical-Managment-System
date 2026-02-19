@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\TreatmentPlanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 
 class TreatmentPlanController extends Controller
 {
@@ -14,6 +13,7 @@ class TreatmentPlanController extends Controller
     public function __construct(TreatmentPlanService $treatmentPlanService)
     {
         $this->treatmentPlanService = $treatmentPlanService;
+        $this->middleware('can:manage-treatments');
     }
 
     /**
@@ -28,35 +28,7 @@ class TreatmentPlanController extends Controller
         if ($request->ajax()) {
             $data = $this->treatmentPlanService->getAllPlans();
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="#" onclick="viewTreatmentPlan(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editTreatmentPlan(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteTreatmentPlan(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->status == 'Planned') $class = 'info';
-                    elseif ($row->status == 'In Progress') $class = 'warning';
-                    elseif ($row->status == 'Completed') $class = 'success';
-                    elseif ($row->status == 'Cancelled') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.plan_status_' . strtolower(str_replace(' ', '_', $row->status))) . '</span>';
-                })
-                ->addColumn('priorityBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->priority == 'Low') $class = 'success';
-                    elseif ($row->priority == 'Medium') $class = 'info';
-                    elseif ($row->priority == 'High') $class = 'warning';
-                    elseif ($row->priority == 'Urgent') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.priority_' . strtolower($row->priority)) . '</span>';
-                })
-                ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'statusBadge', 'priorityBadge'])
-                ->make(true);
+            return $this->treatmentPlanService->buildDataTable($data);
         }
 
         return view('treatment_plans.index');
@@ -75,35 +47,7 @@ class TreatmentPlanController extends Controller
         if ($request->ajax()) {
             $data = $this->treatmentPlanService->getPatientPlans($patient_id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="#" onclick="viewTreatmentPlan(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editTreatmentPlan(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteTreatmentPlan(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->status == 'Planned') $class = 'info';
-                    elseif ($row->status == 'In Progress') $class = 'warning';
-                    elseif ($row->status == 'Completed') $class = 'success';
-                    elseif ($row->status == 'Cancelled') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.plan_status_' . strtolower(str_replace(' ', '_', $row->status))) . '</span>';
-                })
-                ->addColumn('priorityBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->priority == 'Low') $class = 'success';
-                    elseif ($row->priority == 'Medium') $class = 'info';
-                    elseif ($row->priority == 'High') $class = 'warning';
-                    elseif ($row->priority == 'Urgent') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.priority_' . strtolower($row->priority)) . '</span>';
-                })
-                ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'statusBadge', 'priorityBadge'])
-                ->make(true);
+            return $this->treatmentPlanService->buildDataTable($data);
         }
     }
 
@@ -120,35 +64,7 @@ class TreatmentPlanController extends Controller
         if ($request->ajax()) {
             $data = $this->treatmentPlanService->getCasePlans($case_id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="#" onclick="viewTreatmentPlan(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editTreatmentPlan(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteTreatmentPlan(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->status == 'Planned') $class = 'info';
-                    elseif ($row->status == 'In Progress') $class = 'warning';
-                    elseif ($row->status == 'Completed') $class = 'success';
-                    elseif ($row->status == 'Cancelled') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.plan_status_' . strtolower(str_replace(' ', '_', $row->status))) . '</span>';
-                })
-                ->addColumn('priorityBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->priority == 'Low') $class = 'success';
-                    elseif ($row->priority == 'Medium') $class = 'info';
-                    elseif ($row->priority == 'High') $class = 'warning';
-                    elseif ($row->priority == 'Urgent') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.priority_' . strtolower($row->priority)) . '</span>';
-                })
-                ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'statusBadge', 'priorityBadge'])
-                ->make(true);
+            return $this->treatmentPlanService->buildDataTable($data);
         }
     }
 
@@ -168,7 +84,7 @@ class TreatmentPlanController extends Controller
             'patient_id.required' => __('validation.custom.patient_id.required'),
         ])->validate();
 
-        $status = $this->treatmentPlanService->createPlan($request->all());
+        $status = $this->treatmentPlanService->createPlan($request->only(['plan_name', 'patient_id']));
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.treatment_plan_added_successfully'), 'status' => true]);
@@ -213,7 +129,7 @@ class TreatmentPlanController extends Controller
             'plan_name.required' => __('validation.custom.plan_name.required'),
         ])->validate();
 
-        $status = $this->treatmentPlanService->updatePlan($id, $request->all());
+        $status = $this->treatmentPlanService->updatePlan($id, $request->only(['plan_name']));
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.treatment_plan_updated_successfully'), 'status' => true]);

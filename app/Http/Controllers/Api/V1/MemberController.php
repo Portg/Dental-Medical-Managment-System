@@ -14,7 +14,9 @@ class MemberController extends ApiController
 {
     public function __construct(
         protected MemberService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-members');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -71,7 +73,9 @@ class MemberController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $result = $this->service->registerMember($request->all());
+        $result = $this->service->registerMember($request->only([
+            'patient_id', 'member_level_id', 'initial_balance', 'payment_method', 'member_expiry',
+        ]));
 
         if (!$result['status']) {
             return $this->error($result['message']);
@@ -94,7 +98,9 @@ class MemberController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $result = $this->service->updateMember($id, $request->all());
+        $result = $this->service->updateMember($id, $request->only([
+            'member_level_id', 'member_status', 'member_expiry',
+        ]));
 
         if (!$result['status']) {
             return $this->error($result['message']);
@@ -117,7 +123,9 @@ class MemberController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $result = $this->service->deposit($id, $request->all());
+        $result = $this->service->deposit($id, $request->only([
+            'amount', 'payment_method', 'description',
+        ]));
 
         if (!$result['status']) {
             return $this->error($result['message']);

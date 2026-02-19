@@ -15,6 +15,7 @@ class SelfAccountController extends Controller
     public function __construct(SelfAccountService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-accounting');
     }
 
     /**
@@ -27,7 +28,7 @@ class SelfAccountController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $search = !empty($_GET['search']) ? $request->get('search') : null;
+            $search = $request->filled('search') ? $request->get('search') : null;
             $data = $this->service->getAccountList($search);
 
             return Datatables::of($data)
@@ -35,7 +36,7 @@ class SelfAccountController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('account_holder', function ($row) {
-                    return ' <a href="' . url('self-accounts/' . $row->id) . '"  >' . $row->account_holder . '</a>';
+                    return ' <a href="' . url('self-accounts/' . $row->id) . '"  >' . e($row->account_holder) . '</a>';
                 })
                 ->addColumn('account_balance', function ($row) {
                     $account_balance = $this->service->getAccountBalance($row->id);
@@ -100,7 +101,7 @@ class SelfAccountController extends Controller
             'name' => 'required',
         ])->validate();
 
-        $status = $this->service->createAccount($request->all());
+        $status = $this->service->createAccount($request->only(['name']));
 
         if ($status) {
             return response()->json(['message' => __('financial.self_account_created_successfully'), 'status' => true]);
@@ -145,7 +146,7 @@ class SelfAccountController extends Controller
             'name' => 'required',
         ])->validate();
 
-        $status = $this->service->updateAccount($id, $request->all());
+        $status = $this->service->updateAccount($id, $request->only(['name']));
 
         if ($status) {
             return response()->json(['message' => __('financial.self_account_updated_successfully'), 'status' => true]);

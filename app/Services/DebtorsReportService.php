@@ -52,7 +52,8 @@ class DebtorsReportService
                 $invoiceQuery->leftJoin('insurance_companies', 'insurance_companies.id', 'patients.insurance_company_id');
             }
 
-            $invoiceQuery->where('invoices.id', $item->invoice_id);
+            $invoiceQuery->where('invoices.id', $item->invoice_id)
+                ->whereNull('invoices.deleted_at');
 
             $selectColumns = ['patients.*', 'invoices.invoice_no', DB::raw('DATE_FORMAT(invoices.created_at, "%d-%b-%Y") as invoice_date')];
             if ($includeInsurance) {

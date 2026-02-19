@@ -14,6 +14,7 @@ class InventoryCategoryController extends Controller
     public function __construct(InventoryCategoryService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-inventory');
     }
 
     /**
@@ -87,7 +88,9 @@ class InventoryCategoryController extends Controller
             'type.required' => __('inventory.category_type_required'),
         ])->validate();
 
-        $status = $this->service->create($request->all());
+        $status = $this->service->create($request->only([
+            'name', 'code', 'type', 'description', 'sort_order', 'is_active',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('inventory.category_added_successfully'), 'status' => true]);
@@ -126,7 +129,9 @@ class InventoryCategoryController extends Controller
             'type.required' => __('inventory.category_type_required'),
         ])->validate();
 
-        $status = $this->service->update($id, $request->all());
+        $status = $this->service->update($id, $request->only([
+            'name', 'code', 'type', 'description', 'sort_order', 'is_active',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('inventory.category_updated_successfully'), 'status' => true]);

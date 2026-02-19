@@ -14,8 +14,7 @@ class CouponService
      */
     public function getCouponList(): Collection
     {
-        return Coupon::whereNull('deleted_at')
-            ->orderBy('created_at', 'desc')
+        return Coupon::orderBy('created_at', 'desc')
             ->get();
     }
 

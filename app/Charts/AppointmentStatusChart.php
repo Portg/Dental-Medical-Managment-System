@@ -4,7 +4,7 @@ namespace App\Charts;
 
 use ConsoleTVs\Charts\Classes\Chartjs\Chart;
 
-class PatientsChart extends Chart
+class AppointmentStatusChart extends Chart
 {
     /**
      * Initializes the chart.

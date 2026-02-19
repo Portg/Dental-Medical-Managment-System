@@ -34,8 +34,8 @@ class CommissionRuleService
      */
     public function getViewData(): array
     {
-        $services = \App\MedicalService::whereNull('deleted_at')->get();
-        $branches = \App\Branch::whereNull('deleted_at')->get();
+        $services = \App\MedicalService::all();
+        $branches = \App\Branch::all();
 
         return compact('services', 'branches');
     }

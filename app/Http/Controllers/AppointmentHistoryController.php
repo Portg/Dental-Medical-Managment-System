@@ -13,6 +13,7 @@ class AppointmentHistoryController extends Controller
     public function __construct(AppointmentHistoryService $service)
     {
         $this->service = $service;
+        $this->middleware('can:view-appointments');
     }
 
     /**

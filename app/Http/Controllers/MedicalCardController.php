@@ -15,6 +15,7 @@ class MedicalCardController extends Controller
     public function __construct(MedicalCardService $medicalCardService)
     {
         $this->medicalCardService = $medicalCardService;
+        $this->middleware('can:manage-medical-services');
     }
 
     /**
@@ -39,6 +40,9 @@ class MedicalCardController extends Controller
                             return false;
                         });
                     }
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('patient', function ($row) {
                     return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);

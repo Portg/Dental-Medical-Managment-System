@@ -14,6 +14,7 @@ class MedicalServiceController extends Controller
     public function __construct(MedicalServiceService $medicalServiceService)
     {
         $this->medicalServiceService = $medicalServiceService;
+        $this->middleware('can:manage-medical-services');
     }
 
     /**
@@ -97,7 +98,7 @@ class MedicalServiceController extends Controller
             'price' => 'required'
         ])->validate();
 
-        $status = $this->medicalServiceService->createService($request->all());
+        $status = $this->medicalServiceService->createService($request->only(['name', 'price']));
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_added_successfully'), 'status' => true]);
         }
@@ -140,7 +141,7 @@ class MedicalServiceController extends Controller
             'price' => 'required'
         ])->validate();
 
-        $status = $this->medicalServiceService->updateService($id, $request->all());
+        $status = $this->medicalServiceService->updateService($id, $request->only(['name', 'price']));
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_updated_successfully'), 'status' => true]);
         }

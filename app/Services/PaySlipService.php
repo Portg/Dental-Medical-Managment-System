@@ -81,7 +81,7 @@ class PaySlipService
      */
     public function createPaySlip(int $employeeId, string $payslipMonth, array $allowances, array $deductions): array
     {
-        $employee = EmployeeContract::where(['employee_id' => $employeeId, 'status' => 'Active'])->first();
+        $employee = EmployeeContract::where(['employee_id' => $employeeId, 'status' => EmployeeContract::STATUS_ACTIVE])->first();
         if ($employee == null) {
             return ['status' => false, 'message' => __('payslips.employee_no_contract')];
         }

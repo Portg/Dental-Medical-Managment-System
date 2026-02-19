@@ -1,52 +1,32 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+@section('page_title', __('commission_rules.title'))
+@section('table_id', 'commission_table')
+
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('common.add_new') }}</button>
 @endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <i class="icon-calculator"></i>
-                    <span class="caption-subject">{{ __('commission_rules.title') }}</span>
-                </div>
-                <div class="actions">
-                    <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('common.add_new') }}</button>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <table class="table table-striped table-bordered table-hover" id="commission_table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        <th>{{ __('commission_rules.rule_name') }}</th>
-                        <th>{{ __('commission_rules.mode') }}</th>
-                        <th>{{ __('commission_rules.rate') }}</th>
-                        <th>{{ __('commission_rules.service') }}</th>
-                        <th>{{ __('commission_rules.branch') }}</th>
-                        <th>{{ __('common.status') }}</th>
-                        <th>{{ __('common.edit') }}</th>
-                        <th>{{ __('common.delete') }}</th>
-                    </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('commission_rules.create')
+
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('commission_rules.rule_name') }}</th>
+    <th>{{ __('commission_rules.mode') }}</th>
+    <th>{{ __('commission_rules.rate') }}</th>
+    <th>{{ __('commission_rules.service') }}</th>
+    <th>{{ __('commission_rules.branch') }}</th>
+    <th>{{ __('common.status') }}</th>
+    <th>{{ __('common.edit') }}</th>
+    <th>{{ __('common.delete') }}</th>
 @endsection
-@section('js')
-<script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+
+@section('modals')
+    @include('commission_rules.create')
+@endsection
+
+@section('page_js')
 <script type="text/javascript">
 $(function () {
-    var table = $('#commission_table').DataTable({
+    dataTable = $('#commission_table').DataTable({
         destroy: true,
         processing: true,
         serverSide: true,
@@ -54,6 +34,7 @@ $(function () {
         ajax: {
             url: "{{ url('/commission-rules/') }}"
         },
+        dom: 'rtip',
         columns: [
             {data: 'DT_RowIndex', name: 'DT_RowIndex'},
             {data: 'rule_name', name: 'rule_name'},
@@ -66,6 +47,8 @@ $(function () {
             {data: 'deleteBtn', name: 'deleteBtn', orderable: false, searchable: false}
         ]
     });
+
+    setupEmptyStateHandler();
 });
 
 function toggleMode(mode) {
@@ -228,14 +211,6 @@ function deleteRecord(id) {
             }
         });
     });
-}
-
-function alert_dialog(message, status) {
-    swal("{{ __('common.alert') }}", message, status);
-    if (status) {
-        let oTable = $('#commission_table').dataTable();
-        oTable.fnDraw(false);
-    }
 }
 </script>
 @endsection

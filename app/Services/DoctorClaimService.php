@@ -83,7 +83,7 @@ class DoctorClaimService
         return (bool) DoctorClaim::where('id', $id)->update([
             'insurance_amount' => $insuranceAmount,
             'cash_amount' => $cashAmount,
-            'status' => 'Approved',
+            'status' => DoctorClaim::STATUS_APPROVED,
             'approved_by' => Auth::User()->id,
         ]);
     }
@@ -104,7 +104,7 @@ class DoctorClaimService
         return (bool) DoctorClaim::where('id', $id)->update([
             'insurance_amount' => $insuranceAmount,
             'cash_amount' => $cashAmount,
-            'status' => 'Approved',
+            'status' => DoctorClaim::STATUS_APPROVED,
             'approved_by' => Auth::User()->id,
         ]);
     }

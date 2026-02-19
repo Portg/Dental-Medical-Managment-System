@@ -13,7 +13,9 @@ class TreatmentPlanController extends ApiController
 {
     public function __construct(
         protected TreatmentPlanService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-treatments');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -63,7 +65,11 @@ class TreatmentPlanController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $plan = $this->service->createPlan($request->all());
+        $plan = $this->service->createPlan($request->only([
+            'plan_name', 'patient_id', 'description', 'planned_procedures',
+            'estimated_cost', 'status', 'priority', 'start_date',
+            'target_completion_date', 'medical_case_id',
+        ]));
 
         if (!$plan) {
             return $this->error('Failed to create treatment plan', 500);
@@ -93,7 +99,11 @@ class TreatmentPlanController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->service->updatePlan($id, $request->all());
+        $status = $this->service->updatePlan($id, $request->only([
+            'plan_name', 'description', 'planned_procedures', 'estimated_cost',
+            'actual_cost', 'status', 'priority', 'start_date',
+            'target_completion_date', 'completion_notes',
+        ]));
 
         if (!$status) {
             return $this->error('Failed to update treatment plan', 500);

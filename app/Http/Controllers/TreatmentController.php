@@ -15,6 +15,7 @@ class TreatmentController extends Controller
     public function __construct(TreatmentService $treatmentService)
     {
         $this->treatmentService = $treatmentService;
+        $this->middleware('can:manage-treatments');
     }
 
     /**

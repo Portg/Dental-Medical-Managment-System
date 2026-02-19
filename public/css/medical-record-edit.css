@@ -398,7 +398,7 @@
     border-left: 1px solid #e0e0e0;
 }
 .tooth-chart-tab.active {
-    background: #1A237E;
+    background: #00838F;
     color: #fff;
 }
 .tooth-chart-tab:not(.active):hover {

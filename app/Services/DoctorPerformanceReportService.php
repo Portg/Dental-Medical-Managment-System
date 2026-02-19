@@ -15,7 +15,7 @@ class DoctorPerformanceReportService
      */
     public function getDoctors(): Collection
     {
-        return User::where('is_doctor', 'Yes')->orderBy('id', 'DESC')->get();
+        return User::where('is_doctor', true)->orderBy('id', 'DESC')->get();
     }
 
     /**
@@ -35,7 +35,9 @@ class DoctorPerformanceReportService
                 'invoice_items.*',
                 'patients.surname',
                 'patients.othername',
-                DB::raw('sum(price*qty) as amount')
+                DB::raw('sum(price*qty) as amount'),
+                DB::raw("(SELECT COALESCE(SUM(ii2.qty * ii2.price), 0) FROM invoice_items ii2 WHERE ii2.invoice_id = invoice_items.invoice_id AND ii2.deleted_at IS NULL) as invoice_total_amount"),
+                DB::raw("(SELECT COALESCE(SUM(ip.amount), 0) FROM invoice_payments ip WHERE ip.invoice_id = invoice_items.invoice_id) as invoice_paid_amount")
             )
             ->groupBy('invoice_items.invoice_id')
             ->get();
@@ -51,6 +53,7 @@ class DoctorPerformanceReportService
             ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
             ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
             ->whereNull('invoice_items.deleted_at')
+            ->whereNull('invoices.deleted_at')
             ->where('invoice_items.doctor_id', $doctorId)
             ->whereBetween(DB::raw('DATE_FORMAT(invoice_items.created_at, \'%Y-%m-%d\')'), [$from, $to])
             ->select(

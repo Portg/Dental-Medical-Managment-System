@@ -1,44 +1,27 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
+@extends('layouts.list-page')
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption">
-                    <i class="icon-grid font-green"></i>
-                    <span class="caption-subject font-green bold uppercase">{{ __('odontogram.dental_chart_list') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="note note-info">
-                    <p><i class="fa fa-info-circle"></i> {{ __('odontogram.go_to_appointment') }}</p>
-                </div>
-                <table class="table table-striped table-bordered table-hover table-checkable order-column" id="dental_chart_table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>{{ __('odontogram.patient_no') }}</th>
-                            <th>{{ __('odontogram.patient_name') }}</th>
-                            <th>{{ __('odontogram.tooth_count') }}</th>
-                            <th>{{ __('odontogram.last_updated') }}</th>
-                            <th>{{ __('common.actions') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+@section('page_title', __('odontogram.dental_chart_list'))
+@section('table_id', 'dental_chart_table')
 
+@section('table_headers')
+    <th>#</th>
+    <th>{{ __('odontogram.patient_no') }}</th>
+    <th>{{ __('odontogram.patient_name') }}</th>
+    <th>{{ __('odontogram.tooth_count') }}</th>
+    <th>{{ __('odontogram.last_updated') }}</th>
+    <th>{{ __('common.actions') }}</th>
 @endsection
 
-@section('js')
+@section('filter_area')
+    <div class="note note-info">
+        <p><i class="fa fa-info-circle"></i> {{ __('odontogram.go_to_appointment') }}</p>
+    </div>
+@endsection
+
+@section('page_js')
 <script type="text/javascript">
 $(document).ready(function() {
-    $('#dental_chart_table').DataTable({
+    dataTable = $('#dental_chart_table').DataTable({
         processing: true,
         serverSide: true,
         ajax: "{{ url('dental-charting') }}",
@@ -50,9 +33,11 @@ $(document).ready(function() {
             {data: 'last_updated', name: 'last_updated'},
             {data: 'action', name: 'action', orderable: false, searchable: false}
         ],
-        language: LanguageManager.getDataTableLanguage(),
+        dom: 'rtip',
+        language: LanguageManager.getDataTableLang(),
         order: [[4, 'desc']]
     });
+    setupEmptyStateHandler();
 });
 </script>
 @endsection

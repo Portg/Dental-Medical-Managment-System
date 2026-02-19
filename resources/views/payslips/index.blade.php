@@ -1,70 +1,37 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
-@endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject"> {{ __('payslips.payroll_management') }}/ {{ __('payslips.page_title') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('payslips.add_new') }}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @if(session()->has('success'))
-                    <div class="alert alert-info">
-                        <button class="close" data-dismiss="alert"></button> {{ session()->get('success') }}!
-                    </div>
-                @endif
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="payslips-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('payslips.id') }}</th>
-                        <th>{{ __('payslips.employee') }}</th>
-                        <th>{{ __('payslips.month') }}</th>
-                        <th>{{ __('payslips.gross_commission') }}</th>
-                        <th>{{ __('payslips.allowance') }}</th>
-                        <th>{{ __('payslips.deductions') }}</th>
-                        <th>{{ __('payslips.paid') }}</th>
-                        <th>{{ __('payslips.outstanding') }}</th>
-                        <th>{{ __('payslips.added_by') }}</th>
-                        <th>{{ __('payslips.action') }}</th>
-                    </thead>
-                    <tbody>
+@extends('layouts.list-page')
 
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('payslips.loading') }}</span>
-</div>
-@include('payslips.create')
-@endsection
-@section('js')
+@section('page_title', __('payslips.page_title'))
+@section('table_id', 'payslips-table')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('payslips.add_new') }}</button>
+@endsection
+
+@section('table_headers')
+    <th>{{ __('payslips.id') }}</th>
+    <th>{{ __('payslips.employee') }}</th>
+    <th>{{ __('payslips.month') }}</th>
+    <th>{{ __('payslips.gross_commission') }}</th>
+    <th>{{ __('payslips.allowance') }}</th>
+    <th>{{ __('payslips.deductions') }}</th>
+    <th>{{ __('payslips.paid') }}</th>
+    <th>{{ __('payslips.outstanding') }}</th>
+    <th>{{ __('payslips.added_by') }}</th>
+    <th>{{ __('payslips.action') }}</th>
+@endsection
+
+@section('modals')
+    @include('payslips.create')
+@endsection
+
+@section('page_js')
     <script type="text/javascript">
         $(function () {
             LanguageManager.loadAllFromPHP({
                 'payslips': @json(__('payslips'))
             });
 
-            let table = $('#payslips-table').DataTable({
+            dataTable = $('#payslips-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -74,14 +41,7 @@
                     data: function (d) {
                     }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                     {data: 'employee', name: 'employee'},
@@ -96,7 +56,7 @@
                 ]
             });
 
-
+            setupEmptyStateHandler();
         });
 
         function createRecord() {
@@ -347,19 +307,5 @@
         }
 
 
-        function alert_dialog(message, status) {
-            swal("{{ __('common.alert') }}", message, status);
-            if (status) {
-                let oTable = $('#payslips-table').dataTable();
-                oTable.fnDraw(false);
-            }
-        }
-
-
     </script>
 @endsection
-
-
-
-
-

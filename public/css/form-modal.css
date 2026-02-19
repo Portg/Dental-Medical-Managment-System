@@ -29,14 +29,14 @@
 /* Modal header styling */
 .modal-form .modal-header {
     padding: 16px 20px;
-    border-bottom: 1px solid #e8e8e8;
-    background: linear-gradient(to bottom, #fff, #fafafa);
+    border-bottom: none;
+    background: #00838F;
 }
 
 .modal-form .modal-title {
     font-size: 16px;
     font-weight: 600;
-    color: #333;
+    color: #FFFFFF;
 }
 
 /* Modal body with scroll */
@@ -106,7 +106,7 @@
 
 .form-section-title i {
     margin-right: 8px;
-    color: #4472C4;
+    color: #00ACC1;
     width: 16px;
 }
 
@@ -175,8 +175,8 @@
 }
 
 .modal-form .form-control:focus {
-    border-color: #4472C4;
-    box-shadow: 0 0 0 2px rgba(68, 114, 196, 0.1);
+    border-color: #00ACC1;
+    box-shadow: 0 0 0 2px rgba(0, 172, 193, 0.1);
 }
 
 /* Validation states */
@@ -328,8 +328,8 @@
 
 .modal-form .select2-container--default.select2-container--focus .select2-selection--single,
 .modal-form .select2-container--default.select2-container--focus .select2-selection--multiple {
-    border-color: #4472C4;
-    box-shadow: 0 0 0 2px rgba(68, 114, 196, 0.1);
+    border-color: #00ACC1;
+    box-shadow: 0 0 0 2px rgba(0, 172, 193, 0.1);
 }
 
 /* ==========================================================================
@@ -409,9 +409,9 @@
 .modal-form .iti input:focus,
 .modal-form .iti input[type="text"]:focus,
 .modal-form .iti input[type="tel"]:focus {
-    border-color: #4472C4;
+    border-color: #00ACC1;
     outline: 0;
-    box-shadow: 0 0 0 2px rgba(68, 114, 196, 0.1);
+    box-shadow: 0 0 0 2px rgba(0, 172, 193, 0.1);
 }
 
 /* Valid state */

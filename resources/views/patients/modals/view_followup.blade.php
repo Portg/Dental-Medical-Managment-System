@@ -1,4 +1,4 @@
-<div class="modal fade" id="viewFollowupModal" tabindex="-1" role="dialog" aria-labelledby="viewFollowupModalLabel" aria-hidden="true">
+<div class="modal fade modal-form" id="viewFollowupModal" tabindex="-1" role="dialog" aria-labelledby="viewFollowupModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">

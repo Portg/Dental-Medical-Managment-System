@@ -1,128 +1,61 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+@section('page_title', __('expenses.title'))
+@section('table_id', 'expenses-table')
+
+@section('header_actions')
+    <a href="{{ url('export-expenses') }}" class="btn btn-default">
+        <i class="icon-cloud-download"></i> {{ __('common.download_excel_report') }}
+    </a>
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('common.add_new') }}</button>
 @endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('expenses.title') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('common.add_new') }}</button>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="btn-group pull-right">
-                                <a href="{{ url('export-expenses') }}" class="text-danger">
-                                    <i class="icon-cloud-download"></i> {{ __('common.download_excel_report') }}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <br>
-                <div class="col-md-12">
 
-                    <form action="#" class="form-horizontal">
-                        <div class="form-body">
-
-                            <div class="row">
-                                <div class="col-md-6">
-
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{__('datetime.period')}}</label>
-                                        <div class="col-md-9">
-                                            <select class="form-control" id="period_selector">
-                                                <option>{{__('datetime.time_periods.all')}}</option>
-                                                <option value="Today">{{__('datetime.time_periods.today')}}</option>
-                                                <option value="Yesterday">{{__('datetime.time_periods.yesterday')}}</option>
-                                                <option value="This week">{{__('datetime.time_periods.this_week')}}</option>
-                                                <option value="Last week">{{__('datetime.time_periods.last_week')}}</option>
-                                                <option value="This Month">{{__('datetime.time_periods.this_month')}}</option>
-                                                <option value="Last Month">{{__('datetime.time_periods.last_month')}}</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{__('datetime.date_range.start_date')}}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control start_date"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{__('datetime.date_range.end_date')}}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control end_date">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="row">
-                                        <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{__('expenses.filter_expenses')}}
-                                            </button>
-                                            <button type="button" class="btn default">{{__('common.clear')}}</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6"></div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <br>
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="expenses-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        {{--                        <th>Purchase No</th>--}}
-                        <th>{{__('expenses.purchase_date')}}</th>
-                        <th>{{__('expenses.supplier_name')}}</th>
-                        <th>{{__('expenses.total_amount')}}</th>
-                        <th>{{__('expenses.paid_amount')}}</th>
-                        <th>{{__('expenses.outstanding')}}</th>
-                        <th>{{__('expenses.added_by')}}</th>
-                        <th>{{ __('common.action') }}</th>
-                    </thead>
-                    <tbody>
-
-                    </tbody>
-                </table>
-            </div>
+@section('filter_area')
+    <div class="row filter-row">
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('datetime.period') }}</div>
+            <select class="form-control" id="period_selector">
+                <option value="">{{ __('datetime.time_periods.all') }}</option>
+                <option value="Today">{{ __('datetime.time_periods.today') }}</option>
+                <option value="Yesterday">{{ __('datetime.time_periods.yesterday') }}</option>
+                <option value="This week">{{ __('datetime.time_periods.this_week') }}</option>
+                <option value="Last week">{{ __('datetime.time_periods.last_week') }}</option>
+                <option value="This Month">{{ __('datetime.time_periods.this_month') }}</option>
+                <option value="Last Month">{{ __('datetime.time_periods.last_month') }}</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('datetime.date_range.start_date') }}</div>
+            <input type="text" class="form-control start_date" id="filter_start_date">
+        </div>
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('datetime.date_range.end_date') }}</div>
+            <input type="text" class="form-control end_date" id="filter_end_date">
+        </div>
+        <div class="col-md-3 text-right filter-actions">
+            <button type="button" class="btn btn-default" onclick="clearFilters()">{{ __('common.reset') }}</button>
+            <button type="button" class="btn btn-primary" onclick="doSearch()">{{ __('common.search') }}</button>
         </div>
     </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{__('common.loading')}}</span>
-</div>
-@include('expenses.create')
-@include('expenses.payment.create')
 @endsection
-@section('js')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-    <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('expenses.purchase_date') }}</th>
+    <th>{{ __('expenses.supplier_name') }}</th>
+    <th>{{ __('expenses.total_amount') }}</th>
+    <th>{{ __('expenses.paid_amount') }}</th>
+    <th>{{ __('expenses.outstanding') }}</th>
+    <th>{{ __('expenses.added_by') }}</th>
+    <th>{{ __('common.action') }}</th>
+@endsection
+
+@section('modals')
+    @include('expenses.create')
+    @include('expenses.payment.create')
+@endsection
+
+@section('page_js')
     <script type="text/javascript">
         // Load page-specific translations
         LanguageManager.loadAllFromPHP({
@@ -137,12 +70,10 @@
             unitPricePlaceHolder: "{{ __('expenses.enter_unit_price') }}",
             totalAmountPlaceHolder: "{{ __('expenses.enter_total_amount') }}",
             removeBtn: "{{ __('common.remove') }}",
-            // 新增缺失的翻译
             chooseExpenseCategory: "{{ __('expenses.choose_expense_category') }}",
             processing: "{{ __('common.processing') }}",
             saveRecord: "{{ __('common.save_record') }}",
             savePurchase: "{{ __('expenses.save_purchase') }}",
-            // swal对话框
             confirmDelete: "{{ __('common.confirm_delete') }}",
             deleteWarning: "{{ __('expenses.delete_warning') }}",
             yesDelete: "{{ __('common.yes_delete') }}"
@@ -150,36 +81,43 @@
 
         function default_todays_data() {
             // initially load today's date filtered data
-            $('.start_date').val(todaysDate());
-            $('.end_date').val(todaysDate());
+            $('#filter_start_date').val(todaysDate());
+            $('#filter_end_date').val(todaysDate());
             $("#period_selector").val('Today');
+        }
+
+        function clearCustomFilters() {
+            $('#period_selector').val('');
+            $('#filter_start_date').val('');
+            $('#filter_end_date').val('');
         }
 
         $('#period_selector').on('change', function () {
             switch (this.value) {
                 case'Today':
-                    $('.start_date').val(todaysDate());
-                    $('.end_date').val(todaysDate());
+                    $('#filter_start_date').val(todaysDate());
+                    $('#filter_end_date').val(todaysDate());
                     break;
                 case'Yesterday':
-                    $('.start_date').val(YesterdaysDate());
-                    $('.end_date').val(YesterdaysDate());
+                    $('#filter_start_date').val(YesterdaysDate());
+                    $('#filter_end_date').val(YesterdaysDate());
                     break;
                 case'This week':
-                    $('.start_date').val(thisWeek());
-                    $('.end_date').val(todaysDate());
+                    $('#filter_start_date').val(thisWeek());
+                    $('#filter_end_date').val(todaysDate());
                     break;
                 case'Last week':
                     lastWeek();
                     break;
                 case'This Month':
-                    $('.start_date').val(formatDate(thisMonth()));
-                    $('.end_date').val(todaysDate());
+                    $('#filter_start_date').val(formatDate(thisMonth()));
+                    $('#filter_end_date').val(todaysDate());
                     break;
                 case'Last Month':
                     lastMonth();
                     break;
             }
+            doSearch();
         });
 
 
@@ -187,7 +125,7 @@
         let expense_categories_arry = [];
         $(function () {
             default_todays_data();  //filter  data
-            var table = $('#expenses-table').DataTable({
+            dataTable = $('#expenses-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -195,22 +133,13 @@
                 ajax: {
                     url: "{{ url('/expenses/') }}",
                     data: function (d) {
-                        d.start_date = $('.start_date').val();
-                        d.end_date = $('.end_date').val();
-                        d.search = $('input[type="search"]').val();
+                        d.start_date = $('#filter_start_date').val();
+                        d.end_date = $('#filter_end_date').val();
                     }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
-                    // {data: 'purchase_no', name: 'purchase_no'},
                     {data: 'purchase_date', name: 'purchase_date'},
                     {data: 'supplier_name', name: 'supplier_name'},
                     {data: 'amount', name: 'amount'},
@@ -221,10 +150,8 @@
                 ]
             });
 
+            setupEmptyStateHandler();
 
-        });
-        $('#customFilterBtn').click(function () {
-            $('#expenses-table').DataTable().draw(true);
         });
 
 
@@ -310,21 +237,6 @@
             let populated_categories = $('.expense_categories')[0].innerHTML;
             let select = '  <select id="select2-single-input-group-sm"\n' +
                 ' class="form-control select2"name="addmore[' + i + '][expense_category]">' + populated_categories + '</select>';
-            //append expense_categories_append
-            // $('#expense_categories_append' + i).append(populated_categories);
-
-            // $('#expense_categories_append' + i).append(value[0].innerHTML);
-            // console.log()
-
-            {{--var a = [@foreach($data as $k => $info)--}}
-            // {{--    '{{ $info }}',--}}
-            {{--    @endforeach ]--}}
-
-
-
-            //change the name of the select
-            // .setAttribute('name', 'horse');
-
 
             //work on the qty,price and total amount
             $('#qty' + i).on('keyup change', function () {
@@ -377,7 +289,7 @@
         function save_purchase() {
             $.LoadingOverlay("show");
             $('#btn-save').attr('disabled', true);
-            $('#btn-save').text('translations.processing');
+            $('#btn-save').text(translations.processing);
             $.ajax({
                 type: 'POST',
                 data: $('#purchase-form').serialize(),
@@ -505,19 +417,6 @@
             });
         }
 
-        function alert_dialog(message, status) {
-            swal(LanguageManager.trans('common.alert', "{{ __('common.alert') }}"), message, status);
-            if (status) {
-                let oTable = $('#expenses-table').dataTable();
-                oTable.fnDraw(false);
-            }
-        }
-
 
     </script>
 @endsection
-
-
-
-
-

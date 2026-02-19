@@ -13,7 +13,9 @@ class SupplierController extends ApiController
 {
     public function __construct(
         protected SupplierService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-inventory');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -50,7 +52,7 @@ class SupplierController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $supplier = $this->service->createSupplier($request->all());
+        $supplier = $this->service->createSupplier($request->only(['name']));
 
         if (!$supplier) {
             return $this->error('Failed to create supplier', 500);
@@ -69,7 +71,7 @@ class SupplierController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->service->updateSupplier($id, $request->all());
+        $status = $this->service->updateSupplier($id, $request->only(['name']));
 
         if (!$status) {
             return $this->error('Failed to update supplier', 500);

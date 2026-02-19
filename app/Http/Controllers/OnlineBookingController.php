@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
 use App\Jobs\SendAppointmentSms;
+use App\OnlineBooking;
 use App\Services\OnlineBookingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +18,7 @@ class OnlineBookingController extends Controller
     public function __construct(OnlineBookingService $onlineBookingService)
     {
         $this->onlineBookingService = $onlineBookingService;
+        $this->middleware('can:view-appointments');
     }
 
     /**
@@ -42,16 +44,18 @@ class OnlineBookingController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->onlineBookingService->getBookingList($request->all());
+            $data = $this->onlineBookingService->getBookingList($request->only([
+                'search', 'start_date', 'end_date',
+            ]));
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('status', function ($row) {
-                    if ($row->status == "Rejected") {
+                    if ($row->status == OnlineBooking::STATUS_REJECTED) {
                         $btn = '<span class="label label-sm label-danger"> ' . __('common.rejected') . ' </span>';
-                    } else if ($row->status == "Waiting") {
+                    } else if ($row->status == OnlineBooking::STATUS_WAITING) {
                         $btn = '<span class="label label-sm label-info"> ' . __('common.waiting') . ' </span>';
                     } else {
                         $btn = '<span class="label label-sm label-success"> ' . __('common.approved') . ' </span>';
@@ -113,7 +117,10 @@ class OnlineBookingController extends Controller
             'visit_reason' => 'required'
         ])->validate();
 
-        $success = $this->onlineBookingService->createBooking($request->all());
+        $success = $this->onlineBookingService->createBooking($request->only([
+            'full_name', 'phone_number', 'email', 'appointment_date',
+            'appointment_time', 'visit_history', 'visit_reason', 'insurance_provider',
+        ]));
         if ($success) {
             return $this->formResponse();
         }
@@ -164,7 +171,10 @@ class OnlineBookingController extends Controller
         ])->validate();
 
         $result = $this->onlineBookingService->acceptBooking(
-            $request->all(),
+            $request->only([
+                'full_name', 'phone_number', 'email', 'appointment_date',
+                'appointment_time', 'doctor_id', 'insurance_company_id',
+            ]),
             $id,
             Auth::User()->id,
             Auth::User()->branch_id

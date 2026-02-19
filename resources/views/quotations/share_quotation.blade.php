@@ -1,4 +1,4 @@
-<div class="modal fade" id="share-quotation-modal" role="dialog">
+<div class="modal fade modal-form" id="share-quotation-modal" role="dialog">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -8,11 +8,7 @@
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+                    <ul></ul>
                 </div>
                 <form action="#" id="share-quotation-form" class="form-horizontal" autocomplete="off">
                     @csrf
@@ -50,9 +46,9 @@
                 </form>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">{{ __('quotations.cancel') }}</button>
                 <button type="button" id="btn-share" onclick="sendQuotation()" class="btn btn-primary">{{ __('quotations.share') }}
                 </button>
-                <button type="button" class="btn btn-danger" data-dismiss="modal">{{ __('quotations.cancel') }}</button>
             </div>
         </div>
     </div>

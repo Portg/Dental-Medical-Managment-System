@@ -1,18 +1,14 @@
-<div class="modal fade" id="users-modal" role="dialog" aria-hidden="true">
+<div class="modal fade modal-form" id="users-modal" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h4 class="modal-title"> {{ __('users.system_user') }} </h4>
             </div>
             <div class="modal-body">
 
                 <div class="alert alert-danger" style="display:none">
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+                    <ul></ul>
                 </div>
                 <form action="#" id="users-form" autocomplete="off">
 
@@ -79,8 +75,8 @@
                             </div>
                             <div class="form-group">
                                 <label class="text-primary">{{ __('users.is_doctor') }} </label><span class="text-danger">({{ __('users.please_specify_if_doctor') }})</span><br>
-                                <input type="radio" name="is_doctor" value="Yes">{{ __('common.yes') }} &nbsp; &nbsp;
-                                <input type="radio" name="is_doctor" value="No">{{ __('common.no') }}
+                                <input type="radio" name="is_doctor" value="1">{{ __('common.yes') }} &nbsp; &nbsp;
+                                <input type="radio" name="is_doctor" value="0">{{ __('common.no') }}
 
                             </div>
                         </div>
@@ -92,8 +88,8 @@
             </div>
             <div class="modal-footer">
 
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.close') }}</button>
                 <button type="button" class="btn btn-primary" id="btn-save" onclick="save_data()">{{ __('common.save_changes') }}</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

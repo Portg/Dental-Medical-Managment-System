@@ -384,9 +384,9 @@
                 $('[name="education"]').val(data.patient.education);
                 $('[name="blood_type"]').val(data.patient.blood_type);
 
-                $('input[name^="has_insurance"][value="' + data.patient.has_insurance + '"').prop('checked', true);
+                $('input[name^="has_insurance"][value="' + (data.patient.has_insurance ? '1' : '0') + '"').prop('checked', true);
 
-                if (data.patient.has_insurance == "No") {
+                if (!data.patient.has_insurance) {
                     $('#company').val([]).trigger('change');
                     $('.insurance_company').hide();
                     $('#company').next(".select2-container").hide();
@@ -765,7 +765,7 @@
         $('.insurance_company').hide();
         $("input[type=radio][name=has_insurance]").on("change", function() {
             let action = $("input[type=radio][name=has_insurance]:checked").val();
-            if (action == "No") {
+            if (action == "0") {
                 $('#company').val([]).trigger('change');
                 $('.insurance_company').hide();
                 $('#company').next(".select2-container").hide();

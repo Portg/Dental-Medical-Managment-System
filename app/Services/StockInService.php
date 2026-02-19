@@ -55,7 +55,7 @@ class StockInService
             'stock_in_date' => $data['stock_in_date'],
             'notes' => $data['notes'] ?? null,
             'branch_id' => $data['branch_id'] ?? null,
-            'status' => 'draft',
+            'status' => StockIn::STATUS_DRAFT,
             '_who_added' => Auth::User()->id,
         ]);
     }
@@ -182,7 +182,7 @@ class StockInService
                 ]);
             }
 
-            $stockIn->update(['status' => 'confirmed']);
+            $stockIn->update(['status' => StockIn::STATUS_CONFIRMED]);
 
             DB::commit();
             return ['status' => true, 'message' => __('inventory.stock_in_confirmed')];
@@ -204,7 +204,7 @@ class StockInService
             return ['status' => false, 'message' => __('inventory.cannot_cancel')];
         }
 
-        $cancelled = (bool) $stockIn->update(['status' => 'cancelled']);
+        $cancelled = (bool) $stockIn->update(['status' => StockIn::STATUS_CANCELLED]);
 
         return [
             'status' => $cancelled,

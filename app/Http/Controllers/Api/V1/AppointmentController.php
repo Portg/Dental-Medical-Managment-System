@@ -13,7 +13,12 @@ class AppointmentController extends ApiController
 {
     public function __construct(
         protected AppointmentService $appointmentService
-    ) {}
+    ) {
+        $this->middleware('can:view-appointments')->only(['index', 'show', 'calendarEvents', 'chairs', 'doctorTimeSlots']);
+        $this->middleware('can:create-appointments')->only(['store']);
+        $this->middleware('can:edit-appointments')->only(['update', 'reschedule']);
+        $this->middleware('can:delete-appointments')->only(['destroy']);
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -69,7 +74,11 @@ class AppointmentController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $appointment = $this->appointmentService->createAppointment($request->all());
+        $appointment = $this->appointmentService->createAppointment($request->only([
+            'visit_information', 'appointment_date', 'appointment_time',
+            'patient_id', 'doctor_id', 'notes', 'chair_id', 'service_id',
+            'appointment_type', 'duration_minutes',
+        ]));
 
         if (!$appointment) {
             return $this->error('Failed to create appointment', 500);
@@ -94,7 +103,10 @@ class AppointmentController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->appointmentService->updateAppointment($id, $request->all());
+        $status = $this->appointmentService->updateAppointment($id, $request->only([
+            'visit_information', 'appointment_date', 'appointment_time',
+            'patient_id', 'doctor_id', 'notes',
+        ]));
 
         if (!$status) {
             return $this->error('Failed to update appointment', 500);
@@ -127,7 +139,9 @@ class AppointmentController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->appointmentService->rescheduleAppointment($id, $request->all());
+        $status = $this->appointmentService->rescheduleAppointment($id, $request->only([
+            'appointment_date', 'appointment_time',
+        ]));
 
         if (!$status) {
             return $this->error('Failed to reschedule appointment', 500);

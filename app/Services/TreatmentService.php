@@ -33,6 +33,7 @@ class TreatmentService
             ->join('appointments', 'appointments.id', 'treatments.appointment_id')
             ->join('users', 'users.id', 'treatments._who_added')
             ->where('appointments.patient_id', $patientId)
+            ->whereNull('treatments.deleted_at')
             ->select('treatments.*', 'users.surname', 'users.othername')
             ->get();
     }

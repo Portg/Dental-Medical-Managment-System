@@ -16,6 +16,11 @@ class UsersController extends Controller
     public function __construct(UserService $userService)
     {
         $this->userService = $userService;
+
+        $this->middleware('can:view-users')->only(['index', 'show', 'filterDoctor', 'filterEmployees']);
+        $this->middleware('can:create-users')->only(['create', 'store']);
+        $this->middleware('can:edit-users')->only(['edit', 'update']);
+        $this->middleware('can:delete-users')->only(['destroy']);
     }
 
     /**
@@ -28,7 +33,9 @@ class UsersController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->userService->getUserList($request->all());
+            $data = $this->userService->getUserList([
+                'search' => $request->input('search.value', ''),
+            ]);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -38,10 +45,10 @@ class UsersController extends Controller
                     return NameHelper::join($row->surname, $row->othername);
                 })
                 ->addColumn('is_doctor', function ($row) {
-                    if ($row->is_doctor == "Yes") {
-                        return '<span class="label label-sm label-success">' . $row->is_doctor . '</span>';
+                    if ($row->is_doctor) {
+                        return '<span class="label label-sm label-success">' . __('common.yes') . '</span>';
                     } else {
-                        return '<span class="label label-sm label-default">' . $row->is_doctor . '</span>';
+                        return '<span class="label label-sm label-default">' . __('common.no') . '</span>';
                     }
                 })
                 ->addColumn('editBtn', function ($row) {
@@ -111,8 +118,12 @@ class UsersController extends Controller
             ])->validate();
         }
 
-        $nameParts = $this->userService->parseNameParts($request->all());
-        $status = $this->userService->createUser($nameParts, $request->all());
+        $userFields = $request->only([
+            'full_name', 'surname', 'othername', 'email', 'password',
+            'phone_no', 'alternative_no', 'nin', 'role_id', 'branch_id', 'is_doctor',
+        ]);
+        $nameParts = $this->userService->parseNameParts($userFields);
+        $status = $this->userService->createUser($nameParts, $userFields);
         return FunctionsHelper::messageResponse(__('messages.user_registered_successfully'), $status);
     }
 
@@ -147,8 +158,12 @@ class UsersController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $nameParts = $this->userService->parseNameParts($request->all());
-        $status = $this->userService->updateUser($id, $nameParts, $request->all());
+        $userFields = $request->only([
+            'full_name', 'surname', 'othername', 'email',
+            'phone_no', 'alternative_no', 'nin', 'role_id', 'branch_id', 'is_doctor',
+        ]);
+        $nameParts = $this->userService->parseNameParts($userFields);
+        $status = $this->userService->updateUser($id, $nameParts, $userFields);
         return FunctionsHelper::messageResponse(__('messages.user_updated_successfully'), $status);
     }
 

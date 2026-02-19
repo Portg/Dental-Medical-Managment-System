@@ -14,6 +14,7 @@ class StockOutController extends Controller
     public function __construct(StockOutService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-inventory');
     }
 
     /**
@@ -26,7 +27,7 @@ class StockOutController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->service->getStockOutList($request->all());
+            $data = $this->service->getStockOutList($request->only(['status', 'out_type', 'start_date', 'end_date']));
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -99,7 +100,10 @@ class StockOutController extends Controller
             'out_type.required' => __('inventory.out_type_required'),
         ])->validate();
 
-        $stockOut = $this->service->createStockOut($request->all());
+        $stockOut = $this->service->createStockOut($request->only([
+            'stock_out_date', 'out_type', 'patient_id', 'appointment_id',
+            'department', 'notes', 'branch_id',
+        ]));
 
         if ($stockOut) {
             return response()->json([
@@ -155,7 +159,10 @@ class StockOutController extends Controller
             'out_type' => 'required|in:treatment,department,damage,other',
         ])->validate();
 
-        $result = $this->service->updateStockOut($id, $request->all());
+        $result = $this->service->updateStockOut($id, $request->only([
+            'stock_out_date', 'out_type', 'patient_id', 'appointment_id',
+            'department', 'notes', 'branch_id',
+        ]));
         return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 

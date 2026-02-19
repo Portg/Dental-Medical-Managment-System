@@ -33,11 +33,11 @@ class ChartOfAccountsTableSeeder extends Seeder
         // 1. 会计要素 (Accounting Equations)
         // ========================================
         $equations = [
-            ['name' => '资产',       'sort_by' => 1, 'active_tab' => 'yes'],
-            ['name' => '负债',       'sort_by' => 2, 'active_tab' => 'no'],
-            ['name' => '所有者权益', 'sort_by' => 3, 'active_tab' => 'no'],
-            ['name' => '收入',       'sort_by' => 4, 'active_tab' => 'no'],
-            ['name' => '费用',       'sort_by' => 5, 'active_tab' => 'no'],
+            ['name' => '资产',       'sort_by' => 1, 'active_tab' => true],
+            ['name' => '负债',       'sort_by' => 2, 'active_tab' => false],
+            ['name' => '所有者权益', 'sort_by' => 3, 'active_tab' => false],
+            ['name' => '收入',       'sort_by' => 4, 'active_tab' => false],
+            ['name' => '费用',       'sort_by' => 5, 'active_tab' => false],
         ];
 
         $equationIds = [];

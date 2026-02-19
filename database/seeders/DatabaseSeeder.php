@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
         $this->call(DefaultRolePermissionsSeeder::class);
 
         // ========== 4. 业务基础数据 ==========
-        $this->command->info('[4/5] 初始化业务基础数据...');
+        $this->command->info('[4/6] 初始化业务基础数据...');
 
         // 诊疗服务项目
         $this->call(MedicalServicesSeeder::class);
@@ -57,8 +57,23 @@ class DatabaseSeeder extends Seeder
         // 会计科目
         $this->call(ChartOfAccountsTableSeeder::class);
 
-        // ========== 5. 辅助数据 ==========
-        $this->command->info('[5/5] 初始化辅助数据...');
+        // ========== 5. 诊所运营配置 ==========
+        $this->command->info('[5/6] 初始化诊所运营配置...');
+
+        // 诊室椅位
+        $this->call(ChairsTableSeeder::class);
+
+        // 会员等级
+        $this->call(MemberLevelsSeeder::class);
+
+        // 提成规则（示例）
+        $this->call(CommissionRulesSeeder::class);
+
+        // 优惠券（示例）
+        $this->call(CouponsSeeder::class);
+
+        // ========== 6. 辅助数据 ==========
+        $this->command->info('[6/6] 初始化辅助数据...');
 
         // 休假类型
         $this->call(LeaveTypesTableSeeder::class);
@@ -71,6 +86,9 @@ class DatabaseSeeder extends Seeder
 
         // 病历模板和常用短语
         $this->call(MedicalTemplatesSeeder::class);
+
+        // 快捷短语分类
+        $this->call(QuickPhraseCategoriesSeeder::class);
 
         $this->command->info('');
         $this->command->info('===========================================');

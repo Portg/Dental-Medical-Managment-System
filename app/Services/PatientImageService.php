@@ -6,6 +6,7 @@ use App\Patient;
 use App\PatientImage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\DataTables;
 
 class PatientImageService
 {
@@ -148,5 +149,61 @@ class PatientImageService
         }
 
         return (bool) $image->delete();
+    }
+
+    /**
+     * Build the DataTables response for the image index listing.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->addColumn('viewBtn', function ($row) {
+                return '<a href="#" onclick="viewImage(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editImage(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteImage(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->addColumn('typeBadge', function ($row) {
+                $class = 'default';
+                if ($row->image_type == 'X-Ray') $class = 'primary';
+                elseif ($row->image_type == 'CT') $class = 'warning';
+                elseif ($row->image_type == 'Intraoral') $class = 'success';
+                elseif ($row->image_type == 'Extraoral') $class = 'info';
+                return '<span class="label label-' . $class . '">' . __('patient_images.type_' . strtolower(str_replace('-', '_', $row->image_type))) . '</span>';
+            })
+            ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'typeBadge'])
+            ->make(true);
+    }
+
+    /**
+     * Build the DataTables response for a specific patient's images.
+     */
+    public function buildPatientImagesDataTable($data)
+    {
+        return Datatables::of($data)
+            ->addIndexColumn()
+            ->addColumn('viewBtn', function ($row) {
+                return '<a href="#" onclick="viewImage(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editImage(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteImage(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->addColumn('typeBadge', function ($row) {
+                $class = 'default';
+                if ($row->image_type == 'X-Ray') $class = 'primary';
+                elseif ($row->image_type == 'CT') $class = 'warning';
+                elseif ($row->image_type == 'Intraoral') $class = 'success';
+                elseif ($row->image_type == 'Extraoral') $class = 'info';
+                return '<span class="label label-' . $class . '">' . __('patient_images.type_' . strtolower(str_replace('-', '_', $row->image_type))) . '</span>';
+            })
+            ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'typeBadge'])
+            ->make(true);
     }
 }

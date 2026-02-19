@@ -1,53 +1,43 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
-@endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject"> {{ __('sms.sms_credit_loading') }}</span>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4"></div>
-                <div class="col-md-4">
-                    <h2 class="text-primary align-content-center"> {{ __('sms.sms_balance') }}: {{ $current_balance }}</h2>
-                </div>
-                <div class="col-md-4"></div>
-            </div>
-            <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                   id="leave-types_table">
-                <thead>
-                <tr>
-                    <th>{{ __('sms.id') }}</th>
-                    <th>{{ __('sms.transaction_date') }}</th>
-                    <th>{{ __('sms.transaction_reference') }}</th>
-                    <th>{{ __('sms.credit_amount') }}</th>
-                    <th>{{ __('sms.loaded_by') }}</th>
-                </thead>
-                <tbody>
+@extends('layouts.list-page')
 
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('sms.loading') }}</span>
-</div>
-@include('sms_transactions.create')
-@endsection
-@section('js')
+{{-- ========================================================================
+     Page Configuration
+     ======================================================================== --}}
+@section('page_title', __('sms.sms_credit_loading'))
+@section('table_id', 'leave-types_table')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+{{-- ========================================================================
+     Header Actions
+     ======================================================================== --}}
+@section('header_actions')
+    <h2 class="text-primary align-content-center" style="margin: 0; display: inline-block;"> {{ __('sms.sms_balance') }}: {{ $current_balance }}</h2>
+@endsection
+
+{{-- ========================================================================
+     Table Headers
+     ======================================================================== --}}
+@section('table_headers')
+    <th>{{ __('sms.id') }}</th>
+    <th>{{ __('sms.transaction_date') }}</th>
+    <th>{{ __('sms.transaction_reference') }}</th>
+    <th>{{ __('sms.credit_amount') }}</th>
+    <th>{{ __('sms.loaded_by') }}</th>
+@endsection
+
+{{-- ========================================================================
+     Modals
+     ======================================================================== --}}
+@section('modals')
+    @include('sms_transactions.create')
+@endsection
+
+{{-- ========================================================================
+     Page-specific JavaScript
+     ======================================================================== --}}
+@section('page_js')
     <script type="text/javascript">
         $(function () {
-            var table = $('#leave-types_table').DataTable({
+            dataTable = $('#leave-types_table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -59,10 +49,7 @@
                         //     d.search = $('input[type="search"]').val()
                     }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: []
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
                     {data: 'created_at', name: 'created_at'},
@@ -72,7 +59,7 @@
                 ]
             });
 
-
+            setupEmptyStateHandler();
         });
 
         function createRecord() {
@@ -214,21 +201,5 @@
                 });
 
         }
-
-
-        function alert_dialog(message, status) {
-            swal("{{ __('common.alert') }}", message, status);
-            if (status) {
-                let oTable = $('#leave-types_table').dataTable();
-                oTable.fnDraw(false);
-            }
-        }
-
-
     </script>
 @endsection
-
-
-
-
-

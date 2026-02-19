@@ -104,6 +104,7 @@ class Patient extends Model
         'total_consumption' => 'decimal:2',
         'is_pregnant' => 'boolean',
         'is_breastfeeding' => 'boolean',
+        'has_insurance' => 'boolean',
     ];
 
     /**

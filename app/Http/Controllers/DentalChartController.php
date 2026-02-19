@@ -14,6 +14,7 @@ class DentalChartController extends Controller
     public function __construct(DentalChartService $service)
     {
         $this->service = $service;
+        $this->middleware('can:edit-patients');
     }
 
     /**

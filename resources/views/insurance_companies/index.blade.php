@@ -1,83 +1,39 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
-@endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('insurance_companies.title') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('common.add_new') }}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @if(session()->has('success'))
-                    <div class="alert alert-info">
-                        <button class="close" data-dismiss="alert"></button> {{ session()->get('success') }}!
-                    </div>
-                @endif
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="company_table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        <th>{{ __('insurance_companies.added_date') }}</th>
-                        <th>{{ __('insurance_companies.name') }}</th>
-                        <th>{{ __('insurance_companies.added_by') }}</th>
-                        <th>{{ __('common.status') }}</th>
-                        <th>{{ __('common.edit') }}</th>
-                        <th>{{ __('common.delete') }}</th>
-                    </thead>
-                    <tbody>
+@extends('layouts.list-page')
 
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('insurance_companies.create')
-@endsection
-@section('js')
+@section('page_title', __('insurance_companies.title'))
+@section('table_id', 'company_table')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('common.add_new') }}</button>
+@endsection
+
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('insurance_companies.added_date') }}</th>
+    <th>{{ __('insurance_companies.name') }}</th>
+    <th>{{ __('insurance_companies.added_by') }}</th>
+    <th>{{ __('common.status') }}</th>
+    <th>{{ __('common.edit') }}</th>
+    <th>{{ __('common.delete') }}</th>
+@endsection
+
+@section('modals')
+    @include('insurance_companies.create')
+@endsection
+
+@section('page_js')
     <script type="text/javascript">
         $(function () {
 
-            var table = $('#company_table').DataTable({
+            dataTable = $('#company_table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
                 language : LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/insurance-companies/') }}",
-                    data: function (d) {
-                        // d.email = $('.searchEmail').val(),
-                        //     d.search = $('input[type="search"]').val()
-                    }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
                     {data: 'created_at', name: 'created_at'},
@@ -89,7 +45,7 @@
                 ]
             });
 
-
+            setupEmptyStateHandler();
         });
 
         function createRecord() {
@@ -235,18 +191,5 @@
 
         }
 
-        function alert_dialog(message, status) {
-            swal("{{ __('common.alert') }}", message, status);
-            if (status) {
-                let oTable = $('#company_table').dataTable();
-                oTable.fnDraw(false);
-            }
-        }
-
     </script>
 @endsection
-
-
-
-
-

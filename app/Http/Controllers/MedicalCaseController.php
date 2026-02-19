@@ -2,12 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Helper\ActionColumnHelper;
 use App\Services\MedicalCaseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 
 class MedicalCaseController extends Controller
 {
@@ -16,6 +13,7 @@ class MedicalCaseController extends Controller
     public function __construct(MedicalCaseService $medicalCaseService)
     {
         $this->medicalCaseService = $medicalCaseService;
+        $this->middleware('can:manage-medical-cases');
     }
 
     /**
@@ -28,27 +26,16 @@ class MedicalCaseController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->medicalCaseService->getAllCases($request->all());
+            $data = $this->medicalCaseService->getAllCases([
+                'search'     => $request->input('search.value', ''),
+                'status'     => $request->input('status'),
+                'doctor_id'  => $request->input('doctor_id'),
+                'patient_id' => $request->input('patient_id'),
+                'start_date' => $request->input('start_date'),
+                'end_date'   => $request->input('end_date'),
+            ]);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('statusBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->status == 'Open') $class = 'success';
-                    elseif ($row->status == 'In Progress') $class = 'info';
-                    elseif ($row->status == 'Closed') $class = 'danger';
-                    elseif ($row->status == 'Follow-up') $class = 'warning';
-                    $statusKey = strtolower(str_replace([' ', '-'], '_', $row->status));
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.status_' . $statusKey) . '</span>';
-                })
-                ->addColumn('action', function ($row) {
-                    return ActionColumnHelper::make($row->id)
-                        ->primaryIf($row->deleted_at == null, 'edit')
-                        ->add('delete')
-                        ->render();
-                })
-                ->rawColumns(['statusBadge', 'action'])
-                ->make(true);
+            return $this->medicalCaseService->buildIndexDataTable($data);
         }
 
         return view('medical_cases.index');
@@ -67,20 +54,7 @@ class MedicalCaseController extends Controller
         if ($request->ajax()) {
             $data = $this->medicalCaseService->getPatientCases($patient_id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="' . url('medical-cases/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->status == 'Open') $class = 'success';
-                    elseif ($row->status == 'Closed') $class = 'danger';
-                    elseif ($row->status == 'Follow-up') $class = 'warning';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.status_' . strtolower(str_replace('-', '_', $row->status))) . '</span>';
-                })
-                ->rawColumns(['viewBtn', 'statusBadge'])
-                ->make(true);
+            return $this->medicalCaseService->buildPatientCasesDataTable($data);
         }
     }
 
@@ -116,7 +90,13 @@ class MedicalCaseController extends Controller
             'treatment.required' => __('medical_cases.treatment_required'),
         ])->validate();
 
-        $data = $this->medicalCaseService->buildCaseData($request->all());
+        $data = $this->medicalCaseService->buildCaseData($request->only([
+            'patient_id', 'case_date', 'chief_complaint', 'history_of_present_illness',
+            'examination', 'examination_teeth', 'auxiliary_examination', 'related_images',
+            'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
+            'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
+            'visit_type', 'doctor_id',
+        ]));
         $case = $this->medicalCaseService->createCase($data, $isDraft);
 
         if ($case) {
@@ -224,7 +204,13 @@ class MedicalCaseController extends Controller
             'treatment.required' => __('medical_cases.treatment_required'),
         ])->validate();
 
-        $data = $this->medicalCaseService->buildCaseData($request->all(), isUpdate: true);
+        $data = $this->medicalCaseService->buildCaseData($request->only([
+            'patient_id', 'case_date', 'chief_complaint', 'history_of_present_illness',
+            'examination', 'examination_teeth', 'auxiliary_examination', 'related_images',
+            'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
+            'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
+            'visit_type', 'doctor_id',
+        ]), isUpdate: true);
         $result = $this->medicalCaseService->updateCase(
             $id,
             $data,

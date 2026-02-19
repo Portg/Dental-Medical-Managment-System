@@ -17,7 +17,7 @@
         }
     }
 @endphp
-<div class="modal fade" id="tooth_selector_modal" tabindex="-1" role="dialog">
+<div class="modal fade modal-form modal-form-lg" id="tooth_selector_modal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -25,116 +25,7 @@
                 <h4 class="modal-title">{{ __('medical_cases.select_teeth') }}</h4>
             </div>
             <div class="modal-body">
-                <style>
-                    .tooth-selector-container {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        padding: 20px;
-                    }
-                    .tooth-row {
-                        display: flex;
-                        margin-bottom: 4px;
-                    }
-                    .tooth-cell {
-                        width: 36px;
-                        height: 36px;
-                        border: 1px solid #d9d9d9;
-                        border-radius: 4px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 12px;
-                        cursor: pointer;
-                        margin: 2px;
-                        transition: all 0.2s;
-                        background: #fff;
-                    }
-                    .tooth-cell:hover {
-                        border-color: #4472C4;
-                        background: #f0f5ff;
-                    }
-                    .tooth-cell.selected {
-                        background: #4472C4;
-                        border-color: #2B579A;
-                        color: #fff;
-                    }
-                    .quadrant-label {
-                        font-size: 11px;
-                        color: #999;
-                        margin: 10px 0 5px 0;
-                        width: 100%;
-                        text-align: center;
-                    }
-                    .teeth-separator {
-                        width: 100%;
-                        height: 2px;
-                        background: #e8e8e8;
-                        margin: 10px 0;
-                    }
-                    .teeth-separator-vertical {
-                        width: 2px;
-                        height: 100%;
-                        background: #e8e8e8;
-                        margin: 0 8px;
-                    }
-                    .tooth-cell.deciduous {
-                        background: #fffbe6;
-                        border-color: #ffe58f;
-                    }
-                    .tooth-cell.deciduous:hover {
-                        background: #fff1b8;
-                        border-color: #faad14;
-                    }
-                    .tooth-cell.deciduous.selected {
-                        background: #faad14;
-                        border-color: #d48806;
-                        color: #fff;
-                    }
-
-                    /* Modal tab switcher */
-                    .modal-tooth-tabs {
-                        display: flex;
-                        justify-content: center;
-                        margin-bottom: 16px;
-                        gap: 0;
-                    }
-                    .modal-tooth-tab {
-                        padding: 8px 28px;
-                        font-size: 14px;
-                        border: 1px solid #d9d9d9;
-                        background: #fafafa;
-                        color: #666;
-                        cursor: pointer;
-                        transition: all 0.2s;
-                        outline: none;
-                        position: relative;
-                    }
-                    .modal-tooth-tab:first-child {
-                        border-radius: 4px 0 0 4px;
-                    }
-                    .modal-tooth-tab:last-child {
-                        border-radius: 0 4px 4px 0;
-                        border-left: none;
-                    }
-                    .modal-tooth-tab.active {
-                        background: #1A237E;
-                        border-color: #1A237E;
-                        color: #fff;
-                    }
-                    .modal-tooth-tab:not(.active):hover {
-                        background: #f0f0f0;
-                    }
-                    .modal-tooth-tab .tab-dot {
-                        display: inline-block;
-                        width: 6px;
-                        height: 6px;
-                        background: #faad14;
-                        border-radius: 50%;
-                        margin-left: 6px;
-                        vertical-align: middle;
-                    }
-                </style>
+                {{-- CSS: public/css/tooth-selector.css (loaded by parent page) --}}
 
                 {{-- Tab Switcher --}}
                 <div class="modal-tooth-tabs">
@@ -205,11 +96,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="confirmToothSelection()">
-                    {{ __('common.confirm') }}
-                </button>
                 <button type="button" class="btn btn-default" data-dismiss="modal">
                     {{ __('common.cancel') }}
+                </button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="confirmToothSelection()">
+                    {{ __('common.confirm') }}
                 </button>
             </div>
         </div>

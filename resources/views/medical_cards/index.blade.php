@@ -1,88 +1,43 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+@section('page_title', __('medical_cards.cards'))
+@section('table_id', 'sample_1')
+
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('common.add_new') }}</button>
 @endsection
 
-<style type="text/css">
-
-    input[type=file] {
-
-        display: inline;
-
-    }
-
-    #image_preview {
-
-        border: 1px solid black;
-
-        padding: 10px;
-
-    }
-
-    #image_preview img {
-
-        width: 200px;
-
-        padding: 5px;
-
-    }
-
-</style>
-
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('medical_cards.medical_history') }} / {{ __('medical_cards.cards') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('common.add_new') }}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @if(session()->has('success'))
-                    <div class="alert alert-info">
-                        <button class="close" data-dismiss="alert"></button> {{ session()->get('success') }}!
-                    </div>
-                @endif
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="sample_1">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        <th>{{ __('common.date') }}</th>
-                        <th>{{ __('medical_cards.patient') }}</th>
-                        <th>{{ __('medical_cards.card_type') }}</th>
-                        <th>{{ __('medical_cards.added_by') }}</th>
-                        <th>{{ __('medical_cards.view_cards') }}</th>
-                        <th>{{ __('common.delete') }}</th>
-                        <th><button type="button" name="bulk_delete" id="bulk_delete" class="btn btn-danger btn-xs"><i class="glyphicon glyphicon-remove"></i></button></th>
-                    </thead>
-                    <tbody>
-
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('medical_cards.create')
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('common.date') }}</th>
+    <th>{{ __('medical_cards.patient') }}</th>
+    <th>{{ __('medical_cards.card_type') }}</th>
+    <th>{{ __('medical_cards.added_by') }}</th>
+    <th>{{ __('medical_cards.view_cards') }}</th>
+    <th>{{ __('common.delete') }}</th>
+    <th><button type="button" name="bulk_delete" id="bulk_delete" class="btn btn-danger btn-xs"><i class="glyphicon glyphicon-remove"></i></button></th>
 @endsection
-@section('js')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+@section('modals')
+    @include('medical_cards.create')
+@endsection
+
+@section('page_js')
+    <style type="text/css">
+        input[type=file] {
+            display: inline;
+        }
+
+        #image_preview {
+            border: 1px solid black;
+            padding: 10px;
+        }
+
+        #image_preview img {
+            width: 200px;
+            padding: 5px;
+        }
+    </style>
     <script type="text/javascript">
         $(function () {
 
@@ -91,7 +46,7 @@
                 'patient': @json(__('patient')),
                 'medical': @json(__('medical'))
             });
-            let table = $('#sample_1').DataTable({
+            dataTable = $('#sample_1').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -102,14 +57,7 @@
                         d.search = $('input[type="search"]').val();
                     }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        {extend: 'pdfHtml5', className: 'pdfButton'},
-                        {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                     {data: 'created_at', name: 'created_at'},
@@ -122,7 +70,7 @@
                 ]
             });
 
-
+            setupEmptyStateHandler();
         });
 
 
@@ -328,14 +276,6 @@
                 }
             }
         });
-
-        function alert_dialog(message, status) {
-            swal("{{ __('common.alert') }}", message, status);
-            if (status) {
-                let oTable = $('#sample_1').dataTable();
-                oTable.fnDraw(false);
-            }
-        }
 
 
     </script>

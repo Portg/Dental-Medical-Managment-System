@@ -16,12 +16,13 @@ class BudgetLineReportController extends Controller
     public function __construct(BudgetLineReportService $service)
     {
         $this->service = $service;
+        $this->middleware('can:view-reports');
     }
 
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
 
                 $data = $this->service->getBudgetLineData($request->start_date, $request->end_date);

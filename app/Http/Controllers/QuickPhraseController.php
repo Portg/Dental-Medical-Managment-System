@@ -14,6 +14,7 @@ class QuickPhraseController extends Controller
     public function __construct(QuickPhraseService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-settings');
     }
 
     /**
@@ -25,7 +26,7 @@ class QuickPhraseController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->service->getPhraseList($request->all());
+            $data = $this->service->getPhraseList($request->only(['category', 'scope']));
 
             return Datatables::of($data)
                 ->addIndexColumn()

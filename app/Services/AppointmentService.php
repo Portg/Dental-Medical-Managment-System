@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Appointment;
 use App\AppointmentHistory;
+use App\Chair;
+use App\DoctorSchedule;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
 use App\Jobs\SendAppointmentSms;
@@ -14,8 +16,8 @@ use DateTime;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Thomasjohnkane\Snooze\ScheduledNotification;
+use Yajra\DataTables\DataTables;
 
 class AppointmentService
 {
@@ -36,6 +38,7 @@ class AppointmentService
                 'patients.surname', 'patients.othername', 'patients.phone_no',
                 'users.surname as d_surname', 'users.othername as d_othername',
                 DB::raw('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as start_date'),
+                'invoices.id as invoice_id',
                 DB::raw('CASE WHEN invoices.id IS NOT NULL THEN "invoiced" ELSE "pending" END as has_invoice_status')
             );
 
@@ -108,11 +111,26 @@ class AppointmentService
 
         $events = [];
         foreach ($query->get() as $value) {
+            $startDt = date_create($value->sort_by);
+            $duration = $value->duration_minutes ?? 30;
+            $endDt = clone $startDt;
+            $endDt->modify("+{$duration} minutes");
+
+            $patientName = NameHelper::join($value->surname, $value->othername);
+            $doctorName = NameHelper::join($value->d_surname, $value->d_othername);
+
             $events[] = [
-                'title' => NameHelper::join($value->surname, $value->othername),
-                'start' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
-                'end' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
+                'id' => $value->id,
+                'title' => $patientName . ' - ' . $doctorName,
+                'start' => date_format($startDt, "Y-m-d\TH:i:s"),
+                'end' => date_format($endDt, "Y-m-d\TH:i:s"),
+                'backgroundColor' => '#3a87ad',
+                'borderColor' => '#3a87ad',
                 'textColor' => '#ffffff',
+                'extendedProps' => [
+                    'patient_name' => $patientName,
+                    'doctor_name' => $doctorName,
+                ],
             ];
         }
 
@@ -164,7 +182,7 @@ class AppointmentService
     {
         $time24 = date("H:i:s", strtotime($data['appointment_time']));
 
-        $appTime = ($data['visit_information'] == 'walk_in')
+        $appTime = ($data['visit_information'] == Appointment::VISIT_WALK_IN)
             ? (new DateTime('now'))->format("h:i A")
             : $data['appointment_time'];
 
@@ -225,8 +243,8 @@ class AppointmentService
             'end_date' => $data['appointment_date'],
             'start_time' => $data['appointment_time'],
             'sort_by' => $data['appointment_date'] . " " . $time24,
-            'visit_information' => 'appointment',
-            'status' => 'Rescheduled',
+            'visit_information' => Appointment::VISIT_APPOINTMENT,
+            'status' => Appointment::STATUS_RESCHEDULED,
         ]);
 
         if ($success) {
@@ -260,7 +278,7 @@ class AppointmentService
                 DB::raw('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as formatted_date'))
             ->first();
 
-        if ($status == "Created" && $record->visit_information != "walk_in") {
+        if ($status == "Created" && $record->visit_information != Appointment::VISIT_WALK_IN) {
             $message = __('sms.appointment_scheduled', [
                 'name' => $record->othername,
                 'company' => config('app.name', 'Laravel'),
@@ -281,7 +299,7 @@ class AppointmentService
                     ScheduledNotification::create(
                         $patient,
                         new ReminderNotification('Dear, ' . $patient->othername .
-                            " This is a polite reminder about your appointment at " . env('CompanyName', null) . " scheduled for "
+                            " This is a polite reminder about your appointment at " . config('app.company_name') . " scheduled for "
                             . $record->formatted_date . " at " . $record->start_time),
                         Carbon::parse($reminderDate)
                     );
@@ -306,8 +324,7 @@ class AppointmentService
      */
     public function getChairs(int $branchId): Collection
     {
-        return DB::table('chairs')
-            ->where('branch_id', $branchId)
+        return Chair::where('branch_id', $branchId)
             ->where('is_active', true)
             ->select('id', 'name as text')
             ->get();
@@ -319,8 +336,7 @@ class AppointmentService
     public function getDoctorTimeSlots(int $doctorId, string $date): array
     {
         $dayOfWeek = date('l', strtotime($date));
-        $schedule = DB::table('doctor_schedules')
-            ->where('doctor_id', $doctorId)
+        $schedule = DoctorSchedule::where('doctor_id', $doctorId)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_active', true)
             ->first();
@@ -357,7 +373,7 @@ class AppointmentService
             ->where('appointments.doctor_id', $doctorId)
             ->where('appointments.start_date', $date)
             ->whereNull('appointments.deleted_at')
-            ->whereNotIn('appointments.status', ['Cancelled', 'no_show'])
+            ->whereNotIn('appointments.status', [Appointment::STATUS_CANCELLED, Appointment::STATUS_NO_SHOW])
             ->select('appointments.start_time', 'patients.surname as p_surname', 'patients.othername as p_othername')
             ->get();
 
@@ -370,5 +386,79 @@ class AppointmentService
         }
 
         return ['slots' => $slots, 'booked' => $booked];
+    }
+
+    // ─── DataTable formatting ────────────────────────────────────
+
+    /**
+     * Build DataTables response for the appointments index page.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->filter(function ($instance) {
+            })
+            ->editColumn('sort_by', function ($row) {
+                return $row->sort_by ? \Carbon\Carbon::parse($row->sort_by)->format('Y-m-d H:i') : '-';
+            })
+            ->editColumn('status', function ($row) {
+                $key = 'appointment.' . strtolower(str_replace(' ', '_', $row->status));
+                $translated = __($key);
+                return $translated !== $key ? $translated : $row->status;
+            })
+            ->addColumn('patient', function ($row) {
+                return NameHelper::join($row->surname, $row->othername);
+            })
+            ->addColumn('doctor', function ($row) {
+                return NameHelper::join($row->d_surname, $row->d_othername);
+            })
+            ->addColumn('visit_information', function ($row) {
+                $action = '';
+                if ($row->visit_information == Appointment::VISIT_REVIEW_TREATMENT && $row->status != Appointment::STATUS_WAITING) {
+                    $action = '<br> <a href="#"  onclick="ReactivateAppointment(' .
+                        $row->id . ')"  class="text-primary">Re-activate Appointment</a>';
+                }
+                return e($row->visit_information) . $action;
+            })
+            ->addColumn('invoice_status', function ($row) {
+                if ($row->has_invoice_status === 'pending') {
+                    return '<span class="text-danger">' . __('messages.no_invoice_yet') . '</span>';
+                }
+                return '<span class="text-primary">' . __('messages.invoice_already_generated') . '</span>';
+            })
+            ->addColumn('action', function ($row) {
+                $invoice_action = $row->has_invoice_status === 'pending'
+                    ? '<a href="#" onclick="RecordPayment(' . $row->id . ')" >' . __('invoices.generate_invoice') . '</a>'
+                    : '<a href="' . url('invoices/' . $row->invoice_id) . '">' . __('invoices.view_invoice') . '</a>';
+
+                return '
+                  <div class="btn-group">
+                    <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
+                            aria-expanded="false"> ' . __('common.action') . '
+                        <i class="fa fa-angle-down"></i>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                          <li>
+                            <a href="#" onclick="RescheduleAppointment(' . $row->id . ')" >' . __('appointment.reschedule') . '</a>
+                        </li>
+                         <li>
+                          ' . $invoice_action . '
+                        </li>
+                          <li>
+                            <a href="#" onclick="editRecord(' . $row->id . ')" >' . __('common.edit') . '</a>
+                        </li>
+                          <li>
+                            <a href="' . url('medical-treatment/' . $row->id) . '" >' . __('medical_treatment.treatment_history') . '</a>
+                        </li>
+                         <li>
+                           <a href="#" onclick="deleteRecord(' . $row->id . ')">' . __('common.delete') . '</a>
+                        </li>
+                    </ul>
+                </div>
+                ';
+            })
+            ->rawColumns(['visit_information', 'invoice_status', 'action'])
+            ->make(true);
     }
 }

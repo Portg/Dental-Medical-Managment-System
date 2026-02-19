@@ -2,22 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Helper\NameHelper;
 use App\LabCase;
 use App\Services\LabCaseService;
 use App\Services\LabService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use PDF;
-use Yajra\DataTables\DataTables;
 
 class LabCaseController extends Controller
 {
     public function __construct(
         private LabCaseService $labCaseService,
         private LabService $labService,
-    ) {}
+    ) {
+        $this->middleware('can:manage-labs');
+    }
 
     public function index(Request $request)
     {
@@ -26,64 +25,7 @@ class LabCaseController extends Controller
             $filters['search'] = $request->input('search.value');
             $data = $this->labCaseService->getLabCaseList($filters);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('lab_case_no', function ($row) {
-                    return '<a href="' . url('lab-cases/' . $row->id) . '">' . $row->lab_case_no . '</a>';
-                })
-                ->addColumn('patient_name', function ($row) {
-                    return $row->patient_name ?? '-';
-                })
-                ->addColumn('doctor_name', function ($row) {
-                    return $row->doctor_name ?? '-';
-                })
-                ->addColumn('lab_name', function ($row) {
-                    return $row->lab_name ?? '-';
-                })
-                ->addColumn('prosthesis_type_label', function ($row) {
-                    return __('lab_cases.type_' . $row->prosthesis_type);
-                })
-                ->addColumn('status_label', function ($row) {
-                    $badges = [
-                        'pending'       => 'default',
-                        'sent'          => 'info',
-                        'in_production' => 'warning',
-                        'returned'      => 'primary',
-                        'try_in'        => 'info',
-                        'completed'     => 'success',
-                        'rework'        => 'danger',
-                    ];
-                    $badge = $badges[$row->status] ?? 'default';
-                    return '<span class="label label-' . $badge . '">' . __('lab_cases.status_' . $row->status) . '</span>';
-                })
-                ->addColumn('overdue_flag', function ($row) {
-                    if (!empty($row->expected_return_date)
-                        && in_array($row->status, ['sent', 'in_production'])
-                        && empty($row->actual_return_date)
-                        && $row->expected_return_date < now()->format('Y-m-d')
-                    ) {
-                        return '<span class="text-danger"><i class="fa fa-exclamation-triangle"></i></span>';
-                    }
-                    return '';
-                })
-                ->addColumn('action', function ($row) {
-                    return '
-                    <div class="btn-group">
-                        <button class="btn blue dropdown-toggle btn-sm" type="button" data-toggle="dropdown" aria-expanded="false">
-                            ' . __('common.action') . ' <i class="fa fa-angle-down"></i>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                            <li><a href="' . url('lab-cases/' . $row->id) . '">' . __('lab_cases.view_lab_case') . '</a></li>
-                            <li><a href="#" onclick="editLabCase(' . $row->id . ')">' . __('lab_cases.edit_lab_case') . '</a></li>
-                            <li><a href="#" onclick="updateStatus(' . $row->id . ')">' . __('lab_cases.update_status') . '</a></li>
-                            <li><a href="' . url('print-lab-case/' . $row->id) . '" target="_blank">' . __('lab_cases.print_lab_case') . '</a></li>
-                            <li class="divider"></li>
-                            <li><a href="#" onclick="deleteLabCase(' . $row->id . ')" class="text-danger">' . __('lab_cases.delete') . '</a></li>
-                        </ul>
-                    </div>';
-                })
-                ->rawColumns(['lab_case_no', 'status_label', 'overdue_flag', 'action'])
-                ->make(true);
+            return $this->labCaseService->buildIndexDataTable($data);
         }
 
         $labs = $this->labService->getActiveLabsForSelect();
@@ -254,26 +196,7 @@ class LabCaseController extends Controller
         if ($request->ajax()) {
             $data = $this->labCaseService->getPatientCases($patient_id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('lab_case_no', function ($row) {
-                    return '<a href="' . url('lab-cases/' . $row->id) . '">' . $row->lab_case_no . '</a>';
-                })
-                ->addColumn('status_label', function ($row) {
-                    $badges = [
-                        'pending'       => 'default',
-                        'sent'          => 'info',
-                        'in_production' => 'warning',
-                        'returned'      => 'primary',
-                        'try_in'        => 'info',
-                        'completed'     => 'success',
-                        'rework'        => 'danger',
-                    ];
-                    $badge = $badges[$row->status] ?? 'default';
-                    return '<span class="label label-' . $badge . '">' . __('lab_cases.status_' . $row->status) . '</span>';
-                })
-                ->rawColumns(['lab_case_no', 'status_label'])
-                ->make(true);
+            return $this->labCaseService->buildPatientLabCasesDataTable($data);
         }
 
         return response()->json([]);

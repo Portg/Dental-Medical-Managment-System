@@ -15,6 +15,7 @@ class InsuranceReportsController extends Controller
     public function __construct(InsuranceReportService $insuranceReportService)
     {
         $this->insuranceReportService = $insuranceReportService;
+        $this->middleware('can:view-reports');
     }
 
     /**
@@ -27,11 +28,22 @@ class InsuranceReportsController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->insuranceReportService->getInsurancePayments($request->all());
+            $data = $this->insuranceReportService->getInsurancePayments([
+                'search'             => $request->input('search.value', ''),
+                'status'             => $request->input('status'),
+                'start_date'         => $request->input('start_date'),
+                'end_date'           => $request->input('end_date'),
+                'insurance_provider' => $request->input('insurance_provider'),
+                'page'               => $request->input('page'),
+                'per_page'           => $request->input('per_page'),
+            ]);
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('services_provided', function ($row) {
                     //now get the services provided

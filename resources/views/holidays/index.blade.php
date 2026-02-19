@@ -150,7 +150,7 @@
                 $('#id').val(id);
                 $('[name="name"]').val(data.name);
                 $('[name="holiday_date"]').val(data.holiday_date);
-                $('input[name^="repeat_date"][value="' + data.repeat_date + '"').prop('checked', true);
+                $('input[name^="repeat_date"][value="' + data.repeat_date + '"]').prop('checked', true);
 
                 $.LoadingOverlay("hide");
                 $('#btn-save').text('{{ __("common.update_record") }}');

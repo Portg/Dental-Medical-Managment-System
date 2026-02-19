@@ -2,15 +2,21 @@
 
 namespace App\Services;
 
+use App\Appointment;
+use App\InventoryItem;
+use App\Prescription;
+
 class PharmacyDashboardService
 {
     /**
      * Get dashboard data for the pharmacy.
-     *
-     * Currently the pharmacy dashboard has no business logic.
      */
     public function getDashboardData(): array
     {
-        return [];
+        return [
+            'pending_prescriptions' => Prescription::pending()->count(),
+            'low_stock_items' => InventoryItem::lowStock()->count(),
+            'today_appointments' => Appointment::today()->count(),
+        ];
     }
 }

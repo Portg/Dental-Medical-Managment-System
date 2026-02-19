@@ -1,14 +1,14 @@
 /**
- * 牙科门诊管理系统 - 专业医疗主题
- * 设计原则：专业、稳定、克制、长期使用友好
+ * 牙科门诊管理系统 - 专业医疗主题（青蓝色系 Teal/Cyan）
+ * 设计原则：洁净、专业、舒适、长期使用友好
  * ============================================================================
  */
 
 :root {
-    --theme-primary: #1A237E;
-    --theme-primary-dark: #0D1452;
+    --theme-primary: #00838F;
+    --theme-primary-dark: #005662;
     --theme-secondary: #37474F;
-    --theme-accent: #3949AB;
+    --theme-accent: #0097A7;
     --theme-text: #424242;
     --theme-text-light: #757575;
     --theme-border: #E0E0E0;
@@ -67,7 +67,7 @@
 .page-header.navbar,
 .page-header.navbar .page-header-inner,
 .page-header.navbar .page-top {
-    background: #1A237E !important;
+    background: #00838F !important;
     border-bottom: none !important;
     box-shadow: none !important;
 }
@@ -78,7 +78,7 @@
 
 /* Logo Area */
 .page-header.navbar .page-logo {
-    background: #0D1452 !important;
+    background: #005662 !important;
     border-right: none !important;
 }
 
@@ -111,14 +111,14 @@
     .page-header.navbar,
     .page-header.navbar .page-header-inner,
     .page-header.navbar .page-top {
-        background: #1A237E !important;
+        background: #00838F !important;
         border-bottom: none !important;
     }
 }
 @media (max-width:767px) {
     .page-header.navbar,
     .page-header.navbar .page-top {
-        background: #1A237E !important;
+        background: #00838F !important;
         border-bottom: none !important;
     }
 }
@@ -173,7 +173,7 @@
 
 .page-header.navbar .top-menu .nav > li > .dropdown-menu > li > a:hover {
     background: #F5F5F5 !important;
-    color: #1A237E !important;
+    color: #00838F !important;
 }
 
 .page-header.navbar .top-menu .nav > li > .dropdown-menu > li > a > i {
@@ -202,7 +202,7 @@
    ============================================================================ */
 
 .page-sidebar {
-    background: #1A237E !important;
+    background: #00838F !important;
 }
 
 /* Fixed sidebar: fill viewport height with scrollable overflow */
@@ -213,7 +213,7 @@
 }
 
 .page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover {
-    background: #1A237E !important;
+    background: #00838F !important;
     box-shadow: 2px 0 10px rgba(0,0,0,0.2) !important;
 }
 
@@ -391,12 +391,12 @@
 
 /* Parent menu item expands on hover — dark background */
 .page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover {
-    background: #1A237E !important;
+    background: #00838F !important;
 }
 
 /* Parent link in expanded hover state */
 .page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > a {
-    background: #1A237E !important;
+    background: #00838F !important;
     color: #FFFFFF !important;
 }
 
@@ -410,7 +410,7 @@
 
 /* Popup submenu container — dark background with shadow */
 .page-sidebar-closed .page-sidebar .page-sidebar-menu.page-sidebar-menu-closed > li:not(.heading):hover > .sub-menu {
-    background: #1A237E !important;
+    background: #00838F !important;
     box-shadow: 4px 4px 12px rgba(0,0,0,0.25) !important;
     border: none !important;
 }
@@ -418,7 +418,7 @@
 /* Override default theme white background on hover sub-menu */
 .page-sidebar-closed .page-sidebar .page-sidebar-menu:hover .sub-menu,
 .page-sidebar-closed .page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu:hover .sub-menu {
-    background: #0D1452 !important;
+    background: #005662 !important;
 }
 
 /* Popup submenu links */
@@ -495,8 +495,8 @@
    ============================================================================ */
 
 .btn-primary {
-    background: #1A237E !important;
-    border: 1px solid #1A237E !important;
+    background: #00838F !important;
+    border: 1px solid #00838F !important;
     box-shadow: none !important;
 }
 
@@ -504,21 +504,21 @@
 .btn-primary:focus,
 .btn-primary:active,
 .btn-primary.active {
-    background: #0D1452 !important;
-    border-color: #0D1452 !important;
+    background: #005662 !important;
+    border-color: #005662 !important;
     box-shadow: none !important;
 }
 
 .btn-info {
-    background: #3949AB !important;
-    border: 1px solid #3949AB !important;
+    background: #0097A7 !important;
+    border: 1px solid #0097A7 !important;
     box-shadow: none !important;
 }
 
 .btn-info:hover,
 .btn-info:focus {
-    background: #303F9F !important;
-    border-color: #303F9F !important;
+    background: #00695C !important;
+    border-color: #00695C !important;
 }
 
 .btn-default {
@@ -535,8 +535,8 @@
 
 /* Metronic .btn.blue - 统一为紫色主题 */
 .btn.blue {
-    background: #1A237E !important;
-    border: 1px solid #1A237E !important;
+    background: #00838F !important;
+    border: 1px solid #00838F !important;
     color: #FFFFFF !important;
     box-shadow: none !important;
 }
@@ -545,23 +545,23 @@
 .btn.blue:focus,
 .btn.blue:active,
 .btn.blue.active {
-    background: #0D1452 !important;
-    border-color: #0D1452 !important;
+    background: #005662 !important;
+    border-color: #005662 !important;
 }
 
 .btn.blue .dropdown-toggle {
-    background: #1A237E !important;
-    border-color: #1A237E !important;
+    background: #00838F !important;
+    border-color: #00838F !important;
 }
 
 /* .btn-link 链接按钮 */
 .btn-link {
-    color: #1A237E !important;
+    color: #00838F !important;
 }
 
 .btn-link:hover,
 .btn-link:focus {
-    color: #0D1452 !important;
+    color: #005662 !important;
 }
 
 /* ============================================================================
@@ -569,7 +569,7 @@
    ============================================================================ */
 
 .modal-header {
-    background: #1A237E;
+    background: #00838F;
     color: #FFFFFF;
     border-bottom: none;
     padding: 12px 15px;
@@ -622,9 +622,9 @@
 .pagination > .active > span,
 .pagination > .active > span:hover,
 .pagination > .active > span:focus {
-    background: #1A237E !important;
-    background-color: #1A237E !important;
-    border-color: #1A237E !important;
+    background: #00838F !important;
+    background-color: #00838F !important;
+    border-color: #00838F !important;
     color: #FFFFFF !important;
 }
 
@@ -632,9 +632,9 @@
 .dataTables_paginate .paginate_button:hover,
 .pagination > li > a:hover,
 .pagination > li > a:focus {
-    background: #E8EAF6 !important;
+    background: #E0F7FA !important;
     border-color: #E0E0E0 !important;
-    color: #1A237E !important;
+    color: #00838F !important;
 }
 
 /* ============================================================================
@@ -659,7 +659,7 @@
    ============================================================================ */
 
 .form-control:focus {
-    border-color: #1A237E;
+    border-color: #00838F;
     box-shadow: none;
 }
 
@@ -668,12 +668,12 @@
    ============================================================================ */
 
 .select2-container--default .select2-results__option--highlighted[aria-selected] {
-    background-color: #1A237E !important;
+    background-color: #00838F !important;
 }
 
 .select2-container--default.select2-container--focus .select2-selection--single,
 .select2-container--default.select2-container--open .select2-selection--single {
-    border-color: #1A237E !important;
+    border-color: #00838F !important;
 }
 
 /* ============================================================================
@@ -682,12 +682,12 @@
 
 .label-primary,
 .badge-primary {
-    background: #1A237E;
+    background: #00838F;
 }
 
 .label-info,
 .badge-info {
-    background: #3949AB;
+    background: #0097A7;
 }
 
 /* ============================================================================
@@ -697,13 +697,13 @@
 .datepicker table tr td.active,
 .datepicker table tr td.active:hover,
 .datepicker table tr td.active.highlighted {
-    background: #1A237E !important;
-    border-color: #1A237E !important;
+    background: #00838F !important;
+    border-color: #00838F !important;
 }
 
 .datepicker table tr td.today {
-    background: #E8EAF6 !important;
-    color: #1A237E !important;
+    background: #E0F7FA !important;
+    color: #00838F !important;
 }
 
 /* ============================================================================
@@ -711,11 +711,11 @@
    ============================================================================ */
 
 .sweet-alert button.confirm {
-    background: #1A237E !important;
+    background: #00838F !important;
 }
 
 .sweet-alert button.confirm:hover {
-    background: #0D1452 !important;
+    background: #005662 !important;
 }
 
 /* ============================================================================
@@ -723,7 +723,7 @@
    ============================================================================ */
 
 .toast-info {
-    background: #3949AB !important;
+    background: #0097A7 !important;
 }
 
 /* ============================================================================
@@ -731,12 +731,12 @@
    ============================================================================ */
 
 a {
-    color: #1A237E;
+    color: #00838F;
 }
 
 a:hover,
 a:focus {
-    color: #0D1452;
+    color: #005662;
 }
 
 /* 页面底部 - 见文件末尾统一定义 */
@@ -768,7 +768,7 @@ a:focus {
    ============================================================================ */
 
 .progress-bar {
-    background: #1A237E;
+    background: #00838F;
 }
 
 /* ============================================================================
@@ -776,7 +776,7 @@ a:focus {
    ============================================================================ */
 
 .alert-info {
-    border-left: 3px solid #1A237E;
+    border-left: 3px solid #00838F;
 }
 
 /* ============================================================================
@@ -784,12 +784,12 @@ a:focus {
    ============================================================================ */
 
 .fc-event {
-    background: #3949AB !important;
-    border-color: #1A237E !important;
+    background: #0097A7 !important;
+    border-color: #00838F !important;
 }
 
 .fc-today {
-    background: #E8EAF6 !important;
+    background: #E0F7FA !important;
 }
 
 /* ============================================================================
@@ -798,7 +798,7 @@ a:focus {
 
 .dashboard-stat.purple,
 .dashboard-stat2.purple {
-    background: #1A237E !important;
+    background: #00838F !important;
 }
 
 /* ============================================================================
@@ -846,8 +846,8 @@ a:focus {
 }
 
 .tooth-filled {
-    fill: #1A237E;
-    stroke: #0D1452;
+    fill: #00838F;
+    stroke: #005662;
 }
 
 .tooth-decay {
@@ -914,7 +914,7 @@ a:focus {
 }
 
 .page-breadcrumb li a:hover {
-    color: #1A237E !important;
+    color: #00838F !important;
 }
 
 /* 首页图标 */
@@ -924,7 +924,7 @@ a:focus {
 }
 
 .page-breadcrumb li.home-icon a:hover {
-    color: #1A237E !important;
+    color: #00838F !important;
 }
 
 .page-breadcrumb li a i {
@@ -944,7 +944,7 @@ a:focus {
 
 /* 当前页面 */
 .page-breadcrumb li.current {
-    color: #1A237E !important;
+    color: #00838F !important;
     font-weight: 600 !important;
 }
 
@@ -971,7 +971,7 @@ a:focus {
 }
 
 .page-head h4 a:hover {
-    color: #1A237E !important;
+    color: #00838F !important;
 }
 
 .page-head h4 .separator {
@@ -1033,14 +1033,14 @@ a:focus {
 }
 
 .input-group .form-control:focus {
-    border-color: #1A237E !important;
+    border-color: #00838F !important;
     box-shadow: none !important;
 }
 
 .input-group .form-control:focus + .input-group-addon,
 .input-group:focus-within .input-group-addon {
-    border-color: #1A237E !important;
-    color: #1A237E !important;
+    border-color: #00838F !important;
+    color: #00838F !important;
 }
 
 /* ============================================================================
@@ -1093,9 +1093,9 @@ a:focus {
 }
 
 .filter-area .btn-default.active {
-    background: #E8EAF6 !important;
-    border-color: #3949AB !important;
-    color: #1A237E !important;
+    background: #E0F7FA !important;
+    border-color: #0097A7 !important;
+    color: #00838F !important;
 }
 
 /* ============================================================================
@@ -1145,15 +1145,15 @@ a:focus {
 /* 主操作按钮 */
 .table-toolbar .btn-primary,
 .table-toolbar .btn.blue {
-    background: #1A237E !important;
-    border-color: #1A237E !important;
+    background: #00838F !important;
+    border-color: #00838F !important;
     color: #FFFFFF !important;
 }
 
 .table-toolbar .btn-primary:hover,
 .table-toolbar .btn.blue:hover {
-    background: #0D1452 !important;
-    border-color: #0D1452 !important;
+    background: #005662 !important;
+    border-color: #005662 !important;
 }
 
 /* 次要操作按钮 */
@@ -1174,7 +1174,7 @@ a:focus {
 /* 下载/导出链接样式 */
 .table-toolbar a.text-danger,
 .table-toolbar .text-danger {
-    color: #1A237E !important;
+    color: #00838F !important;
     text-decoration: none !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -1186,8 +1186,8 @@ a:focus {
 }
 
 .table-toolbar a.text-danger:hover {
-    background: #E8EAF6 !important;
-    color: #0D1452 !important;
+    background: #E0F7FA !important;
+    color: #005662 !important;
 }
 
 /* ============================================================================
@@ -1351,8 +1351,8 @@ a:focus {
 }
 
 .form-control:focus {
-    border-color: #1A237E !important;
-    box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.1) !important;
+    border-color: #00838F !important;
+    box-shadow: 0 0 0 2px rgba(0, 131, 143, 0.1) !important;
 }
 
 /* Select2 优化 */
@@ -1391,6 +1391,6 @@ a:focus {
 .nav-pills > li.active > a,
 .nav-pills > li.active > a:hover,
 .nav-pills > li.active > a:focus {
-    background: #1A237E !important;
+    background: #00838F !important;
     color: #FFFFFF !important;
 }

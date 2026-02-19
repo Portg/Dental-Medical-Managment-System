@@ -9,6 +9,16 @@ class TreatmentPlan extends Model
 {
     use SoftDeletes;
 
+    const STATUS_PLANNED = 'Planned';
+    const STATUS_IN_PROGRESS = 'In Progress';
+    const STATUS_COMPLETED = 'Completed';
+    const STATUS_CANCELLED = 'Cancelled';
+
+    const APPROVAL_PENDING = 'pending';
+    const APPROVAL_APPROVED = 'approved';
+    const APPROVAL_REJECTED = 'rejected';
+    const APPROVAL_REVISION_NEEDED = 'revision_needed';
+
     protected $fillable = [
         'plan_name', 'description', 'planned_procedures',
         'related_teeth', 'estimated_cost', 'actual_cost',
@@ -100,7 +110,7 @@ class TreatmentPlan extends Model
      */
     public function scopeInProgress($query)
     {
-        return $query->where('status', 'in_progress');
+        return $query->where('status', self::STATUS_IN_PROGRESS);
     }
 
     /**
@@ -108,7 +118,7 @@ class TreatmentPlan extends Model
      */
     public function scopeCompleted($query)
     {
-        return $query->where('status', 'completed');
+        return $query->where('status', self::STATUS_COMPLETED);
     }
 
     /**
@@ -116,7 +126,7 @@ class TreatmentPlan extends Model
      */
     public function scopePendingApproval($query)
     {
-        return $query->where('approval_status', 'pending');
+        return $query->where('approval_status', self::APPROVAL_PENDING);
     }
 
     /**

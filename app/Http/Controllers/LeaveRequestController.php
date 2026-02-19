@@ -16,6 +16,7 @@ class LeaveRequestController extends Controller
     public function __construct(LeaveRequestService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-leave');
     }
 
     /**
@@ -33,6 +34,9 @@ class LeaveRequestController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
@@ -76,7 +80,7 @@ class LeaveRequestController extends Controller
             'duration.required' => __('validation.attributes.leaves.duration') . ' '.__('validation.required'),
         ])->validate();
 
-        $success = $this->service->createLeaveRequest($request->all(), Auth::User()->id);
+        $success = $this->service->createLeaveRequest($request->only(['leave_type', 'start_date', 'duration']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_request.sent_successfully'), $success);
     }
 
@@ -110,7 +114,7 @@ class LeaveRequestController extends Controller
             'duration.required' => __('validation.attributes.leaves.duration') . ' '.__('validation.required'),
         ])->validate();
 
-        $success = $this->service->updateLeaveRequest($id, $request->all(), Auth::User()->id);
+        $success = $this->service->updateLeaveRequest($id, $request->only(['leave_type', 'start_date', 'duration']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_request.updated_successfully'), $success);
     }
 

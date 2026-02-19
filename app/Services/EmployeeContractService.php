@@ -103,7 +103,7 @@ class EmployeeContractService
     {
         $count = EmployeeContract::where('employee_id', $employeeId)->count();
         if ($count > 0) {
-            EmployeeContract::where('employee_id', $employeeId)->update(['status' => 'Expired']);
+            EmployeeContract::where('employee_id', $employeeId)->update(['status' => EmployeeContract::STATUS_EXPIRED]);
         }
     }
 }

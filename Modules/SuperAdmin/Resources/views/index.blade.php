@@ -5,42 +5,42 @@
         <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
             <a class="dashboard-stat dashboard-stat-v2 blue" href="{{ url('appointments') }}">
                 <div class="visual">
-                    <i class="fa fa-comments"></i>
+                    <i class="fa fa-calendar-check-o"></i>
                 </div>
                 <div class="details">
                     <div class="number">
                         <span data-counter="counterup"
                               data-value="{{ $today_appointments }}">{{ $today_appointments }}</span>
                     </div>
-                    <div class="desc"> {{__('report.today_appointments')}}</div>
+                    <div class="desc"> {{ __('dashboard.today_appointments') }}</div>
                 </div>
             </a>
         </div>
         <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
             <a class="dashboard-stat dashboard-stat-v2 yellow" href="{{ url('todays-cash') }}">
                 <div class="visual">
-                    <i class="fa fa-comments"></i>
+                    <i class="fa fa-money"></i>
                 </div>
                 <div class="details">
                     <div class="number">
                         <span data-counter="counterup"
                               data-value="{{ number_format($today_cash_amount) }}">{{ number_format($today_cash_amount) }}</span>
                     </div>
-                    <div class="desc"> {{__('report.today_cash_amount')}}</div>
+                    <div class="desc"> {{ __('dashboard.today_cash_amount') }}</div>
                 </div>
             </a>
         </div>
         <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
-            <a class="dashboard-stat dashboard-stat-v2 blue-chambray" href="{{ url('todays-insurance') }}">
+            <a class="dashboard-stat dashboard-stat-v2 blue-chambray" href="{{ url('invoices') }}">
                 <div class="visual">
-                    <i class="fa fa-bar-chart-o"></i>
+                    <i class="fa fa-file-text-o"></i>
                 </div>
                 <div class="details">
                     <div class="number">
                         <span data-counter="counterup"
-                              data-value="{{ number_format($today_Insurance_amount) }}">{{ number_format($today_Insurance_amount)  }}</span>
+                              data-value="{{ number_format($pending_receivable_amount) }}">{{ number_format($pending_receivable_amount) }}</span>
                     </div>
-                    <div class="desc"> {{__('report.today_insurance_amount')}}</div>
+                    <div class="desc"> {{ __('dashboard.pending_receivable_amount') }}</div>
                 </div>
             </a>
         </div>
@@ -48,14 +48,14 @@
         <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
             <a class="dashboard-stat dashboard-stat-v2 green-seagreen" href="{{ url('todays-expenses') }}">
                 <div class="visual">
-                    <i class="fa fa-shopping-cart"></i>
+                    <i class="fa fa-credit-card"></i>
                 </div>
                 <div class="details">
                     <div class="number">
                         <span data-counter="counterup"
                               data-value="{{ number_format($today_expense_amount) }}">{{ number_format($today_expense_amount) }}</span>
                     </div>
-                    <div class="desc"> {{__('report.today_expenses_amount')}}</div>
+                    <div class="desc"> {{ __('dashboard.today_expense_amount') }}</div>
                 </div>
             </a>
         </div>
@@ -69,7 +69,7 @@
                 <div class="portlet-title">
                     <div class="caption">
                         <i class="icon-bar-chart font-dark hide"></i>
-                        <span class="caption-subject font-dark bold uppercase"> {{__('report.monthly_income_chart_cash_in')}}</span>
+                        <span class="caption-subject font-dark bold uppercase"> {{ __('dashboard.monthly_revenue_trend') }}</span>
                     </div>
                     <div class="actions">
 
@@ -85,12 +85,10 @@
                 <div class="portlet-title">
                     <div class="caption">
                         <i class="icon-share font-red-sunglo hide"></i>
-                        <span class="caption-subject font-dark bold uppercase"> {{__('report.monthly_expenses_chart_cash_out')}}</span>
+                        <span class="caption-subject font-dark bold uppercase"> {{ __('dashboard.monthly_expense_trend') }}</span>
                     </div>
                     <div class="actions">
-                        <div class="btn-group">
 
-                        </div>
                     </div>
                 </div>
                 <div class="portlet-body">
@@ -107,7 +105,7 @@
                     <div class="caption">
                         <i class="icon-bar-chart font-dark hide"></i>
                         <span
-                            class="caption-subject font-dark bold uppercase"> {{__('report.monthly_overall_income_chart')}}</span>
+                            class="caption-subject font-dark bold uppercase"> {{ __('dashboard.income_by_payment_method') }}</span>
                     </div>
                     <div class="actions">
 
@@ -124,12 +122,10 @@
                     <div class="caption">
                         <i class="icon-share font-red-sunglo hide"></i>
                         <span
-                            class="caption-subject font-dark bold uppercase"> {{__('report.monthly_overall_chart_income_expenditure')}}</span>
+                            class="caption-subject font-dark bold uppercase"> {{ __('dashboard.income_vs_expense') }}</span>
                     </div>
                     <div class="actions">
-                        <div class="btn-group">
 
-                        </div>
                     </div>
                 </div>
                 <div class="portlet-body">
@@ -143,4 +139,3 @@
     {!! $monthlyOverRollIncome->script() !!}
     {!! $MonthlyOverRollIncomeExpense->script() !!}
 @endsection
-

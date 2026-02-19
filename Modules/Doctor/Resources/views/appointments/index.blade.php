@@ -263,7 +263,7 @@
         function save_data() {
             $.LoadingOverlay("show");
             $('#btnSave').attr('disabled', true);
-            $('#btnSave').text('processing...');
+            $('#btnSave').text('{{ __('common.processing') }}');
             $.ajax({
                 type: 'POST',
                 data: $('#claims-form').serialize(),

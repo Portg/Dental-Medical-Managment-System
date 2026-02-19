@@ -9,6 +9,10 @@ class StockIn extends Model
 {
     use SoftDeletes;
 
+    const STATUS_DRAFT = 'draft';
+    const STATUS_CONFIRMED = 'confirmed';
+    const STATUS_CANCELLED = 'cancelled';
+
     protected $fillable = [
         'stock_in_no',
         'supplier_id',
@@ -70,7 +74,7 @@ class StockIn extends Model
      */
     public function isDraft()
     {
-        return $this->status === 'draft';
+        return $this->status === self::STATUS_DRAFT;
     }
 
     /**
@@ -78,7 +82,7 @@ class StockIn extends Model
      */
     public function isConfirmed()
     {
-        return $this->status === 'confirmed';
+        return $this->status === self::STATUS_CONFIRMED;
     }
 
     /**
@@ -86,7 +90,7 @@ class StockIn extends Model
      */
     public function isCancelled()
     {
-        return $this->status === 'cancelled';
+        return $this->status === self::STATUS_CANCELLED;
     }
 
     /**
@@ -120,9 +124,9 @@ class StockIn extends Model
     public function getStatusLabelAttribute()
     {
         $statuses = [
-            'draft' => __('inventory.status_draft'),
-            'confirmed' => __('inventory.status_confirmed'),
-            'cancelled' => __('inventory.status_cancelled'),
+            self::STATUS_DRAFT => __('inventory.status_draft'),
+            self::STATUS_CONFIRMED => __('inventory.status_confirmed'),
+            self::STATUS_CANCELLED => __('inventory.status_cancelled'),
         ];
 
         return $statuses[$this->status] ?? $this->status;

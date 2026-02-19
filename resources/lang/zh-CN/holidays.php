@@ -25,6 +25,8 @@ return [
     'updated_successfully' => '节假日更新成功',
     'deleted_successfully' => '节假日删除成功',
 
+    'updating' => '更新中...',
+
     // 确认对话框
     'delete_confirm_message' => '您将无法恢复此节假日！',
 ];

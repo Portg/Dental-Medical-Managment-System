@@ -13,6 +13,7 @@ class SatisfactionSurveyController extends Controller
     public function __construct(SatisfactionSurveyService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-settings');
     }
 
     /**
@@ -30,7 +31,13 @@ class SatisfactionSurveyController extends Controller
      */
     public function getData(Request $request)
     {
-        $query = $this->service->getSurveyQuery($request->all());
+        $query = $this->service->getSurveyQuery([
+            'search'     => $request->input('search.value', ''),
+            'status'     => $request->input('status'),
+            'start_date' => $request->input('start_date'),
+            'end_date'   => $request->input('end_date'),
+            'doctor_id'  => $request->input('doctor_id'),
+        ]);
 
         return DataTables::of($query)
             ->addColumn('patient_name', function($row) {
@@ -126,7 +133,10 @@ class SatisfactionSurveyController extends Controller
             'suggestions' => 'nullable|string|max:1000',
         ]);
 
-        $this->service->submitSurvey($id, $request->all());
+        $this->service->submitSurvey($id, $request->only([
+            'overall_rating', 'service_rating', 'environment_rating', 'wait_time_rating',
+            'doctor_rating', 'would_recommend', 'feedback', 'suggestions',
+        ]));
 
         return response()->json([
             'status' => 'success',

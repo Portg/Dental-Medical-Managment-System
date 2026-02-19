@@ -27,7 +27,7 @@ class PrescriptionApiTest extends TestCase
 
         Bus::fake();
 
-        $branch     = Branch::create(['name' => 'Main Branch', 'is_active' => 'true']);
+        $branch     = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
         $adminRole  = Role::create(['name' => 'Administrator']);
         $doctorRole = Role::create(['name' => 'Doctor']);
 

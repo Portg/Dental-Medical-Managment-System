@@ -13,7 +13,9 @@ class TreatmentController extends ApiController
 {
     public function __construct(
         protected TreatmentService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-treatments');
+    }
 
     public function index(Request $request): JsonResponse
     {

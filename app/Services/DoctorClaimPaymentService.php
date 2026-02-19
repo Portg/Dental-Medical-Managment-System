@@ -13,11 +13,8 @@ class DoctorClaimPaymentService
      */
     public function getPaymentsByClaim(int $claimId): Collection
     {
-        return DB::table('doctor_claim_payments')
-            ->whereNull('doctor_claim_payments.deleted_at')
-            ->where('doctor_claim_payments.doctor_claim_id', $claimId)
-            ->select('doctor_claim_payments.*')
-            ->orderBy('doctor_claim_payments.updated_at', 'desc')
+        return DoctorClaimPayment::where('doctor_claim_id', $claimId)
+            ->orderBy('updated_at', 'desc')
             ->get();
     }
 
@@ -29,6 +26,7 @@ class DoctorClaimPaymentService
         return DB::table('doctor_claims')
             ->join('users', 'users.id', 'doctor_claims._who_added')
             ->where('doctor_claims.id', $claimId)
+            ->whereNull('doctor_claims.deleted_at')
             ->first();
     }
 

@@ -14,6 +14,7 @@ class SupplierController extends Controller
     public function __construct(SupplierService $supplierService)
     {
         $this->supplierService = $supplierService;
+        $this->middleware('can:manage-inventory');
     }
 
     public function index(Request $request)
@@ -24,6 +25,9 @@ class SupplierController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('addedBy', function ($row) {
                     return $row->AddedBy->othername;
@@ -58,7 +62,7 @@ class SupplierController extends Controller
             'name.required' => __('validation.custom.name.required'),
         ])->validate();
 
-        $status = $this->supplierService->createSupplier($request->all());
+        $status = $this->supplierService->createSupplier($request->only(['name']));
 
         if ($status) {
             return response()->json(['message' => __('common.supplier_added_successfully'), 'status' => true]);
@@ -84,7 +88,7 @@ class SupplierController extends Controller
             'name.required' => __('validation.custom.name.required'),
         ])->validate();
 
-        $status = $this->supplierService->updateSupplier($id, $request->all());
+        $status = $this->supplierService->updateSupplier($id, $request->only(['name']));
 
         if ($status) {
             return response()->json(['message' => __('common.supplier_updated_successfully'), 'status' => true]);

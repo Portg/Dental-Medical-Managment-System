@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\leaveRequest;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class LeaveRequestService

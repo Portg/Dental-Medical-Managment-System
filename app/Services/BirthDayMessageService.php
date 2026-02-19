@@ -19,8 +19,12 @@ class BirthDayMessageService
             ->whereNull('birth_day_messages.deleted_at')
             ->select(['birth_day_messages.*', 'users.surname']);
 
-        if (!empty($filters['search'])) {
-            $query->where('birth_day_messages.message', 'like', '%' . $filters['search'] . '%');
+        $search = $filters['search'] ?? '';
+        if (is_array($search)) {
+            $search = $search['value'] ?? '';
+        }
+        if ($search !== '') {
+            $query->where('birth_day_messages.message', 'like', '%' . $search . '%');
         }
 
         return $query->orderBy('birth_day_messages.id', 'desc')->get();

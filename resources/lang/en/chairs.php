@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'chairs_management' => 'Chairs Management',
+    'chairs_form' => 'Chair Form',
+    'chair_code' => 'Chair Code',
+    'chair_name' => 'Chair Name',
+    'branch' => 'Branch',
+    'status' => 'Status',
+    'status_active' => 'Active',
+    'status_maintenance' => 'Maintenance',
+    'status_offline' => 'Offline',
+    'notes' => 'Notes',
+    'added_date' => 'Added Date',
+    'added_by' => 'Added By',
+    'select_branch' => 'Select Branch',
+    'select_status' => 'Select Status',
+    'enter_chair_code' => 'Enter chair code',
+    'enter_chair_name' => 'Enter chair name',
+    'chair_added_successfully' => 'Chair added successfully',
+    'chair_updated_successfully' => 'Chair updated successfully',
+    'chair_deleted_successfully' => 'Chair deleted successfully',
+    'chair_has_active_appointments' => 'This chair has active appointments and cannot be deleted',
+    'delete_confirm_message' => 'Are you sure you want to delete this chair?',
+];

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Patient;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class MedicalHistoryService
@@ -18,6 +17,7 @@ class MedicalHistoryService
         $medicalCards = DB::table('medical_card_items')
             ->join('medical_cards', 'medical_cards.id', 'medical_card_items.medical_card_id')
             ->whereNull('medical_card_items.deleted_at')
+            ->whereNull('medical_cards.deleted_at')
             ->where('medical_cards.patient_id', $patientId)
             ->get();
 

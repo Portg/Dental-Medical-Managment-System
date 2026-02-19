@@ -9,6 +9,10 @@ class Refund extends Model
 {
     use SoftDeletes;
 
+    const APPROVAL_PENDING = 'pending';
+    const APPROVAL_APPROVED = 'approved';
+    const APPROVAL_REJECTED = 'rejected';
+
     protected $fillable = [
         'refund_no',
         'invoice_id',
@@ -75,12 +79,12 @@ class Refund extends Model
 
     public function scopePending($query)
     {
-        return $query->where('approval_status', 'pending');
+        return $query->where('approval_status', self::APPROVAL_PENDING);
     }
 
     public function scopeApproved($query)
     {
-        return $query->where('approval_status', 'approved');
+        return $query->where('approval_status', self::APPROVAL_APPROVED);
     }
 
     public function needsApproval()

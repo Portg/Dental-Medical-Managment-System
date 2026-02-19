@@ -1,52 +1,35 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
+@extends('layouts.list-page')
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption">
-                    <i class="icon-list font-green"></i>
-                    <span class="caption-subject font-green bold uppercase">{{ __('medical_cases.treatment_plans') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <table class="table table-striped table-bordered table-hover table-checkable order-column" id="treatment_plans_table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>{{ __('patient.patient_no') }}</th>
-                            <th>{{ __('patient.patient_name') }}</th>
-                            <th>{{ __('medical_cases.plan_name') }}</th>
-                            <th>{{ __('medical_cases.status') }}</th>
-                            <th>{{ __('medical_cases.priority') }}</th>
-                            <th>{{ __('medical_cases.estimated_cost') }}</th>
-                            <th>{{ __('common.created_at') }}</th>
-                            <th>{{ __('common.view') }}</th>
-                            <th>{{ __('common.edit') }}</th>
-                            <th>{{ __('common.delete') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+@section('page_title', __('medical_cases.treatment_plans'))
 
-{{-- View Treatment Plan Modal --}}
-@include('medical_cases.treatment_plans.view')
+@section('table_id', 'treatment_plans_table')
 
-{{-- Create/Edit Treatment Plan Modal --}}
-@include('medical_cases.treatment_plans.create')
-
+@section('table_headers')
+    <th>#</th>
+    <th>{{ __('patient.patient_no') }}</th>
+    <th>{{ __('patient.patient_name') }}</th>
+    <th>{{ __('medical_cases.plan_name') }}</th>
+    <th>{{ __('medical_cases.status') }}</th>
+    <th>{{ __('medical_cases.priority') }}</th>
+    <th>{{ __('medical_cases.estimated_cost') }}</th>
+    <th>{{ __('common.created_at') }}</th>
+    <th>{{ __('common.view') }}</th>
+    <th>{{ __('common.edit') }}</th>
+    <th>{{ __('common.delete') }}</th>
 @endsection
 
-@section('js')
+@section('modals')
+    {{-- View Treatment Plan Modal --}}
+    @include('medical_cases.treatment_plans.view')
+
+    {{-- Create/Edit Treatment Plan Modal --}}
+    @include('medical_cases.treatment_plans.create')
+@endsection
+
+@section('page_js')
 <script type="text/javascript">
 $(document).ready(function() {
-    $('#treatment_plans_table').DataTable({
+    dataTable = $('#treatment_plans_table').DataTable({
         processing: true,
         serverSide: true,
         ajax: "{{ url('treatment-plans') }}",
@@ -67,9 +50,12 @@ $(document).ready(function() {
             {data: 'editBtn', name: 'editBtn', orderable: false, searchable: false},
             {data: 'deleteBtn', name: 'deleteBtn', orderable: false, searchable: false}
         ],
-        language: LanguageManager.getDataTableLanguage(),
+        dom: 'rtip',
+        language: LanguageManager.getDataTableLang(),
         order: [[7, 'desc']]
     });
+
+    setupEmptyStateHandler();
 
     // Show/hide completed fields based on status
     $('#plan_status').on('change', function() {
@@ -182,7 +168,7 @@ function saveTreatmentPlan() {
             if (response.status) {
                 toastr.success(response.message);
                 $('#treatment_plan_modal').modal('hide');
-                $('#treatment_plans_table').DataTable().ajax.reload();
+                dataTable.ajax.reload();
                 resetTreatmentPlanForm();
             } else {
                 toastr.error(response.message);
@@ -223,7 +209,7 @@ function deleteTreatmentPlan(id) {
             success: function(response) {
                 if (response.status) {
                     swal("{{ __('common.deleted') }}", response.message, "success");
-                    $('#treatment_plans_table').DataTable().ajax.reload();
+                    dataTable.ajax.reload();
                 } else {
                     swal("{{ __('common.error') }}", response.message, "error");
                 }

@@ -14,6 +14,7 @@ class ExpenseCategoryController extends Controller
     public function __construct(ExpenseCategoryService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-expenses');
     }
 
     /**
@@ -33,10 +34,10 @@ class ExpenseCategoryController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('addedBy', function ($row) {
-                    return $row->AddedBy->othername;
+                    return $row->addedBy?->othername ?? '-';
                 })
                 ->addColumn('expense_account', function ($row) {
-                    return $row->ExpenseAccount->name;
+                    return $row->ExpenseAccount?->name ?? '-';
                 })
                 ->addColumn('editBtn', function ($row) {
                     $btn = '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
@@ -96,7 +97,7 @@ class ExpenseCategoryController extends Controller
             'expense_account.required' => __('validation.attributes.expense_account') . ' ' . __('validation.required')
         ])->validate();
 
-        $status = $this->service->create($request->all());
+        $status = $this->service->create($request->only(['name', 'expense_account']));
 
         if ($status) {
             return response()->json(['message' => __('expense_categories.added_successfully'), 'status' => true]);
@@ -143,7 +144,7 @@ class ExpenseCategoryController extends Controller
             'expense_account.required' => __('validation.attributes.expense_account') . ' ' . __('validation.required')
         ])->validate();
 
-        $status = $this->service->update($id, $request->all());
+        $status = $this->service->update($id, $request->only(['name', 'expense_account']));
 
         if ($status) {
             return response()->json(['message' => __('expense_categories.updated_successfully'), 'status' => true]);

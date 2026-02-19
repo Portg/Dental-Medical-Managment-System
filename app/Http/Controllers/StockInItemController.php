@@ -14,6 +14,7 @@ class StockInItemController extends Controller
     public function __construct(StockInItemService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-inventory');
     }
 
     /**
@@ -104,7 +105,10 @@ class StockInItemController extends Controller
             return response()->json($deviationWarning);
         }
 
-        $item = $this->service->createItem($request->all());
+        $item = $this->service->createItem($request->only([
+            'stock_in_id', 'inventory_item_id', 'qty', 'unit_price',
+            'batch_no', 'expiry_date', 'production_date',
+        ]));
 
         if ($item) {
             return response()->json([
@@ -159,7 +163,9 @@ class StockInItemController extends Controller
             return response()->json($expiryError);
         }
 
-        $status = $this->service->updateItem($item, $request->all());
+        $status = $this->service->updateItem($item, $request->only([
+            'qty', 'unit_price', 'batch_no', 'expiry_date', 'production_date',
+        ]));
 
         if ($status) {
             return response()->json(['message' => __('inventory.item_updated_successfully'), 'status' => true]);

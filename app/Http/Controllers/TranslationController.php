@@ -12,6 +12,7 @@ class TranslationController extends Controller
     public function __construct(TranslationService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-settings');
     }
 
     /**

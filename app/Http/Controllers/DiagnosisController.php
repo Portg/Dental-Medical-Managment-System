@@ -14,6 +14,7 @@ class DiagnosisController extends Controller
     public function __construct(DiagnosisService $service)
     {
         $this->service = $service;
+        $this->middleware('can:edit-patients');
     }
 
     /**
@@ -116,7 +117,7 @@ class DiagnosisController extends Controller
             'patient_id.required' => __('validation.custom.patient_id.required'),
         ])->validate();
 
-        $status = $this->service->createDiagnosis($request->all());
+        $status = $this->service->createDiagnosis($request->only(['diagnosis_name', 'diagnosis_date', 'patient_id']));
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.diagnosis_added_successfully'), 'status' => true]);
@@ -153,7 +154,7 @@ class DiagnosisController extends Controller
             'diagnosis_date.required' => __('validation.custom.diagnosis_date.required'),
         ])->validate();
 
-        $status = $this->service->updateDiagnosis($id, $request->all());
+        $status = $this->service->updateDiagnosis($id, $request->only(['diagnosis_name', 'diagnosis_date']));
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.diagnosis_updated_successfully'), 'status' => true]);

@@ -1,60 +1,25 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+@section('page_title', __('claim_rates.claim_rates_form'))
+@section('table_id', 'sample_1')
+
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('doctor_claims.date') }}</th>
+    <th>{{ __('doctor_claims.patient') }}</th>
+    <th>{{ __('doctor_claims.treatment_amount') }}</th>
+    <th>{{ __('doctor_claims.insurance_claim') }}</th>
+    <th>{{ __('doctor_claims.cash_claim') }}</th>
+    <th>{{ __('doctor_claims.total_claim_amount') }}</th>
+    <th>{{ __('common.status') }}</th>
+    <th>{{ __('common.action') }}</th>
 @endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('claim_rates.claim_rates_form') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
 
-                        </div>
-                    </div>
-                </div>
-                @if(session()->has('success'))
-                    <div class="alert alert-info">
-                        <button class="close" data-dismiss="alert"></button> {{ session()->get('success') }}!
-                    </div>
-                @endif
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="sample_1">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        <th>{{ __('doctor_claims.date') }}</th>
-                        <th>{{ __('doctor_claims.patient') }}</th>
-                        <th>{{ __('doctor_claims.treatment_amount') }}</th>
-                        <th>{{ __('doctor_claims.insurance_claim') }}</th>
-                        <th>{{ __('doctor_claims.cash_claim') }}</th>
-                        <th>{{ __('doctor_claims.total_claim_amount') }}</th>
-                        <th>{{ __('common.status') }}</th>
-                        <th>{{ __('common.action') }}</th>
-                    </thead>
-                    <tbody>
-
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('doctor::claims.edit_claim')
+@section('modals')
+    @include('doctor::claims.edit_claim')
 @endsection
-@section('js')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+@section('page_js')
     <script type="text/javascript">
         $(function () {
             // Load page-specific translations
@@ -62,7 +27,7 @@
                 'doctor_claims': @json(__('doctor_claims'))
             });
 
-            let table = $('#sample_1').DataTable({
+            dataTable = $('#sample_1').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -72,14 +37,7 @@
                     data: function (d) {
                     }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                     {data: 'created_at', name: 'created_at'},
@@ -93,7 +51,7 @@
                 ]
             });
 
-
+            setupEmptyStateHandler();
         });
 
 
@@ -185,18 +143,13 @@
 
         }
 
+        // Override base template alert_dialog with page-specific behavior
         function alert_dialog(message, status) {
 
             if (status) {
-                let oTable = $('#sample_1').dataTable();
-                oTable.fnDraw(false);
+                dataTable.draw(false);
                 swal("{{ __('common.alert') }}", message, status);
             }
         }
     </script>
 @endsection
-
-
-
-
-

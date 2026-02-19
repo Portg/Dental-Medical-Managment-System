@@ -13,7 +13,9 @@ class MemberLevelController extends ApiController
 {
     public function __construct(
         protected MemberService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-members');
+    }
 
     public function index(): JsonResponse
     {
@@ -41,7 +43,10 @@ class MemberLevelController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $result = $this->service->createLevel($request->all());
+        $result = $this->service->createLevel($request->only([
+            'name', 'code', 'discount_rate', 'color', 'min_consumption',
+            'points_rate', 'benefits', 'sort_order', 'is_default', 'is_active',
+        ]));
 
         if (!$result['status']) {
             return $this->error($result['message']);
@@ -76,7 +81,10 @@ class MemberLevelController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $result = $this->service->updateLevel($id, $request->all());
+        $result = $this->service->updateLevel($id, $request->only([
+            'name', 'code', 'discount_rate', 'color', 'min_consumption',
+            'points_rate', 'benefits', 'sort_order', 'is_default', 'is_active',
+        ]));
 
         if (!$result['status']) {
             return $this->error($result['message']);

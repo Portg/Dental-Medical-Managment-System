@@ -362,10 +362,10 @@
                                     'name' => 'has_insurance',
                                     'label' => __('patient.has_medical_insurance'),
                                     'options' => [
-                                        ['value' => 'Yes', 'text' => __('patient.has_insurance')],
-                                        ['value' => 'No', 'text' => __('patient.no_insurance')],
+                                        ['value' => '1', 'text' => __('patient.has_insurance')],
+                                        ['value' => '0', 'text' => __('patient.no_insurance')],
                                     ],
-                                    'selected' => 'No',
+                                    'selected' => '0',
                                 ])
                             </div>
                             <div class="col-md-6 insurance_company" style="display: none;">
@@ -605,7 +605,7 @@ function setPatientFormToEditMode(patient) {
         }
 
         // Expand Insurance section if patient has insurance
-        if (patient.has_insurance === 'Yes' || patient.insurance_company_id) {
+        if (patient.has_insurance == 1 || patient.insurance_company_id) {
             expandSection('section-insurance');
         }
 

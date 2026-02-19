@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\PatientFollowupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Yajra\DataTables\DataTables;
 
 class PatientFollowupController extends Controller
 {
@@ -14,6 +13,7 @@ class PatientFollowupController extends Controller
     public function __construct(PatientFollowupService $followupService)
     {
         $this->followupService = $followupService;
+        $this->middleware('can:edit-patients');
     }
 
     /**
@@ -28,42 +28,7 @@ class PatientFollowupController extends Controller
         if ($request->ajax()) {
             $data = $this->followupService->getAllFollowups();
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="#" onclick="viewFollowup(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editFollowup(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteFollowup(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->addColumn('completeBtn', function ($row) {
-                    if ($row->status == 'Pending') {
-                        return '<a href="#" onclick="completeFollowup(' . $row->id . ')" class="btn btn-success btn-sm">' . __('patient_followups.mark_complete') . '</a>';
-                    }
-                    return '';
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->status == 'Pending') $class = 'warning';
-                    elseif ($row->status == 'Completed') $class = 'success';
-                    elseif ($row->status == 'Cancelled') $class = 'danger';
-                    elseif ($row->status == 'No Response') $class = 'info';
-                    return '<span class="label label-' . $class . '">' . __('patient_followups.status_' . strtolower(str_replace(' ', '_', $row->status))) . '</span>';
-                })
-                ->addColumn('typeBadge', function ($row) {
-                    return '<span class="label label-default">' . __('patient_followups.type_' . strtolower($row->followup_type)) . '</span>';
-                })
-                ->addColumn('overdueFlag', function ($row) {
-                    if ($row->status == 'Pending' && $row->scheduled_date < date('Y-m-d')) {
-                        return '<span class="label label-danger">' . __('patient_followups.overdue') . '</span>';
-                    }
-                    return '';
-                })
-                ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'completeBtn', 'statusBadge', 'typeBadge', 'overdueFlag'])
-                ->make(true);
+            return $this->followupService->buildIndexDataTable($data);
         }
 
         $patients = $this->followupService->getAllPatients();
@@ -83,41 +48,7 @@ class PatientFollowupController extends Controller
         if ($request->ajax()) {
             $data = $this->followupService->getPatientFollowups($patient_id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="#" onclick="viewFollowup(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->addColumn('editBtn', function ($row) {
-                    return '<a href="#" onclick="editFollowup(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-                })
-                ->addColumn('deleteBtn', function ($row) {
-                    return '<a href="#" onclick="deleteFollowup(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
-                })
-                ->addColumn('completeBtn', function ($row) {
-                    if ($row->status == 'Pending') {
-                        return '<a href="#" onclick="completeFollowup(' . $row->id . ')" class="btn btn-success btn-sm">' . __('patient_followups.mark_complete') . '</a>';
-                    }
-                    return '';
-                })
-                ->addColumn('typeBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->followup_type == 'Phone') $class = 'primary';
-                    elseif ($row->followup_type == 'SMS') $class = 'info';
-                    elseif ($row->followup_type == 'Email') $class = 'warning';
-                    elseif ($row->followup_type == 'Visit') $class = 'success';
-                    return '<span class="label label-' . $class . '">' . __('patient_followups.type_' . strtolower($row->followup_type)) . '</span>';
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $class = 'default';
-                    if ($row->status == 'Pending') $class = 'warning';
-                    elseif ($row->status == 'Completed') $class = 'success';
-                    elseif ($row->status == 'Cancelled') $class = 'danger';
-                    elseif ($row->status == 'No Response') $class = 'info';
-                    return '<span class="label label-' . $class . '">' . __('patient_followups.status_' . strtolower(str_replace(' ', '_', $row->status))) . '</span>';
-                })
-                ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'completeBtn', 'typeBadge', 'statusBadge'])
-                ->make(true);
+            return $this->followupService->buildPatientFollowupsDataTable($data);
         }
     }
 
@@ -163,7 +94,7 @@ class PatientFollowupController extends Controller
             'purpose.required' => __('validation.custom.purpose.required'),
         ])->validate();
 
-        $status = $this->followupService->createFollowup($request->all());
+        $status = $this->followupService->createFollowup($request->only(['patient_id', 'followup_type', 'scheduled_date', 'purpose']));
 
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_created_successfully'), 'status' => true]);
@@ -214,7 +145,7 @@ class PatientFollowupController extends Controller
             'status.required' => __('validation.custom.status.required'),
         ])->validate();
 
-        $status = $this->followupService->updateFollowup($id, $request->all());
+        $status = $this->followupService->updateFollowup($id, $request->only(['followup_type', 'scheduled_date', 'purpose', 'status']));
 
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_updated_successfully'), 'status' => true]);

@@ -9,6 +9,23 @@ class Appointment extends Model
 {
     use SoftDeletes;
 
+    const STATUS_WAITING = 'Waiting';
+    const STATUS_TREATMENT_COMPLETE = 'Treatment Complete';
+    const STATUS_TREATMENT_INCOMPLETE = 'Treatment Incomplete';
+    const STATUS_RESCHEDULED = 'Rescheduled';
+    const STATUS_CANCELLED = 'Cancelled';
+    const STATUS_NO_SHOW = 'no_show';
+    const STATUS_CHECKED_IN = 'checked_in';
+    const STATUS_IN_PROGRESS = 'in_progress';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_SCHEDULED = 'scheduled';
+    const STATUS_REJECTED = 'Rejected';
+
+    const VISIT_WALK_IN = 'walk_in';
+    const VISIT_APPOINTMENT = 'appointment';
+    const VISIT_SINGLE_TREATMENT = 'Single Treatment';
+    const VISIT_REVIEW_TREATMENT = 'Review Treatment';
+
     protected $fillable = [
         'appointment_no', 'start_date', 'end_date', 'start_time',
         'duration_minutes', 'appointment_type', 'source',
@@ -126,7 +143,7 @@ class Appointment extends Model
      */
     public function scopeNoShow($query)
     {
-        return $query->where('status', 'no_show');
+        return $query->where('status', self::STATUS_NO_SHOW);
     }
 
     /**
@@ -135,7 +152,7 @@ class Appointment extends Model
     public function needsReminder()
     {
         return !$this->reminder_sent
-            && $this->status === 'scheduled'
+            && $this->status === self::STATUS_SCHEDULED
             && $this->start_date->isAfter(now());
     }
 
@@ -144,7 +161,7 @@ class Appointment extends Model
      */
     public function markAsNoShow()
     {
-        $this->status = 'no_show';
+        $this->status = self::STATUS_NO_SHOW;
         $this->no_show_count = ($this->no_show_count ?? 0) + 1;
         $this->save();
 

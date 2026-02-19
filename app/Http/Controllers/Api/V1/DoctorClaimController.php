@@ -14,7 +14,9 @@ class DoctorClaimController extends ApiController
 {
     public function __construct(
         protected DoctorClaimService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-doctor-claims');
+    }
 
     public function index(Request $request): JsonResponse
     {

@@ -6,6 +6,7 @@ use App\LabCase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\DataTables;
 
 class LabCaseService
 {
@@ -62,7 +63,7 @@ class LabCaseService
             ->join('patients', 'patients.id', 'lab_cases.patient_id')
             ->join('labs', 'labs.id', 'lab_cases.lab_id')
             ->whereNull('lab_cases.deleted_at')
-            ->whereIn('lab_cases.status', ['sent', 'in_production'])
+            ->whereIn('lab_cases.status', [LabCase::STATUS_SENT, LabCase::STATUS_IN_PRODUCTION])
             ->whereNotNull('lab_cases.expected_return_date')
             ->where('lab_cases.expected_return_date', '<', now()->format('Y-m-d'))
             ->whereNull('lab_cases.actual_return_date')
@@ -103,15 +104,15 @@ class LabCaseService
     {
         $update = ['status' => $status];
 
-        if ($status === 'sent' && empty($extra['sent_date'])) {
+        if ($status === LabCase::STATUS_SENT && empty($extra['sent_date'])) {
             $update['sent_date'] = now()->format('Y-m-d');
         }
 
-        if (in_array($status, ['returned', 'try_in', 'completed']) && empty($extra['actual_return_date'])) {
+        if (in_array($status, [LabCase::STATUS_RETURNED, LabCase::STATUS_TRY_IN, LabCase::STATUS_COMPLETED]) && empty($extra['actual_return_date'])) {
             $update['actual_return_date'] = now()->format('Y-m-d');
         }
 
-        if ($status === 'rework') {
+        if ($status === LabCase::STATUS_REWORK) {
             $case = LabCase::find($id);
             if ($case) {
                 $update['rework_count'] = $case->rework_count + 1;
@@ -161,18 +162,22 @@ class LabCaseService
             ->whereNull('deleted_at')
             ->selectRaw("
                 COUNT(*) as total,
-                SUM(CASE WHEN status IN ('pending','sent','in_production') THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN status = 'rework' THEN 1 ELSE 0 END) as rework,
+                SUM(CASE WHEN status IN (?, ?, ?) THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as rework,
                 SUM(lab_fee) as total_lab_fee,
                 SUM(patient_charge) as total_patient_charge,
                 SUM(patient_charge - lab_fee) as total_profit
-            ")
+            ", [
+                LabCase::STATUS_PENDING, LabCase::STATUS_SENT, LabCase::STATUS_IN_PRODUCTION,
+                LabCase::STATUS_COMPLETED,
+                LabCase::STATUS_REWORK,
+            ])
             ->first();
 
         $overdue = DB::table('lab_cases')
             ->whereNull('deleted_at')
-            ->whereIn('status', ['sent', 'in_production'])
+            ->whereIn('status', [LabCase::STATUS_SENT, LabCase::STATUS_IN_PRODUCTION])
             ->whereNotNull('expected_return_date')
             ->where('expected_return_date', '<', now()->format('Y-m-d'))
             ->whereNull('actual_return_date')
@@ -196,5 +201,99 @@ class LabCaseService
     public function getPrintData(int $id): ?LabCase
     {
         return LabCase::with(['patient', 'doctor', 'lab', 'appointment', 'addedBy'])->find($id);
+    }
+
+    // ─── DataTable formatting ────────────────────────────────────
+
+    /**
+     * Build DataTables response for the lab cases index page.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('lab_case_no', function ($row) {
+                return '<a href="' . url('lab-cases/' . $row->id) . '">' . e($row->lab_case_no) . '</a>';
+            })
+            ->addColumn('patient_name', function ($row) {
+                return $row->patient_name ?? '-';
+            })
+            ->addColumn('doctor_name', function ($row) {
+                return $row->doctor_name ?? '-';
+            })
+            ->addColumn('lab_name', function ($row) {
+                return $row->lab_name ?? '-';
+            })
+            ->addColumn('prosthesis_type_label', function ($row) {
+                return __('lab_cases.type_' . $row->prosthesis_type);
+            })
+            ->addColumn('status_label', function ($row) {
+                $badges = [
+                    LabCase::STATUS_PENDING       => 'default',
+                    LabCase::STATUS_SENT          => 'info',
+                    LabCase::STATUS_IN_PRODUCTION => 'warning',
+                    LabCase::STATUS_RETURNED      => 'primary',
+                    LabCase::STATUS_TRY_IN        => 'info',
+                    LabCase::STATUS_COMPLETED     => 'success',
+                    LabCase::STATUS_REWORK        => 'danger',
+                ];
+                $badge = $badges[$row->status] ?? 'default';
+                return '<span class="label label-' . $badge . '">' . __('lab_cases.status_' . $row->status) . '</span>';
+            })
+            ->addColumn('overdue_flag', function ($row) {
+                if (!empty($row->expected_return_date)
+                    && in_array($row->status, [LabCase::STATUS_SENT, LabCase::STATUS_IN_PRODUCTION])
+                    && empty($row->actual_return_date)
+                    && $row->expected_return_date < now()->format('Y-m-d')
+                ) {
+                    return '<span class="text-danger"><i class="fa fa-exclamation-triangle"></i></span>';
+                }
+                return '';
+            })
+            ->addColumn('action', function ($row) {
+                return '
+                <div class="btn-group">
+                    <button class="btn blue dropdown-toggle btn-sm" type="button" data-toggle="dropdown" aria-expanded="false">
+                        ' . __('common.action') . ' <i class="fa fa-angle-down"></i>
+                    </button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="' . url('lab-cases/' . $row->id) . '">' . __('lab_cases.view_lab_case') . '</a></li>
+                        <li><a href="#" onclick="editLabCase(' . $row->id . ')">' . __('lab_cases.edit_lab_case') . '</a></li>
+                        <li><a href="#" onclick="updateStatus(' . $row->id . ')">' . __('lab_cases.update_status') . '</a></li>
+                        <li><a href="' . url('print-lab-case/' . $row->id) . '" target="_blank">' . __('lab_cases.print_lab_case') . '</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#" onclick="deleteLabCase(' . $row->id . ')" class="text-danger">' . __('lab_cases.delete') . '</a></li>
+                    </ul>
+                </div>';
+            })
+            ->rawColumns(['lab_case_no', 'status_label', 'overdue_flag', 'action'])
+            ->make(true);
+    }
+
+    /**
+     * Build DataTables response for a patient's lab cases.
+     */
+    public function buildPatientLabCasesDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('lab_case_no', function ($row) {
+                return '<a href="' . url('lab-cases/' . $row->id) . '">' . e($row->lab_case_no) . '</a>';
+            })
+            ->addColumn('status_label', function ($row) {
+                $badges = [
+                    LabCase::STATUS_PENDING       => 'default',
+                    LabCase::STATUS_SENT          => 'info',
+                    LabCase::STATUS_IN_PRODUCTION => 'warning',
+                    LabCase::STATUS_RETURNED      => 'primary',
+                    LabCase::STATUS_TRY_IN        => 'info',
+                    LabCase::STATUS_COMPLETED     => 'success',
+                    LabCase::STATUS_REWORK        => 'danger',
+                ];
+                $badge = $badges[$row->status] ?? 'default';
+                return '<span class="label label-' . $badge . '">' . __('lab_cases.status_' . $row->status) . '</span>';
+            })
+            ->rawColumns(['lab_case_no', 'status_label'])
+            ->make(true);
     }
 }

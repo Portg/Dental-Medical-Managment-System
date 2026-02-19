@@ -14,6 +14,7 @@ class BillingEmailNotificationController extends Controller
     public function __construct(BillingEmailNotificationService $billingEmailNotificationService)
     {
         $this->billingEmailNotificationService = $billingEmailNotificationService;
+        $this->middleware('can:manage-settings');
     }
 
     /**
@@ -28,7 +29,9 @@ class BillingEmailNotificationController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->billingEmailNotificationService->getList($request->all());
+            $data = $this->billingEmailNotificationService->getList($request->only([
+                'search', 'start_date', 'end_date',
+            ]));
 
             return Datatables::of($data)
                 ->addIndexColumn()

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Services\PatientSourceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -15,6 +14,7 @@ class PatientSourceController extends Controller
     public function __construct(PatientSourceService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-patient-settings');
     }
 
     /**
@@ -26,15 +26,12 @@ class PatientSourceController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->service->getSourceList($request->all());
+            $data = $this->service->getSourceList($request->only(['quick_search', 'status']));
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('patients_count', function ($row) {
-                    return DB::table('patients')
-                        ->where('source_id', $row->id)
-                        ->whereNull('deleted_at')
-                        ->count();
+                    return (int) $row->patients_count;
                 })
                 ->addColumn('status', function ($row) {
                     if ($row->is_active) {

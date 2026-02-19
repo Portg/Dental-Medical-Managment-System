@@ -40,6 +40,7 @@ return [
     'confirm' => '确认',
     'yes' => '是',
     'no' => '否',
+    'unlimited' => '不限',
     'ok' => '确定',
     'print' => '打印',
     'export' => '导出',

@@ -13,7 +13,9 @@ class InventoryItemController extends ApiController
 {
     public function __construct(
         protected InventoryItemService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-inventory');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -59,7 +61,11 @@ class InventoryItemController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $item = $this->service->createItem($request->all());
+        $item = $this->service->createItem($request->only([
+            'item_code', 'name', 'unit', 'category_id', 'reference_price', 'selling_price',
+            'specification', 'brand', 'track_expiry', 'stock_warning_level',
+            'storage_location', 'notes', 'is_active',
+        ]));
 
         if (!$item) {
             return $this->error('Failed to create inventory item', 500);
@@ -103,7 +109,11 @@ class InventoryItemController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->service->updateItem($id, $request->all());
+        $status = $this->service->updateItem($id, $request->only([
+            'item_code', 'name', 'unit', 'category_id', 'reference_price', 'selling_price',
+            'specification', 'brand', 'track_expiry', 'stock_warning_level',
+            'storage_location', 'notes', 'is_active',
+        ]));
 
         if (!$status) {
             return $this->error('Failed to update inventory item', 500);

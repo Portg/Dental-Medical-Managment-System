@@ -13,7 +13,12 @@ class InvoiceController extends ApiController
 {
     public function __construct(
         protected InvoiceService $invoiceService
-    ) {}
+    ) {
+        $this->middleware('can:view-invoices')->only(['index', 'show', 'search', 'amount', 'procedures']);
+        $this->middleware('can:create-invoices')->only(['store']);
+        $this->middleware('can:edit-invoices')->only(['approveDiscount', 'rejectDiscount', 'setCredit']);
+        $this->middleware('can:delete-invoices')->only(['destroy']);
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -44,8 +49,6 @@ class InvoiceController extends ApiController
 
     public function show(int $id): JsonResponse
     {
-        $detail = $this->invoiceService->getInvoiceDetail($id);
-
         $invoice = Invoice::with(['patient', 'items.medical_service', 'payments'])->findOrFail($id);
 
         return $this->success(new InvoiceResource($invoice));

@@ -18,6 +18,8 @@ class RoleController extends Controller
     public function __construct(RoleService $roleService)
     {
         $this->roleService = $roleService;
+
+        $this->middleware('can:manage-roles');
     }
 
     /**
@@ -36,6 +38,9 @@ class RoleController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('action', function ($row) {
                     return ActionColumnHelper::make($row->id)

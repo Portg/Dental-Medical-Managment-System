@@ -21,7 +21,7 @@
 
 @section('modals')
 <!-- Reject Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1" role="dialog">
+<div class="modal fade modal-form" id="rejectModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">

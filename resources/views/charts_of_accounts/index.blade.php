@@ -31,7 +31,7 @@
                         <ul class="nav nav-tabs">
                             @if(isset($AccountingEquations))
                                 @foreach($AccountingEquations as $row)
-                                    <li class="@if($row->active_tab == 'yes') active @endif">
+                                    <li class="@if($row->active_tab) active @endif">
                                         <a href="#{{ $row->id . '_tab' }}" data-toggle="tab">{{ $row->name }}</a>
                                     </li>
                                 @endforeach
@@ -40,7 +40,7 @@
                         <div class="tab-content">
                             @if(isset($AccountingEquations))
                                 @foreach($AccountingEquations as $row)
-                                    <div class="tab-pane @if($row->active_tab == 'yes') active @endif" id="{{ $row->id . '_tab' }}">
+                                    <div class="tab-pane @if($row->active_tab) active @endif" id="{{ $row->id . '_tab' }}">
                                         @foreach($row->Categories as $cat)
                                             <div class="portlet">
                                                 <div class="portlet-body">

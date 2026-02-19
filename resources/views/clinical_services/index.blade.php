@@ -1,66 +1,33 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
-@endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('clinical_services.title') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('common.add_new') }}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @if(session()->has('success'))
-                    <div class="alert alert-info">
-                        <button class="close" data-dismiss="alert"></button> {{ session()->get('success') }}!
-                    </div>
-                @endif
-                <table class="table table-striped table-bordered table-hover table-checkable order-column" id="services-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        <th>{{ __('clinical_services.procedure') }}</th>
-                        <th>{{ __('clinical_services.price') }}</th>
-                        <th>{{ __('clinical_services.add_by') }}</th>
-                        <th>{{ __('common.action') }}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('clinical_services.create')
-@endsection
-@section('js')
-<script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-<script type="text/javascript">
-    var table;
+@extends('layouts.list-page')
 
+@section('page_title', __('clinical_services.title'))
+@section('table_id', 'services-table')
+
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('common.add_new') }}</button>
+@endsection
+
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('clinical_services.procedure') }}</th>
+    <th>{{ __('clinical_services.price') }}</th>
+    <th>{{ __('clinical_services.add_by') }}</th>
+    <th>{{ __('common.action') }}</th>
+@endsection
+
+@section('modals')
+    @include('clinical_services.create')
+@endsection
+
+@section('page_js')
+<script type="text/javascript">
     $(function () {
         LanguageManager.loadAllFromPHP({
             'clinical_services': @json(__('clinical_services')),
             'common': @json(__('common'))
         });
 
-        table = $('#services-table').DataTable({
+        dataTable = $('#services-table').DataTable({
             destroy: true,
             processing: true,
             language: LanguageManager.getDataTableLang(),
@@ -70,6 +37,7 @@
                     d.search = $('input[type="search"]').val();
                 }
             },
+            dom: 'rtip',
             columns: [
                 {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                 {data: 'name', name: 'name'},
@@ -78,6 +46,8 @@
                 {data: 'action', name: 'action', orderable: false, searchable: false}
             ]
         });
+
+        setupEmptyStateHandler();
     });
 
     function createRecord() {
@@ -214,13 +184,6 @@
                 }
             });
         });
-    }
-
-    function alert_dialog(message, status) {
-        swal("{{ __('common.alert') }}", message, status);
-        setTimeout(function () {
-            location.reload();
-        }, 1900);
     }
 </script>
 @endsection

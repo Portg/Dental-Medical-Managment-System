@@ -1,4 +1,4 @@
-<div class="modal fade" id="viewImageModal" tabindex="-1" role="dialog" aria-labelledby="viewImageModalLabel" aria-hidden="true">
+<div class="modal fade modal-form modal-form-lg" id="viewImageModal" tabindex="-1" role="dialog" aria-labelledby="viewImageModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -41,10 +41,10 @@
                 </div>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn default" data-dismiss="modal">{{ __('common.close') }}</button>
                 <a id="download_image_btn" href="" download class="btn btn-primary">
                     <i class="fa fa-download"></i> {{ __('patient_images.download') }}
                 </a>
-                <button type="button" class="btn default" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

@@ -28,14 +28,22 @@ class LabCase extends Model
         'actual_return_date'   => 'date',
     ];
 
+    const STATUS_PENDING = 'pending';
+    const STATUS_SENT = 'sent';
+    const STATUS_IN_PRODUCTION = 'in_production';
+    const STATUS_RETURNED = 'returned';
+    const STATUS_TRY_IN = 'try_in';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_REWORK = 'rework';
+
     public const STATUSES = [
-        'pending'       => '待送出',
-        'sent'          => '已送出',
-        'in_production' => '制作中',
-        'returned'      => '已返回',
-        'try_in'        => '试戴',
-        'completed'     => '完成',
-        'rework'        => '返工',
+        self::STATUS_PENDING       => '待送出',
+        self::STATUS_SENT          => '已送出',
+        self::STATUS_IN_PRODUCTION => '制作中',
+        self::STATUS_RETURNED      => '已返回',
+        self::STATUS_TRY_IN        => '试戴',
+        self::STATUS_COMPLETED     => '完成',
+        self::STATUS_REWORK        => '返工',
     ];
 
     public const PROSTHESIS_TYPES = [
@@ -94,7 +102,7 @@ class LabCase extends Model
             return false;
         }
 
-        return in_array($this->status, ['sent', 'in_production'])
+        return in_array($this->status, [self::STATUS_SENT, self::STATUS_IN_PRODUCTION])
             && now()->gt($this->expected_return_date);
     }
 

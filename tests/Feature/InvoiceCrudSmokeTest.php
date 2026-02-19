@@ -6,7 +6,9 @@ use App\Appointment;
 use App\Branch;
 use App\MedicalService;
 use App\Patient;
+use App\Permission;
 use App\Role;
+use App\RolePermission;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -29,7 +31,7 @@ class InvoiceCrudSmokeTest extends TestCase
 
         Bus::fake();
 
-        $branch     = Branch::create(['name' => 'Main Branch', 'is_active' => 'true']);
+        $branch     = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
         $adminRole  = Role::create(['name' => 'Administrator']);
         $doctorRole = Role::create(['name' => 'Doctor']);
 
@@ -74,6 +76,10 @@ class InvoiceCrudSmokeTest extends TestCase
         ]);
 
         $this->token = $this->admin->createToken('test')->plainTextToken;
+
+        // Grant view-invoices permission to admin role (needed for web routes)
+        $perm = Permission::create(['name' => 'View Invoices', 'slug' => 'view-invoices', 'module' => 'invoices']);
+        RolePermission::create(['role_id' => $adminRole->id, 'permission_id' => $perm->id]);
     }
 
     private function authHeader(): array
@@ -227,6 +233,29 @@ class InvoiceCrudSmokeTest extends TestCase
             'id'        => $invoiceId,
             'is_credit' => true,
         ]);
+    }
+
+    // ─── Web DataTable ──────────────────────────────────────────────
+
+    public function test_invoice_datatable_ajax_returns_200(): void
+    {
+        // Create an invoice first so there is data to display
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/invoices', $this->validInvoiceData());
+
+        // Simulate a DataTables server-side AJAX request (search is an array)
+        $response = $this->actingAs($this->admin)
+            ->get('/invoices?' . http_build_query([
+                'draw'       => 1,
+                'start'      => 0,
+                'length'     => 10,
+                'search'     => ['value' => '', 'regex' => 'false'],
+                'start_date' => now()->format('Y-m-d'),
+                'end_date'   => now()->format('Y-m-d'),
+            ]), ['X-Requested-With' => 'XMLHttpRequest']);
+
+        $response->assertOk()
+                 ->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
     }
 
     // ─── Auth guard ────────────────────────────────────────────────

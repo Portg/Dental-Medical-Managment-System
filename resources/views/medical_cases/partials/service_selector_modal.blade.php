@@ -1,5 +1,5 @@
 {{-- Service Selector Modal --}}
-<div class="modal fade" id="service_selector_modal" tabindex="-1" role="dialog">
+<div class="modal fade modal-form" id="service_selector_modal" tabindex="-1" role="dialog">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -14,11 +14,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" onclick="confirmServiceSelection()">
-                    {{ __('common.confirm') }}
-                </button>
                 <button type="button" class="btn btn-default" data-dismiss="modal">
                     {{ __('common.cancel') }}
+                </button>
+                <button type="button" class="btn btn-primary" onclick="confirmServiceSelection()">
+                    {{ __('common.confirm') }}
                 </button>
             </div>
         </div>

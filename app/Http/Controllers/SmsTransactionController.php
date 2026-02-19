@@ -15,6 +15,7 @@ class SmsTransactionController extends Controller
     public function __construct(SmsTransactionService $smsTransactionService)
     {
         $this->smsTransactionService = $smsTransactionService;
+        $this->middleware('can:manage-sms');
     }
 
     /**
@@ -31,11 +32,14 @@ class SmsTransactionController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->smsTransactionService->getList($request->all());
+            $data = $this->smsTransactionService->getList($request->only(['start_date', 'end_date']));
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('amount', function ($row) {
                     return number_format($row->amount);
@@ -43,7 +47,7 @@ class SmsTransactionController extends Controller
                 ->addColumn('addedBy', function ($row) {
                     return $row->othername;
                 })
-                ->rawColumns(['message_receiver'])
+                ->rawColumns([])
                 ->make(true);
         }
 

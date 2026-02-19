@@ -16,6 +16,7 @@ class DoctorScheduleController extends Controller
     public function __construct(DoctorScheduleService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-schedules');
     }
 
     public function index(Request $request)
@@ -68,7 +69,10 @@ class DoctorScheduleController extends Controller
             'max_patients.required' => __('doctor_schedules.max_patients_required'),
         ])->validate();
 
-        $success = $this->service->createSchedule($request->all());
+        $success = $this->service->createSchedule($request->only([
+            'doctor_id', 'schedule_date', 'start_time', 'end_time', 'max_patients',
+            'is_recurring', 'recurring_pattern', 'recurring_until',
+        ]));
 
         return FunctionsHelper::messageResponse(__('doctor_schedules.added_successfully'), $success);
     }
@@ -96,7 +100,10 @@ class DoctorScheduleController extends Controller
             'max_patients.required' => __('doctor_schedules.max_patients_required'),
         ])->validate();
 
-        $success = $this->service->updateSchedule($id, $request->all());
+        $success = $this->service->updateSchedule($id, $request->only([
+            'doctor_id', 'schedule_date', 'start_time', 'end_time', 'max_patients',
+            'is_recurring', 'recurring_pattern', 'recurring_until',
+        ]));
 
         return FunctionsHelper::messageResponse(__('doctor_schedules.updated_successfully'), $success);
     }

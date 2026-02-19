@@ -60,7 +60,7 @@ class StockOutService
             'department' => $data['department'] ?? null,
             'notes' => $data['notes'] ?? null,
             'branch_id' => $data['branch_id'] ?? null,
-            'status' => 'draft',
+            'status' => StockOut::STATUS_DRAFT,
             '_who_added' => Auth::User()->id,
         ]);
     }
@@ -194,7 +194,7 @@ class StockOutService
                 }
             }
 
-            $stockOut->update(['status' => 'confirmed']);
+            $stockOut->update(['status' => StockOut::STATUS_CONFIRMED]);
 
             DB::commit();
             return ['status' => true, 'message' => __('inventory.stock_out_confirmed')];
@@ -216,7 +216,7 @@ class StockOutService
             return ['status' => false, 'message' => __('inventory.cannot_cancel')];
         }
 
-        $cancelled = (bool) $stockOut->update(['status' => 'cancelled']);
+        $cancelled = (bool) $stockOut->update(['status' => StockOut::STATUS_CANCELLED]);
 
         return [
             'status' => $cancelled,

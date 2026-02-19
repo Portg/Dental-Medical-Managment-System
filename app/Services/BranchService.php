@@ -31,7 +31,7 @@ class BranchService
     public function getAllBranches(): Collection
     {
         return Cache::remember(self::CACHE_KEY_ALL, self::CACHE_TTL, function () {
-            return Branch::whereNull('deleted_at')->orderBy('name')->get();
+            return Branch::orderBy('name')->get();
         });
     }
 

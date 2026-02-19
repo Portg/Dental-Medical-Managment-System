@@ -13,7 +13,9 @@ class MedicalServiceController extends ApiController
 {
     public function __construct(
         protected MedicalServiceService $service
-    ) {}
+    ) {
+        $this->middleware('can:manage-medical-services');
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -51,7 +53,7 @@ class MedicalServiceController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $service = $this->service->createService($request->all());
+        $service = $this->service->createService($request->only(['name', 'price']));
 
         if (!$service) {
             return $this->error('Failed to create medical service', 500);
@@ -71,7 +73,7 @@ class MedicalServiceController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->service->updateService($id, $request->all());
+        $status = $this->service->updateService($id, $request->only(['name', 'price']));
 
         if (!$status) {
             return $this->error('Failed to update medical service', 500);

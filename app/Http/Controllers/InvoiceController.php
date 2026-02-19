@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
-use App\Http\Helper\NameHelper;
 use App\Services\InvoiceService;
 use App\Exports\InvoiceExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -11,7 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use PDF;
-use Yajra\DataTables\DataTables;
 
 class InvoiceController extends Controller
 {
@@ -20,6 +18,11 @@ class InvoiceController extends Controller
     public function __construct(InvoiceService $invoiceService)
     {
         $this->invoiceService = $invoiceService;
+
+        $this->middleware('can:view-invoices')->only(['index', 'show', 'previewInvoice', 'invoiceShareDetails', 'sendInvoice', 'invoiceAmount', 'patientInvoices', 'printReceipt', 'exportReport', 'invoiceProceduresToJson', 'searchInvoices']);
+        $this->middleware('can:create-invoices')->only(['create', 'store']);
+        $this->middleware('can:edit-invoices')->only(['edit', 'update', 'pendingDiscountApprovals', 'approveDiscount', 'rejectDiscount', 'setCredit']);
+        $this->middleware('can:delete-invoices')->only(['destroy']);
     }
 
     public function index(Request $request)
@@ -29,63 +32,16 @@ class InvoiceController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->invoiceService->getInvoiceList($request->all());
+            $data = $this->invoiceService->getInvoiceList([
+                'search'     => $request->input('search.value', ''),
+                'status'     => $request->input('status'),
+                'start_date' => $request->input('start_date'),
+                'end_date'   => $request->input('end_date'),
+                'page'       => $request->input('page'),
+                'per_page'   => $request->input('per_page'),
+            ]);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->filter(function ($instance) use ($request) {
-                })
-                ->addColumn('invoice_no', function ($row) {
-                    return '<a href="' . url('invoices/' . $row->id) . '">' . $row->invoice_no . '</a>';
-                })
-                ->addColumn('customer', function ($row) {
-                    return NameHelper::join($row->surname, $row->othername);
-                })
-                ->addColumn('amount', function ($row) {
-                    return number_format($this->invoiceService->totalInvoiceAmount($row->id));
-                })
-                ->addColumn('paid_amount', function ($row) {
-                    return number_format($this->invoiceService->totalInvoicePaidAmount($row->id));
-                })
-                ->addColumn('due_amount', function ($row) {
-                    $balance = $this->invoiceService->invoiceBalance($row->id);
-                    if ($balance <= 0) {
-                        return number_format($balance);
-                    }
-                    return number_format($balance) . '<br>
-                    <a href="#" onclick="record_payment(' . $row->id . ')" class="text-primary">' . __('invoices.record_payment') . '</a>
-                    ';
-                })
-                ->addColumn('action', function ($row) {
-                    return '
-                      <div class="btn-group">
-                        <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-expanded="false"> ' . __('common.action') . '
-                            <i class="fa fa-angle-down"></i>
-                        </button>
-                        <ul class="dropdown-menu" role="menu">
-                        <li>
-                        <a href="#" onClick="viewInvoiceProcedures('.$row->id.')"> ' . __('invoices.view_procedures_done') . '</a>
-                    </li>
-                    <li>
-                                <a href="' . url('invoices/' . $row->id) . '"> ' . __('invoices.view_invoice_details') . '</a>
-                            </li>
-                             <li>
-                                <a target="_blank" href="' . url('print-receipt/' . $row->id) . '"  > ' . __('invoices.print') . ' </a>
-                            </li>
-                              <li>
-                         <a  href="#" onClick="shareInvoiceView(' . $row->id . ')"> ' . __('invoices.share_invoice') . ' </a>
-                            </li>
-                            <li class="divider"></li>
-                            <li>
-                                <a href="#" onClick="deleteInvoice(' . $row->id . ')" class="text-danger"> ' . __('invoices.delete_invoice') . '</a>
-                            </li>
-                        </ul>
-                    </div>
-                    ';
-                })
-                ->rawColumns(['invoice_no', 'due_amount', 'payment_classification', 'action', 'status'])
-                ->make(true);
+            return $this->invoiceService->buildIndexDataTable($data);
         }
         return view('invoices.index');
     }
@@ -129,37 +85,7 @@ class InvoiceController extends Controller
         if ($request->ajax()) {
             $data = $this->invoiceService->getPatientInvoices($patient_id);
 
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->editColumn('created_at', function ($row) {
-                    return $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('Y-m-d') : '-';
-                })
-                ->addColumn('amount', function ($row) {
-                    return number_format($this->invoiceService->totalInvoiceAmount($row->id));
-                })
-                ->addColumn('statusBadge', function ($row) {
-                    $balance = $this->invoiceService->invoiceBalance($row->id);
-                    $total = $this->invoiceService->totalInvoiceAmount($row->id);
-                    if ($total <= 0) {
-                        $class = 'default';
-                        $text = '-';
-                    } elseif ($balance <= 0) {
-                        $class = 'success';
-                        $text = __('invoices.paid');
-                    } elseif ($balance < $total) {
-                        $class = 'warning';
-                        $text = __('invoices.partially_paid');
-                    } else {
-                        $class = 'danger';
-                        $text = __('invoices.unpaid');
-                    }
-                    return '<span class="label label-' . $class . '">' . $text . '</span>';
-                })
-                ->addColumn('viewBtn', function ($row) {
-                    return '<a href="' . url('invoices/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-                })
-                ->rawColumns(['statusBadge', 'viewBtn'])
-                ->make(true);
+            return $this->invoiceService->buildPatientInvoicesDataTable($data);
         }
     }
 
@@ -244,38 +170,7 @@ class InvoiceController extends Controller
         if ($request->ajax()) {
             $data = $this->invoiceService->getPendingDiscountApprovals();
 
-            return DataTables::of($data)
-                ->addIndexColumn()
-                ->addColumn('invoice_no', function ($row) {
-                    return '<a href="' . url('invoices/' . $row->id) . '">' . $row->invoice_no . '</a>';
-                })
-                ->addColumn('patient_name', function ($row) {
-                    return $row->patient ? $row->patient->full_name : '-';
-                })
-                ->addColumn('subtotal', function ($row) {
-                    return number_format($row->subtotal, 2);
-                })
-                ->addColumn('discount_amount', function ($row) {
-                    return number_format($row->discount_amount, 2);
-                })
-                ->addColumn('total_amount', function ($row) {
-                    return number_format($row->total_amount, 2);
-                })
-                ->addColumn('added_by', function ($row) {
-                    return $row->addedBy ? $row->addedBy->othername : '-';
-                })
-                ->addColumn('action', function ($row) {
-                    return '
-                        <button class="btn btn-sm btn-success" onclick="approveDiscount(' . $row->id . ')">
-                            <i class="fa fa-check"></i> ' . __('invoices.approve') . '
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="rejectDiscount(' . $row->id . ')">
-                            <i class="fa fa-times"></i> ' . __('invoices.reject') . '
-                        </button>
-                    ';
-                })
-                ->rawColumns(['invoice_no', 'action'])
-                ->make(true);
+            return $this->invoiceService->buildDiscountApprovalsDataTable($data);
         }
 
         return view('invoices.pending_discount_approvals');

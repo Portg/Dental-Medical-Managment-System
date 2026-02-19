@@ -207,7 +207,7 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
 
-                                        <button type="button" class="btn dark btn-outline btn-circle btn-sm"
+                                        <button type="button" class="btn btn-default btn-circle btn-sm"
                                            onclick="AddIllness(<?php if (isset($patient->id)) {
                                                /** @var TYPE_NAME $patient */
                                                echo $patient->id;
@@ -244,7 +244,7 @@
                                 <div class="portlet light">
                                     <div class="portlet-title">
 
-                                        <button type="button" class="btn dark btn-outline btn-circle btn-sm"
+                                        <button type="button" class="btn btn-default btn-circle btn-sm"
                                            onclick="AddAllergy(<?php if (isset($patient->id)) {
                                                /** @var TYPE_NAME $patient */
                                                echo $patient->id;

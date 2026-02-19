@@ -1,4 +1,4 @@
-<div class="modal fade" id="completeFollowupModal" tabindex="-1" role="dialog" aria-labelledby="completeFollowupModalLabel" aria-hidden="true">
+<div class="modal fade modal-form" id="completeFollowupModal" tabindex="-1" role="dialog" aria-labelledby="completeFollowupModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -25,8 +25,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn green" onclick="confirmCompleteFollowup()">{{ __('patient_followups.mark_complete') }}</button>
                 <button type="button" class="btn default" data-dismiss="modal">{{ __('common.cancel') }}</button>
+                <button type="button" class="btn green" onclick="confirmCompleteFollowup()">{{ __('patient_followups.mark_complete') }}</button>
             </div>
         </div>
     </div>

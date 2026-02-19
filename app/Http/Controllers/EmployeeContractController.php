@@ -17,6 +17,7 @@ class EmployeeContractController extends Controller
     public function __construct(EmployeeContractService $employeeContractService)
     {
         $this->employeeContractService = $employeeContractService;
+        $this->middleware('can:manage-employees');
     }
 
     /**
@@ -120,7 +121,10 @@ class EmployeeContractController extends Controller
             'payroll_type.required' => __('validation.attributes.payroll_type') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->employeeContractService->createContract($request->all(), Auth::User()->id);
+        $status = $this->employeeContractService->createContract($request->only([
+            'employee', 'contract_type', 'start_date', 'contract_length',
+            'contract_period', 'payroll_type', 'gross_salary', 'commission_percentage',
+        ]), Auth::User()->id);
 
         if ($status) {
             return response()->json(['message' => __('employee_contracts.employee_contract_added_successfully'),
@@ -177,7 +181,10 @@ class EmployeeContractController extends Controller
             'payroll_type.required' => __('validation.attributes.payroll_type') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->employeeContractService->updateContract($id, $request->all(), Auth::User()->id);
+        $status = $this->employeeContractService->updateContract($id, $request->only([
+            'employee', 'contract_type', 'start_date', 'contract_length',
+            'contract_period', 'payroll_type', 'gross_salary', 'commission_percentage',
+        ]), Auth::User()->id);
 
         if ($status) {
             return response()->json(['message' => __('employee_contracts.employee_contract_updated_successfully'),

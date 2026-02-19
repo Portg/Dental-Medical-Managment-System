@@ -34,7 +34,7 @@ class MailSuccessfulDatabaseBackup
     {
         try {
             Mail::raw(__('emails.new_database_backup_file'), function ($message) use ($path) {
-                $message->to(env('DB_BACKUP_EMAIL'))
+                $message->to(config('app.db_backup_email'))
                     ->subject(__('emails.db_backup_done_subject'))
                     ->attach($path);
             });
