@@ -1,8 +1,8 @@
-<div class="modal fade" id="status-modal" role="dialog" aria-hidden="true">
+<div class="modal fade modal-form" id="status-modal" role="dialog" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h4 class="modal-title">{{ __('lab_cases.update_status') }}</h4>
             </div>
             <div class="modal-body">
@@ -27,8 +27,8 @@
                 </form>
             </div>
             <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal">{{ __('lab_cases.cancel') }}</button>
                 <button class="btn btn-primary" id="btn-status" onclick="saveStatus()">{{ __('common.save_changes') }}</button>
-                <button class="btn dark btn-outline" data-dismiss="modal">{{ __('lab_cases.cancel') }}</button>
             </div>
         </div>
     </div>

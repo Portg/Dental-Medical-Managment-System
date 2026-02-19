@@ -1,123 +1,55 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
-@endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject"> {{ __('online_bookings.appointments_online_bookings') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
+@extends('layouts.list-page')
 
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-12">
+@section('page_title', __('online_bookings.appointments_online_bookings'))
+@section('table_id', 'bookings-table')
 
-                    <form action="#" class="form-horizontal">
-                        <div class="form-body">
-
-                            <div class="row">
-                                <div class="col-md-6">
-
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('online_bookings.period') }}</label>
-                                        <div class="col-md-9">
-                                            <select class="form-control" id="period_selector">
-                                                <option>{{ __('online_bookings.all') }}</option>
-                                                <option value="Today">{{ __('online_bookings.today') }}</option>
-                                                <option value="Yesterday">{{ __('online_bookings.yesterday') }}</option>
-                                                <option value="This week">{{ __('online_bookings.this_week') }}</option>
-                                                <option value="Last week">{{ __('online_bookings.last_week') }}</option>
-                                                <option value="This Month">{{ __('online_bookings.this_month') }}</option>
-                                                <option value="Last Month">{{ __('online_bookings.last_month') }}</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('online_bookings.start_date') }}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control start_date">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('online_bookings.end_date') }}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control end_date">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="row">
-                                        <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn"
-                                                    class="btn purple-intense">{{ __('online_bookings.filter_bookings') }}
-                                            </button>
-                                            <button type="button" class="btn default">{{ __('online_bookings.clear') }}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6"></div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <br>
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="bookings-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('online_bookings.id') }}</th>
-                        <th>{{ __('online_bookings.booking_date') }}</th>
-                        <th>{{ __('online_bookings.patient') }}</th>
-                        <th>{{ __('online_bookings.phone_no') }}</th>
-                        <th>{{ __('online_bookings.email') }}</th>
-                        <th>{{ __('online_bookings.preferred_appointment_date') }}</th>
-                        <th>{{ __('online_bookings.preferred_appointment_time') }}</th>
-                        <th>{{ __('online_bookings.is_new_patient') }}</th>
-                        <th>{{ __('online_bookings.status') }}</th>
-                        <th>{{ __('online_bookings.action') }}</th>
-                    </thead>
-                    <tbody>
-
-                    </tbody>
-                </table>
-            </div>
+@section('filter_area')
+    <div class="row filter-row">
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('online_bookings.period') }}</div>
+            <select class="form-control" id="period_selector">
+                <option>{{ __('online_bookings.all') }}</option>
+                <option value="Today">{{ __('online_bookings.today') }}</option>
+                <option value="Yesterday">{{ __('online_bookings.yesterday') }}</option>
+                <option value="This week">{{ __('online_bookings.this_week') }}</option>
+                <option value="Last week">{{ __('online_bookings.last_week') }}</option>
+                <option value="This Month">{{ __('online_bookings.this_month') }}</option>
+                <option value="Last Month">{{ __('online_bookings.last_month') }}</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('online_bookings.start_date') }}</div>
+            <input type="text" class="form-control start_date" placeholder="{{ __('online_bookings.start_date') }}">
+        </div>
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('online_bookings.end_date') }}</div>
+            <input type="text" class="form-control end_date" placeholder="{{ __('online_bookings.end_date') }}">
+        </div>
+        <div class="col-md-3 text-right filter-actions">
+            <button type="button" class="btn btn-default" onclick="clearFilters()">{{ __('online_bookings.clear') }}</button>
+            <button type="button" id="customFilterBtn" class="btn btn-primary">{{ __('online_bookings.filter_bookings') }}</button>
         </div>
     </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('online_bookings.loading') }}</span>
-</div>
-@include('online_bookings.preview_booking')
 @endsection
-@section('js')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-    <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
+@section('table_headers')
+    <th>{{ __('online_bookings.id') }}</th>
+    <th>{{ __('online_bookings.booking_date') }}</th>
+    <th>{{ __('online_bookings.patient') }}</th>
+    <th>{{ __('online_bookings.phone_no') }}</th>
+    <th>{{ __('online_bookings.email') }}</th>
+    <th>{{ __('online_bookings.preferred_appointment_date') }}</th>
+    <th>{{ __('online_bookings.preferred_appointment_time') }}</th>
+    <th>{{ __('online_bookings.is_new_patient') }}</th>
+    <th>{{ __('online_bookings.status') }}</th>
+    <th>{{ __('online_bookings.action') }}</th>
+@endsection
+
+@section('modals')
+    @include('online_bookings.preview_booking')
+@endsection
+
+@section('page_js')
     <script type="text/javascript">
 
         function default_todays_data() {
@@ -160,7 +92,7 @@
             });
 
             default_todays_data();  //filter  date
-            var table = $('#bookings-table').DataTable({
+            dataTable = $('#bookings-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -173,14 +105,7 @@
                         d.search = $('input[type="search"]').val();
                     }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
                     {data: 'booking_date', name: 'booking_date'},
@@ -195,11 +120,11 @@
                 ]
             });
 
-
+            setupEmptyStateHandler();
         });
 
         $('#customFilterBtn').click(function () {
-            $('#bookings-table').DataTable().draw(true);
+            dataTable.draw(true);
         });
 
 
@@ -266,7 +191,7 @@
                     $('[name="appointment_date"]').val(data.start_date);
                     $('[name="appointment_time"]').val(data.start_time);
                     $('[name="visit_reason"]').val(data.message);
-                    $('input[name^="visit_history"][value="' + data.visit_history + '"').prop('checked', true);
+                    $('input[name^="visit_history"][value="' + (data.visit_history ? '1' : '0') + '"').prop('checked', true);
                     //check if the patient has medical isurance
                     if (data.insurance_company_id != null) {
                         let company_data = {
@@ -366,11 +291,11 @@
         }
 
 
+        // Override base template alert_dialog with page-specific behavior
         function alert_dialog(message, status) {
             swal("{{ __('online_bookings.alert') }}", message, status);
             if (status) {
-                let oTable = $('#bookings-table').dataTable();
-                oTable.fnDraw(false);
+                dataTable.draw(false);
             }
         }
 

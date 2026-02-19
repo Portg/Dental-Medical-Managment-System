@@ -1,8 +1,8 @@
-<div class="modal fade" id="New-invoice-modal" role="dialog" aria-hidden="true">
+<div class="modal fade modal-form" id="New-invoice-modal" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-full">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h4 class="modal-title">{{ __('invoices.invoice_form') }}</h4>
             </div>
             <div class="modal-body">
@@ -61,9 +61,9 @@
             </div>
             <div class="modal-footer">
 
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.close') }}</button>
                 <button type="button" class="btn btn-success" id="btnSave" onclick="save_invoice()">{{ __('invoices.generate_invoice') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

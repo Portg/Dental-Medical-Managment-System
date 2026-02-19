@@ -9,10 +9,12 @@
     @yield('head')
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <meta name="theme-color" content="#00838F"/>
     <meta content="clinic management system" name="description"/>
     <meta content="" name="author"/>
     {{-- Backend CSS Bundle (compiled via npm run dev/prod) --}}
     <link href="{{ asset('css/backend-bundle.css') }}" rel="stylesheet" type="text/css"/>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"/>
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 
     {{-- Purple Theme --}}
@@ -124,7 +126,7 @@
     <script src="{{ asset('backend/assets/global/scripts/loadingoverlay.min.js') }}"></script>
 
     {{-- Language Manager for i18n --}}
-    <script src="{{ asset('js/i18n/language-manager.js') }}" type="text/javascript"></script>
+    <script src="{{ asset('js/i18n/language-manager.js') }}?v={{ filemtime(public_path('js/i18n/language-manager.js')) }}" type="text/javascript"></script>
     <script src="{{ asset('js/i18n/lang-' . app()->getLocale() . '.js') }}" type="text/javascript"></script>
 
     <script type="text/javascript">

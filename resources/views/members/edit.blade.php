@@ -1,4 +1,4 @@
-<div class="modal fade" id="editMemberModal" tabindex="-1" role="dialog" aria-labelledby="editMemberModalLabel" aria-hidden="true">
+<div class="modal fade modal-form" id="editMemberModal" tabindex="-1" role="dialog" aria-labelledby="editMemberModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -61,8 +61,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn green" onclick="updateMember()">{{ __('common.save') }}</button>
                 <button type="button" class="btn default" data-dismiss="modal">{{ __('common.close') }}</button>
+                <button type="button" class="btn green" onclick="updateMember()">{{ __('common.save') }}</button>
             </div>
         </div>
     </div>

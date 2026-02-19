@@ -1,61 +1,29 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+@section('page_title', __('inventory.categories'))
+@section('table_id', 'categories-table')
+
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('inventory.add_category') }}</button>
 @endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('inventory.categories') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('inventory.add_category') }}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @if(session()->has('success'))
-                    <div class="alert alert-info">
-                        <button class="close" data-dismiss="alert"></button> {{ session()->get('success') }}!
-                    </div>
-                @endif
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="categories-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('inventory.sn') }}</th>
-                        <th>{{ __('inventory.category_code') }}</th>
-                        <th>{{ __('inventory.category_name') }}</th>
-                        <th>{{ __('inventory.category_type') }}</th>
-                        <th>{{ __('inventory.items_count') }}</th>
-                        <th>{{ __('inventory.status') }}</th>
-                        <th>{{ __('inventory.added_by') }}</th>
-                        <th>{{ __('common.edit') }}</th>
-                        <th>{{ __('common.delete') }}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('inventory.categories.create')
+
+@section('table_headers')
+    <th>{{ __('inventory.sn') }}</th>
+    <th>{{ __('inventory.category_code') }}</th>
+    <th>{{ __('inventory.category_name') }}</th>
+    <th>{{ __('inventory.category_type') }}</th>
+    <th>{{ __('inventory.items_count') }}</th>
+    <th>{{ __('inventory.status') }}</th>
+    <th>{{ __('inventory.added_by') }}</th>
+    <th>{{ __('common.edit') }}</th>
+    <th>{{ __('common.delete') }}</th>
 @endsection
-@section('js')
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+
+@section('modals')
+    @include('inventory.categories.create')
+@endsection
+
+@section('page_js')
     <script type="text/javascript">
         $(function () {
             LanguageManager.loadAllFromPHP({
@@ -63,7 +31,7 @@
                 'common': @json(__('common'))
             });
 
-            let table = $('#categories-table').DataTable({
+            dataTable = $('#categories-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -72,6 +40,7 @@
                     url: "{{ url('/inventory-categories') }}",
                     data: function (d) {}
                 },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                     {data: 'code', name: 'code'},
@@ -84,6 +53,8 @@
                     {data: 'deleteBtn', name: 'deleteBtn', orderable: false, searchable: false}
                 ]
             });
+
+            setupEmptyStateHandler();
         });
 
         function createRecord() {
@@ -216,14 +187,6 @@
                     }
                 });
             });
-        }
-
-        function alert_dialog(message, status) {
-            swal("{{ __('common.alert') }}", message, status);
-            if (status) {
-                let oTable = $('#categories-table').dataTable();
-                oTable.fnDraw(false);
-            }
         }
     </script>
 @endsection

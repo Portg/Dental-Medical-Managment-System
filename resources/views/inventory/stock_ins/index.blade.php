@@ -1,79 +1,56 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+@section('page_title', __('inventory.stock_in'))
+@section('table_id', 'stock-ins-table')
+
+@section('header_actions')
+    <a class="btn btn-primary" href="{{ route('stock-ins.create') }}">
+        {{ __('inventory.create_stock_in') }} <i class="fa fa-plus"></i>
+    </a>
 @endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('inventory.stock_in') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="btn-group">
-                                <a class="btn blue btn-outline sbold" href="{{ route('stock-ins.create') }}">
-                                    {{ __('inventory.create_stock_in') }} <i class="fa fa-plus"></i>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <select id="filter-status" class="form-control">
-                                <option value="">{{ __('inventory.status') }}</option>
-                                <option value="draft">{{ __('inventory.status_draft') }}</option>
-                                <option value="confirmed">{{ __('inventory.status_confirmed') }}</option>
-                                <option value="cancelled">{{ __('inventory.status_cancelled') }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <input type="text" id="start-date" class="form-control datepicker" placeholder="{{ __('common.start_date') }}">
-                        </div>
-                        <div class="col-md-2">
-                            <input type="text" id="end-date" class="form-control datepicker" placeholder="{{ __('common.end_date') }}">
-                        </div>
-                        <div class="col-md-2">
-                            <button class="btn btn-default" onclick="filterTable()">{{ __('inventory.filter') }}</button>
-                        </div>
-                    </div>
-                </div>
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="stock-ins-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('inventory.sn') }}</th>
-                        <th>{{ __('inventory.stock_in_no') }}</th>
-                        <th>{{ __('inventory.stock_in_date') }}</th>
-                        <th>{{ __('inventory.supplier') }}</th>
-                        <th>{{ __('inventory.items_count') }}</th>
-                        <th>{{ __('inventory.total_amount') }}</th>
-                        <th>{{ __('inventory.status') }}</th>
-                        <th>{{ __('inventory.added_by') }}</th>
-                        <th>{{ __('common.view') }}</th>
-                        <th>{{ __('common.edit') }}</th>
-                        <th>{{ __('common.delete') }}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
+
+@section('filter_area')
+    <div class="row filter-row">
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('inventory.status') }}</div>
+            <select id="filter-status" class="form-control">
+                <option value="">{{ __('common.all') }}</option>
+                <option value="draft">{{ __('inventory.status_draft') }}</option>
+                <option value="confirmed">{{ __('inventory.status_confirmed') }}</option>
+                <option value="cancelled">{{ __('inventory.status_cancelled') }}</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('common.start_date') }}</div>
+            <input type="text" id="start-date" class="form-control datepicker" placeholder="{{ __('common.start_date') }}">
+        </div>
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('common.end_date') }}</div>
+            <input type="text" id="end-date" class="form-control datepicker" placeholder="{{ __('common.end_date') }}">
+        </div>
+        <div class="col-md-3 text-right filter-actions">
+            <button class="btn btn-default" onclick="clearFilters()">{{ __('common.reset') }}</button>
+            <button class="btn btn-primary" onclick="filterTable()">{{ __('inventory.filter') }}</button>
         </div>
     </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
 @endsection
-@section('js')
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-    <script type="text/javascript">
-        var table;
 
+@section('table_headers')
+    <th>{{ __('inventory.sn') }}</th>
+    <th>{{ __('inventory.stock_in_no') }}</th>
+    <th>{{ __('inventory.stock_in_date') }}</th>
+    <th>{{ __('inventory.supplier') }}</th>
+    <th>{{ __('inventory.items_count') }}</th>
+    <th>{{ __('inventory.total_amount') }}</th>
+    <th>{{ __('inventory.status') }}</th>
+    <th>{{ __('inventory.added_by') }}</th>
+    <th>{{ __('common.view') }}</th>
+    <th>{{ __('common.edit') }}</th>
+    <th>{{ __('common.delete') }}</th>
+@endsection
+
+@section('page_js')
+    <script type="text/javascript">
         $(function () {
             LanguageManager.loadAllFromPHP({
                 'inventory': @json(__('inventory')),
@@ -88,7 +65,7 @@
         });
 
         function loadTable() {
-            table = $('#stock-ins-table').DataTable({
+            dataTable = $('#stock-ins-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -101,6 +78,7 @@
                         d.end_date = $('#end-date').val();
                     }
                 },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                     {data: 'stock_in_no', name: 'stock_in_no'},
@@ -115,10 +93,12 @@
                     {data: 'deleteBtn', name: 'deleteBtn', orderable: false, searchable: false}
                 ]
             });
+
+            setupEmptyStateHandler();
         }
 
         function filterTable() {
-            table.ajax.reload();
+            dataTable.ajax.reload();
         }
 
         function deleteRecord(id) {
@@ -141,7 +121,7 @@
                         $.LoadingOverlay("hide");
                         swal("{{ __('common.alert') }}", data.message, data.status ? "success" : "danger");
                         if (data.status) {
-                            table.ajax.reload();
+                            dataTable.ajax.reload();
                         }
                     },
                     error: function (request, status, error) {

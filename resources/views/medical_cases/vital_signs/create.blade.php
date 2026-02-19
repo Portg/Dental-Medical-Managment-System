@@ -1,8 +1,8 @@
-<div class="modal fade" id="vital_sign_modal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade modal-form modal-form-lg" id="vital_sign_modal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h4 class="modal-title" id="vital_sign_modal_title">{{ __('medical_cases.add_vital_sign') }}</h4>
             </div>
             <div class="modal-body">
@@ -140,8 +140,8 @@
                 </form>
             </div>
             <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.close') }}</button>
                 <button type="button" class="btn green" id="btn_save_vital_sign" onclick="saveVitalSign()">{{ __('common.save_record') }}</button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

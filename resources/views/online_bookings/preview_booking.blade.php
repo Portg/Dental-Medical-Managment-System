@@ -1,17 +1,13 @@
-<div class="modal fade" id="booking-preview-modal" role="dialog" aria-hidden="true">
+<div class="modal fade modal-form" id="booking-preview-modal" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-full">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h4 class="modal-title"> {{ __('online_bookings.online_booking_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+                    <ul></ul>
                 </div>
                 <form action="#" id="booking-preview-form" autocomplete="off" readonly="">
 
@@ -52,8 +48,8 @@
 
                             <div class="form-group"><br>
                                 <label>{{ __('online_bookings.have_you_visited') }} {{ env('CompanyName',null) }} <span>*</span></label><br>
-                                <input type="radio" name="visit_history" value="Yes"> {{ __('online_bookings.yes') }}<br>
-                                <input type="radio" name="visit_history" value="No"> {{ __('online_bookings.no') }}<br>
+                                <input type="radio" name="visit_history" value="1"> {{ __('online_bookings.yes') }}<br>
+                                <input type="radio" name="visit_history" value="0"> {{ __('online_bookings.no') }}<br>
                             </div>
                             <div class="form-group">
                                 <label>{{ __('online_bookings.reason_for_visit') }} <span>*</span></label>
@@ -75,7 +71,7 @@
                     <button type="button" id="rejectBtn" class="btn btn-danger" onclick="RejectBooking();">{{ __('online_bookings.reject_booking') }}
                     </button>
                 </div>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('online_bookings.close') }}</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('online_bookings.close') }}</button>
             </div>
         </div>
     </div>

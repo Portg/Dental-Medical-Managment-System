@@ -103,88 +103,41 @@
      ======================================================================== --}}
 @section('page_js')
 <script type="text/javascript">
-    // Load page-specific translations
     LanguageManager.loadAllFromPHP({
         'medical_cases': @json(__('medical_cases')),
         'messages': @json(__('messages'))
     });
 
-    $('#filter_doctor').select2({
-        language: '{{ app()->getLocale() }}',
-        placeholder: "{{ __('medical_cases.select_doctor') }}",
-        allowClear: true,
-        ajax: {
-            url: '/search-doctor',
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return { q: params.term || '' };
-            },
-            processResults: function(data) {
-                return { results: data };
-            },
-            cache: true
-        }
-    });
-
-    // Patient filter - AJAX loading
-    $('#filter_patient').select2({
-        language: '{{ app()->getLocale() }}',
-        placeholder: "{{ __('medical_cases.select_patient') }}",
-        allowClear: true,
-        minimumInputLength: 2,
-        ajax: {
-            url: '/search-patient',
-            dataType: 'json',
-            delay: 250,
-            data: function(params) {
-                return { q: params.term };
-            },
-            processResults: function(data) {
-                return { results: data };
-            },
-            cache: true
-        }
-    });
-
-    // ==========================================================================
-    // Document Ready
-    // ==========================================================================
-
     $(document).ready(function() {
-        initializeDataTable();
-
-        // Quick search with debounce
-        $('#quickSearch').on('keyup', debounce(function() {
-            doSearch();
-        }, 300));
-
-        // Filter change events
-        $('#filter_status, #filter_doctor, #filter_patient').on('change', function() {
-            doSearch();
-        });
-    });
-
-    /**
-     * Initialize DataTable
-     */
-    function initializeDataTable() {
-        dataTable = $('#medical_cases_table').DataTable({
-            language: LanguageManager.getDataTableLang(),
-            destroy: true,
-            processing: true,
-            serverSide: true,
+        // Select2 AJAX 筛选器
+        $('#filter_doctor').select2({
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('medical_cases.select_doctor') }}",
+            allowClear: true,
             ajax: {
-                url: "/medical-cases",
-                data: function(d) {
-                    d.search_term = $('#quickSearch').val();
-                    d.status = $('#filter_status').val();
-                    d.doctor_id = $('#filter_doctor').val();
-                    d.patient_id = $('#filter_patient').val();
-                    d.start_date = $('#filter_start_date').val();
-                    d.end_date = $('#filter_end_date').val();
-                }
-            },
+                url: '/search-doctor', dataType: 'json', delay: 250,
+                data: function(p) { return { q: p.term || '' }; },
+                processResults: function(d) { return { results: d }; },
+                cache: true
+            }
+        });
+        $('#filter_patient').select2({
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('medical_cases.select_patient') }}",
+            allowClear: true, minimumInputLength: 2,
+            ajax: {
+                url: '/search-patient', dataType: 'json', delay: 250,
+                data: function(p) { return { q: p.term }; },
+                processResults: function(d) { return { results: d }; },
+                cache: true
+            }
+        });
+
+        // DataTable + 导航式 CRUD
+        var dtm = new DataTableManager({
+            tableId: '#medical_cases_table',
+            ajaxUrl: '/medical-cases',
+            order: [[5, 'desc']],
             columns: [
                 {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
                 {data: 'case_no', name: 'case_no'},
@@ -195,73 +148,28 @@
                 {data: 'statusBadge', name: 'statusBadge', orderable: false, searchable: false},
                 {data: 'action', name: 'action', orderable: false, searchable: false}
             ],
-            order: [[5, 'desc']]
+            filterParams: function(d) {
+                d.search_term = $('#quickSearch').val();
+                d.status = $('#filter_status').val();
+                d.doctor_id = $('#filter_doctor').val();
+                d.patient_id = $('#filter_patient').val();
+                d.start_date = $('#filter_start_date').val();
+                d.end_date = $('#filter_end_date').val();
+            },
+            navigateCreate: true,
+            createUrl: "{{ url('medical-cases/create') }}",
+            navigateEdit: true,
+            editUrl: '/medical-cases/{id}/edit'
         });
 
-        setupEmptyStateHandler();
-    }
+        dtm.initQuickSearch('#quickSearch');
+        $('#filter_status, #filter_doctor, #filter_patient').on('change', function() { doSearch(); });
+    });
 
-    /**
-     * Create new record - navigate to create page
-     */
-    function createRecord() {
-        window.location.href = "{{ url('medical-cases/create') }}";
-    }
-
-    /**
-     * View record
-     */
     function viewRecord(id) {
         window.location.href = '/medical-cases/' + id;
     }
 
-    /**
-     * Edit record
-     */
-    function editRecord(id) {
-        window.location.href = '/medical-cases/' + id + '/edit';
-    }
-
-    /**
-     * Delete record
-     */
-    function deleteRecord(id) {
-        swal({
-            title: LanguageManager.trans('medical_cases.confirm_delete'),
-            text: LanguageManager.trans('medical_cases.confirm_delete_message'),
-            type: "warning",
-            showCancelButton: true,
-            confirmButtonClass: "btn-danger",
-            confirmButtonText: LanguageManager.trans('common.yes_delete'),
-            cancelButtonText: LanguageManager.trans('common.cancel'),
-            closeOnConfirm: false
-        }, function() {
-            var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
-            $('.loading').show();
-            $.ajax({
-                type: 'DELETE',
-                url: '/medical-cases/' + id,
-                data: { _token: CSRF_TOKEN },
-                success: function(data) {
-                    $('.loading').hide();
-                    if (data.status) {
-                        swal(LanguageManager.trans('common.deleted'), data.message, "success");
-                        dataTable.ajax.reload();
-                    } else {
-                        swal(LanguageManager.trans('common.error'), data.message, "error");
-                    }
-                },
-                error: function() {
-                    $('.loading').hide();
-                    swal(LanguageManager.trans('common.error'), LanguageManager.trans('messages.error_occurred'), "error");
-                }
-            });
-        });
-    }
-
-    /**
-     * Clear custom filters
-     */
     function clearCustomFilters() {
         $('#quickSearch').val('');
         $('#filter_status').val('');

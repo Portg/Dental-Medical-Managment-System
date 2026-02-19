@@ -1,103 +1,56 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+{{-- ========================================================================
+     Page Configuration
+     ======================================================================== --}}
+@section('page_title', __('report.todays_cash_report'))
+@section('table_id', 'sample_1')
+
+{{-- ========================================================================
+     Table Headers
+     ======================================================================== --}}
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('common.time') }}</th>
+    <th>{{ __('report.surname') }}</th>
+    <th>{{ __('report.othername') }}</th>
+    <th>{{ __('common.amount') }}</th>
+    <th>{{ __('report.added_by') }}</th>
 @endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject"> {{ __('report.todays_cash_report') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
 
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-
-                        </div>
-                    </div>
-                </div>
-                <br>
-
-                <br>
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="sample_1">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        <th>{{ __('common.time') }}</th>
-                        <th>{{ __('report.surname') }}</th>
-                        <th>{{ __('report.othername') }}</th>
-                        <th>{{ __('common.amount') }}</th>
-                        <th>{{ __('report.added_by') }}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('patients.create')
-@endsection
-@section('js')
-
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-    <script type="text/javascript">
-        $(function () {
-            // 批量加载
-            LanguageManager.loadAllFromPHP({
-                'report': @json(__('report'))
-            });
-
-            var table = $('#sample_1').DataTable({
-                destroy: true,
-                processing: true,
-                serverSide: true,
-                language: LanguageManager.getDataTableLang(),
-                ajax: {
-                    url: "{{ url('/todays-cash/') }}",
-                    data: function (d) {
-                        d.search = $('input[type="search"]').val();
-                    }
-                },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
-                columns: [
-                    {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
-                    {data: 'created_date', name: 'created_date'},
-                    {data: 'surname', name: 'surname'},
-                    {data: 'othername', name: 'othername'},
-                    {data: 'amount', name: 'amount'},
-                    {data: 'added_by', name: 'added_by'},
-                ]
-            });
-
-
-        });
-        $('#btnFiterSubmitSearch').click(function () {
-            $('#sample_1').DataTable().draw(true);
+{{-- ========================================================================
+     Page-specific JavaScript
+     ======================================================================== --}}
+@section('page_js')
+<script type="text/javascript">
+    $(function () {
+        LanguageManager.loadAllFromPHP({
+            'report': @json(__('report'))
         });
 
+        dataTable = $('#sample_1').DataTable({
+            destroy: true,
+            processing: true,
+            serverSide: true,
+            language: LanguageManager.getDataTableLang(),
+            ajax: {
+                url: "{{ url('/todays-cash/') }}",
+                data: function (d) {
+                    d.search = $('input[type="search"]').val();
+                }
+            },
+            dom: 'rtip',
+            columns: [
+                {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
+                {data: 'created_date', name: 'created_date'},
+                {data: 'surname', name: 'surname'},
+                {data: 'othername', name: 'othername'},
+                {data: 'amount', name: 'amount'},
+                {data: 'added_by', name: 'added_by'},
+            ]
+        });
 
-    </script>
+        setupEmptyStateHandler();
+    });
+</script>
 @endsection

@@ -1,92 +1,75 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+@section('page_title', __('lab_cases.lab_case_list'))
+@section('table_id', 'lab-cases-table')
+
+@section('header_actions')
+    <a href="#" onclick="createLabCase()" class="btn btn-primary">
+        <i class="fa fa-plus"></i> {{ __('lab_cases.add_lab_case') }}
+    </a>
+    <a href="{{ url('labs') }}" class="btn btn-default">
+        <i class="fa fa-building"></i> {{ __('lab_cases.lab_management') }}
+    </a>
 @endsection
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('lab_cases.lab_case_list') }}</span>
-                </div>
-                <div class="actions">
-                    <a href="#" onclick="createLabCase()" class="btn btn-sm green">
-                        <i class="fa fa-plus"></i> {{ __('lab_cases.add_lab_case') }}
-                    </a>
-                    <a href="{{ url('labs') }}" class="btn btn-sm blue">
-                        <i class="fa fa-building"></i> {{ __('lab_cases.lab_management') }}
-                    </a>
-                </div>
-            </div>
-            <div class="portlet-body">
-                {{-- Filters --}}
-                <div class="row" style="margin-bottom: 15px;">
-                    <div class="col-md-3">
-                        <select class="form-control" id="filter_status">
-                            <option value="">{{ __('lab_cases.all_statuses') }}</option>
-                            @foreach(\App\LabCase::STATUSES as $key => $label)
-                                <option value="{{ $key }}">{{ __('lab_cases.status_' . $key) }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-control" id="filter_lab">
-                            <option value="">{{ __('lab_cases.all_labs') }}</option>
-                            @foreach($labs as $lab)
-                                <option value="{{ $lab->id }}">{{ $lab->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <button type="button" id="filterBtn" class="btn purple-intense">
-                            {{ __('lab_cases.search_lab_cases') }}
-                        </button>
-                    </div>
-                </div>
-
-                <table class="table table-striped table-bordered table-hover" id="lab-cases-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('lab_cases.id') }}</th>
-                        <th>{{ __('lab_cases.lab_case_no') }}</th>
-                        <th>{{ __('lab_cases.patient_name') }}</th>
-                        <th>{{ __('lab_cases.doctor_name') }}</th>
-                        <th>{{ __('lab_cases.lab_name_header') }}</th>
-                        <th>{{ __('lab_cases.prosthesis_type') }}</th>
-                        <th>{{ __('lab_cases.status') }}</th>
-                        <th>{{ __('lab_cases.expected_return_date') }}</th>
-                        <th></th>
-                        <th>{{ __('lab_cases.actions') }}</th>
-                    </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+@section('filter_area')
+    <div class="row filter-row">
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('lab_cases.status') }}</div>
+            <select class="form-control" id="filter_status">
+                <option value="">{{ __('lab_cases.all_statuses') }}</option>
+                @foreach(\App\LabCase::STATUSES as $key => $label)
+                    <option value="{{ $key }}">{{ __('lab_cases.status_' . $key) }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('lab_cases.lab_name_header') }}</div>
+            <select class="form-control" id="filter_lab">
+                <option value="">{{ __('lab_cases.all_labs') }}</option>
+                @foreach($labs as $lab)
+                    <option value="{{ $lab->id }}">{{ $lab->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-3 text-right filter-actions">
+            <button type="button" class="btn btn-default" onclick="clearFilters()">
+                {{ __('common.reset') }}
+            </button>
+            <button type="button" id="filterBtn" class="btn btn-primary">
+                {{ __('common.search') }}
+            </button>
         </div>
     </div>
-</div>
-
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-
-@include('lab_cases.create_modal')
-@include('lab_cases.edit_modal')
-@include('lab_cases.status_modal')
 @endsection
 
-@section('js')
-<script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+@section('table_headers')
+    <th>{{ __('lab_cases.id') }}</th>
+    <th>{{ __('lab_cases.lab_case_no') }}</th>
+    <th>{{ __('lab_cases.patient_name') }}</th>
+    <th>{{ __('lab_cases.doctor_name') }}</th>
+    <th>{{ __('lab_cases.lab_name_header') }}</th>
+    <th>{{ __('lab_cases.prosthesis_type') }}</th>
+    <th>{{ __('lab_cases.status') }}</th>
+    <th>{{ __('lab_cases.expected_return_date') }}</th>
+    <th></th>
+    <th>{{ __('lab_cases.actions') }}</th>
+@endsection
+
+@section('modals')
+    @include('lab_cases.create_modal')
+    @include('lab_cases.edit_modal')
+    @include('lab_cases.status_modal')
+@endsection
+
+@section('page_js')
 <script type="text/javascript">
 $(function () {
     LanguageManager.loadAllFromPHP({
         'lab_cases': @json(__('lab_cases'))
     });
 
-    var table = $('#lab-cases-table').DataTable({
+    dataTable = $('#lab-cases-table').DataTable({
         destroy: true,
         processing: true,
         serverSide: true,
@@ -112,8 +95,10 @@ $(function () {
         ]
     });
 
+    setupEmptyStateHandler();
+
     $('#filterBtn').click(function () {
-        table.draw(true);
+        dataTable.draw(true);
     });
 });
 
@@ -135,7 +120,7 @@ function saveLabCase() {
             $('#create-lab-case-modal').modal('hide');
             swal("{{ __('common.alert') }}", data.message, data.status ? "success" : "error");
             if (data.status) {
-                $('#lab-cases-table').DataTable().draw(false);
+                dataTable.draw(false);
             }
         },
         error: function (request) {
@@ -191,7 +176,7 @@ function updateLabCase() {
             $('#edit-lab-case-modal').modal('hide');
             swal("{{ __('common.alert') }}", data.message, data.status ? "success" : "error");
             if (data.status) {
-                $('#lab-cases-table').DataTable().draw(false);
+                dataTable.draw(false);
             }
         },
         error: function (request) {
@@ -229,7 +214,7 @@ function saveStatus() {
             $('#status-modal').modal('hide');
             swal("{{ __('common.alert') }}", data.message, data.status ? "success" : "error");
             if (data.status) {
-                $('#lab-cases-table').DataTable().draw(false);
+                dataTable.draw(false);
             }
         },
         error: function (request) {
@@ -266,7 +251,7 @@ function deleteLabCase(id) {
                 $.LoadingOverlay("hide");
                 swal("{{ __('common.alert') }}", data.message, data.status ? "success" : "error");
                 if (data.status) {
-                    $('#lab-cases-table').DataTable().draw(false);
+                    dataTable.draw(false);
                 }
             },
             error: function () {

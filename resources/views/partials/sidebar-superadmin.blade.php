@@ -320,6 +320,13 @@
                             <span class="title">{{ __('menu.group_organization') }}</span>
                         </a>
                     </li>
+                    {{-- 6.1b Chairs --}}
+                    <li class="nav-item">
+                        <a href="{{ url('chairs') }}" class="nav-link">
+                            <i class="icon-grid"></i>
+                            <span class="title">{{ __('menu.chairs') }}</span>
+                        </a>
+                    </li>
                     {{-- 6.2 Permissions --}}
                     <li class="nav-item">
                         <a href="javascript:;" class="nav-link nav-toggle">

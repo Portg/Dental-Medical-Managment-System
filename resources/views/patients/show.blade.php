@@ -53,7 +53,7 @@
                             </div>
                             <div class="col-md-3">
                                 <p><strong>{{ __('patient.insurance') }}:</strong><br>
-                                    @if($patient->has_insurance == 'Yes' && $patient->InsuranceCompany)
+                                    @if($patient->has_insurance && $patient->InsuranceCompany)
                                         {{ $patient->InsuranceCompany->name }}
                                     @else
                                         {{ __('common.no') }}
@@ -192,9 +192,9 @@
                                     <table class="table table-bordered">
                                         <tr>
                                             <th width="40%">{{ __('patient.has_insurance') }}</th>
-                                            <td>{{ $patient->has_insurance == 'Yes' ? __('common.yes') : __('common.no') }}</td>
+                                            <td>{{ $patient->has_insurance ? __('common.yes') : __('common.no') }}</td>
                                         </tr>
-                                        @if($patient->has_insurance == 'Yes' && $patient->InsuranceCompany)
+                                        @if($patient->has_insurance && $patient->InsuranceCompany)
                                         <tr>
                                             <th>{{ __('patient.insurance_company') }}</th>
                                             <td>{{ $patient->InsuranceCompany->name }}</td>

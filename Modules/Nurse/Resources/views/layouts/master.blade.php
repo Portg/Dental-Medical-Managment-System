@@ -9,6 +9,7 @@
     @yield('head')
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <meta name="theme-color" content="#00838F"/>
     <meta content="clinic management system" name="description"/>
     <meta content="" name="author"/>
     <link href="{{ asset('backend/assets/global/plugins/font-awesome/css/fontawesome.min.css') }}" rel="stylesheet"
@@ -58,6 +59,7 @@
           href="{{ asset('backend/assets/global/css/magnific-popup.css') }}">
     <link rel="stylesheet" href="{{ asset('backend/assets/global/css/jquery.fancybox.min.css') }}" media="screen">
     <link rel="stylesheet" href="{{ asset('backend/assets/global/css/intlTelInput.css') }}" media="screen">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"/>
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 
     {{-- Purple Theme --}}
@@ -169,7 +171,7 @@
     <script src="{{ asset('backend/assets/global/scripts/loadingoverlay.min.js') }}"></script>
 
     {{-- Language Manager for i18n --}}
-    <script src="{{ asset('js/i18n/language-manager.js') }}" type="text/javascript"></script>
+    <script src="{{ asset('js/i18n/language-manager.js') }}?v={{ filemtime(public_path('js/i18n/language-manager.js')) }}" type="text/javascript"></script>
     <script src="{{ asset('js/i18n/lang-' . app()->getLocale() . '.js') }}" type="text/javascript"></script>
 
     <script type="text/javascript">

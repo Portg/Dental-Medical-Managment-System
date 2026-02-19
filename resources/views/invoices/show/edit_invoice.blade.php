@@ -1,17 +1,13 @@
-<div class="modal fade" id="invoice-modal" role="dialog" aria-hidden="true">
+<div class="modal fade modal-form modal-form-lg" id="invoice-modal" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h4 class="modal-title"> {{ __('invoices.invoice_item_form') }} </h4>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger" style="display:none">
-                    <ul>
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+                    <ul></ul>
                 </div>
                 <form action="#" id="invoice-form" autocomplete="off">
 
@@ -51,9 +47,9 @@
             </div>
             <div class="modal-footer">
 
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.close') }}</button>
                 <button type="button" class="btn btn-primary" id="btn-save" onclick="save_invoice_update()">{{ __('common.save_changes') }}
                 </button>
-                <button type="button" class="btn dark btn-outline" data-dismiss="modal">{{ __('common.close') }}</button>
             </div>
         </div>
     </div>

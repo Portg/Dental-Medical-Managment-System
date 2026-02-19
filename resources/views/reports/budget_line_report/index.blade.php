@@ -1,123 +1,83 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+{{-- ========================================================================
+     Page Configuration
+     ======================================================================== --}}
+@section('page_title', __('report.budget_line_report'))
+@section('table_id', 'payment-report')
+
+{{-- ========================================================================
+     Header Actions
+     ======================================================================== --}}
+@section('header_actions')
+    <a href="{{ url('export-budget-line') }}" class="text-danger">
+        <i class="icon-cloud-download"></i> {{ __('report.download_excel_report') }}
+    </a>
 @endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject"> {{ __('report.budget_line_report') }}</span>
+
+{{-- ========================================================================
+     Filter Area
+     ======================================================================== --}}
+@section('filter_area')
+    <div class="filter-row">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="control-label">{{ __('report.period') }}</label>
+                    <select class="form-control" id="period_selector">
+                        <option value="Today">{{ __('report.today') }}</option>
+                        <option value="Yesterday">{{ __('report.yesterday') }}</option>
+                        <option value="This week">{{ __('report.this_week') }}</option>
+                        <option value="Last week">{{ __('report.last_week') }}</option>
+                        <option value="This Month">{{ __('report.this_month') }}</option>
+                        <option value="Last Month">{{ __('report.last_month') }}</option>
+                    </select>
                 </div>
             </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="btn-group pull-right">
-                                <a href="{{ url('export-budget-line') }}" class="text-danger">
-                                    <i class="icon-cloud-download"></i> {{ __('report.download_excel_report') }} </a>
-                            </div>
-                        </div>
-                    </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="control-label">{{ __('common.start_date') }}</label>
+                    <input type="text" class="form-control start_date">
                 </div>
-                <br>
-                <div class="col-md-12">
-                    <form action="#" class="form-horizontal">
-                        <div class="form-body">
-
-                            <div class="row">
-                                <div class="col-md-6">
-
-                                </div>
-
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('report.period') }}</label>
-                                        <div class="col-md-9">
-                                            <select class="form-control" id="period_selector">
-                                                <option value="Today">{{ __('report.today') }}</option>
-                                                <option value="Yesterday">{{ __('report.yesterday') }}</option>
-                                                <option value="This week">{{ __('report.this_week') }}</option>
-                                                <option value="Last week">{{ __('report.last_week') }}</option>
-                                                <option value="This Month">{{ __('report.this_month') }}</option>
-                                                <option value="Last Month">{{ __('report.last_month') }}</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('common.start_date') }}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control start_date"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('common.end_date') }}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control end_date">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="row">
-                                        <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('report.filter_report') }}
-                                            </button>
-                                            <button type="button" class="btn default">{{ __('common.clear') }}</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6"></div>
-                            </div>
-                        </div>
-                    </form>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label class="control-label">{{ __('common.end_date') }}</label>
+                    <input type="text" class="form-control end_date">
                 </div>
-                <br>
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="payment-report">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        <th>{{ __('report.budget_lines') }}</th>
-                        <th>{{ __('report.total_items') }}</th>
-                        <th>{{ __('common.total') }} {{ __('common.amount') }}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-
-                    </tbody>
-                </table>
+            </div>
+        </div>
+        <div class="row" style="margin-top: 10px;">
+            <div class="col-md-12">
+                <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('report.filter_report') }}</button>
+                <button type="button" class="btn default">{{ __('common.clear') }}</button>
             </div>
         </div>
     </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('reports.budget_line_report.preview_budget_line')
 @endsection
-@section('js')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+{{-- ========================================================================
+     Table Headers
+     ======================================================================== --}}
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('report.budget_lines') }}</th>
+    <th>{{ __('report.total_items') }}</th>
+    <th>{{ __('common.total') }} {{ __('common.amount') }}</th>
+@endsection
+
+{{-- ========================================================================
+     Modals
+     ======================================================================== --}}
+@section('modals')
+    @include('reports.budget_line_report.preview_budget_line')
+@endsection
+
+{{-- ========================================================================
+     Page-specific JavaScript
+     ======================================================================== --}}
+@section('page_js')
     <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
-    <script src="{{ asset('include_js/functions.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
         function default_todays_data() {
             // initially load today's date filtered data
@@ -157,8 +117,7 @@
         $(function () {
             default_todays_data();  //filter  date
 
-
-            var table = $('#payment-report').DataTable({
+            dataTable = $('#payment-report').DataTable({
                 language: LanguageManager.getDataTableLang(),
                 destroy: true,
                 processing: true,
@@ -173,15 +132,7 @@
                         d.search = $('input[type="search"]').val();
                     }
                 },
-
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
                     {data: 'budget_line', name: 'budget_line'},
@@ -190,17 +141,11 @@
                 ]
             });
 
-
+            setupEmptyStateHandler();
         });
+
         $('#customFilterBtn').click(function () {
-            $('#payment-report').DataTable().draw(true);
+            dataTable.draw(true);
         });
-
-
     </script>
 @endsection
-
-
-
-
-

@@ -167,6 +167,7 @@
 @section('js')
 <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
 <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
+<script src="{{ asset('include_js/DataTableManager.js') }}" type="text/javascript"></script>
 
 <script type="text/javascript">
     // ==========================================================================

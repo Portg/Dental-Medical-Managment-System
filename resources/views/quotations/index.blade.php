@@ -1,167 +1,95 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
+@extends('layouts.list-page')
+
+@section('page_title', __('quotations.billing_quotations'))
+@section('table_id', 'quotations-table')
+
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('quotations.add_new') }}</button>
 @endsection
 
-
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject"> {{ __('quotations.billing_quotations') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('quotations.add_new') }}</button>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="btn-group pull-right hidden">
-                                <a href="{{ url('export-appointments') }}" class="text-danger">
-                                    <i class="icon-cloud-download"></i> Download Excel Report
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <br>
-                <div class="col-md-12">
-                    <form action="#" class="form-horizontal">
-                        <div class="form-body">
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('quotations.quotation_no') }}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control" placeholder="{{ __('quotations.enter_quotation_no') }}"
-                                                   name="quotation_no" id="quotation_no">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('quotations.period') }}</label>
-                                        <div class="col-md-9">
-                                            <select class="form-control" id="period_selector">
-                                                <option>{{ __('quotations.all') }}</option>
-                                                <option value="Today">{{ __('quotations.today') }}</option>
-                                                <option value="Yesterday">{{ __('quotations.yesterday') }}</option>
-                                                <option value="This week">{{ __('quotations.this_week') }}</option>
-                                                <option value="Last week">{{ __('quotations.last_week') }}</option>
-                                                <option value="This Month">{{ __('quotations.this_month') }}</option>
-                                                <option value="Last Month">{{ __('quotations.last_month') }}</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('quotations.start_date') }}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control start_date"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label col-md-3">{{ __('quotations.end_date') }}</label>
-                                        <div class="col-md-9">
-                                            <input type="text" class="form-control end_date">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="row">
-                                        <div class="col-md-offset-3 col-md-9">
-                                            <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('quotations.filter_quotations') }}
-                                            </button>
-                                            <button type="button" class="btn default">{{ __('quotations.clear') }}</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6"></div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <br>
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="quotations-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('quotations.hash') }}</th>
-                        <th>{{ __('quotations.quotation_no') }}</th>
-                        <th>{{ __('quotations.date') }}</th>
-                        <th>{{ __('quotations.customer') }}</th>
-                        <th>{{ __('quotations.total_amount') }}</th>
-                        <th>{{ __('quotations.added_by') }}</th>
-                        <th>{{ __('quotations.actions') }}</th>
-                    </thead>
-                    <tbody>
-
-
-                    </tbody>
-                </table>
-            </div>
+@section('filter_area')
+    <div class="row filter-row">
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('quotations.quotation_no') }}</div>
+            <input type="text" class="form-control" placeholder="{{ __('quotations.enter_quotation_no') }}" id="quotation_no">
+        </div>
+        <div class="col-md-3">
+            <div class="filter-label">{{ __('quotations.period') }}</div>
+            <select class="form-control" id="period_selector">
+                <option value="">{{ __('quotations.all') }}</option>
+                <option value="Today">{{ __('quotations.today') }}</option>
+                <option value="Yesterday">{{ __('quotations.yesterday') }}</option>
+                <option value="This week">{{ __('quotations.this_week') }}</option>
+                <option value="Last week">{{ __('quotations.last_week') }}</option>
+                <option value="This Month">{{ __('quotations.this_month') }}</option>
+                <option value="Last Month">{{ __('quotations.last_month') }}</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <div class="filter-label">{{ __('quotations.start_date') }}</div>
+            <input type="text" class="form-control start_date" id="filter_start_date">
+        </div>
+        <div class="col-md-2">
+            <div class="filter-label">{{ __('quotations.end_date') }}</div>
+            <input type="text" class="form-control end_date" id="filter_end_date">
+        </div>
+        <div class="col-md-2 text-right filter-actions">
+            <button type="button" class="btn btn-default" onclick="clearFilters()">{{ __('common.reset') }}</button>
+            <button type="button" class="btn btn-primary" onclick="doSearch()">{{ __('common.search') }}</button>
         </div>
     </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('quotations.loading') }}</span>
-</div>
-@include('quotations.create')
-@include('quotations.share_quotation')
 @endsection
-@section('js')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-    <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
+@section('table_headers')
+    <th>{{ __('quotations.hash') }}</th>
+    <th>{{ __('quotations.quotation_no') }}</th>
+    <th>{{ __('quotations.date') }}</th>
+    <th>{{ __('quotations.customer') }}</th>
+    <th>{{ __('quotations.total_amount') }}</th>
+    <th>{{ __('quotations.added_by') }}</th>
+    <th>{{ __('quotations.actions') }}</th>
+@endsection
+
+@section('modals')
+    @include('quotations.create')
+    @include('quotations.share_quotation')
+@endsection
+
+@section('page_js')
     <script type="text/javascript">
         function default_todays_data() {
             // initially load today's date filtered data
-            $('.start_date').val(todaysDate());
-            $('.end_date').val(todaysDate());
+            $('#filter_start_date').val(todaysDate());
+            $('#filter_end_date').val(todaysDate());
             $("#period_selector").val('Today');
         }
 
         $('#period_selector').on('change', function () {
             switch (this.value) {
                 case'Today':
-                    $('.start_date').val(todaysDate());
-                    $('.end_date').val(todaysDate());
+                    $('#filter_start_date').val(todaysDate());
+                    $('#filter_end_date').val(todaysDate());
                     break;
                 case'Yesterday':
-                    $('.start_date').val(YesterdaysDate());
-                    $('.end_date').val(YesterdaysDate());
+                    $('#filter_start_date').val(YesterdaysDate());
+                    $('#filter_end_date').val(YesterdaysDate());
                     break;
                 case'This week':
-                    $('.start_date').val(thisWeek());
-                    $('.end_date').val(todaysDate());
+                    $('#filter_start_date').val(thisWeek());
+                    $('#filter_end_date').val(todaysDate());
                     break;
                 case'Last week':
                     lastWeek();
                     break;
                 case'This Month':
-                    $('.start_date').val(formatDate(thisMonth()));
-                    $('.end_date').val(todaysDate());
+                    $('#filter_start_date').val(formatDate(thisMonth()));
+                    $('#filter_end_date').val(todaysDate());
                     break;
                 case'Last Month':
                     lastMonth();
                     break;
             }
+            doSearch();
         });
 
         $(function () {
@@ -171,7 +99,7 @@
             });
 
             default_todays_data();  //filter  date
-            var table = $('#quotations-table').DataTable({
+            dataTable = $('#quotations-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
@@ -179,20 +107,12 @@
                 ajax: {
                     url: "{{ url('/quotations/') }}",
                     data: function (d) {
-                        d.start_date = $('.start_date').val();
-                        d.end_date = $('.end_date').val();
+                        d.start_date = $('#filter_start_date').val();
+                        d.end_date = $('#filter_end_date').val();
                         d.quotation_no = $('#quotation_no').val();
-                        d.search = $('input[type="search"]').val();
                     }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
                     {data: 'quotation_no', name: 'quotation_no', orderable: false},
@@ -204,11 +124,15 @@
                 ]
             });
 
+            setupEmptyStateHandler();
+        });
 
-        });
-        $('#customFilterBtn').click(function () {
-            $('#quotations-table').DataTable().draw(true);
-        });
+        function clearCustomFilters() {
+            $('#quotation_no').val('');
+            $('#period_selector').val('');
+            $('#filter_start_date').val('');
+            $('#filter_end_date').val('');
+        }
 
         function createRecord() {
             $("#quotation-form")[0].reset();
@@ -494,19 +418,6 @@
             return value.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
-        function alert_dialog(message, status) {
-            swal("{{ __('messages.info') }}", message, status);
-            if (status) {
-                let oTable = $('#quotations-table').dataTable();
-                oTable.fnDraw(false);
-            }
-        }
-
 
     </script>
 @endsection
-
-
-
-
-

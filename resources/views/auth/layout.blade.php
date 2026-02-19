@@ -9,6 +9,7 @@
     <title>{{ config('app.name', 'Laravel') }}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <meta name="theme-color" content="#00838F"/>
     <meta content="Clinic Soft" name="description"/>
     <meta content="Clinic Soft" name="author"/>
 
@@ -28,6 +29,8 @@
           type="text/css"/>
     <link href="{{ asset('backend/assets/global/css/plugins.min.css') }}" rel="stylesheet" type="text/css"/>
     <link href="{{ asset('backend/assets/pages/css/login-5.min.css') }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('css/theme-purple.css') }}" rel="stylesheet" type="text/css"/>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"/>
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 </head>
 

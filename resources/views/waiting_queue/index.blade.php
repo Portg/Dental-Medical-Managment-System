@@ -161,7 +161,7 @@
 </div>
 
 {{-- 签到模态框 --}}
-<div class="modal fade" id="check-in-modal" tabindex="-1">
+<div class="modal fade modal-form modal-form-lg" id="check-in-modal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -187,7 +187,7 @@
 </div>
 
 {{-- 叫号选择椅位模态框 --}}
-<div class="modal fade" id="call-modal" tabindex="-1">
+<div class="modal fade modal-form" id="call-modal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">

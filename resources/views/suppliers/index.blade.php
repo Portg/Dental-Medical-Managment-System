@@ -1,83 +1,41 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
-@endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject"> {{ __('suppliers.expenses_mgt_suppliers') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('suppliers.add_new') }}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @if(session()->has('success'))
-                    <div class="alert alert-info">
-                        <button class="close" data-dismiss="alert"></button> {{ session()->get('success') }}!
-                    </div>
-                @endif
-                <table class="table table-striped table-bordered table-hover table-checkable order-column"
-                       id="suppliers-table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('suppliers.id') }}</th>
-                        <th>{{ __('suppliers.date') }}</th>
-                        <th>{{ __('suppliers.name') }}</th>
-                        <th>{{ __('suppliers.added_by') }}</th>
-                        <th>{{ __('suppliers.edit') }}</th>
-                        <th>{{ __('suppliers.delete') }}</th>
-                    </thead>
-                    <tbody>
+@extends('layouts.list-page')
 
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('suppliers.loading') }}</span>
-</div>
-@include('suppliers.create')
-@endsection
-@section('js')
+@section('page_title', __('suppliers.expenses_mgt_suppliers'))
+@section('table_id', 'suppliers-table')
 
-    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('suppliers.add_new') }}</button>
+@endsection
+
+@section('table_headers')
+    <th>{{ __('suppliers.id') }}</th>
+    <th>{{ __('suppliers.date') }}</th>
+    <th>{{ __('suppliers.name') }}</th>
+    <th>{{ __('suppliers.added_by') }}</th>
+    <th>{{ __('suppliers.edit') }}</th>
+    <th>{{ __('suppliers.delete') }}</th>
+@endsection
+
+@section('modals')
+    @include('suppliers.create')
+@endsection
+
+@section('page_js')
     <script type="text/javascript">
         $(function () {
             LanguageManager.loadAllFromPHP({
                 'suppliers': @json(__('suppliers'))
             });
 
-            let table = $('#suppliers-table').DataTable({
+            dataTable = $('#suppliers-table').DataTable({
                 destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),
                 ajax: {
                     url: "{{ url('/suppliers/') }}",
-                    data: function (d) {
-                    }
                 },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
+                dom: 'rtip',
                 columns: [
                     {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                     {data: 'created_at', name: 'created_at'},
@@ -88,7 +46,7 @@
                 ]
             });
 
-
+            setupEmptyStateHandler();
         });
 
         function createRecord() {
@@ -231,20 +189,5 @@
 
         }
 
-
-        function alert_dialog(message, status) {
-            swal("{{ __('common.alert') }}", message, status);
-            if (status) {
-                let oTable = $('#suppliers-table').dataTable();
-                oTable.fnDraw(false);
-            }
-        }
-
-
     </script>
 @endsection
-
-
-
-
-

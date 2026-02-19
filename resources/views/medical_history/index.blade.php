@@ -81,7 +81,7 @@
             <div class="portlet-title">
                 <div class="caption">
                     <span class="caption-subject font-dark bold uppercase">{{ __('medical_history.chronic_diseases') }}</span>
-                    <button type="button" class="btn dark btn-outline btn-circle btn-sm"
+                    <button type="button" class="btn btn-default btn-circle btn-sm"
                        onclick="AddIllness({{ $patient->id  }})">
                         {{ __('medical_history.add_illness') }}
                     </button>

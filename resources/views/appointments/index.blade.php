@@ -2,6 +2,12 @@
 @section('content')
 @section('css')
     @include('layouts.page_loader')
+    {{-- Unified list page styles --}}
+    <link rel="stylesheet" href="{{ asset('css/list-page.css') }}">
+    {{-- Unified form modal styles --}}
+    <link rel="stylesheet" href="{{ asset('css/form-modal.css') }}">
+    {{-- Appointment drawer styles --}}
+    <link rel="stylesheet" href="{{ asset('css/appointment-drawer.css') }}">
 @endsection
 <div class="row">
     <div class="col-md-12">
@@ -24,94 +30,91 @@
                         <div class="tab-pane active" id="appointments_tab">
                             <div class="row">
                                 <div class="portlet light">
-                                    <div class="portlet-title">
-                                        <div class="caption font-dark">
-                                            <span class="caption-subject"> {{ __('appointment.appointment_mgt') }}</span>
-                                        </div>
-                                    </div>
                                     <div class="portlet-body">
-                                        <div class="table-toolbar">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="btn-group">
-                                                        <button type="button" class="btn blue btn-outline sbold" onclick="createRecord()">{{ __('appointment.add_appointment') }}</button>
+                                        {{-- L1: Page Header --}}
+                                        <div class="page-header-l1">
+                                            <h1 class="page-title">{{ __('appointment.appointment_mgt') }}</h1>
+                                            <div class="header-actions">
+                                                <a href="{{ url('export-appointments') }}" class="btn btn-default">
+                                                    <i class="icon-cloud-download"></i> {{ __('common.download_excel_report') }}
+                                                </a>
+                                                <button type="button" class="btn btn-primary" onclick="createRecord()">{{ __('appointment.add_appointment') }}</button>
+                                            </div>
+                                        </div>
+
+                                        {{-- L2: Filter Area --}}
+                                        <div class="filter-area-l2">
+                                            <div class="row filter-row">
+                                                {{-- Quick Search --}}
+                                                <div class="col-md-4">
+                                                    <div class="filter-label">{{ __('common.search') }}</div>
+                                                    <div class="input-group">
+                                                        <span class="input-group-addon"><i class="icon-magnifier"></i></span>
+                                                        <input type="text" class="form-control" id="quickSearch"
+                                                               placeholder="{{ __('appointment.quick_search_placeholder') }}">
                                                     </div>
                                                 </div>
-                                                <div class="col-md-6">
-                                                    <div class="btn-group pull-right">
-                                                        <a href="{{ url('export-appointments') }}" class="text-danger">
-                                                            <i class="icon-cloud-download"></i> {{ __('common.download_excel_report') }}
-                                                        </a>
+                                                {{-- Period Selector --}}
+                                                <div class="col-md-3">
+                                                    <div class="filter-label">{{ __('datetime.period') }}</div>
+                                                    <select class="form-control" id="period_selector">
+                                                        <option value="">{{__('datetime.time_periods.all')}}</option>
+                                                        <option value="Today">{{__('datetime.time_periods.today')}}</option>
+                                                        <option value="Yesterday">{{__('datetime.time_periods.yesterday')}}</option>
+                                                        <option value="This week">{{__('datetime.time_periods.this_week')}}</option>
+                                                        <option value="Last week">{{__('datetime.time_periods.last_week')}}</option>
+                                                        <option value="This Month">{{__('datetime.time_periods.this_month')}}</option>
+                                                        <option value="Last Month">{{__('datetime.time_periods.last_month')}}</option>
+                                                    </select>
+                                                </div>
+                                                {{-- Date Range with connector --}}
+                                                <div class="col-md-4">
+                                                    <div class="filter-label">{{ __('datetime.date_range.title') }}</div>
+                                                    <div class="date-range-wrapper">
+                                                        <input type="text" class="form-control start_date" placeholder="{{__('datetime.date_range.start_date')}}" style="flex: 1;">
+                                                        <span class="date-separator">{{__('datetime.date_range.to')}}</span>
+                                                        <input type="text" class="form-control end_date" placeholder="{{__('datetime.date_range.end_date')}}" style="flex: 1;">
+                                                        <button type="button" class="btn btn-default" id="toggleAdvancedFilter" title="{{ __('common.advanced_filter') }}">
+                                                            <i class="icon-equalizer"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {{-- Advanced Filters (Collapsible) --}}
+                                            <div id="advancedFilters" class="advanced-filters-section" style="display: none;">
+                                                <div class="row filter-row">
+                                                    <div class="col-md-4">
+                                                        <div class="filter-label">{{ __('appointment.appointment_no') }}</div>
+                                                        <input type="text" class="form-control"
+                                                               placeholder="{{ __('appointment.enter_appointment_no') }}"
+                                                               name="appointment_no"
+                                                               id="appointment_no_filter">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="filter-label">{{ __('appointment.doctor') }}</div>
+                                                        <select class="form-control" id="filter_doctor">
+                                                            <option value="">{{ __('common.all') }}</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="filter-label">{{ __('appointment.invoice_status') }}</div>
+                                                        <select class="form-control" id="filter_invoice_status">
+                                                            <option value="">{{ __('common.all') }}</option>
+                                                            <option value="pending">{{ __('common.pending') }}</option>
+                                                            <option value="invoiced">{{ __('appointment.invoiced') }}</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-12" style="margin-top: 10px;">
+                                                        <button type="button" class="btn btn-sm btn-default" id="clearFilters">
+                                                            {{ __('common.reset') }}
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {{-- Search and Filter Area - Design spec: compact layout, auto-search with 300ms debounce --}}
-                                        <div class="row" style="margin-bottom: 15px;">
-                                            {{-- Quick Search --}}
-                                            <div class="col-md-4">
-                                                <div class="input-group">
-                                                    <span class="input-group-addon"><i class="icon-magnifier"></i></span>
-                                                    <input type="text" class="form-control" id="quickSearch"
-                                                           placeholder="{{ __('appointment.quick_search_placeholder') }}">
-                                                </div>
-                                            </div>
-                                            {{-- Period Selector --}}
-                                            <div class="col-md-3">
-                                                <select class="form-control" id="period_selector">
-                                                    <option value="">{{__('datetime.time_periods.all')}}</option>
-                                                    <option value="Today">{{__('datetime.time_periods.today')}}</option>
-                                                    <option value="Yesterday">{{__('datetime.time_periods.yesterday')}}</option>
-                                                    <option value="This week">{{__('datetime.time_periods.this_week')}}</option>
-                                                    <option value="Last week">{{__('datetime.time_periods.last_week')}}</option>
-                                                    <option value="This Month">{{__('datetime.time_periods.this_month')}}</option>
-                                                    <option value="Last Month">{{__('datetime.time_periods.last_month')}}</option>
-                                                </select>
-                                            </div>
-                                            {{-- Date Range with connector --}}
-                                            <div class="col-md-4">
-                                                <div class="date-range-wrapper">
-                                                    <input type="text" class="form-control start_date" placeholder="{{__('datetime.date_range.start_date')}}" style="flex: 1;">
-                                                    <span class="date-separator">{{__('datetime.date_range.to')}}</span>
-                                                    <input type="text" class="form-control end_date" placeholder="{{__('datetime.date_range.end_date')}}" style="flex: 1;">
-                                                    <button type="button" class="btn btn-default" id="toggleAdvancedFilter" title="{{ __('common.advanced_filter') }}">
-                                                        <i class="icon-equalizer"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {{-- Advanced Filters (Collapsible) --}}
-                                        <div class="row" id="advancedFilters" style="display: none; margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
-                                            <div class="col-md-4">
-                                                <label>{{ __('appointment.appointment_no') }}</label>
-                                                <input type="text" class="form-control"
-                                                       placeholder="{{ __('appointment.enter_appointment_no') }}"
-                                                       name="appointment_no"
-                                                       id="appointment_no_filter">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label>{{ __('appointment.doctor') }}</label>
-                                                <select class="form-control" id="filter_doctor">
-                                                    <option value="">{{ __('common.all') }}</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label>{{ __('appointment.invoice_status') }}</label>
-                                                <select class="form-control" id="filter_invoice_status">
-                                                    <option value="">{{ __('common.all') }}</option>
-                                                    <option value="pending">{{ __('common.pending') }}</option>
-                                                    <option value="invoiced">{{ __('appointment.invoiced') }}</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-12" style="margin-top: 10px;">
-                                                <button type="button" class="btn btn-sm btn-default" id="clearFilters">
-                                                    {{ __('common.reset') }}
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <table class="table table-striped table-bordered table-hover table-checkable order-column"
+                                        <table class="table table-hover list-table"
                                                id="appointments-table">
                                             <thead>
                                             <tr>
@@ -170,21 +173,17 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/reschedule_appointment.js') }}" type="text/javascript"></script>
+    {{-- Load page-specific translations BEFORE appointment_drawer.js so LanguageManager.trans() works --}}
     <script type="text/javascript">
-        // Load page-specific translations
         LanguageManager.loadAllFromPHP({
             'appointment': @json(__('appointment')),
-            'datetime': @json(__('datetime'))
+            'datetime': @json(__('datetime')),
+            'patient': @json(__('patient')),
+            'messages': @json(__('messages'))
         });
-
-        // Translation variables for JavaScript
-        const translations = {
-            choosePatient: "{{ __('appointment.choose_patient') }}",
-            chooseDoctor: "{{ __('appointment.choose_doctor') }}",
-            selectProcedure: "{{ __('appointment.select_procedure') }}",
-            procedureDoneBy: "{{ __('appointment.procedure_done_by') }}"
-        };
-
+    </script>
+    <script src="{{ asset('include_js/appointment_drawer.js') }}?v={{ filemtime(public_path('include_js/appointment_drawer.js')) }}" type="text/javascript"></script>
+    <script type="text/javascript">
         // Debounce helper function (design spec: 300ms debounce for auto-search)
         function debounce(func, wait) {
             let timeout;
@@ -344,7 +343,7 @@
         //filter patients
         $('#patient').select2({
             language: '{{ app()->getLocale() }}',
-            placeholder: translations.choosePatient,
+            placeholder: LanguageManager.trans('appointment.choose_patient'),
             minimumInputLength: 2,
             ajax: {
                 url: '/search-patient',
@@ -366,7 +365,7 @@
         //filter doctor
         $('#doctor').select2({
             language: '{{ app()->getLocale() }}',
-            placeholder: translations.chooseDoctor,
+            placeholder: LanguageManager.trans('appointment.choose_doctor'),
             minimumInputLength: 2,
             ajax: {
                 url: '/search-doctor',
@@ -390,7 +389,7 @@
 
         $('#doctor_id').select2({
             language: '{{ app()->getLocale() }}',
-            placeholder: translations.procedureDoneBy,
+            placeholder: LanguageManager.trans('appointment.procedure_done_by'),
             minimumInputLength: 2,
             ajax: {
                 url: '/search-doctor',
@@ -721,7 +720,7 @@
         //filter Procedures
         $('#service').select2({
             language: '{{ app()->getLocale() }}',
-            placeholder: translations.selectProcedure,
+            placeholder: LanguageManager.trans('appointment.select_procedure'),
             minimumInputLength: 2,
             ajax: {
                 url: '/search-medical-service',
@@ -818,7 +817,7 @@
             //append procedure doctor
             $('#doctor_id_append' + i).select2({
                 language: '{{ app()->getLocale() }}',
-                placeholder: translations.procedureDoneBy,
+                placeholder: LanguageManager.trans('appointment.procedure_done_by'),
                 minimumInputLength: 2,
                 ajax: {
                     url: '/search-doctor',
@@ -841,7 +840,7 @@
 
             $('#service_append' + i).select2({
                 language: '{{ app()->getLocale() }}',
-                placeholder: translations.selectProcedure,
+                placeholder: LanguageManager.trans('appointment.select_procedure'),
                 minimumInputLength: 2,
                 ajax: {
                     url: '/search-medical-service',
@@ -961,11 +960,26 @@
                         center: 'title',
                         right: 'dayGridMonth,timeGridWeek,timeGridDay'
                     },
+                    editable: false,
+                    selectable: true,
+                    eventDisplay: 'block',
                     events: {
                         url: '{{ url("appointments/calendar-events") }}',
                         method: 'GET',
                         failure: function() {
                             console.error('Failed to load calendar events');
+                        }
+                    },
+                    dateClick: function(info) {
+                        if (typeof openAppointmentDrawer === 'function') {
+                            openAppointmentDrawer({ date: info.dateStr.substring(0, 10) });
+                        }
+                    },
+                    eventClick: function(info) {
+                        info.jsEvent.preventDefault();
+                        var eventId = info.event.id;
+                        if (eventId && typeof editRecord === 'function') {
+                            editRecord(eventId);
                         }
                     }
                 });

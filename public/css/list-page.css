@@ -1,7 +1,7 @@
 /**
 * List Page Unified Styles – Medical System Enhanced
 * Based on Healthcare UX Best Practices
-* Color scheme: Purple Theme (#1A237E)
+* Color scheme: Teal/Cyan Theme (#00838F)
 */
 
 /* ==========================================================================
@@ -12,12 +12,12 @@
 }
 
 .breadcrumb-l0 a {
-    color: #1A237E;
+    color: #00838F;
     text-decoration: none;
 }
 
 .breadcrumb-l0 a:hover {
-    color: #0D1452;
+    color: #005662;
     text-decoration: underline;
 }
 
@@ -126,7 +126,7 @@
 .advanced-filter-toggle button.btn-link,
 #toggleAdvancedFilters {
     font-size: 13px;
-    color: #1A237E !important;
+    color: #00838F !important;
     text-decoration: none;
     background: transparent !important;
     border: none !important;
@@ -138,7 +138,7 @@
 .advanced-filter-toggle .advanced-filter-btn:hover,
 .advanced-filter-toggle button.btn-link:hover,
 #toggleAdvancedFilters:hover {
-    color: #0D1452 !important;
+    color: #005662 !important;
     text-decoration: underline;
     background: transparent !important;
 }
@@ -182,7 +182,7 @@
 }
 
 .list-table tbody tr.is-selected {
-    background: #E8EAF6;
+    background: #E0F7FA;
 }
 
 /* Zebra Rows */
@@ -213,8 +213,8 @@
 .list-table .btn-primary,
 .list-table .btn.blue,
 .btn.blue {
-    background: #1A237E !important;
-    border-color: #1A237E !important;
+    background: #00838F !important;
+    border-color: #00838F !important;
     color: #fff !important;
 }
 
@@ -222,8 +222,8 @@
 .list-table .btn-primary:hover,
 .list-table .btn.blue:hover,
 .btn.blue:hover {
-    background: #0D1452 !important;
-    border-color: #0D1452 !important;
+    background: #005662 !important;
+    border-color: #005662 !important;
 }
 
 /* ==========================================================================
@@ -304,17 +304,32 @@
 }
 
 /* Pagination - Purple Theme */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    background: #fff !important;
+    border: 1px solid #80DEEA !important;
+    color: #555 !important;
+}
+
 .dataTables_wrapper .dataTables_paginate .paginate_button.current,
 .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
-    background: #1A237E !important;
-    border-color: #1A237E !important;
+    background: #00838F !important;
+    border-color: #00838F !important;
     color: #fff !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-    background: #E8EAF6 !important;
-    border-color: #E0E0E0 !important;
-    color: #1A237E !important;
+    background: #E0F7FA !important;
+    border-color: #4DD0E1 !important;
+    color: #00838F !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:active {
+    background: #FAFAFA !important;
+    border: 1px solid #E0E0E0 !important;
+    color: #BDBDBD !important;
+    cursor: default;
 }
 
 /* ==========================================================================
@@ -359,11 +374,11 @@
 
 /* Links in list page - Purple Theme */
 .list-table a {
-    color: #1A237E;
+    color: #00838F;
 }
 
 .list-table a:hover {
-    color: #0D1452;
+    color: #005662;
 }
 
 /* ==========================================================================
@@ -401,4 +416,4 @@
 .list-table .btn-group .dropdown-toggle.btn-sm { padding: 4px 8px; }
 .list-table .btn-group .dropdown-menu { min-width: 140px; }
 .list-table .btn-group .dropdown-menu > li > a { padding: 6px 16px; color: #303133; }
-.list-table .btn-group .dropdown-menu > li > a:hover { background: #E8EAF6; color: #1A237E; }
+.list-table .btn-group .dropdown-menu > li > a:hover { background: #E0F7FA; color: #00838F; }
