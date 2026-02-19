@@ -9,4 +9,8 @@ class Holiday extends Model
 {
     use SoftDeletes;
     protected  $fillable=['name','holiday_date','repeat_date','_who_added'];
+
+    protected $casts = [
+        'holiday_date' => 'date:Y-m-d',
+    ];
 }

@@ -16,12 +16,13 @@ class DoctorPerformanceReport extends Controller
     public function __construct(DoctorPerformanceReportService $performanceService)
     {
         $this->performanceService = $performanceService;
+        $this->middleware('can:view-reports');
     }
 
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($_GET['start_date']) && !empty($_GET['end_date'])) {
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
                 //first get
                 $data = $this->performanceService->getPerformanceData(
@@ -35,6 +36,9 @@ class DoctorPerformanceReport extends Controller
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
+                })
                 ->addColumn('patient', function ($row) {
                     return \App\Http\Helper\NameHelper::join($row->surname, $row->othername);
                 })
@@ -42,15 +46,13 @@ class DoctorPerformanceReport extends Controller
                     return number_format($row->amount);
                 })
                 ->addColumn('invoice_amount', function ($row) {
-                    $amount = $this->performanceService->totalInvoiceAmount($row->invoice_id);
-                    return number_format($amount);
+                    return number_format($row->invoice_total_amount);
                 })
                 ->addColumn('paid_amount', function ($row) {
-                    $paid = $this->performanceService->totalInvoicePaidAmount($row->invoice_id);
-                    return number_format($paid);
+                    return number_format($row->invoice_paid_amount);
                 })
                 ->addColumn('outstanding', function ($row) {
-                    return number_format($this->performanceService->invoiceBalance($row->invoice_id));
+                    return number_format($row->invoice_total_amount - $row->invoice_paid_amount);
                 })
                 ->rawColumns(['amount'])
                 ->make(true);

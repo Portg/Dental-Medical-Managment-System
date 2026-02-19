@@ -17,6 +17,7 @@ class HolidayController extends Controller
     public function __construct(HolidayService $holidayService)
     {
         $this->holidayService = $holidayService;
+        $this->middleware('can:manage-holidays');
     }
 
     /**
@@ -29,12 +30,15 @@ class HolidayController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->holidayService->getHolidayList($request->all());
+            $data = $this->holidayService->getHolidayList($request->only(['filter_name', 'filter_repeat']));
 
             return Datatables::of($data)
                 ->addIndexColumn()
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
+                })
                 ->addColumn('addedBy', function ($row) {
-                    return $row->surname;
+                    return $row->surname ?? '-';
                 })
                 ->editColumn('repeat_date', function ($row) {
                     return $row->repeat_date === 'Yes' ? __('common.yes') : __('common.no');
@@ -81,7 +85,7 @@ class HolidayController extends Controller
                 'repeat_date.required' => __('validation.attributes.repeat_date') . ' ' . __('validation.required'),
             ])->validate();
 
-        $success = $this->holidayService->createHoliday($request->all());
+        $success = $this->holidayService->createHoliday($request->only(['name', 'holiday_date', 'repeat_date']));
         return FunctionsHelper::messageResponse(__('holidays.added_successfully'), $success);
     }
 
@@ -128,7 +132,7 @@ class HolidayController extends Controller
                 'repeat_date.required' => __('validation.attributes.repeat_date') . ' ' . __('validation.required'),
             ])->validate();
 
-        $success = $this->holidayService->updateHoliday($id, $request->all());
+        $success = $this->holidayService->updateHoliday($id, $request->only(['name', 'holiday_date', 'repeat_date']));
         return FunctionsHelper::messageResponse(__('holidays.updated_successfully'), $success);
     }
 

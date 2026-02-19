@@ -18,6 +18,7 @@ class SmsLoggingController extends Controller
     public function __construct(SmsLoggingService $smsLoggingService)
     {
         $this->smsLoggingService = $smsLoggingService;
+        $this->middleware('can:manage-sms');
     }
 
     /**
@@ -34,11 +35,16 @@ class SmsLoggingController extends Controller
                 FunctionsHelper::storeDateFilter($request);
             }
 
-            $data = $this->smsLoggingService->getList($request->all());
+            $data = $this->smsLoggingService->getList($request->only([
+                'search', 'start_date', 'end_date',
+            ]));
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('message_receiver', function ($row) {
                     return NameHelper::join($row->surname, $row->othername);
@@ -46,13 +52,13 @@ class SmsLoggingController extends Controller
                 ->addColumn('type', function ($row) {
                     $type = '';
                     if ($row->type == "Reminder") {
-                        $type = '<span class="label label-sm label-danger">' . $row->type . '</span>';
+                        $type = '<span class="label label-sm label-danger">' . e($row->type) . '</span>';
                     } else {
-                        $type = '<span class="label label-sm label-success">' . $row->type . '</span>';
+                        $type = '<span class="label label-sm label-success">' . e($row->type) . '</span>';
                     }
                     return $type;
                 })
-                ->rawColumns(['message_receiver', 'type'])
+                ->rawColumns(['type'])
                 ->make(true);
         }
         return view('outbox_sms.index');

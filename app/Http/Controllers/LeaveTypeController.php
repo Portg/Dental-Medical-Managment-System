@@ -15,6 +15,7 @@ class LeaveTypeController extends Controller
     public function __construct(LeaveTypeService $leaveTypeService)
     {
         $this->leaveTypeService = $leaveTypeService;
+        $this->middleware('can:manage-leave');
     }
 
     /**
@@ -31,8 +32,11 @@ class LeaveTypeController extends Controller
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
                 })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
+                })
                 ->addColumn('addedBy', function ($row) {
-                    return $row->surname;
+                    return $row->surname ?? '-';
                 })
                 ->addColumn('editBtn', function ($row) {
                     if ($row->deleted_at == null) {
@@ -94,7 +98,7 @@ class LeaveTypeController extends Controller
                 'max_days.required' => __('validation.custom.max_days.required')
             ])->validate();
 
-        $success = $this->leaveTypeService->createLeaveType($request->all());
+        $success = $this->leaveTypeService->createLeaveType($request->only(['name', 'max_days']));
         return FunctionsHelper::messageResponse(__('messages.leave_type_added_successfully'), $success);
     }
 
@@ -138,7 +142,7 @@ class LeaveTypeController extends Controller
                 'max_days.required' => __('validation.custom.max_days.required')
             ])->validate();
 
-        $success = $this->leaveTypeService->updateLeaveType($id, $request->all());
+        $success = $this->leaveTypeService->updateLeaveType($id, $request->only(['name', 'max_days']));
         return FunctionsHelper::messageResponse(__('messages.leave_type_updated_successfully'), $success);
     }
 

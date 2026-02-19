@@ -45,12 +45,13 @@
                 <input type="text" class="form-control" id="search_filter" placeholder="{{ __('invoices.search_refund') }}">
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-2 text-right filter-actions">
             <div class="form-group">
                 <label>&nbsp;</label>
-                <button class="btn btn-primary btn-block" onclick="filterTable()">
-                    {{ __('common.filter') }}
-                </button>
+                <div>
+                    <button type="button" class="btn btn-default" onclick="clearFilters()">{{ __('common.reset') }}</button>
+                    <button type="button" class="btn btn-primary" onclick="doSearch()">{{ __('common.search') }}</button>
+                </div>
             </div>
         </div>
     </div>
@@ -69,7 +70,7 @@
 
 @section('modals')
 <!-- Approve Modal -->
-<div class="modal fade" id="approveModal" tabindex="-1" role="dialog">
+<div class="modal fade modal-form" id="approveModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -89,7 +90,7 @@
 </div>
 
 <!-- Reject Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1" role="dialog">
+<div class="modal fade modal-form" id="rejectModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -154,10 +155,6 @@
             autoclose: true
         });
     });
-
-    function filterTable() {
-        dataTable.ajax.reload();
-    }
 
     function loadPendingCount() {
         $.get("{{ url('refunds/pending-count') }}", function (data) {

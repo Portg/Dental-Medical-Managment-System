@@ -15,6 +15,7 @@ class DoctorClaimController extends Controller
     public function __construct(DoctorClaimService $service)
     {
         $this->service = $service;
+        $this->middleware('can:manage-doctor-claims');
     }
 
     /**
@@ -35,7 +36,7 @@ class DoctorClaimController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('created_at', function ($row) {
-                    return date('d/m/Y', strtotime($row->created_at));
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('patient', function ($row) {
                     return NameHelper::join($row->surname, $row->othername);
@@ -57,7 +58,7 @@ class DoctorClaimController extends Controller
                     $remaining_balance = $this->service->getPaymentBalance($row->id, $claims_amount);
                     $action_balance = '';
                     if ($remaining_balance > 0) {
-                        $action_balance = "<br>(<a href=\"#\" class=\"text-danger\" onclick=\"record_payment('" . $row->id . "','" . $remaining_balance . "')\">" . __('doctor_claims.make_payment') . "</a>)";
+                        $action_balance = '<br>(<a href="#" class="text-danger" onclick="record_payment(' . (int) $row->id . ',' . (float) $remaining_balance . ')">' . __('doctor_claims.make_payment') . '</a>)';
                     }
                     return '<span class="text-primary">' . number_format($remaining_balance) . '</span>' . $action_balance;
                 })
@@ -65,8 +66,8 @@ class DoctorClaimController extends Controller
                     $action = '';
                     $claim = '';
                     if ($row->status == "Pending") {
-                        $claim = " <a href=\"#\" onclick=\"Approve_Claim('" . $row->id . "','" . $row->claim_amount .
-                            "')\"> " . __('doctor_claims.approve_claim') . " </a>";
+                        $claim = ' <a href="#" onclick="Approve_Claim(' . (int) $row->id . ',' . (float) $row->claim_amount .
+                            ')"> ' . __('doctor_claims.approve_claim') . ' </a>';
 
                     } else {
                         $action = '

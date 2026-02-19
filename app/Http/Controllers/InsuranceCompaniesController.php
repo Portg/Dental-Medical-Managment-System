@@ -14,6 +14,7 @@ class InsuranceCompaniesController extends Controller
     public function __construct(InsuranceCompanyService $insuranceCompanyService)
     {
         $this->insuranceCompanyService = $insuranceCompanyService;
+        $this->middleware('can:manage-insurance');
     }
 
     /**
@@ -32,6 +33,9 @@ class InsuranceCompaniesController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('addedBy', function ($row) {
                     return $row->surname;
@@ -83,7 +87,7 @@ class InsuranceCompaniesController extends Controller
             'name.required' => __('validation.attributes.insurance_company_name') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->insuranceCompanyService->createCompany($request->all());
+        $status = $this->insuranceCompanyService->createCompany($request->only(['name', 'phone_no', 'email']));
         if ($status) {
             return response()->json(['message' => __('insurance_companies.added_successfully'), 'status' => true]);
         }
@@ -127,7 +131,7 @@ class InsuranceCompaniesController extends Controller
             'name.required' => __('validation.attributes.insurance_company_name') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->insuranceCompanyService->updateCompany($id, $request->all());
+        $status = $this->insuranceCompanyService->updateCompany($id, $request->only(['name', 'phone_no', 'email']));
         if ($status) {
             return response()->json(['message' => __('insurance_companies.updated_successfully'), 'status' => true]);
         }

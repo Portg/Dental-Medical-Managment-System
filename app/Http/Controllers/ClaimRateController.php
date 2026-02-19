@@ -14,6 +14,7 @@ class ClaimRateController extends Controller
     public function __construct(ClaimRateService $claimRateService)
     {
         $this->claimRateService = $claimRateService;
+        $this->middleware('can:manage-doctor-claims');
     }
 
     /**
@@ -32,6 +33,9 @@ class ClaimRateController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
+                })
+                ->addColumn('created_at', function ($row) {
+                    return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
                 ->addColumn('action', function ($row) {
                     $action = " <a href=\"#\" onclick=\"newClaim('" . $row->doctor_id . "','" . $row->othername .
@@ -88,7 +92,7 @@ class ClaimRateController extends Controller
             'insurance_rate' => 'required'
         ])->validate();
 
-        $status = $this->claimRateService->createClaimRate($request->all());
+        $status = $this->claimRateService->createClaimRate($request->only(['doctor_id', 'cash_rate', 'insurance_rate']));
         if ($status) {
             return response()->json(['message' => __('claim_rates.claim_rates_added_successfully'),
                 'status' => true]);
@@ -134,7 +138,7 @@ class ClaimRateController extends Controller
             'insurance_rate' => 'required',
         ])->validate();
 
-        $status = $this->claimRateService->updateClaimRate($id, $request->all());
+        $status = $this->claimRateService->updateClaimRate($id, $request->only(['doctor_id', 'cash_rate', 'insurance_rate']));
         if ($status) {
             return response()->json(['message' => __('claim_rates.claim_rates_updated_successfully'),
                 'status' => true]);

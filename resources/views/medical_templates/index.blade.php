@@ -1,89 +1,59 @@
-@extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
-@section('css')
-    @include('layouts.page_loader')
-@endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">{{ __('templates.medical_templates') }}</span>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <div class="table-toolbar">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="btn-group">
-                                <button type="button" class="btn blue btn-outline sbold" onclick="createTemplate()">{{ __('common.add_new') }}</button>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <select id="filter_category" class="form-control">
-                                <option value="">{{ __('templates.all_categories') }}</option>
-                                <option value="system">{{ __('templates.system') }}</option>
-                                <option value="department">{{ __('templates.department') }}</option>
-                                <option value="personal">{{ __('templates.personal') }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select id="filter_type" class="form-control">
-                                <option value="">{{ __('templates.all_types') }}</option>
-                                <option value="progress_note">{{ __('templates.progress_note') }}</option>
-                                <option value="diagnosis">{{ __('templates.diagnosis') }}</option>
-                                <option value="treatment_plan">{{ __('templates.treatment_plan') }}</option>
-                                <option value="chief_complaint">{{ __('templates.chief_complaint') }}</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                @if(session()->has('success'))
-                    <div class="alert alert-info">
-                        <button class="close" data-dismiss="alert"></button> {{ session()->get('success') }}!
-                    </div>
-                @endif
-                <table class="table table-striped table-bordered table-hover table-checkable order-column" id="templates_table">
-                    <thead>
-                    <tr>
-                        <th>{{ __('common.id') }}</th>
-                        <th>{{ __('templates.name') }}</th>
-                        <th>{{ __('templates.code') }}</th>
-                        <th>{{ __('templates.category') }}</th>
-                        <th>{{ __('templates.type') }}</th>
-                        <th>{{ __('templates.usage_count') }}</th>
-                        <th>{{ __('common.status') }}</th>
-                        <th>{{ __('common.action') }}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
-@include('medical_templates.create')
-@include('medical_templates.preview')
-@endsection
-@section('js')
-<script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-<script type="text/javascript">
-    var table;
+@extends('layouts.list-page')
 
+@section('page_title', __('templates.medical_templates'))
+@section('table_id', 'templates_table')
+
+@section('header_actions')
+    <button type="button" class="btn btn-primary" onclick="createTemplate()">{{ __('common.add_new') }}</button>
+@endsection
+
+@section('filter_primary')
+    <div class="col-md-3">
+        <select id="filter_category" class="form-control">
+            <option value="">{{ __('templates.all_categories') }}</option>
+            <option value="system">{{ __('templates.system') }}</option>
+            <option value="department">{{ __('templates.department') }}</option>
+            <option value="personal">{{ __('templates.personal') }}</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select id="filter_type" class="form-control">
+            <option value="">{{ __('templates.all_types') }}</option>
+            <option value="progress_note">{{ __('templates.progress_note') }}</option>
+            <option value="diagnosis">{{ __('templates.diagnosis') }}</option>
+            <option value="treatment_plan">{{ __('templates.treatment_plan') }}</option>
+            <option value="chief_complaint">{{ __('templates.chief_complaint') }}</option>
+        </select>
+    </div>
+@endsection
+
+@section('table_headers')
+    <th>{{ __('common.id') }}</th>
+    <th>{{ __('templates.name') }}</th>
+    <th>{{ __('templates.code') }}</th>
+    <th>{{ __('templates.category') }}</th>
+    <th>{{ __('templates.type') }}</th>
+    <th>{{ __('templates.usage_count') }}</th>
+    <th>{{ __('common.status') }}</th>
+    <th>{{ __('common.action') }}</th>
+@endsection
+
+@section('modals')
+    @include('medical_templates.create')
+    @include('medical_templates.preview')
+@endsection
+
+@section('page_js')
+<script type="text/javascript">
     $(function () {
         LanguageManager.loadAllFromPHP({
             'templates': @json(__('templates')),
             'common': @json(__('common'))
         });
 
-        table = $('#templates_table').DataTable({
-            destroy: true,
+        dataTable = $('#templates_table').DataTable({
             processing: true,
+            serverSide: true,
             language: LanguageManager.getDataTableLang(),
             ajax: {
                 url: "{{ url('/medical-templates/') }}",
@@ -92,6 +62,7 @@
                     d.type = $('#filter_type').val();
                 }
             },
+            dom: 'rtip',
             columns: [
                 {data: 'DT_RowIndex', name: 'DT_RowIndex'},
                 {data: 'name', name: 'name'},
@@ -104,8 +75,10 @@
             ]
         });
 
+        setupEmptyStateHandler();
+
         $('#filter_category, #filter_type').change(function() {
-            table.ajax.reload();
+            doSearch();
         });
     });
 
@@ -332,11 +305,5 @@
         });
     }
 
-    function alert_dialog(message, status) {
-        swal("{{ __('common.alert') }}", message, status);
-        setTimeout(function () {
-            location.reload();
-        }, 1900);
-    }
 </script>
 @endsection
