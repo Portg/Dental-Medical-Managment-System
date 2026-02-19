@@ -75,7 +75,6 @@
 
         function loadTable() {
             table = $('#expiry-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),

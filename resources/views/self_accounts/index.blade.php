@@ -29,7 +29,6 @@
         $(function () {
 
             dataTable = $('#self-accounts-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),

@@ -77,7 +77,6 @@
 
         function loadTable() {
             dataTable = $('#stock-outs-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),

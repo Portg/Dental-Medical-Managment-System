@@ -69,7 +69,7 @@
      Table Headers
      ======================================================================== --}}
 @section('table_headers')
-    <th style="width: 50px;">#</th>
+    <th style="width: 50px;">{{ __('common.id') }}</th>
     <th>{{ __('medical_cases.case_no') }}</th>
     <th>{{ __('medical_cases.title') }}</th>
     <th>{{ __('medical_cases.patient') }}</th>

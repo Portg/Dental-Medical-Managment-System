@@ -81,7 +81,6 @@
 <script type="text/javascript">
 $(function () {
     var table = $('#schedules_table').DataTable({
-        destroy: true,
         processing: true,
         serverSide: true,
         language: LanguageManager.getDataTableLang(),

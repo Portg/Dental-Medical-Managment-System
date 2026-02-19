@@ -29,7 +29,6 @@
 <script type="text/javascript">
     $(function () {
         dataTable = $(getTableSelector()).DataTable({
-            destroy: true,
             processing: true,
             serverSide: true,
             language: LanguageManager.getDataTableLang(),

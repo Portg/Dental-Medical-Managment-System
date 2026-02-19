@@ -36,7 +36,6 @@
             });
 
             dataTable = $('#labs-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),

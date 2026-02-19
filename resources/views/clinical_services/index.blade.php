@@ -28,7 +28,6 @@
         });
 
         dataTable = $('#services-table').DataTable({
-            destroy: true,
             processing: true,
             language: LanguageManager.getDataTableLang(),
             ajax: {

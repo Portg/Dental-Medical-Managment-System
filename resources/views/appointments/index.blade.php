@@ -267,7 +267,6 @@
 
             default_todays_data();  //filter  date
             table = $('#appointments-table').DataTable({
-                destroy: true,
                 processing: true,
                 serverSide: true,
                 language: LanguageManager.getDataTableLang(),  // 使用当前语言配置
@@ -931,13 +930,8 @@
 
         function alert_dialog(message, status) {
             swal("{{ __('common.alert') }}", message, status);
-            if (status) {
-
-                setTimeout(function () {
-                    location.reload();
-                }, 1900);
-                // let oTable = $('#appointments-table').dataTable();
-                // oTable.fnDraw(false);
+            if (status === 'success' && dataTable) {
+                dataTable.draw(false);
             }
         }
 
