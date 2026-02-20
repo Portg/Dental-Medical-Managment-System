@@ -21,7 +21,7 @@ class QuotationService
             ->whereNull('quotations.deleted_at')
             ->select(
                 'quotations.*', 'patients.surname', 'patients.othername', 'users.othername as addedBy',
-                DB::raw("(SELECT COALESCE(SUM(qi.qty * qi.price), 0) FROM quotation_items qi WHERE qi.quotation_id = quotations.id AND qi.deleted_at IS NULL) as total_amount")
+                DB::raw("(SELECT COALESCE(SUM(qi.qty * qi.amount), 0) FROM quotation_items qi WHERE qi.quotation_id = quotations.id AND qi.deleted_at IS NULL) as total_amount")
             );
 
         if (!empty($filters['search'])) {
