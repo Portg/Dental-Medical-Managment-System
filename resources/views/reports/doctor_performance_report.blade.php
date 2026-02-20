@@ -91,6 +91,10 @@
         $("#period_selector").val('This Month');
     }
 
+    function clearCustomFilters() {
+        default_todays_data();
+    }
+
     $('#period_selector').on('change', function () {
         switch (this.value) {
             case'Today':
