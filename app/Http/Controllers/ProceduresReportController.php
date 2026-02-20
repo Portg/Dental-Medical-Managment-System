@@ -25,20 +25,15 @@ class ProceduresReportController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            if (!empty($request->start_date) && !empty($request->end_date) && !empty($request->search)) {
+            if (!empty($request->start_date) && !empty($request->end_date)) {
                 FunctionsHelper::storeDateFilter($request);
-                $data = $this->proceduresReportService->getProceduresIncome(
-                    $request->start_date,
-                    $request->end_date,
-                    $request->get('search')
-                );
-            } else if (!empty($request->start_date) && !empty($request->end_date)) {
-                FunctionsHelper::storeDateFilter($request);
-                $data = $this->proceduresReportService->getProceduresIncome(
-                    $request->start_date,
-                    $request->end_date
-                );
             }
+
+            $data = $this->proceduresReportService->getProceduresIncome(
+                $request->input('start_date'),
+                $request->input('end_date'),
+                $request->input('search')
+            );
 
             return Datatables::of($data)
                 ->addIndexColumn()
