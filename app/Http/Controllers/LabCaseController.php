@@ -34,7 +34,7 @@ class LabCaseController extends Controller
 
     public function show($id)
     {
-        $labCase = $this->labCaseService->getLabCase($id);
+        $labCase = $this->labCaseService->getLabCase((int) $id);
 
         if (!$labCase) {
             return redirect('lab-cases')->with('error', __('lab_cases.case_not_found'));
@@ -109,7 +109,7 @@ class LabCaseController extends Controller
             $data['teeth_positions'] = array_map('trim', explode(',', $request->teeth_positions));
         }
 
-        $result = $this->labCaseService->updateLabCase($id, $data);
+        $result = $this->labCaseService->updateLabCase((int) $id, $data);
 
         if (!$result) {
             return response()->json(['message' => __('lab_cases.error_updating_case'), 'status' => false]);
@@ -120,7 +120,7 @@ class LabCaseController extends Controller
 
     public function destroy($id)
     {
-        $result = $this->labCaseService->deleteLabCase($id);
+        $result = $this->labCaseService->deleteLabCase((int) $id);
 
         if (!$result) {
             return response()->json(['message' => __('lab_cases.error_deleting_case'), 'status' => false]);
@@ -146,7 +146,7 @@ class LabCaseController extends Controller
         }
 
         $result = $this->labCaseService->updateStatus(
-            $id,
+            (int) $id,
             $request->input('status'),
             $request->only(['rework_reason', 'sent_date', 'actual_return_date'])
         );
@@ -163,7 +163,7 @@ class LabCaseController extends Controller
      */
     public function getCase($id)
     {
-        $case = $this->labCaseService->getLabCase($id);
+        $case = $this->labCaseService->getLabCase((int) $id);
 
         if (!$case) {
             return response()->json(['message' => __('lab_cases.case_not_found'), 'status' => false]);
@@ -177,7 +177,7 @@ class LabCaseController extends Controller
      */
     public function printLabCase($id)
     {
-        $labCase = $this->labCaseService->getPrintData($id);
+        $labCase = $this->labCaseService->getPrintData((int) $id);
 
         if (!$labCase) {
             return redirect('lab-cases')->with('error', __('lab_cases.case_not_found'));
@@ -194,7 +194,7 @@ class LabCaseController extends Controller
     public function patientLabCases(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->labCaseService->getPatientCases($patient_id);
+            $data = $this->labCaseService->getPatientCases((int) $patient_id);
 
             return $this->labCaseService->buildPatientLabCasesDataTable($data);
         }

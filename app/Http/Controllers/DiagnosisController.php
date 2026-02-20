@@ -28,7 +28,7 @@ class DiagnosisController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->service->getByPatient($patient_id);
+            $data = $this->service->getByPatient((int) $patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -69,7 +69,7 @@ class DiagnosisController extends Controller
     public function caseIndex(Request $request, $case_id)
     {
         if ($request->ajax()) {
-            $data = $this->service->getByCase($case_id);
+            $data = $this->service->getByCase((int) $case_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -133,7 +133,7 @@ class DiagnosisController extends Controller
      */
     public function edit($id)
     {
-        $diagnosis = $this->service->find($id);
+        $diagnosis = $this->service->find((int) $id);
         return response()->json($diagnosis);
     }
 
@@ -154,7 +154,7 @@ class DiagnosisController extends Controller
             'diagnosis_date.required' => __('validation.custom.diagnosis_date.required'),
         ])->validate();
 
-        $status = $this->service->updateDiagnosis($id, $request->only(['diagnosis_name', 'diagnosis_date']));
+        $status = $this->service->updateDiagnosis((int) $id, $request->only(['diagnosis_name', 'diagnosis_date']));
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.diagnosis_updated_successfully'), 'status' => true]);
@@ -170,7 +170,7 @@ class DiagnosisController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deleteDiagnosis($id);
+        $status = $this->service->deleteDiagnosis((int) $id);
         if ($status) {
             return response()->json(['message' => __('medical_cases.diagnosis_deleted_successfully'), 'status' => true]);
         }

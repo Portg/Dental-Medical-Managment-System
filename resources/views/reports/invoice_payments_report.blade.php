@@ -19,35 +19,34 @@
      Filter Area
      ======================================================================== --}}
 @section('filter_area')
-    <div class="filter-row">
-        <div class="row">
-            <div class="col-md-4">
-                <div class="form-group">
-                    <label class="control-label">{{ __('report.period') }}</label>
-                    <select class="form-control" id="period_selector">
-                        <option value="Today">{{ __('report.today') }}</option>
-                        <option value="Yesterday">{{ __('report.yesterday') }}</option>
-                        <option value="This week">{{ __('report.this_week') }}</option>
-                        <option value="Last week">{{ __('report.last_week') }}</option>
-                        <option value="This Month">{{ __('report.this_month') }}</option>
-                        <option value="Last Month">{{ __('report.last_month') }}</option>
-                    </select>
-                </div>
+    <div class="row filter-row">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label class="control-label">{{ __('report.period') }}</label>
+                <select class="form-control" id="period_selector">
+                    <option value="Today">{{ __('report.today') }}</option>
+                    <option value="Yesterday">{{ __('report.yesterday') }}</option>
+                    <option value="This week">{{ __('report.this_week') }}</option>
+                    <option value="Last week">{{ __('report.last_week') }}</option>
+                    <option value="This Month">{{ __('report.this_month') }}</option>
+                    <option value="Last Month">{{ __('report.last_month') }}</option>
+                </select>
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label class="control-label">{{ __('common.start_date') }}</label>
-                    <input type="text" class="form-control start_date">
-                </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label class="control-label">{{ __('common.start_date') }}</label>
+                <input type="text" class="form-control start_date">
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label class="control-label">{{ __('common.end_date') }}</label>
-                    <input type="text" class="form-control end_date">
-                </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label class="control-label">{{ __('common.end_date') }}</label>
+                <input type="text" class="form-control end_date">
             </div>
-            <div class="col-md-2 text-right filter-actions">
-                <label class="control-label">&nbsp;</label>
+        </div>
+        <div class="col-md-2 text-right filter-actions">
+            <div class="form-group">
                 <div>
                     <button type="button" class="btn btn-default" onclick="clearFilters()">{{ __('common.reset') }}</button>
                     <button type="button" id="customFilterBtn" class="btn btn-primary">{{ __('common.search') }}</button>
@@ -77,6 +76,10 @@
         $('.start_date').val(todaysDate());
         $('.end_date').val(todaysDate());
         $("#period_selector").val('Today');
+    }
+
+    function clearCustomFilters() {
+        default_todays_data();
     }
 
     $('#period_selector').on('change', function () {

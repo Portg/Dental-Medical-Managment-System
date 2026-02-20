@@ -54,7 +54,7 @@ class PrescriptionController extends Controller
     public function index(Request $request, $id)
     {
         if ($request->ajax()) {
-            $data = $this->prescriptionService->getPrescriptionsByAppointment($id);
+            $data = $this->prescriptionService->getPrescriptionsByAppointment((int) $id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -97,7 +97,7 @@ class PrescriptionController extends Controller
      */
     public function store(Request $request)
     {
-        $this->prescriptionService->createPrescriptions($request->appointment_id, $request->addmore);
+        $this->prescriptionService->createPrescriptions((int) $request->appointment_id, $request->addmore);
         return response()->json(['message' => __('messages.prescription_created_successfully'), 'status' => true]);
     }
 
@@ -114,7 +114,7 @@ class PrescriptionController extends Controller
 
     public function printPrescription($appointment_id)
     {
-        $data = $this->prescriptionService->getPrintData($appointment_id);
+        $data = $this->prescriptionService->getPrintData((int) $appointment_id);
 
         $pdf = PDF::loadView('medical_treatment.prescriptions.print_out', $data);
         return $pdf->stream('medium', array("attachment" => false))->header('Content-Type', 'application/pdf');
@@ -128,7 +128,7 @@ class PrescriptionController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->prescriptionService->getPrescriptionForEdit($id));
+        return response()->json($this->prescriptionService->getPrescriptionForEdit((int) $id));
     }
 
     /**
@@ -140,7 +140,7 @@ class PrescriptionController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $status = $this->prescriptionService->updatePrescription($id, $request->only('drug', 'qty', 'directions'));
+        $status = $this->prescriptionService->updatePrescription((int) $id, $request->only('drug', 'qty', 'directions'));
         if ($status) {
             return response()->json(['message' => __('messages.prescription_updated_successfully'), 'status' => true]);
         }
@@ -155,7 +155,7 @@ class PrescriptionController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->prescriptionService->deletePrescription($id);
+        $status = $this->prescriptionService->deletePrescription((int) $id);
         if ($status) {
             return response()->json(['message' => __('messages.prescription_deleted_successfully'), 'status' => true]);
         }

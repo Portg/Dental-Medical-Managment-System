@@ -52,7 +52,7 @@ class MedicalCaseController extends Controller
     public function patientCases(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->medicalCaseService->getPatientCases($patient_id);
+            $data = $this->medicalCaseService->getPatientCases((int) $patient_id);
 
             return $this->medicalCaseService->buildPatientCasesDataTable($data);
         }
@@ -117,7 +117,7 @@ class MedicalCaseController extends Controller
      */
     public function show($id)
     {
-        $detail = $this->medicalCaseService->getCaseDetail($id);
+        $detail = $this->medicalCaseService->getCaseDetail((int) $id);
 
         return view('medical_cases.show', $detail);
     }
@@ -130,7 +130,7 @@ class MedicalCaseController extends Controller
      */
     public function edit($id)
     {
-        $data = $this->medicalCaseService->getCaseForEdit($id);
+        $data = $this->medicalCaseService->getCaseForEdit((int) $id);
 
         return view('medical_cases.edit', $data);
     }
@@ -143,7 +143,7 @@ class MedicalCaseController extends Controller
      */
     public function getCase($id)
     {
-        return response()->json($this->medicalCaseService->getCase($id));
+        return response()->json($this->medicalCaseService->getCase((int) $id));
     }
 
     /**
@@ -166,7 +166,7 @@ class MedicalCaseController extends Controller
      */
     public function createForPatient($patient_id)
     {
-        $data = $this->medicalCaseService->getCreateForPatientData($patient_id);
+        $data = $this->medicalCaseService->getCreateForPatientData((int) $patient_id);
 
         return view('medical_cases.edit', $data);
     }
@@ -212,7 +212,7 @@ class MedicalCaseController extends Controller
             'visit_type', 'doctor_id',
         ]), isUpdate: true);
         $result = $this->medicalCaseService->updateCase(
-            $id,
+            (int) $id,
             $data,
             $isDraft,
             $request->modification_reason,
@@ -246,7 +246,7 @@ class MedicalCaseController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->medicalCaseService->deleteCase($id);
+        $status = $this->medicalCaseService->deleteCase((int) $id);
         if ($status) {
             return response()->json(['message' => __('medical_cases.case_deleted_successfully'), 'status' => true]);
         }
@@ -261,7 +261,7 @@ class MedicalCaseController extends Controller
      */
     public function printCase($id)
     {
-        $data = $this->medicalCaseService->getPrintData($id);
+        $data = $this->medicalCaseService->getPrintData((int) $id);
 
         return view('medical_cases.print', $data);
     }

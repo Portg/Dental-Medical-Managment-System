@@ -72,7 +72,7 @@ class LabController extends Controller
 
     public function show($id)
     {
-        $lab = $this->labService->getLab($id);
+        $lab = $this->labService->getLab((int) $id);
 
         if (!$lab) {
             return response()->json(['message' => __('lab_cases.lab_not_found'), 'status' => false]);
@@ -97,7 +97,7 @@ class LabController extends Controller
             return response()->json(['message' => $validator->errors()->first(), 'status' => false]);
         }
 
-        $result = $this->labService->updateLab($id, $request->only([
+        $result = $this->labService->updateLab((int) $id, $request->only([
             'name', 'contact', 'phone', 'address', 'specialties', 'avg_turnaround_days', 'is_active',
         ]));
 
@@ -110,7 +110,7 @@ class LabController extends Controller
 
     public function destroy($id)
     {
-        $result = $this->labService->deleteLab($id);
+        $result = $this->labService->deleteLab((int) $id);
 
         if (!$result) {
             return response()->json(['message' => __('lab_cases.lab_has_active_cases'), 'status' => false]);

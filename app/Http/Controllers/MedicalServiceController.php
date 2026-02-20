@@ -124,7 +124,7 @@ class MedicalServiceController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->medicalServiceService->getServiceForEdit($id));
+        return response()->json($this->medicalServiceService->getServiceForEdit((int) $id));
     }
 
     /**
@@ -141,7 +141,7 @@ class MedicalServiceController extends Controller
             'price' => 'required'
         ])->validate();
 
-        $status = $this->medicalServiceService->updateService($id, $request->only(['name', 'price']));
+        $status = $this->medicalServiceService->updateService((int) $id, $request->only(['name', 'price']));
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_updated_successfully'), 'status' => true]);
         }
@@ -156,7 +156,7 @@ class MedicalServiceController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->medicalServiceService->deleteService($id);
+        $status = $this->medicalServiceService->deleteService((int) $id);
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_deleted_successfully'), 'status' => true]);
         }

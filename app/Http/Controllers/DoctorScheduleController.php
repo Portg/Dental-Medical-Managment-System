@@ -79,7 +79,7 @@ class DoctorScheduleController extends Controller
 
     public function edit($id)
     {
-        $schedule = $this->service->find($id);
+        $schedule = $this->service->find((int) $id);
         return response()->json($schedule);
     }
 
@@ -100,7 +100,7 @@ class DoctorScheduleController extends Controller
             'max_patients.required' => __('doctor_schedules.max_patients_required'),
         ])->validate();
 
-        $success = $this->service->updateSchedule($id, $request->only([
+        $success = $this->service->updateSchedule((int) $id, $request->only([
             'doctor_id', 'schedule_date', 'start_time', 'end_time', 'max_patients',
             'is_recurring', 'recurring_pattern', 'recurring_until',
         ]));
@@ -110,7 +110,7 @@ class DoctorScheduleController extends Controller
 
     public function destroy($id)
     {
-        $success = $this->service->deleteSchedule($id);
+        $success = $this->service->deleteSchedule((int) $id);
         return FunctionsHelper::messageResponse(__('doctor_schedules.deleted_successfully'), $success);
     }
 

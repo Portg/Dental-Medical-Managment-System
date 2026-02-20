@@ -29,7 +29,7 @@ class ExpensePaymentController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = $this->expensePaymentService->getPaymentsByExpense($expense_id);
+            $data = $this->expensePaymentService->getPaymentsByExpense((int) $expense_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -62,7 +62,7 @@ class ExpensePaymentController extends Controller
     //show modal for updating the payment balance
     public function supplier_balance($purchase_id)
     {
-        return response()->json($this->expensePaymentService->getSupplierBalance($purchase_id));
+        return response()->json($this->expensePaymentService->getSupplierBalance((int) $purchase_id));
     }
 
     /**
@@ -121,7 +121,7 @@ class ExpensePaymentController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->expensePaymentService->getPaymentForEdit($id));
+        return response()->json($this->expensePaymentService->getPaymentForEdit((int) $id));
     }
 
     /**
@@ -145,7 +145,7 @@ class ExpensePaymentController extends Controller
             'payment_account.required' => __('validation.attributes.payment_account') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->expensePaymentService->updatePayment($id, $request->only(['payment_date', 'amount', 'payment_method', 'payment_account']));
+        $status = $this->expensePaymentService->updatePayment((int) $id, $request->only(['payment_date', 'amount', 'payment_method', 'payment_account']));
         if ($status) {
             return response()->json(['message' => __('expense_items.payments.payment_updated_successfully'), 'status' => true]);
         }
@@ -160,7 +160,7 @@ class ExpensePaymentController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->expensePaymentService->deletePayment($id);
+        $status = $this->expensePaymentService->deletePayment((int) $id);
         if ($status) {
             return response()->json(['message' => __('expense_items.payments.payment_deleted_successfully'), 'status' => true]);
         }

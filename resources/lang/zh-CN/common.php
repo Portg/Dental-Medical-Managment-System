@@ -211,6 +211,7 @@ return [
     'show' => '显示',
     'per_page' => '每页',
     'all' => '全部',
+    'only' => '仅限',
     'no_matching_records' => '没有匹配的记录',
 
     // Pagination

@@ -71,7 +71,7 @@ class ServiceConsumableController extends Controller
      */
     public function show($serviceId)
     {
-        $consumables = $this->serviceConsumableService->getByService($serviceId);
+        $consumables = $this->serviceConsumableService->getByService((int) $serviceId);
         return response()->json($consumables);
     }
 
@@ -94,7 +94,7 @@ class ServiceConsumableController extends Controller
             'qty.min' => __('inventory.qty_min'),
         ])->validate();
 
-        if ($this->serviceConsumableService->exists($request->medical_service_id, $request->inventory_item_id)) {
+        if ($this->serviceConsumableService->exists((int) $request->medical_service_id, (int) $request->inventory_item_id)) {
             return response()->json([
                 'message' => __('inventory.consumable_already_exists'),
                 'status' => false,
@@ -122,7 +122,7 @@ class ServiceConsumableController extends Controller
             'qty' => 'required|numeric|min:0.01',
         ])->validate();
 
-        $status = $this->serviceConsumableService->update($id, $request->only(['qty']));
+        $status = $this->serviceConsumableService->update((int) $id, $request->only(['qty']));
 
         if ($status) {
             return response()->json(['message' => __('inventory.consumable_updated_successfully'), 'status' => true]);
@@ -138,7 +138,7 @@ class ServiceConsumableController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->serviceConsumableService->delete($id);
+        $status = $this->serviceConsumableService->delete((int) $id);
         if ($status) {
             return response()->json(['message' => __('inventory.consumable_deleted_successfully'), 'status' => true]);
         }

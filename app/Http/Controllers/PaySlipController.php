@@ -116,7 +116,7 @@ class PaySlipController extends Controller
         ])->validate();
 
         $result = $this->service->createPaySlip(
-            $request->employee,
+            (int) $request->employee,
             $request->payslip_month,
             $request->addAllowance ?? [],
             $request->addDeduction ?? []
@@ -133,7 +133,7 @@ class PaySlipController extends Controller
      */
     public function show($pay_slip_id)
     {
-        $data['employee'] = $this->service->getPaySlipDetail($pay_slip_id);
+        $data['employee'] = $this->service->getPaySlipDetail((int) $pay_slip_id);
         $data['pay_slip_id'] = $pay_slip_id;
         return view('payslips.show.index')->with($data);
     }
@@ -170,13 +170,13 @@ class PaySlipController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->service->deletePaySlip($id);
+        $success = $this->service->deletePaySlip((int) $id);
         return FunctionsHelper::messageResponse(__('payslips.payslip_deleted_successfully'), $success);
     }
 
     public function individualPaySlip(Request $request)
     {
-        $data['employee'] = $this->service->getPaySlipDetail($request->pay_slip_id);
+        $data['employee'] = $this->service->getPaySlipDetail((int) $request->pay_slip_id);
         $data['pay_slip_id'] = $request->pay_slip_id;
 
         return view('payslips.individual_payslips');

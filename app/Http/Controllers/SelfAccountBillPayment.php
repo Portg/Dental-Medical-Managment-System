@@ -29,7 +29,7 @@ class SelfAccountBillPayment extends Controller
     public function index(Request $request, $self_account_id)
     {
         if ($request->ajax()) {
-            $data = $this->selfAccountBillPaymentService->getList($self_account_id);
+            $data = $this->selfAccountBillPaymentService->getList((int) $self_account_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()

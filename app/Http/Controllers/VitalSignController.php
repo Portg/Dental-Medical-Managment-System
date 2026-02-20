@@ -28,7 +28,7 @@ class VitalSignController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->service->getByPatient($patient_id);
+            $data = $this->service->getByPatient((int) $patient_id);
 
             return $this->buildVitalSignDatatable($data);
         }
@@ -45,7 +45,7 @@ class VitalSignController extends Controller
     public function caseIndex(Request $request, $case_id)
     {
         if ($request->ajax()) {
-            $patientId = $this->service->getPatientIdFromCase($case_id);
+            $patientId = $this->service->getPatientIdFromCase((int) $case_id);
             if (!$patientId) {
                 return Datatables::of(collect([]))->make(true);
             }
@@ -130,7 +130,7 @@ class VitalSignController extends Controller
      */
     public function edit($id)
     {
-        $vitalSign = $this->service->getVitalSign($id);
+        $vitalSign = $this->service->getVitalSign((int) $id);
         return response()->json($vitalSign);
     }
 
@@ -149,7 +149,7 @@ class VitalSignController extends Controller
             'recorded_at.required' => __('validation.custom.recorded_at.required'),
         ])->validate();
 
-        $status = $this->service->updateVitalSign($id, [
+        $status = $this->service->updateVitalSign((int) $id, [
             'blood_pressure_systolic' => $request->blood_pressure_systolic,
             'blood_pressure_diastolic' => $request->blood_pressure_diastolic,
             'heart_rate' => $request->heart_rate,
@@ -176,7 +176,7 @@ class VitalSignController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deleteVitalSign($id);
+        $status = $this->service->deleteVitalSign((int) $id);
         if ($status) {
             return response()->json(['message' => __('medical_cases.vital_sign_deleted_successfully'), 'status' => true]);
         }
@@ -191,7 +191,7 @@ class VitalSignController extends Controller
      */
     public function latest($patient_id)
     {
-        $latestVitalSign = $this->service->getLatestForPatient($patient_id);
+        $latestVitalSign = $this->service->getLatestForPatient((int) $patient_id);
 
         return response()->json($latestVitalSign);
     }

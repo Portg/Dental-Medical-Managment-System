@@ -28,7 +28,7 @@ class SurgeriesController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = $this->surgeryService->getListByPatient($patient_id);
+            $data = $this->surgeryService->getListByPatient((int) $patient_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -81,7 +81,7 @@ class SurgeriesController extends Controller
             $request->surgery,
             $request->surgery_date,
             $request->description,
-            $request->patient_id
+            (int) $request->patient_id
         );
 
         if ($status) {
@@ -109,7 +109,7 @@ class SurgeriesController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->surgeryService->find($id));
+        return response()->json($this->surgeryService->find((int) $id));
     }
 
     /**
@@ -130,7 +130,7 @@ class SurgeriesController extends Controller
         ])->validate();
 
         $status = $this->surgeryService->update(
-            $id,
+            (int) $id,
             $request->surgery,
             $request->surgery_date,
             $request->description
@@ -150,7 +150,7 @@ class SurgeriesController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->surgeryService->delete($id);
+        $status = $this->surgeryService->delete((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('medical_history.surgery_deleted_successfully'), 'status' => true]);

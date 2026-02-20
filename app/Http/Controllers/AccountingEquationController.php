@@ -80,7 +80,7 @@ class AccountingEquationController extends Controller
      */
     public function edit($id)
     {
-        $data = $this->accountingEquationService->findEquation($id);
+        $data = $this->accountingEquationService->findEquation((int) $id);
         return response()->json($data);
     }
 
@@ -102,7 +102,7 @@ class AccountingEquationController extends Controller
             'sort_by.integer' => __('validation.custom.sort_by.integer')
         ])->validate();
 
-        $success = $this->accountingEquationService->updateEquation($id, $request->only(['name', 'sort_by']));
+        $success = $this->accountingEquationService->updateEquation((int) $id, $request->only(['name', 'sort_by']));
 
         return FunctionsHelper::messageResponse(__('messages.accounting_equation_updated_successfully'), $success);
     }
@@ -116,7 +116,7 @@ class AccountingEquationController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->accountingEquationService->deleteEquation($id);
+        $success = $this->accountingEquationService->deleteEquation((int) $id);
         return FunctionsHelper::messageResponse(__('messages.accounting_equation_deleted_successfully'), $success);
     }
 }

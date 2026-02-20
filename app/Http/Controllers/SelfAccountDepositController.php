@@ -29,7 +29,7 @@ class SelfAccountDepositController extends Controller
     public function index(Request $request, $self_account_id)
     {
         if ($request->ajax()) {
-            $data = $this->selfAccountDepositService->getList($self_account_id);
+            $data = $this->selfAccountDepositService->getList((int) $self_account_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -100,7 +100,7 @@ class SelfAccountDepositController extends Controller
      */
     public function edit($id)
     {
-        $record = $this->selfAccountDepositService->find($id);
+        $record = $this->selfAccountDepositService->find((int) $id);
         return response()->json($record);
     }
 
@@ -119,7 +119,7 @@ class SelfAccountDepositController extends Controller
             'payment_method' => 'required',
         ])->validate();
 
-        $status = $this->selfAccountDepositService->update($id, $request->only(['payment_date', 'amount', 'payment_method']));
+        $status = $this->selfAccountDepositService->update((int) $id, $request->only(['payment_date', 'amount', 'payment_method']));
 
         if ($status) {
             return response()->json(['message' => __('messages.record_updated'), 'status' => true]);
@@ -135,7 +135,7 @@ class SelfAccountDepositController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->selfAccountDepositService->delete($id);
+        $status = $this->selfAccountDepositService->delete((int) $id);
         if ($status) {
             return response()->json(['message' => __('messages.record_deleted'), 'status' => true]);
         }

@@ -28,7 +28,7 @@ class ExpenseItemController extends Controller
     public function index(Request $request, $expense_id)
     {
         if ($request->ajax()) {
-            $data = $this->service->getListByExpense($expense_id);
+            $data = $this->service->getListByExpense((int) $expense_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -109,7 +109,7 @@ class ExpenseItemController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->find($id));
+        return response()->json($this->service->find((int) $id));
     }
 
     /**
@@ -131,7 +131,7 @@ class ExpenseItemController extends Controller
             'price.required' => __('validation.attributes.price') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->service->update($id, $request->only(['item', 'qty', 'price']));
+        $status = $this->service->update((int) $id, $request->only(['item', 'qty', 'price']));
 
         if ($status) {
             return response()->json(['message' => __('expense_items.updated_successfully'), 'status' => true]);
@@ -147,7 +147,7 @@ class ExpenseItemController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->delete($id);
+        $status = $this->service->delete((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('expense_items.deleted_successfully'), 'status' => true]);

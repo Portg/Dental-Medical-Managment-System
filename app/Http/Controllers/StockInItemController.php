@@ -26,7 +26,7 @@ class StockInItemController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax() && $request->stock_in_id) {
-            $data = $this->service->getItemsByStockIn($request->stock_in_id);
+            $data = $this->service->getItemsByStockIn((int) $request->stock_in_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -72,7 +72,7 @@ class StockInItemController extends Controller
     public function store(Request $request)
     {
         // Verify stock in is draft
-        $draftError = $this->service->verifyDraftStatus($request->stock_in_id);
+        $draftError = $this->service->verifyDraftStatus((int) $request->stock_in_id);
         if ($draftError) {
             return response()->json($draftError);
         }
@@ -91,7 +91,7 @@ class StockInItemController extends Controller
 
         // Check if item requires expiry tracking
         $expiryError = $this->service->checkExpiryRequirement(
-            $request->inventory_item_id, $request->batch_no, $request->expiry_date
+            (int) $request->inventory_item_id, $request->batch_no, $request->expiry_date
         );
         if ($expiryError) {
             return response()->json($expiryError);
@@ -99,7 +99,7 @@ class StockInItemController extends Controller
 
         // Check price deviation (BR-043)
         $deviationWarning = $this->service->checkPriceDeviation(
-            $request->inventory_item_id, $request->unit_price, (bool) $request->confirm_deviation
+            (int) $request->inventory_item_id, $request->unit_price, (bool) $request->confirm_deviation
         );
         if ($deviationWarning) {
             return response()->json($deviationWarning);
@@ -128,7 +128,7 @@ class StockInItemController extends Controller
      */
     public function edit($id)
     {
-        $item = $this->service->find($id);
+        $item = $this->service->find((int) $id);
         return response()->json($item);
     }
 
@@ -141,7 +141,7 @@ class StockInItemController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $item = $this->service->findBasic($id);
+        $item = $this->service->findBasic((int) $id);
         if (!$item) {
             return response()->json(['message' => __('common.not_found'), 'status' => false]);
         }
@@ -181,7 +181,7 @@ class StockInItemController extends Controller
      */
     public function destroy($id)
     {
-        $item = $this->service->findBasic($id);
+        $item = $this->service->findBasic((int) $id);
         if (!$item) {
             return response()->json(['message' => __('common.not_found'), 'status' => false]);
         }

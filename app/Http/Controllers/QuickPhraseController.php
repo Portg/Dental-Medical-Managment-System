@@ -119,7 +119,7 @@ class QuickPhraseController extends Controller
      */
     public function show($id)
     {
-        $phrase = $this->service->getPhrase($id);
+        $phrase = $this->service->getPhrase((int) $id);
         return response()->json([
             'status' => true,
             'data' => $phrase
@@ -141,7 +141,7 @@ class QuickPhraseController extends Controller
             'scope' => 'required|in:system,personal',
         ])->validate();
 
-        $status = $this->service->updatePhrase($id, [
+        $status = $this->service->updatePhrase((int) $id, [
             'shortcut' => $request->shortcut,
             'phrase' => $request->phrase,
             'category' => $request->category,
@@ -170,7 +170,7 @@ class QuickPhraseController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deletePhrase($id);
+        $status = $this->service->deletePhrase((int) $id);
 
         if ($status) {
             return response()->json([

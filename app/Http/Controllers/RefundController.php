@@ -87,7 +87,7 @@ class RefundController extends Controller
      */
     public function show($id)
     {
-        $refund = $this->refundService->getRefundDetail($id);
+        $refund = $this->refundService->getRefundDetail((int) $id);
         return view('refunds.show', compact('refund'));
     }
 
@@ -96,7 +96,7 @@ class RefundController extends Controller
      */
     public function approve(Request $request, $id)
     {
-        return response()->json($this->refundService->approveRefund($id, Auth::id()));
+        return response()->json($this->refundService->approveRefund((int) $id, Auth::id()));
     }
 
     /**
@@ -113,7 +113,7 @@ class RefundController extends Controller
         }
 
         return response()->json(
-            $this->refundService->rejectRefund($id, Auth::id(), $request->rejection_reason)
+            $this->refundService->rejectRefund((int) $id, Auth::id(), $request->rejection_reason)
         );
     }
 
@@ -122,7 +122,7 @@ class RefundController extends Controller
      */
     public function print($id)
     {
-        $refund = $this->refundService->getRefundForPrint($id);
+        $refund = $this->refundService->getRefundForPrint((int) $id);
 
         $pdf = PDF::loadView('refunds.print', compact('refund'));
         return $pdf->stream('refund_' . $refund->refund_no . '.pdf', ['Attachment' => false]);
@@ -133,7 +133,7 @@ class RefundController extends Controller
      */
     public function destroy($id)
     {
-        return response()->json($this->refundService->deleteRefund($id));
+        return response()->json($this->refundService->deleteRefund((int) $id));
     }
 
     /**
@@ -155,6 +155,6 @@ class RefundController extends Controller
      */
     public function getRefundableAmount($invoiceId)
     {
-        return response()->json($this->refundService->getRefundableAmount($invoiceId));
+        return response()->json($this->refundService->getRefundableAmount((int) $invoiceId));
     }
 }

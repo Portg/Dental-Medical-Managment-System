@@ -28,7 +28,7 @@ class QuotationItemController extends Controller
     public function index(Request $request, $quotation_id)
     {
         if ($request->ajax()) {
-            $data = $this->service->getListByQuotation($quotation_id);
+            $data = $this->service->getListByQuotation((int) $quotation_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -113,7 +113,7 @@ class QuotationItemController extends Controller
      */
     public function edit($quotationItem_id)
     {
-        return response()->json($this->service->find($quotationItem_id));
+        return response()->json($this->service->find((int) $quotationItem_id));
     }
 
     /**
@@ -131,7 +131,7 @@ class QuotationItemController extends Controller
             'medical_service_id' => 'required'
         ])->validate();
 
-        $status = $this->service->update($id, $request->only(['qty', 'price', 'medical_service_id']));
+        $status = $this->service->update((int) $id, $request->only(['qty', 'price', 'medical_service_id']));
 
         if ($status) {
             return response()->json(['message' => __('invoices.quotation_item_updated_successfully'), 'status' => true]);
@@ -147,7 +147,7 @@ class QuotationItemController extends Controller
      */
     public function destroy($quotationItem_id)
     {
-        $status = $this->service->delete($quotationItem_id);
+        $status = $this->service->delete((int) $quotationItem_id);
 
         if ($status) {
             return response()->json(['message' => __('invoices.quotation_item_deleted_successfully'), 'status' => true]);

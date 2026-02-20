@@ -119,7 +119,7 @@ class BranchController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->branchService->findBranch($id));
+        return response()->json($this->branchService->findBranch((int) $id));
     }
 
     /**
@@ -134,7 +134,7 @@ class BranchController extends Controller
         Validator::make($request->all(), [
             'name' => 'required'
         ])->validate();
-        $success = $this->branchService->updateBranch($id, $request->name, Auth::User()->id);
+        $success = $this->branchService->updateBranch((int) $id, $request->name, Auth::User()->id);
         return FunctionsHelper::messageResponse(__('branches.branch_updated_successfully'), $success);
     }
 
@@ -146,7 +146,7 @@ class BranchController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->branchService->deleteBranch($id);
+        $success = $this->branchService->deleteBranch((int) $id);
         return FunctionsHelper::messageResponse(__('branches.branch_deleted_successfully'), $success);
     }
 }

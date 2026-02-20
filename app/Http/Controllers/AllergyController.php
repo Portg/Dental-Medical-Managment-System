@@ -29,7 +29,7 @@ class AllergyController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = $this->allergyService->getListByPatient($patient_id);
+            $data = $this->allergyService->getListByPatient((int) $patient_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -79,7 +79,7 @@ class AllergyController extends Controller
             'body_reaction.required' => __('validation.custom.body_reaction.required')
         ])->validate();
 
-        $status = $this->allergyService->create($request->body_reaction, $request->patient_id);
+        $status = $this->allergyService->create($request->body_reaction, (int) $request->patient_id);
 
         if ($status) {
             return response()->json(['message' => __('medical_history.allergy_captured_successfully'), 'status' => true]);
@@ -106,7 +106,7 @@ class AllergyController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->allergyService->find($id));
+        return response()->json($this->allergyService->find((int) $id));
     }
 
     /**
@@ -124,7 +124,7 @@ class AllergyController extends Controller
             'body_reaction.required' => __('validation.custom.body_reaction.required')
         ])->validate();
 
-        $status = $this->allergyService->update($id, $request->body_reaction);
+        $status = $this->allergyService->update((int) $id, $request->body_reaction);
 
         if ($status) {
             return response()->json(['message' => __('medical_history.allergy_updated_successfully'), 'status' => true]);
@@ -140,7 +140,7 @@ class AllergyController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->allergyService->delete($id);
+        $status = $this->allergyService->delete((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('medical_history.allergy_deleted_successfully'), 'status' => true]);

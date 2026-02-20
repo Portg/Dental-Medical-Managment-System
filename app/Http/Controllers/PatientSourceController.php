@@ -117,7 +117,7 @@ class PatientSourceController extends Controller
      */
     public function show($id)
     {
-        $source = $this->service->getSource($id);
+        $source = $this->service->getSource((int) $id);
         return response()->json([
             'status' => true,
             'data' => $source
@@ -138,7 +138,7 @@ class PatientSourceController extends Controller
             'code' => 'required|string|max:20|unique:patient_sources,code,' . $id,
         ])->validate();
 
-        $status = $this->service->updateSource($id, [
+        $status = $this->service->updateSource((int) $id, [
             'name' => $request->name,
             'code' => $request->code,
             'description' => $request->description,
@@ -166,14 +166,14 @@ class PatientSourceController extends Controller
      */
     public function destroy($id)
     {
-        if ($this->service->isSourceInUse($id)) {
+        if ($this->service->isSourceInUse((int) $id)) {
             return response()->json([
                 'message' => __('messages.source_in_use'),
                 'status' => false
             ]);
         }
 
-        $status = $this->service->deleteSource($id);
+        $status = $this->service->deleteSource((int) $id);
 
         if ($status) {
             return response()->json([

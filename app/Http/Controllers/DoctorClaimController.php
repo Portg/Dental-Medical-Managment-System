@@ -125,7 +125,7 @@ class DoctorClaimController extends Controller
             'cash_amount' => 'required'
         ])->validate();
 
-        $status = $this->service->approveClaim($request->id, $request->insurance_amount, $request->cash_amount);
+        $status = $this->service->approveClaim((int) $request->id, $request->insurance_amount, $request->cash_amount);
 
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_approved_successfully'), 'status' => true]);
@@ -152,7 +152,7 @@ class DoctorClaimController extends Controller
      */
     public function edit($id)
     {
-        $claim = $this->service->getClaim($id);
+        $claim = $this->service->getClaim((int) $id);
         return response()->json($claim);
     }
 
@@ -170,7 +170,7 @@ class DoctorClaimController extends Controller
             'cash_amount' => 'required'
         ])->validate();
 
-        $status = $this->service->updateClaim($id, $request->insurance_amount, $request->cash_amount);
+        $status = $this->service->updateClaim((int) $id, $request->insurance_amount, $request->cash_amount);
 
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_updated_successfully'), 'status' => true]);
@@ -186,7 +186,7 @@ class DoctorClaimController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deleteClaim($id);
+        $status = $this->service->deleteClaim((int) $id);
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_deleted_successfully'), 'status' => true]);
         }

@@ -5,10 +5,10 @@
 
 @section('header_actions')
     <a href="#" onclick="createLabCase()" class="btn btn-primary">
-        <i class="fa fa-plus"></i> {{ __('lab_cases.add_lab_case') }}
+        {{__('lab_cases.add_lab_case') }}
     </a>
     <a href="{{ url('labs') }}" class="btn btn-default">
-        <i class="fa fa-building"></i> {{ __('lab_cases.lab_management') }}
+        {{__('lab_cases.lab_management') }}
     </a>
 @endsection
 

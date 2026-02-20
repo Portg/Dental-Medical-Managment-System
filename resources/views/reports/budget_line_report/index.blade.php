@@ -34,23 +34,24 @@
                     </select>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="form-group">
                     <label class="control-label">{{ __('common.start_date') }}</label>
                     <input type="text" class="form-control start_date">
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="form-group">
                     <label class="control-label">{{ __('common.end_date') }}</label>
                     <input type="text" class="form-control end_date">
                 </div>
             </div>
-        </div>
-        <div class="row" style="margin-top: 10px;">
-            <div class="col-md-12">
-                <button type="button" id="customFilterBtn" class="btn purple-intense">{{ __('report.filter_report') }}</button>
-                <button type="button" class="btn default">{{ __('common.clear') }}</button>
+            <div class="col-md-2 text-right filter-actions">
+                <label class="control-label">&nbsp;</label>
+                <div>
+                    <button type="button" class="btn btn-default" onclick="clearFilters()">{{ __('common.reset') }}</button>
+                    <button type="button" id="customFilterBtn" class="btn btn-primary">{{ __('common.search') }}</button>
+                </div>
             </div>
         </div>
     </div>
@@ -84,6 +85,10 @@
             $('.start_date').val(formatDate(thisMonth()));
             $('.end_date').val(todaysDate());
             $("#period_selector").val('This Month');
+        }
+
+        function clearCustomFilters() {
+            default_todays_data();
         }
 
         $('#period_selector').on('change', function () {

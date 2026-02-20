@@ -105,7 +105,7 @@ class AppointmentsController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->appointmentService->getAppointmentForEdit($id));
+        return response()->json($this->appointmentService->getAppointmentForEdit((int) $id));
     }
 
     /**
@@ -121,7 +121,7 @@ class AppointmentsController extends Controller
             'doctor_id' => 'required',
         ])->validate();
 
-        $status = $this->appointmentService->updateAppointment($id, $request->only([
+        $status = $this->appointmentService->updateAppointment((int) $id, $request->only([
             'visit_information', 'patient_id', 'appointment_date',
             'appointment_time', 'doctor_id', 'notes',
         ]));
@@ -137,7 +137,7 @@ class AppointmentsController extends Controller
      */
     public function sendReschedule(Request $request): JsonResponse
     {
-        $success = $this->appointmentService->rescheduleAppointment($request->id, $request->only([
+        $success = $this->appointmentService->rescheduleAppointment((int) $request->id, $request->only([
             'appointment_date', 'appointment_time',
         ]));
 
@@ -152,7 +152,7 @@ class AppointmentsController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->appointmentService->deleteAppointment($id);
+        $status = $this->appointmentService->deleteAppointment((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('messages.appointment_deleted_successfully'), 'status' => true]);
@@ -180,7 +180,7 @@ class AppointmentsController extends Controller
         }
 
         return response()->json(
-            $this->appointmentService->getDoctorTimeSlots($request->doctor_id, $request->date)
+            $this->appointmentService->getDoctorTimeSlots((int) $request->doctor_id, $request->date)
         );
     }
 }

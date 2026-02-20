@@ -167,4 +167,5 @@ return [
     'uploading' => 'Uploading',
     'already_exists' => 'Already exists',
     'confirm' => 'Confirm',
+    'only' => 'only',
 ];

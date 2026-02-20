@@ -101,7 +101,7 @@ class BirthDayMessageController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->birthDayMessageService->find($id));
+        return response()->json($this->birthDayMessageService->find((int) $id));
     }
 
     /**
@@ -119,7 +119,7 @@ class BirthDayMessageController extends Controller
             'message.required' => __('validation.custom.message.required')
         ])->validate();
 
-        $success = $this->birthDayMessageService->update($id, $request->message);
+        $success = $this->birthDayMessageService->update((int) $id, $request->message);
 
         return FunctionsHelper::messageResponse(__("messages.message_updated_successfully"), $success);
     }
@@ -132,7 +132,7 @@ class BirthDayMessageController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->birthDayMessageService->delete($id);
+        $success = $this->birthDayMessageService->delete((int) $id);
 
         return FunctionsHelper::messageResponse(__("messages.message_deleted_successfully"), $success);
     }

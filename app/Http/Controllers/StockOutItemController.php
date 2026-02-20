@@ -26,7 +26,7 @@ class StockOutItemController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax() && $request->stock_out_id) {
-            $data = $this->service->getItemsByStockOut($request->stock_out_id);
+            $data = $this->service->getItemsByStockOut((int) $request->stock_out_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -75,7 +75,7 @@ class StockOutItemController extends Controller
     public function store(Request $request)
     {
         // Verify stock out is draft
-        $draftError = $this->service->verifyDraftStatus($request->stock_out_id);
+        $draftError = $this->service->verifyDraftStatus((int) $request->stock_out_id);
         if ($draftError) {
             return response()->json($draftError);
         }
@@ -91,7 +91,7 @@ class StockOutItemController extends Controller
         ])->validate();
 
         // Check stock availability
-        $stockError = $this->service->checkStockAvailability($request->inventory_item_id, $request->qty);
+        $stockError = $this->service->checkStockAvailability((int) $request->inventory_item_id, $request->qty);
         if ($stockError) {
             return response()->json($stockError);
         }
@@ -118,7 +118,7 @@ class StockOutItemController extends Controller
      */
     public function edit($id)
     {
-        $item = $this->service->find($id);
+        $item = $this->service->find((int) $id);
         return response()->json($item);
     }
 
@@ -131,7 +131,7 @@ class StockOutItemController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $item = $this->service->findBasic($id);
+        $item = $this->service->findBasic((int) $id);
         if (!$item) {
             return response()->json(['message' => __('common.not_found'), 'status' => false]);
         }
@@ -170,7 +170,7 @@ class StockOutItemController extends Controller
      */
     public function destroy($id)
     {
-        $item = $this->service->findBasic($id);
+        $item = $this->service->findBasic((int) $id);
         if (!$item) {
             return response()->json(['message' => __('common.not_found'), 'status' => false]);
         }

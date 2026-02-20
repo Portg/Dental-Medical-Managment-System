@@ -92,7 +92,7 @@ class LeaveRequestController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->getLeaveRequestForEdit($id));
+        return response()->json($this->service->getLeaveRequestForEdit((int) $id));
     }
 
     /**
@@ -114,7 +114,7 @@ class LeaveRequestController extends Controller
             'duration.required' => __('validation.attributes.leaves.duration') . ' '.__('validation.required'),
         ])->validate();
 
-        $success = $this->service->updateLeaveRequest($id, $request->only(['leave_type', 'start_date', 'duration']), Auth::User()->id);
+        $success = $this->service->updateLeaveRequest((int) $id, $request->only(['leave_type', 'start_date', 'duration']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_request.updated_successfully'), $success);
     }
 
@@ -126,7 +126,7 @@ class LeaveRequestController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->service->deleteLeaveRequest($id);
+        $success = $this->service->deleteLeaveRequest((int) $id);
         return FunctionsHelper::messageResponse(__('leaves.leave_request.deleted_successfully'), $success);
     }
 }

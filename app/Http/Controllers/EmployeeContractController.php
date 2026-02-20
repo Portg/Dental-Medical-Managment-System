@@ -153,7 +153,7 @@ class EmployeeContractController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->employeeContractService->getContractForEdit($id));
+        return response()->json($this->employeeContractService->getContractForEdit((int) $id));
     }
 
     /**
@@ -181,7 +181,7 @@ class EmployeeContractController extends Controller
             'payroll_type.required' => __('validation.attributes.payroll_type') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->employeeContractService->updateContract($id, $request->only([
+        $status = $this->employeeContractService->updateContract((int) $id, $request->only([
             'employee', 'contract_type', 'start_date', 'contract_length',
             'contract_period', 'payroll_type', 'gross_salary', 'commission_percentage',
         ]), Auth::User()->id);
@@ -202,7 +202,7 @@ class EmployeeContractController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->employeeContractService->deleteContract($id);
+        $status = $this->employeeContractService->deleteContract((int) $id);
         if ($status) {
             return response()->json(['message' => __('employee_contracts.employee_contract_deleted_successfully'),
                 'status' => true]);

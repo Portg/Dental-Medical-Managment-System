@@ -88,7 +88,7 @@ class MedicalCardItemController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deleteMedicalCardItem($id);
+        $status = $this->service->deleteMedicalCardItem((int) $id);
         if ($status) {
             return response()->json(["message" => __('messages.medical_card_deleted_successfully'), "status" => true]);
         }

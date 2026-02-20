@@ -69,13 +69,13 @@ class LeaveRequestApprovalController extends Controller
 
     public function approveRequest($id)
     {
-        $success = $this->service->approveRequest($id, Auth::User()->id);
+        $success = $this->service->approveRequest((int) $id, Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_requests_approval.approved_successfully'), $success);
     }
 
     public function rejectRequest($id)
     {
-        $success = $this->service->rejectRequest($id, Auth::User()->id);
+        $success = $this->service->rejectRequest((int) $id, Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_requests_approval.rejected_successfully'), $success);
     }
 }

@@ -113,7 +113,7 @@ class SalaryAdvanceController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->find($id));
+        return response()->json($this->service->find((int) $id));
     }
 
     /**
@@ -134,7 +134,7 @@ class SalaryAdvanceController extends Controller
             'payment_date' => 'required'
         ])->validate();
 
-        $status = $this->service->update($id, $request->only([
+        $status = $this->service->update((int) $id, $request->only([
             'payment_classification', 'employee', 'advance_month', 'amount',
             'payment_method', 'payment_date',
         ]));
@@ -153,7 +153,7 @@ class SalaryAdvanceController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->delete($id);
+        $status = $this->service->delete((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('salary_advances.advance_deleted_successfully'), 'status' => true]);

@@ -119,11 +119,14 @@
                     </div>
                     <div class="row">
                         <div class="col-md-12">
-                            <div class="checkbox">
-                                <label>
-                                    <input type="checkbox" name="is_active" id="is_active" value="1" checked>
-                                    {{ __('common.active') }}
-                                </label>
+                            <div class="form-group">
+                                <label>{{ __('invoices.coupon_status') }}</label>
+                                <div>
+                                    <label style="font-weight: normal; cursor: pointer;">
+                                        <input type="checkbox" name="is_active" id="is_active" value="1" checked style="margin-right: 4px;">
+                                        {{ __('common.active') }}
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -29,7 +29,7 @@ class TreatmentController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->treatmentService->getTreatmentsByPatient($patient_id);
+            $data = $this->treatmentService->getTreatmentsByPatient((int) $patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -51,7 +51,7 @@ class TreatmentController extends Controller
     public function treatmentHistory(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->treatmentService->getTreatmentHistory($patient_id);
+            $data = $this->treatmentService->getTreatmentHistory((int) $patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -93,7 +93,7 @@ class TreatmentController extends Controller
         $status = $this->treatmentService->createTreatment(
             $request->clinical_notes,
             $request->treatment,
-            $request->appointment_id
+            (int) $request->appointment_id
         );
 
         if ($status) {
@@ -121,7 +121,7 @@ class TreatmentController extends Controller
      */
     public function edit($id)
     {
-        $treatment = $this->treatmentService->find($id);
+        $treatment = $this->treatmentService->find((int) $id);
         return response()->json($treatment);
     }
 
@@ -145,10 +145,10 @@ class TreatmentController extends Controller
         ])->validate();
 
         $status = $this->treatmentService->updateTreatment(
-            $id,
+            (int) $id,
             $request->clinical_notes,
             $request->treatment,
-            $request->appointment_id
+            (int) $request->appointment_id
         );
 
         if ($status) {
@@ -165,7 +165,7 @@ class TreatmentController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->treatmentService->deleteTreatment($id);
+        $status = $this->treatmentService->deleteTreatment((int) $id);
         if ($status) {
             return response()->json(['message' => __('medical_treatment.treatment_deleted_successfully'), 'status' => true]);
         }

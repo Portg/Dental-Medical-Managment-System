@@ -103,7 +103,7 @@ class DoctorClaimController extends Controller
             'amount' => 'required'
         ])->validate();
 
-        $claim = $this->service->createClaim($request->appointment_id, $request->amount);
+        $claim = $this->service->createClaim((int) $request->appointment_id, $request->amount);
 
         if ($claim === null) {
             return response()->json(['message' => __('doctor_claims.no_claim_rate_in_system'), 'status' => false]);
@@ -128,7 +128,7 @@ class DoctorClaimController extends Controller
      */
     public function edit($id)
     {
-        $claim = $this->service->getClaimForEdit($id);
+        $claim = $this->service->getClaimForEdit((int) $id);
         return response()->json($claim);
     }
 
@@ -144,7 +144,7 @@ class DoctorClaimController extends Controller
             'amount' => 'required'
         ])->validate();
 
-        $status = $this->service->updateClaim($id, $request->amount);
+        $status = $this->service->updateClaim((int) $id, $request->amount);
 
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_updated_successfully'), 'status' => true]);
@@ -159,7 +159,7 @@ class DoctorClaimController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deleteClaim($id);
+        $status = $this->service->deleteClaim((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_deleted_successfully'), 'status' => true]);
