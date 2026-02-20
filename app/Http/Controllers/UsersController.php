@@ -146,7 +146,7 @@ class UsersController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->userService->getUserForEdit($id));
+        return response()->json($this->userService->getUserForEdit((int) $id));
     }
 
     /**
@@ -163,7 +163,7 @@ class UsersController extends Controller
             'phone_no', 'alternative_no', 'nin', 'role_id', 'branch_id', 'is_doctor',
         ]);
         $nameParts = $this->userService->parseNameParts($userFields);
-        $status = $this->userService->updateUser($id, $nameParts, $userFields);
+        $status = $this->userService->updateUser((int) $id, $nameParts, $userFields);
         return FunctionsHelper::messageResponse(__('messages.user_updated_successfully'), $status);
     }
 
@@ -175,7 +175,7 @@ class UsersController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->userService->deleteUser($id);
+        $status = $this->userService->deleteUser((int) $id);
         return FunctionsHelper::messageResponse(__('messages.user_deleted_successfully'), $status);
     }
 

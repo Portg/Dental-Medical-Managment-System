@@ -106,7 +106,7 @@ class InventoryCategoryController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->find($id));
+        return response()->json($this->service->find((int) $id));
     }
 
     /**
@@ -129,7 +129,7 @@ class InventoryCategoryController extends Controller
             'type.required' => __('inventory.category_type_required'),
         ])->validate();
 
-        $status = $this->service->update($id, $request->only([
+        $status = $this->service->update((int) $id, $request->only([
             'name', 'code', 'type', 'description', 'sort_order', 'is_active',
         ]));
 
@@ -147,7 +147,7 @@ class InventoryCategoryController extends Controller
      */
     public function destroy($id)
     {
-        $result = $this->service->delete($id);
+        $result = $this->service->delete((int) $id);
 
         if ($result['has_items']) {
             return response()->json([

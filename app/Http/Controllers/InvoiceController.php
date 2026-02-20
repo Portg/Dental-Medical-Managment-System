@@ -48,13 +48,13 @@ class InvoiceController extends Controller
 
     public function previewInvoice($invoice_id)
     {
-        $data = $this->invoiceService->getPreviewData($invoice_id);
+        $data = $this->invoiceService->getPreviewData((int) $invoice_id);
         return view('invoices.preview', $data);
     }
 
     public function invoiceShareDetails(Request $request, $invoice_id)
     {
-        return response()->json($this->invoiceService->getInvoiceShareDetails($invoice_id));
+        return response()->json($this->invoiceService->getInvoiceShareDetails((int) $invoice_id));
     }
 
     public function sendInvoice(Request $request)
@@ -67,14 +67,14 @@ class InvoiceController extends Controller
             'email.required' => __('validation.attributes.email') . ' ' . __('validation.required'),
         ])->validate();
 
-        $this->invoiceService->sendInvoiceEmail($request->invoice_id, $request->email, $request->message);
+        $this->invoiceService->sendInvoiceEmail((int) $request->invoice_id, $request->email, $request->message);
 
         return response()->json(['message' => __('emails.invoice_sent_successfully'), 'status' => true]);
     }
 
     public function invoiceAmount($invoice_id)
     {
-        return response()->json($this->invoiceService->getInvoiceAmountData($invoice_id));
+        return response()->json($this->invoiceService->getInvoiceAmountData((int) $invoice_id));
     }
 
     /**
@@ -83,7 +83,7 @@ class InvoiceController extends Controller
     public function patientInvoices(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->invoiceService->getPatientInvoices($patient_id);
+            $data = $this->invoiceService->getPatientInvoices((int) $patient_id);
 
             return $this->invoiceService->buildPatientInvoicesDataTable($data);
         }
@@ -91,7 +91,7 @@ class InvoiceController extends Controller
 
     public function printReceipt($invoice_id)
     {
-        $data = $this->invoiceService->getReceiptData($invoice_id);
+        $data = $this->invoiceService->getReceiptData((int) $invoice_id);
 
         $pdf = PDF::loadView('invoices.receipt_print', $data);
         return $pdf->stream('receipt', array("attachment" => false))->header('Content-Type', 'application/pdf');
@@ -109,7 +109,7 @@ class InvoiceController extends Controller
 
     public function invoiceProceduresToJson($InvoiceId)
     {
-        return response()->json($this->invoiceService->getInvoiceProcedures($InvoiceId));
+        return response()->json($this->invoiceService->getInvoiceProcedures((int) $InvoiceId));
     }
 
     /**
@@ -125,7 +125,7 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
-        $result = $this->invoiceService->createInvoice($request->appointment_id, $request->addmore);
+        $result = $this->invoiceService->createInvoice((int) $request->appointment_id, $request->addmore);
         return response()->json($result);
     }
 
@@ -134,7 +134,7 @@ class InvoiceController extends Controller
      */
     public function show($invoice)
     {
-        $data = $this->invoiceService->getInvoiceDetail($invoice);
+        $data = $this->invoiceService->getInvoiceDetail((int) $invoice);
         return view('invoices.show.index')->with($data);
     }
 
@@ -159,7 +159,7 @@ class InvoiceController extends Controller
      */
     public function destroy($id)
     {
-        return response()->json($this->invoiceService->deleteInvoice($id));
+        return response()->json($this->invoiceService->deleteInvoice((int) $id));
     }
 
     /**
@@ -182,7 +182,7 @@ class InvoiceController extends Controller
     public function approveDiscount(Request $request, $id)
     {
         return response()->json(
-            $this->invoiceService->approveDiscount($id, Auth::id(), $request->reason)
+            $this->invoiceService->approveDiscount((int) $id, Auth::id(), $request->reason)
         );
     }
 
@@ -200,7 +200,7 @@ class InvoiceController extends Controller
         }
 
         return response()->json(
-            $this->invoiceService->rejectDiscount($id, Auth::id(), $request->reason)
+            $this->invoiceService->rejectDiscount((int) $id, Auth::id(), $request->reason)
         );
     }
 
@@ -210,7 +210,7 @@ class InvoiceController extends Controller
     public function setCredit(Request $request, $id)
     {
         return response()->json(
-            $this->invoiceService->setCredit($id, Auth::id())
+            $this->invoiceService->setCredit((int) $id, Auth::id())
         );
     }
 

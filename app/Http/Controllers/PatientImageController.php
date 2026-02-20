@@ -47,7 +47,7 @@ class PatientImageController extends Controller
     public function patientImages(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->patientImageService->getPatientImages($patient_id);
+            $data = $this->patientImageService->getPatientImages((int) $patient_id);
 
             return $this->patientImageService->buildPatientImagesDataTable($data);
         }
@@ -117,7 +117,7 @@ class PatientImageController extends Controller
      */
     public function show($id)
     {
-        return response()->json($this->patientImageService->getImageWithRelations($id));
+        return response()->json($this->patientImageService->getImageWithRelations((int) $id));
     }
 
     /**
@@ -128,7 +128,7 @@ class PatientImageController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->patientImageService->getImageForEdit($id));
+        return response()->json($this->patientImageService->getImageForEdit((int) $id));
     }
 
     /**
@@ -155,7 +155,7 @@ class PatientImageController extends Controller
         // Handle new file upload if provided
         if ($request->hasFile('image_file')) {
             $file = $request->file('image_file');
-            $image = $this->patientImageService->getImageForEdit($id);
+            $image = $this->patientImageService->getImageForEdit((int) $id);
             $fileName = time() . '_' . $file->getClientOriginalName();
             $filePath = 'patient_images/' . $image->patient_id;
             $file->move(public_path($filePath), $fileName);
@@ -168,7 +168,7 @@ class PatientImageController extends Controller
             ];
         }
 
-        $status = $this->patientImageService->updateImage($id, $request->only(['title', 'image_date', 'image_type']), $fileInfo);
+        $status = $this->patientImageService->updateImage((int) $id, $request->only(['title', 'image_date', 'image_type']), $fileInfo);
 
         if ($status) {
             return response()->json(['message' => __('patient_images.image_updated_successfully'), 'status' => true]);
@@ -184,7 +184,7 @@ class PatientImageController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->patientImageService->deleteImage($id);
+        $status = $this->patientImageService->deleteImage((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('patient_images.image_deleted_successfully'), 'status' => true]);

@@ -68,7 +68,7 @@ class MedicalCardController extends Controller
     public function individualMedicalCards(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->medicalCardService->getIndividualMedicalCards($patient_id);
+            $data = $this->medicalCardService->getIndividualMedicalCards((int) $patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -132,7 +132,7 @@ class MedicalCardController extends Controller
      */
     public function show($id)
     {
-        $data = $this->medicalCardService->getMedicalCardDetail($id);
+        $data = $this->medicalCardService->getMedicalCardDetail((int) $id);
         return view('medical_cards.show')->with($data);
     }
 
@@ -144,7 +144,7 @@ class MedicalCardController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->medicalCardService->getMedicalCardForEdit($id));
+        return response()->json($this->medicalCardService->getMedicalCardForEdit((int) $id));
     }
 
     /**
@@ -167,7 +167,7 @@ class MedicalCardController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->medicalCardService->deleteMedicalCard($id);
+        $status = $this->medicalCardService->deleteMedicalCard((int) $id);
         if ($status) {
             return Response()->json(["message" => __('medical_cards.medical_card_deleted_successfully'), "status" => true]);
         }

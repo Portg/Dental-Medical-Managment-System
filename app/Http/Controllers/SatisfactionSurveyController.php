@@ -89,7 +89,7 @@ class SatisfactionSurveyController extends Controller
             'channel' => 'required|in:sms,wechat,app,instore'
         ]);
 
-        $survey = $this->service->createSurvey($request->appointment_id, $request->channel);
+        $survey = $this->service->createSurvey((int) $request->appointment_id, $request->channel);
 
         return response()->json([
             'status' => 'success',
@@ -103,7 +103,7 @@ class SatisfactionSurveyController extends Controller
      */
     public function show($id)
     {
-        $survey = $this->service->getSurveyDetail($id);
+        $survey = $this->service->getSurveyDetail((int) $id);
 
         return view('satisfaction_surveys.show', compact('survey'));
     }
@@ -133,7 +133,7 @@ class SatisfactionSurveyController extends Controller
             'suggestions' => 'nullable|string|max:1000',
         ]);
 
-        $this->service->submitSurvey($id, $request->only([
+        $this->service->submitSurvey((int) $id, $request->only([
             'overall_rating', 'service_rating', 'environment_rating', 'wait_time_rating',
             'doctor_rating', 'would_recommend', 'feedback', 'suggestions',
         ]));

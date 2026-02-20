@@ -91,7 +91,7 @@ class InventoryItemController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->getItemForEdit($id));
+        return response()->json($this->service->getItemForEdit((int) $id));
     }
 
     /**
@@ -116,7 +116,7 @@ class InventoryItemController extends Controller
             'category_id.required' => __('inventory.category_required'),
         ])->validate();
 
-        $status = $this->service->updateItem($id, $request->only([
+        $status = $this->service->updateItem((int) $id, $request->only([
             'item_code', 'name', 'unit', 'category_id', 'specification', 'brand',
             'reference_price', 'selling_price', 'track_expiry', 'stock_warning_level',
             'storage_location', 'notes', 'is_active',
@@ -136,7 +136,7 @@ class InventoryItemController extends Controller
      */
     public function destroy($id)
     {
-        $result = $this->service->deleteItem($id);
+        $result = $this->service->deleteItem((int) $id);
         return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 

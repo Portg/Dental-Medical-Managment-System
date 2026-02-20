@@ -91,7 +91,7 @@ class AppointmentsController extends Controller
             'patient_id' => 'required',
         ])->validate();
 
-        $status = $this->service->createAppointment($request->patient_id, $request->notes);
+        $status = $this->service->createAppointment((int) $request->patient_id, $request->notes);
 
         if ($status) {
             return response()->json(['message' => __('messages.appointment_created_successfully'), 'status' => true]);
@@ -116,7 +116,7 @@ class AppointmentsController extends Controller
      */
     public function edit($id)
     {
-        $appointment = $this->service->getAppointmentForEdit($id);
+        $appointment = $this->service->getAppointmentForEdit((int) $id);
         return response()->json($appointment);
     }
 
@@ -132,7 +132,7 @@ class AppointmentsController extends Controller
             'patient_id' => 'required'
         ])->validate();
 
-        $status = $this->service->updateAppointment($id, $request->patient_id, $request->notes);
+        $status = $this->service->updateAppointment((int) $id, (int) $request->patient_id, $request->notes);
 
         if ($status) {
             return response()->json(['message' => __('messages.appointment_updated_successfully'), 'status' => true]);
@@ -147,7 +147,7 @@ class AppointmentsController extends Controller
             'appointment_status' => 'required'
         ])->validate();
 
-        $success = $this->service->updateStatus($request->appointment_id, $request->appointment_status);
+        $success = $this->service->updateStatus((int) $request->appointment_id, $request->appointment_status);
         return FunctionsHelper::messageResponse(__('messages.appointment_status_updated', ['status' => $request->appointment_status]), $success);
     }
 
@@ -159,7 +159,7 @@ class AppointmentsController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deleteAppointment($id);
+        $status = $this->service->deleteAppointment((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('messages.appointment_deleted_successfully'), 'status' => true]);

@@ -78,7 +78,7 @@ class ChairController extends Controller
 
     public function edit($id)
     {
-        return response()->json($this->chairService->findChair($id));
+        return response()->json($this->chairService->findChair((int) $id));
     }
 
     public function update(Request $request, $id)
@@ -91,14 +91,14 @@ class ChairController extends Controller
         ])->validate();
 
         $data = $request->only(['chair_code', 'chair_name', 'status', 'branch_id', 'notes']);
-        $success = $this->chairService->updateChair($id, $data);
+        $success = $this->chairService->updateChair((int) $id, $data);
 
         return FunctionsHelper::messageResponse(__('chairs.chair_updated_successfully'), $success);
     }
 
     public function destroy($id)
     {
-        $success = $this->chairService->deleteChair($id);
+        $success = $this->chairService->deleteChair((int) $id);
 
         if (!$success) {
             return response()->json([

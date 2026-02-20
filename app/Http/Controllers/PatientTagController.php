@@ -122,7 +122,7 @@ class PatientTagController extends Controller
      */
     public function show($id)
     {
-        $tag = $this->service->getTag($id);
+        $tag = $this->service->getTag((int) $id);
         return response()->json([
             'status' => true,
             'data' => $tag
@@ -143,7 +143,7 @@ class PatientTagController extends Controller
             'color' => 'required|string|max:7',
         ])->validate();
 
-        $status = $this->service->updateTag($id, [
+        $status = $this->service->updateTag((int) $id, [
             'name' => $request->name,
             'color' => $request->color,
             'icon' => $request->icon,
@@ -173,7 +173,7 @@ class PatientTagController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deleteTag($id);
+        $status = $this->service->deleteTag((int) $id);
 
         if ($status) {
             return response()->json([

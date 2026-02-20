@@ -123,7 +123,7 @@ class StockOutController extends Controller
      */
     public function show($id)
     {
-        $data['stockOut'] = $this->service->getStockOutDetail($id);
+        $data['stockOut'] = $this->service->getStockOutDetail((int) $id);
         if (!$data['stockOut']) {
             abort(404);
         }
@@ -138,7 +138,7 @@ class StockOutController extends Controller
      */
     public function edit($id)
     {
-        $data = $this->service->getStockOutForEdit($id);
+        $data = $this->service->getStockOutForEdit((int) $id);
         if (!$data) {
             abort(404);
         }
@@ -159,7 +159,7 @@ class StockOutController extends Controller
             'out_type' => 'required|in:treatment,department,damage,other',
         ])->validate();
 
-        $result = $this->service->updateStockOut($id, $request->only([
+        $result = $this->service->updateStockOut((int) $id, $request->only([
             'stock_out_date', 'out_type', 'patient_id', 'appointment_id',
             'department', 'notes', 'branch_id',
         ]));
@@ -174,7 +174,7 @@ class StockOutController extends Controller
      */
     public function destroy($id)
     {
-        $result = $this->service->deleteStockOut($id);
+        $result = $this->service->deleteStockOut((int) $id);
         return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 
@@ -186,7 +186,7 @@ class StockOutController extends Controller
      */
     public function confirm($id)
     {
-        $result = $this->service->confirmStockOut($id);
+        $result = $this->service->confirmStockOut((int) $id);
         return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 
@@ -198,7 +198,7 @@ class StockOutController extends Controller
      */
     public function cancel($id)
     {
-        $result = $this->service->cancelStockOut($id);
+        $result = $this->service->cancelStockOut((int) $id);
         return response()->json(['message' => $result['message'], 'status' => $result['status']]);
     }
 }

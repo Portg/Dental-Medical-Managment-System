@@ -100,7 +100,7 @@ class ChartOfAccountCategoryController extends Controller
      */
     public function edit($id)
     {
-        $data = $this->chartOfAccountCategoryService->findCategory($id);
+        $data = $this->chartOfAccountCategoryService->findCategory((int) $id);
         return response()->json($data);
     }
 
@@ -121,7 +121,7 @@ class ChartOfAccountCategoryController extends Controller
             'accounting_equation_id.required' => __('validation.custom.accounting_equation_id.required')
         ])->validate();
 
-        $success = $this->chartOfAccountCategoryService->updateCategory($id, $request->only(['name', 'accounting_equation_id']));
+        $success = $this->chartOfAccountCategoryService->updateCategory((int) $id, $request->only(['name', 'accounting_equation_id']));
 
         return FunctionsHelper::messageResponse(__('messages.chart_account_category_updated_successfully'), $success);
     }
@@ -135,7 +135,7 @@ class ChartOfAccountCategoryController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->chartOfAccountCategoryService->deleteCategory($id);
+        $success = $this->chartOfAccountCategoryService->deleteCategory((int) $id);
         return FunctionsHelper::messageResponse(__('messages.chart_account_category_deleted_successfully'), $success);
     }
 }

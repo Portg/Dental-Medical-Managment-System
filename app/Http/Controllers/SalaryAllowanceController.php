@@ -30,7 +30,7 @@ class SalaryAllowanceController extends Controller
     public function index(Request $request, $pay_slip_id)
     {
         if ($request->ajax()) {
-            $data = $this->service->getAllowancesForPaySlip($pay_slip_id);
+            $data = $this->service->getAllowancesForPaySlip((int) $pay_slip_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -102,7 +102,7 @@ class SalaryAllowanceController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->getAllowanceForEdit($id));
+        return response()->json($this->service->getAllowanceForEdit((int) $id));
     }
 
     /**
@@ -122,7 +122,7 @@ class SalaryAllowanceController extends Controller
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
 
-        $success = $this->service->updateAllowance($id, $request->only(['allowance', 'amount']), Auth::User()->id);
+        $success = $this->service->updateAllowance((int) $id, $request->only(['allowance', 'amount']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('messages.salary_allowance_updated_successfully'), $success);
     }
 
@@ -134,7 +134,7 @@ class SalaryAllowanceController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->service->deleteAllowance($id);
+        $success = $this->service->deleteAllowance((int) $id);
         return FunctionsHelper::messageResponse(__('messages.salary_allowance_deleted_successfully'), $success);
     }
 }

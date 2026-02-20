@@ -113,7 +113,7 @@ class InsuranceCompaniesController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->insuranceCompanyService->getCompanyForEdit($id));
+        return response()->json($this->insuranceCompanyService->getCompanyForEdit((int) $id));
     }
 
     /**
@@ -131,7 +131,7 @@ class InsuranceCompaniesController extends Controller
             'name.required' => __('validation.attributes.insurance_company_name') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->insuranceCompanyService->updateCompany($id, $request->only(['name', 'phone_no', 'email']));
+        $status = $this->insuranceCompanyService->updateCompany((int) $id, $request->only(['name', 'phone_no', 'email']));
         if ($status) {
             return response()->json(['message' => __('insurance_companies.updated_successfully'), 'status' => true]);
         }
@@ -155,7 +155,7 @@ class InsuranceCompaniesController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->insuranceCompanyService->deleteCompany($id);
+        $status = $this->insuranceCompanyService->deleteCompany((int) $id);
         if ($status) {
             return response()->json(['message' => __('insurance_companies.deleted_successfully'), 'status' => true]);
         }

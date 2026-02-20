@@ -30,7 +30,7 @@ class DoctorClaimPaymentController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = $this->claimPaymentService->getPaymentsByClaim($claim_id);
+            $data = $this->claimPaymentService->getPaymentsByClaim((int) $claim_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -49,7 +49,7 @@ class DoctorClaimPaymentController extends Controller
                 ->make(true);
         }
         $data['claim_id'] = $claim_id;
-        $data['doctor'] = $this->claimPaymentService->getDoctorForClaim($claim_id);
+        $data['doctor'] = $this->claimPaymentService->getDoctorForClaim((int) $claim_id);
         return view('doctor_claims.payments.index')->with($data);
     }
 
@@ -79,7 +79,7 @@ class DoctorClaimPaymentController extends Controller
         $status = $this->claimPaymentService->createPayment(
             $request->payment_date,
             $request->amount,
-            $request->claim_id,
+            (int) $request->claim_id,
             Auth::User()->id
         );
 
@@ -108,7 +108,7 @@ class DoctorClaimPaymentController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->claimPaymentService->findPayment($id));
+        return response()->json($this->claimPaymentService->findPayment((int) $id));
     }
 
     /**
@@ -126,7 +126,7 @@ class DoctorClaimPaymentController extends Controller
         ])->validate();
 
         $status = $this->claimPaymentService->updatePayment(
-            $id,
+            (int) $id,
             $request->payment_date,
             $request->amount,
             Auth::User()->id
@@ -147,7 +147,7 @@ class DoctorClaimPaymentController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->claimPaymentService->deletePayment($id);
+        $status = $this->claimPaymentService->deletePayment((int) $id);
         if ($status) {
             return response()->json(['message' => __('doctor_claims.payments.payment_deleted_successfully'), 'status' => true]);
         }

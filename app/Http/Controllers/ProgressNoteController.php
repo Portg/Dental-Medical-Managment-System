@@ -28,7 +28,7 @@ class ProgressNoteController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->progressNoteService->getNotesByPatient($patient_id);
+            $data = $this->progressNoteService->getNotesByPatient((int) $patient_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -64,7 +64,7 @@ class ProgressNoteController extends Controller
     public function caseIndex(Request $request, $case_id)
     {
         if ($request->ajax()) {
-            $data = $this->progressNoteService->getNotesByCase($case_id);
+            $data = $this->progressNoteService->getNotesByCase((int) $case_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -124,7 +124,7 @@ class ProgressNoteController extends Controller
      */
     public function show($id)
     {
-        return response()->json($this->progressNoteService->getNoteWithRelations($id));
+        return response()->json($this->progressNoteService->getNoteWithRelations((int) $id));
     }
 
     /**
@@ -135,7 +135,7 @@ class ProgressNoteController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->progressNoteService->getNoteForEdit($id));
+        return response()->json($this->progressNoteService->getNoteForEdit((int) $id));
     }
 
     /**
@@ -153,7 +153,7 @@ class ProgressNoteController extends Controller
             'note_date.required' => __('validation.custom.note_date.required'),
         ])->validate();
 
-        $status = $this->progressNoteService->updateNote($id, $request->only([
+        $status = $this->progressNoteService->updateNote((int) $id, $request->only([
             'subjective', 'objective', 'assessment', 'plan', 'note_date', 'note_type',
         ]));
 
@@ -171,7 +171,7 @@ class ProgressNoteController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->progressNoteService->deleteNote($id);
+        $status = $this->progressNoteService->deleteNote((int) $id);
         if ($status) {
             return response()->json(['message' => __('medical_cases.progress_note_deleted_successfully'), 'status' => true]);
         }

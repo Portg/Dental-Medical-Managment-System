@@ -46,7 +46,7 @@ class PatientFollowupController extends Controller
     public function patientFollowups(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->followupService->getPatientFollowups($patient_id);
+            $data = $this->followupService->getPatientFollowups((int) $patient_id);
 
             return $this->followupService->buildPatientFollowupsDataTable($data);
         }
@@ -110,7 +110,7 @@ class PatientFollowupController extends Controller
      */
     public function show($id)
     {
-        return response()->json($this->followupService->getFollowupDetail($id));
+        return response()->json($this->followupService->getFollowupDetail((int) $id));
     }
 
     /**
@@ -121,7 +121,7 @@ class PatientFollowupController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->followupService->getFollowupForEdit($id));
+        return response()->json($this->followupService->getFollowupForEdit((int) $id));
     }
 
     /**
@@ -145,7 +145,7 @@ class PatientFollowupController extends Controller
             'status.required' => __('validation.custom.status.required'),
         ])->validate();
 
-        $status = $this->followupService->updateFollowup($id, $request->only(['followup_type', 'scheduled_date', 'purpose', 'status']));
+        $status = $this->followupService->updateFollowup((int) $id, $request->only(['followup_type', 'scheduled_date', 'purpose', 'status']));
 
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_updated_successfully'), 'status' => true]);
@@ -162,7 +162,7 @@ class PatientFollowupController extends Controller
      */
     public function complete(Request $request, $id)
     {
-        $status = $this->followupService->completeFollowup($id, $request->outcome);
+        $status = $this->followupService->completeFollowup((int) $id, $request->outcome);
 
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_completed_successfully'), 'status' => true]);
@@ -178,7 +178,7 @@ class PatientFollowupController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->followupService->deleteFollowup($id);
+        $status = $this->followupService->deleteFollowup((int) $id);
         if ($status) {
             return response()->json(['message' => __('patient_followups.followup_deleted_successfully'), 'status' => true]);
         }

@@ -121,7 +121,7 @@ class LeaveTypeController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->leaveTypeService->getLeaveTypeForEdit($id));
+        return response()->json($this->leaveTypeService->getLeaveTypeForEdit((int) $id));
     }
 
     /**
@@ -142,7 +142,7 @@ class LeaveTypeController extends Controller
                 'max_days.required' => __('validation.custom.max_days.required')
             ])->validate();
 
-        $success = $this->leaveTypeService->updateLeaveType($id, $request->only(['name', 'max_days']));
+        $success = $this->leaveTypeService->updateLeaveType((int) $id, $request->only(['name', 'max_days']));
         return FunctionsHelper::messageResponse(__('messages.leave_type_updated_successfully'), $success);
     }
 
@@ -154,7 +154,7 @@ class LeaveTypeController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->leaveTypeService->deleteLeaveType($id);
+        $success = $this->leaveTypeService->deleteLeaveType((int) $id);
         return FunctionsHelper::messageResponse(__('messages.leave_type_deleted_successfully'), $success);
     }
 }

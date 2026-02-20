@@ -117,7 +117,7 @@ class SelfAccountController extends Controller
      */
     public function show($id)
     {
-        $data['account_info'] = $this->service->find($id);
+        $data['account_info'] = $this->service->find((int) $id);
         return view('self_accounts.preview_account')->with($data);
     }
 
@@ -129,7 +129,7 @@ class SelfAccountController extends Controller
      */
     public function edit($id)
     {
-        $self_account = $this->service->find($id);
+        $self_account = $this->service->find((int) $id);
         return response()->json($self_account);
     }
 
@@ -146,7 +146,7 @@ class SelfAccountController extends Controller
             'name' => 'required',
         ])->validate();
 
-        $status = $this->service->updateAccount($id, $request->only(['name']));
+        $status = $this->service->updateAccount((int) $id, $request->only(['name']));
 
         if ($status) {
             return response()->json(['message' => __('financial.self_account_updated_successfully'), 'status' => true]);
@@ -162,7 +162,7 @@ class SelfAccountController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->deleteAccount($id);
+        $status = $this->service->deleteAccount((int) $id);
         if ($status) {
             return response()->json(['message' => __('financial.self_account_deleted_successfully'), 'status' => true]);
         }

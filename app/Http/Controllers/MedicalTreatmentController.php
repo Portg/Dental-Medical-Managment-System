@@ -24,7 +24,7 @@ class MedicalTreatmentController extends Controller
      */
     public function index(Request $request, $appointment_id)
     {
-        $data = $this->service->getTreatmentDataForAppointment($appointment_id);
+        $data = $this->service->getTreatmentDataForAppointment((int) $appointment_id);
 
         return view('medical_treatment.index')->with($data);
     }

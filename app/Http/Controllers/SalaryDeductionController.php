@@ -30,7 +30,7 @@ class SalaryDeductionController extends Controller
     public function index(Request $request, $pay_slip_id)
     {
         if ($request->ajax()) {
-            $data = $this->service->getDeductionsForPaySlip($pay_slip_id);
+            $data = $this->service->getDeductionsForPaySlip((int) $pay_slip_id);
 
             return Datatables::of($data)
                 ->addIndexColumn()
@@ -102,7 +102,7 @@ class SalaryDeductionController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->getDeductionForEdit($id));
+        return response()->json($this->service->getDeductionForEdit((int) $id));
     }
 
     /**
@@ -122,7 +122,7 @@ class SalaryDeductionController extends Controller
             'amount.required' => __('validation.custom.amount.required')
         ])->validate();
 
-        $success = $this->service->updateDeduction($id, $request->only(['deduction', 'amount']), Auth::User()->id);
+        $success = $this->service->updateDeduction((int) $id, $request->only(['deduction', 'amount']), Auth::User()->id);
         return FunctionsHelper::messageResponse(__('messages.salary_deduction_updated_successfully'), $success);
     }
 
@@ -134,7 +134,7 @@ class SalaryDeductionController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->service->deleteDeduction($id);
+        $success = $this->service->deleteDeduction((int) $id);
         return FunctionsHelper::messageResponse(__('messages.salary_deduction_deleted_successfully'), $success);
     }
 }

@@ -30,7 +30,7 @@ class InvoiceItemController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = $this->invoiceItemService->getItemsByInvoice($invoice_id);
+            $data = $this->invoiceItemService->getItemsByInvoice((int) $invoice_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -68,7 +68,7 @@ class InvoiceItemController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = $this->invoiceItemService->getItemsByAppointment($appointment_id);
+            $data = $this->invoiceItemService->getItemsByAppointment((int) $appointment_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -132,7 +132,7 @@ class InvoiceItemController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->invoiceItemService->getItemForEdit($id));
+        return response()->json($this->invoiceItemService->getItemForEdit((int) $id));
     }
 
     /**
@@ -151,7 +151,7 @@ class InvoiceItemController extends Controller
             'medical_service_id' => 'required'
         ])->validate();
 
-        $status = $this->invoiceItemService->updateItem($id, $request->only(['price', 'qty', 'doctor_id', 'medical_service_id']));
+        $status = $this->invoiceItemService->updateItem((int) $id, $request->only(['price', 'qty', 'doctor_id', 'medical_service_id']));
         if ($status) {
             return response()->json(['message' => __('invoices.invoice_item_updated_successfully'), 'status' => true]);
         }
@@ -166,7 +166,7 @@ class InvoiceItemController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->invoiceItemService->deleteItem($id);
+        $status = $this->invoiceItemService->deleteItem((int) $id);
         if ($status) {
             return response()->json(['message' => __('invoices.invoice_item_deleted_successfully'), 'status' => true]);
         }

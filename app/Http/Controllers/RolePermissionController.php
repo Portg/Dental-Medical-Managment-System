@@ -59,11 +59,11 @@ class RolePermissionController extends Controller
         ])->validate();
 
         // 检查是否已存在
-        if ($this->rolePermissionService->exists($request->role_id, $request->permission_id)) {
+        if ($this->rolePermissionService->exists((int) $request->role_id, (int) $request->permission_id)) {
             return response()->json(['message' => __('role_permissions.permission_already_assigned'), 'status' => false]);
         }
 
-        $status = $this->rolePermissionService->createRolePermission($request->role_id, $request->permission_id);
+        $status = $this->rolePermissionService->createRolePermission((int) $request->role_id, (int) $request->permission_id);
 
         if ($status) {
             return response()->json(['message' => __('role_permissions.role_permission_added_successfully'), 'status' => true]);
@@ -73,7 +73,7 @@ class RolePermissionController extends Controller
 
     public function edit($id)
     {
-        return response()->json($this->rolePermissionService->findRolePermission($id));
+        return response()->json($this->rolePermissionService->findRolePermission((int) $id));
     }
 
     public function update(Request $request, $id)
@@ -84,11 +84,11 @@ class RolePermissionController extends Controller
         ])->validate();
 
         // 检查是否已存在(排除当前记录)
-        if ($this->rolePermissionService->exists($request->role_id, $request->permission_id, $id)) {
+        if ($this->rolePermissionService->exists((int) $request->role_id, (int) $request->permission_id, (int) $id)) {
             return response()->json(['message' => __('role_permissions.permission_already_assigned'), 'status' => false]);
         }
 
-        $status = $this->rolePermissionService->updateRolePermission($id, $request->role_id, $request->permission_id);
+        $status = $this->rolePermissionService->updateRolePermission((int) $id, (int) $request->role_id, (int) $request->permission_id);
 
         if ($status) {
             return response()->json(['message' => __('role_permissions.role_permission_updated_successfully'), 'status' => true]);
@@ -98,7 +98,7 @@ class RolePermissionController extends Controller
 
     public function destroy($id)
     {
-        $status = $this->rolePermissionService->deleteRolePermission($id);
+        $status = $this->rolePermissionService->deleteRolePermission((int) $id);
         if ($status) {
             return response()->json(['message' => __('role_permissions.role_permission_deleted_successfully'), 'status' => true]);
         }

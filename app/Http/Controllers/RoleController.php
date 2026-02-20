@@ -116,7 +116,7 @@ class RoleController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->roleService->findRole($id));
+        return response()->json($this->roleService->findRole((int) $id));
     }
 
     /**
@@ -134,7 +134,7 @@ class RoleController extends Controller
             'name.required' => __('validation.custom.name.required')
         ])->validate();
 
-        $status = $this->roleService->updateRole($id, $request->name);
+        $status = $this->roleService->updateRole((int) $id, $request->name);
 
         if ($status) {
             return response()->json(['message' => __('roles.role_updated_successfully'), 'status' => true]);
@@ -152,7 +152,7 @@ class RoleController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->roleService->deleteRole($id);
+        $status = $this->roleService->deleteRole((int) $id);
         if ($status) {
             return response()->json(['message' => __('roles.role_deleted_successfully'), 'status' => true]);
         }

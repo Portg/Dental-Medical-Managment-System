@@ -25,7 +25,7 @@ class MedicalHistoryController extends Controller
      */
     public function index(Request $request, $patient_id)
     {
-        $data = $this->service->getMedicalHistoryForPatient($patient_id);
+        $data = $this->service->getMedicalHistoryForPatient((int) $patient_id);
 
         return view('medical_history.index', [
             'patient' => $data['patient'],

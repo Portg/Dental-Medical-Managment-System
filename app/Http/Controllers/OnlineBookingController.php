@@ -139,7 +139,7 @@ class OnlineBookingController extends Controller
      */
     public function show($id)
     {
-        return response()->json($this->onlineBookingService->getBookingDetail($id));
+        return response()->json($this->onlineBookingService->getBookingDetail((int) $id));
     }
 
     /**
@@ -175,7 +175,7 @@ class OnlineBookingController extends Controller
                 'full_name', 'phone_number', 'email', 'appointment_date',
                 'appointment_time', 'doctor_id', 'insurance_company_id',
             ]),
-            $id,
+            (int) $id,
             Auth::User()->id,
             Auth::User()->branch_id
         );
@@ -201,7 +201,7 @@ class OnlineBookingController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->onlineBookingService->rejectBooking($id);
+        $status = $this->onlineBookingService->rejectBooking((int) $id);
         return FunctionsHelper::messageResponse(__('messages.booking_rejected_successfully'), $status);
     }
 }

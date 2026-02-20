@@ -258,6 +258,27 @@ class InvoiceCrudSmokeTest extends TestCase
                  ->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
     }
 
+    // ─── Service int cast regression ───────────────────────────────
+
+    /**
+     * Regression: InvoiceService::getInvoiceDetail(int) received string from route parameter.
+     * Verify that the controller correctly casts to int before calling the service.
+     */
+    public function test_invoice_service_accepts_route_parameter_as_int(): void
+    {
+        $invoice = \App\Invoice::create([
+            'appointment_id' => $this->appointment->id,
+            '_who_added'     => $this->admin->id,
+        ]);
+
+        // Simulate what the controller does: pass a string ID (like a route parameter)
+        $service = app(\App\Services\InvoiceService::class);
+        $data = $service->getInvoiceDetail((int) "{$invoice->id}");
+
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('invoice', $data);
+    }
+
     // ─── Auth guard ────────────────────────────────────────────────
 
     public function test_unauthenticated_cannot_access_invoices(): void

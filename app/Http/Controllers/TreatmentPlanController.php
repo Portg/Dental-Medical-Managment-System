@@ -45,7 +45,7 @@ class TreatmentPlanController extends Controller
     public function index(Request $request, $patient_id)
     {
         if ($request->ajax()) {
-            $data = $this->treatmentPlanService->getPatientPlans($patient_id);
+            $data = $this->treatmentPlanService->getPatientPlans((int) $patient_id);
 
             return $this->treatmentPlanService->buildDataTable($data);
         }
@@ -62,7 +62,7 @@ class TreatmentPlanController extends Controller
     public function caseIndex(Request $request, $case_id)
     {
         if ($request->ajax()) {
-            $data = $this->treatmentPlanService->getCasePlans($case_id);
+            $data = $this->treatmentPlanService->getCasePlans((int) $case_id);
 
             return $this->treatmentPlanService->buildDataTable($data);
         }
@@ -100,7 +100,7 @@ class TreatmentPlanController extends Controller
      */
     public function show($id)
     {
-        return response()->json($this->treatmentPlanService->getPlanDetail($id));
+        return response()->json($this->treatmentPlanService->getPlanDetail((int) $id));
     }
 
     /**
@@ -111,7 +111,7 @@ class TreatmentPlanController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->treatmentPlanService->getPlanForEdit($id));
+        return response()->json($this->treatmentPlanService->getPlanForEdit((int) $id));
     }
 
     /**
@@ -129,7 +129,7 @@ class TreatmentPlanController extends Controller
             'plan_name.required' => __('validation.custom.plan_name.required'),
         ])->validate();
 
-        $status = $this->treatmentPlanService->updatePlan($id, $request->only(['plan_name']));
+        $status = $this->treatmentPlanService->updatePlan((int) $id, $request->only(['plan_name']));
 
         if ($status) {
             return response()->json(['message' => __('medical_cases.treatment_plan_updated_successfully'), 'status' => true]);
@@ -145,7 +145,7 @@ class TreatmentPlanController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->treatmentPlanService->deletePlan($id);
+        $status = $this->treatmentPlanService->deletePlan((int) $id);
         if ($status) {
             return response()->json(['message' => __('medical_cases.treatment_plan_deleted_successfully'), 'status' => true]);
         }

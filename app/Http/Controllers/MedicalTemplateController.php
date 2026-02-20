@@ -113,7 +113,7 @@ class MedicalTemplateController extends Controller
      */
     public function show($id)
     {
-        $template = $this->medicalTemplateService->getTemplateDetail($id);
+        $template = $this->medicalTemplateService->getTemplateDetail((int) $id);
         return response()->json([
             'status' => true,
             'data' => $template
@@ -137,7 +137,7 @@ class MedicalTemplateController extends Controller
             'content' => 'required',
         ])->validate();
 
-        $status = $this->medicalTemplateService->updateTemplate($id, $request->only(['name', 'code', 'category', 'type', 'content']));
+        $status = $this->medicalTemplateService->updateTemplate((int) $id, $request->only(['name', 'code', 'category', 'type', 'content']));
 
         if ($status) {
             return response()->json([
@@ -160,7 +160,7 @@ class MedicalTemplateController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->medicalTemplateService->deleteTemplate($id);
+        $status = $this->medicalTemplateService->deleteTemplate((int) $id);
 
         if ($status) {
             return response()->json([
@@ -203,7 +203,7 @@ class MedicalTemplateController extends Controller
      */
     public function incrementUsage($id)
     {
-        $usageCount = $this->medicalTemplateService->incrementUsage($id);
+        $usageCount = $this->medicalTemplateService->incrementUsage((int) $id);
 
         return response()->json([
             'status' => true,

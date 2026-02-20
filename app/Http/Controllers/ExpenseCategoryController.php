@@ -124,7 +124,7 @@ class ExpenseCategoryController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->find($id));
+        return response()->json($this->service->find((int) $id));
     }
 
     /**
@@ -144,7 +144,7 @@ class ExpenseCategoryController extends Controller
             'expense_account.required' => __('validation.attributes.expense_account') . ' ' . __('validation.required')
         ])->validate();
 
-        $status = $this->service->update($id, $request->only(['name', 'expense_account']));
+        $status = $this->service->update((int) $id, $request->only(['name', 'expense_account']));
 
         if ($status) {
             return response()->json(['message' => __('expense_categories.updated_successfully'), 'status' => true]);
@@ -160,7 +160,7 @@ class ExpenseCategoryController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->service->delete($id);
+        $status = $this->service->delete((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('expense_categories.deleted_successfully'), 'status' => true]);

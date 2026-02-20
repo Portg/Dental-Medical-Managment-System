@@ -77,7 +77,7 @@ class SupplierController extends Controller
 
     public function edit($id)
     {
-        return response()->json($this->supplierService->getSupplier($id));
+        return response()->json($this->supplierService->getSupplier((int) $id));
     }
 
     public function update(Request $request, $id)
@@ -88,7 +88,7 @@ class SupplierController extends Controller
             'name.required' => __('validation.custom.name.required'),
         ])->validate();
 
-        $status = $this->supplierService->updateSupplier($id, $request->only(['name']));
+        $status = $this->supplierService->updateSupplier((int) $id, $request->only(['name']));
 
         if ($status) {
             return response()->json(['message' => __('common.supplier_updated_successfully'), 'status' => true]);
@@ -98,7 +98,7 @@ class SupplierController extends Controller
 
     public function destroy($id)
     {
-        $status = $this->supplierService->deleteSupplier($id);
+        $status = $this->supplierService->deleteSupplier((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('common.supplier_deleted_successfully'), 'status' => true]);

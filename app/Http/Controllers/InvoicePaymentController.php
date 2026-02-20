@@ -30,7 +30,7 @@ class InvoicePaymentController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = $this->invoicePaymentService->getPaymentsByInvoice($invoice_id);
+            $data = $this->invoicePaymentService->getPaymentsByInvoice((int) $invoice_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -105,7 +105,7 @@ class InvoicePaymentController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->invoicePaymentService->getPaymentForEdit($id));
+        return response()->json($this->invoicePaymentService->getPaymentForEdit((int) $id));
     }
 
     /**
@@ -124,7 +124,7 @@ class InvoicePaymentController extends Controller
             'payment_method' => 'required'
         ])->validate();
 
-        $status = $this->invoicePaymentService->updatePayment($id, $request->only(['amount', 'payment_date', 'payment_method']));
+        $status = $this->invoicePaymentService->updatePayment((int) $id, $request->only(['amount', 'payment_date', 'payment_method']));
         if ($status) {
             return response()->json(['message' => __('messages.payment_updated_successfully'), 'status' => true]);
         }
@@ -140,7 +140,7 @@ class InvoicePaymentController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->invoicePaymentService->deletePayment($id);
+        $status = $this->invoicePaymentService->deletePayment((int) $id);
         if ($status) {
             return response()->json(['message' => __('messages.payment_deleted_successfully'), 'status' => true]);
         }
@@ -169,7 +169,7 @@ class InvoicePaymentController extends Controller
         }
 
         $result = $this->invoicePaymentService->processMixedPayment(
-            $request->invoice_id,
+            (int) $request->invoice_id,
             $request->payments,
             $request->payment_date
         );
@@ -192,7 +192,7 @@ class InvoicePaymentController extends Controller
     {
         $receivedAmount = floatval($request->received_amount ?? 0);
         return response()->json(
-            $this->invoicePaymentService->calculateChange($request->invoice_id, $receivedAmount)
+            $this->invoicePaymentService->calculateChange((int) $request->invoice_id, $receivedAmount)
         );
     }
 }

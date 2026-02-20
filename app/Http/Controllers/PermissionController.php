@@ -109,7 +109,7 @@ class PermissionController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->permissionService->findPermission($id));
+        return response()->json($this->permissionService->findPermission((int) $id));
     }
 
     /**
@@ -129,7 +129,7 @@ class PermissionController extends Controller
         ])->validate();
 
         $status = $this->permissionService->updatePermission(
-            $id,
+            (int) $id,
             $request->name,
             $request->slug,
             $request->description,
@@ -150,7 +150,7 @@ class PermissionController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->permissionService->deletePermission($id);
+        $status = $this->permissionService->deletePermission((int) $id);
         if ($status) {
             return response()->json(['message' => __('permissions.permission_deleted_successfully'), 'status' => true]);
         }

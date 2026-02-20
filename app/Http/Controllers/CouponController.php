@@ -129,7 +129,7 @@ class CouponController extends Controller
      */
     public function show($id)
     {
-        return response()->json($this->service->getCouponDetail($id));
+        return response()->json($this->service->getCouponDetail((int) $id));
     }
 
     /**
@@ -137,7 +137,7 @@ class CouponController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->getCouponForEdit($id));
+        return response()->json($this->service->getCouponForEdit((int) $id));
     }
 
     /**
@@ -172,7 +172,7 @@ class CouponController extends Controller
             ]);
         }
 
-        $this->service->updateCoupon($id, array_merge($request->only([
+        $this->service->updateCoupon((int) $id, array_merge($request->only([
             'code', 'name', 'type', 'value', 'min_order_amount', 'max_discount',
             'max_uses', 'max_uses_per_user', 'starts_at', 'expires_at',
         ]), [
@@ -190,7 +190,7 @@ class CouponController extends Controller
      */
     public function destroy($id)
     {
-        $this->service->deleteCoupon($id);
+        $this->service->deleteCoupon((int) $id);
 
         return response()->json([
             'message' => __('invoices.coupon_deleted_successfully'),

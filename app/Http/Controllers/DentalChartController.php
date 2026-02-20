@@ -58,7 +58,7 @@ class DentalChartController extends Controller
      */
     public function create(Request $request, $appointment_id)
     {
-        $data['patient'] = $this->service->getPatientForChart($appointment_id);
+        $data['patient'] = $this->service->getPatientForChart((int) $appointment_id);
         $data['appointment_id'] = $appointment_id;
         return view('dental_chart.create')->with($data);
     }
@@ -71,7 +71,7 @@ class DentalChartController extends Controller
      */
     public function store(Request $request)
     {
-        $this->service->replaceChartData($request->appointment_id, $request->data);
+        $this->service->replaceChartData((int) $request->appointment_id, $request->data);
 
         return response()->json(['message' => __('odontogram.chart_saved_success'), 'success' => true]);
     }
@@ -84,7 +84,7 @@ class DentalChartController extends Controller
      */
     public function show($id)
     {
-        $data = $this->service->getChartByAppointment($id);
+        $data = $this->service->getChartByAppointment((int) $id);
         return response()->json($data);
     }
 

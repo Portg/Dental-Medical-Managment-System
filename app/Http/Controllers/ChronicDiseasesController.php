@@ -26,7 +26,7 @@ class ChronicDiseasesController extends Controller
     {
         if ($request->ajax()) {
 
-            $data = $this->chronicDiseaseService->getListByPatient($patient_id);
+            $data = $this->chronicDiseaseService->getListByPatient((int) $patient_id);
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->filter(function ($instance) use ($request) {
@@ -78,7 +78,7 @@ class ChronicDiseasesController extends Controller
             'status.required' => __('validation.custom.status.required')
         ])->validate();
 
-        $status = $this->chronicDiseaseService->create($request->disease, $request->status, $request->patient_id);
+        $status = $this->chronicDiseaseService->create($request->disease, $request->status, (int) $request->patient_id);
 
         if ($status) {
             return response()->json(['message' => __('messages.chronic_disease_added_successfully'), 'status' => true]);
@@ -105,7 +105,7 @@ class ChronicDiseasesController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->chronicDiseaseService->find($id));
+        return response()->json($this->chronicDiseaseService->find((int) $id));
     }
 
     /**
@@ -125,7 +125,7 @@ class ChronicDiseasesController extends Controller
             'status.required' => __('validation.custom.status.required')
         ])->validate();
 
-        $status = $this->chronicDiseaseService->update($id, $request->disease, $request->status);
+        $status = $this->chronicDiseaseService->update((int) $id, $request->disease, $request->status);
 
         if ($status) {
             return response()->json(['message' => __('messages.chronic_disease_updated_successfully'), 'status' => true]);
@@ -141,7 +141,7 @@ class ChronicDiseasesController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->chronicDiseaseService->delete($id);
+        $status = $this->chronicDiseaseService->delete((int) $id);
 
         if ($status) {
             return response()->json(['message' => __('messages.chronic_disease_deleted_successfully'), 'status' => true]);

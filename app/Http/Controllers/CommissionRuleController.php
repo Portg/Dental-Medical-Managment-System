@@ -79,7 +79,7 @@ class CommissionRuleController extends Controller
 
     public function edit($id)
     {
-        return response()->json($this->service->find($id));
+        return response()->json($this->service->find((int) $id));
     }
 
     public function update(Request $request, $id)
@@ -92,14 +92,14 @@ class CommissionRuleController extends Controller
             'commission_mode.required' => __('commission_rules.mode_required'),
         ])->validate();
 
-        $success = $this->service->update($id, $request->only(['rule_name', 'commission_mode']));
+        $success = $this->service->update((int) $id, $request->only(['rule_name', 'commission_mode']));
 
         return FunctionsHelper::messageResponse(__('commission_rules.updated_successfully'), $success);
     }
 
     public function destroy($id)
     {
-        $success = $this->service->delete($id);
+        $success = $this->service->delete((int) $id);
         return FunctionsHelper::messageResponse(__('commission_rules.deleted_successfully'), $success);
     }
 
