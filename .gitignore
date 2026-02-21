@@ -14,3 +14,5 @@ yarn-error.log
 .idea
 .env.example
 .env.live.config
+/public/docs
+.scribe

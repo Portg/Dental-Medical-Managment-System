@@ -14,6 +14,9 @@
                     </span>
                 </div>
                 <div class="actions">
+                    <a href="{{ url('medical-cases/' . $case->id . '/export-pdf') }}" class="btn btn-default btn-sm">
+                        <i class="fa fa-file-pdf-o"></i> {{ __('medical_cases.export_pdf') }}
+                    </a>
                     <a href="{{ url('print-medical-case/' . $case->id) }}" target="_blank" class="btn btn-default btn-sm">
                         <i class="fa fa-print"></i> {{ __('common.print') }}
                     </a>
@@ -26,6 +29,13 @@
                         <span class="label label-danger">{{ __('medical_cases.status_closed') }}</span>
                     @else
                         <span class="label label-warning">{{ __('medical_cases.status_follow_up') }}</span>
+                    @endif
+                    <span class="label label-default">v{{ $case->version_number ?? 1 }}</span>
+                    @if($case->locked_at)
+                        <span class="label label-warning"><i class="fa fa-lock"></i> {{ __('medical_cases.record_locked') }}</span>
+                    @endif
+                    @if($case->signed_at)
+                        <span class="label label-info"><i class="fa fa-pencil"></i> {{ __('medical_cases.signed') }}</span>
                     @endif
                 </div>
             </div>
@@ -105,6 +115,17 @@
                         </li>
                         <li>
                             <a href="#appointments_tab" data-toggle="tab">{{ __('medical_cases.related_appointments') }}</a>
+                        </li>
+                        <li>
+                            <a href="#version_history_tab" data-toggle="tab">{{ __('medical_cases.version_history') }}</a>
+                        </li>
+                        <li>
+                            <a href="#amendments_tab" data-toggle="tab">
+                                {{ __('medical_cases.amendments') }}
+                                @if($case->hasPendingAmendment())
+                                    <span class="badge badge-warning">!</span>
+                                @endif
+                            </a>
                         </li>
                     </ul>
                     <div class="tab-content">
@@ -246,6 +267,22 @@
                                 <tbody></tbody>
                             </table>
                         </div>
+
+                        <!-- Version History Tab -->
+                        <div class="tab-pane" id="version_history_tab">
+                            <br>
+                            <div id="version_history_content">
+                                <p class="text-muted">{{ __('common.loading') }}...</p>
+                            </div>
+                        </div>
+
+                        <!-- Amendments Tab -->
+                        <div class="tab-pane" id="amendments_tab">
+                            <br>
+                            <div id="amendments_content">
+                                <p class="text-muted">{{ __('common.loading') }}...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -271,12 +308,121 @@
         var global_case_id = {{ $case->id }};
         var global_patient_id = {{ $case->patient_id }};
         var doctors = @json($doctors);
+        var canApproveAmendment = {{ auth()->user()->can('approve-medical-case-amendment') ? 'true' : 'false' }};
 
         // Load medical_cases and messages translations for JavaScript
         LanguageManager.loadAllFromPHP({
             'medical_cases': @json(__('medical_cases')),
-            'messages': @json(__('messages'))
+            'messages': @json(__('messages')),
+            'common': @json(__('common'))
         });
+
+        // Lazy-load version history and amendments tabs
+        $(document).ready(function() {
+            var versionLoaded = false, amendmentsLoaded = false;
+
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+                var target = $(e.target).attr('href');
+
+                if (target === '#version_history_tab' && !versionLoaded) {
+                    versionLoaded = true;
+                    loadVersionHistory();
+                }
+                if (target === '#amendments_tab' && !amendmentsLoaded) {
+                    amendmentsLoaded = true;
+                    loadAmendments();
+                }
+            });
+        });
+
+        function loadVersionHistory() {
+            $.getJSON('/medical-cases/' + global_case_id + '/version-history', function(res) {
+                if (!res.status || !res.data.length) {
+                    $('#version_history_content').html('<p class="text-muted">' + LanguageManager.trans('common.no_data_found') + '</p>');
+                    return;
+                }
+                var html = '<table class="table table-striped table-bordered"><thead><tr>'
+                    + '<th>' + LanguageManager.trans('common.time') + '</th>'
+                    + '<th>' + LanguageManager.trans('common.operator') + '</th>'
+                    + '<th>' + LanguageManager.trans('common.action') + '</th>'
+                    + '<th>' + LanguageManager.trans('medical_cases.modification_reason') + '</th>'
+                    + '</tr></thead><tbody>';
+                $.each(res.data, function(i, audit) {
+                    var userName = audit.user ? audit.user.full_name : '-';
+                    var reason = (audit.new_values && audit.new_values.modification_reason) || '-';
+                    html += '<tr><td>' + audit.created_at + '</td><td>' + userName
+                        + '</td><td>' + LanguageManager.trans('common.audit_event_' + audit.event)
+                        + '</td><td>' + reason + '</td></tr>';
+                });
+                html += '</tbody></table>';
+                $('#version_history_content').html(html);
+            });
+        }
+
+        function loadAmendments() {
+            $.getJSON('/medical-cases/' + global_case_id + '/amendments', function(res) {
+                if (!res.status || !res.data.length) {
+                    $('#amendments_content').html('<p class="text-muted">' + LanguageManager.trans('common.no_data_found') + '</p>');
+                    return;
+                }
+                var html = '<table class="table table-striped table-bordered"><thead><tr>'
+                    + '<th>' + LanguageManager.trans('common.time') + '</th>'
+                    + '<th>' + LanguageManager.trans('medical_cases.amendment_requested_by') + '</th>'
+                    + '<th>' + LanguageManager.trans('medical_cases.amendment_reason') + '</th>'
+                    + '<th>' + LanguageManager.trans('medical_cases.amendment_status') + '</th>'
+                    + '<th>' + LanguageManager.trans('common.actions') + '</th>'
+                    + '</tr></thead><tbody>';
+                $.each(res.data, function(i, a) {
+                    var requester = a.requested_by_user ? a.requested_by_user.full_name : '-';
+                    var statusLabel = '';
+                    if (a.status === 'pending') statusLabel = '<span class="label label-warning">' + LanguageManager.trans('medical_cases.amendment_pending') + '</span>';
+                    else if (a.status === 'approved') statusLabel = '<span class="label label-success">' + LanguageManager.trans('medical_cases.amendment_approved') + '</span>';
+                    else statusLabel = '<span class="label label-danger">' + LanguageManager.trans('medical_cases.amendment_rejected') + '</span>';
+
+                    var actions = '-';
+                    if (a.status === 'pending' && canApproveAmendment) {
+                        actions = '<button class="btn btn-xs btn-success" onclick="approveAmendment(' + a.id + ')">' + LanguageManager.trans('medical_cases.approve_amendment') + '</button> '
+                            + '<button class="btn btn-xs btn-danger" onclick="rejectAmendment(' + a.id + ')">' + LanguageManager.trans('medical_cases.reject_amendment') + '</button>';
+                    } else if (a.status !== 'pending' && a.review_notes) {
+                        actions = a.review_notes;
+                    }
+
+                    html += '<tr><td>' + a.created_at + '</td><td>' + requester
+                        + '</td><td>' + a.amendment_reason
+                        + '</td><td>' + statusLabel
+                        + '</td><td>' + actions + '</td></tr>';
+                });
+                html += '</tbody></table>';
+                $('#amendments_content').html(html);
+            });
+        }
+
+        function approveAmendment(id) {
+            var notes = prompt(LanguageManager.trans('medical_cases.amendment_review_notes'));
+            if (notes === null) return;
+            $.post('/medical-case-amendments/' + id + '/approve', {
+                _token: $('meta[name="csrf-token"]').attr('content'),
+                review_notes: notes
+            }, function(res) {
+                swal(res.message, '', res.status ? 'success' : 'error');
+                if (res.status) { loadAmendments(); }
+            });
+        }
+
+        function rejectAmendment(id) {
+            var notes = prompt(LanguageManager.trans('medical_cases.reject_reason_required'));
+            if (!notes || notes.length < 5) {
+                swal(LanguageManager.trans('medical_cases.reject_reason_required'), '', 'warning');
+                return;
+            }
+            $.post('/medical-case-amendments/' + id + '/reject', {
+                _token: $('meta[name="csrf-token"]').attr('content'),
+                review_notes: notes
+            }, function(res) {
+                swal(res.message, '', res.status ? 'success' : 'error');
+                if (res.status) { loadAmendments(); }
+            });
+        }
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/diagnoses.js') }}"></script>

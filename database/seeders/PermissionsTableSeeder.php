@@ -84,6 +84,7 @@ class PermissionsTableSeeder extends Seeder
             ['name' => 'Manage Patient Settings', 'slug' => 'manage-patient-settings', 'module' => 'Settings', 'description' => 'Can manage patient tags and sources'],
             ['name' => 'Manage SMS', 'slug' => 'manage-sms', 'module' => 'Settings', 'description' => 'Can manage SMS settings and logs'],
             ['name' => 'Manage System Settings', 'slug' => 'manage-settings', 'module' => 'Settings', 'description' => 'Can manage system settings'],
+            ['name' => 'Manage System Maintenance', 'slug' => 'manage-system-maintenance', 'module' => 'Settings', 'description' => 'Can access system maintenance page (backups, retention, logs)'],
         ];
 
         foreach ($permissions as $permission) {

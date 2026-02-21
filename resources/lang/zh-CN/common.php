@@ -13,6 +13,11 @@ return [
 
     // Actions
     'action' => '操作',
+    'operator' => '操作人',
+    'audit_event_created' => '创建',
+    'audit_event_updated' => '修改',
+    'audit_event_deleted' => '删除',
+    'audit_event_restored' => '恢复',
     'add' => '添加',
     'add_new' => '添加新项',
     'edit' => '编辑',

@@ -254,10 +254,15 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('permissions', 'PermissionController');
     Route::resource('role-permissions', 'RolePermissionController');
-    Route::get('/backup', function () {
-        \Illuminate\Support\Facades\Artisan::call('backup:run');
-        return 'Successful backup!';
-    });
+    // System Maintenance
+    Route::get('system-maintenance', 'SystemMaintenanceController@index');
+    Route::post('system-maintenance/backup/run', 'SystemMaintenanceController@triggerBackup');
+    Route::get('system-maintenance/backup/download/{file}', 'SystemMaintenanceController@downloadBackup');
+    Route::delete('system-maintenance/backup/{file}', 'SystemMaintenanceController@deleteBackup');
+    Route::post('system-maintenance/retention/run', 'SystemMaintenanceController@triggerRetention');
+    Route::get('system-maintenance/logs/operations', 'SystemMaintenanceController@operationLogs');
+    Route::get('system-maintenance/logs/access', 'SystemMaintenanceController@accessLogs');
+    Route::get('system-maintenance/logs/audits', 'SystemMaintenanceController@auditLogs');
 
     //debtors report
     Route::get('/debtors', 'DebtorsReportController@index');
@@ -270,6 +275,12 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('api/medical-case/{id}', 'MedicalCaseController@getCase');
     Route::get('api/icd10-codes', 'MedicalCaseController@searchIcd10');
     Route::get('print-medical-case/{id}', 'MedicalCaseController@printCase');
+    Route::get('medical-cases/{id}/amendments', 'MedicalCaseController@amendments');
+    Route::get('medical-cases/{id}/version-history', 'MedicalCaseController@versionHistory');
+    Route::post('medical-case-amendments/{id}/approve', 'MedicalCaseController@approveAmendment');
+    Route::post('medical-case-amendments/{id}/reject', 'MedicalCaseController@rejectAmendment');
+    Route::get('medical-cases/{id}/export-pdf', 'MedicalCaseController@exportPdf');
+    Route::post('medical-cases/{id}/archive-pdf', 'MedicalCaseController@archivePdf');
 
     // Diagnoses
     Route::get('diagnoses/{patient_id}', 'DiagnosisController@index');

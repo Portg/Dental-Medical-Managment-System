@@ -4,6 +4,7 @@
         .case-info {
             font-family: sans-serif;
             font-size: 12px;
+            position: relative;
         }
         .case-info table {
             width: 100%;
@@ -40,10 +41,6 @@
             border: 1px solid #eee;
             min-height: 30px;
         }
-        .diagnosis-item {
-            padding: 5px 0;
-            border-bottom: 1px dashed #ddd;
-        }
         .status-badge {
             display: inline-block;
             padding: 2px 8px;
@@ -57,10 +54,22 @@
         .print-header {
             text-align: center;
             margin-bottom: 20px;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
         }
         .print-header h3 {
             margin: 0;
             color: #2c3e50;
+        }
+        .print-header .institution {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .print-header .case-no-display {
+            font-size: 11px;
+            color: #666;
         }
         .teeth-list {
             background-color: #f9f9f9;
@@ -68,12 +77,53 @@
             border-radius: 3px;
             font-size: 11px;
         }
+        .watermark {
+            position: fixed;
+            top: 40%;
+            left: 15%;
+            font-size: 60px;
+            color: rgba(200, 200, 200, 0.15);
+            transform: rotate(-45deg);
+            z-index: -1;
+            white-space: nowrap;
+        }
+        .print-footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ccc;
+            font-size: 10px;
+            color: #888;
+            text-align: center;
+        }
+        .signature-image {
+            max-width: 200px;
+            max-height: 80px;
+        }
+        .audit-trail {
+            font-size: 10px;
+            color: #666;
+        }
+        .audit-trail td, .audit-trail th {
+            padding: 3px 6px;
+            font-size: 10px;
+        }
     </style>
 
+    {{-- Watermark --}}
+    <div class="watermark">{{ __('medical_cases.pdf_watermark') }}</div>
+
     <div class="case-info">
+        {{-- Header with institution and case number --}}
         <div class="print-header">
+            <div class="institution">{{ config('app.name', __('medical_cases.medical_record')) }}</div>
             <h3>{{ __('medical_cases.medical_record') }}</h3>
-            <p style="font-size: 11px; color: #666;">{{ __('print.printed_at') }}: {{ now()->format('Y-m-d H:i') }}</p>
+            <div class="case-no-display">
+                {{ __('medical_cases.case_no') }}: {{ $case->case_no }}
+                &nbsp;|&nbsp;
+                {{ __('medical_cases.version_number') }}: v{{ $case->version_number ?? 1 }}
+                &nbsp;|&nbsp;
+                {{ __('print.printed_at') }}: {{ now()->format('Y-m-d H:i') }}
+            </div>
         </div>
 
         <!-- Basic Information -->
@@ -86,7 +136,7 @@
             </tr>
             <tr>
                 <th>{{ __('medical_cases.patient') }}</th>
-                <td>{{ $case->patient->full_name ({{ $case->patient->patient_no }})</td>
+                <td>{{ $case->patient->full_name }} ({{ $case->patient->patient_no }})</td>
                 <th>{{ __('medical_cases.status') }}</th>
                 <td>
                     <span class="status-badge status-{{ strtolower(str_replace('-', '', $case->status)) }}">
@@ -190,7 +240,7 @@
                 <tr>
                     <td>{{ $diagnosis->diagnosis_name }}</td>
                     <td>{{ $diagnosis->icd_code ?: '-' }}</td>
-                    <td>{{ __('medical_cases.severity_' . strtolower($diagnosis->severity)) }}</td>
+                    <td>{{ $diagnosis->severity ? __('medical_cases.severity_' . strtolower($diagnosis->severity)) : '-' }}</td>
                     <td>{{ __('medical_cases.diagnosis_status_' . strtolower($diagnosis->status)) }}</td>
                 </tr>
                 @endforeach
@@ -213,7 +263,7 @@
             <tbody>
                 @foreach($treatmentPlans as $plan)
                 <tr>
-                    <td>{{ $plan->name }}</td>
+                    <td>{{ $plan->plan_name }}</td>
                     <td>{{ __('medical_cases.priority_' . strtolower($plan->priority)) }}</td>
                     <td>{{ number_format($plan->estimated_cost, 2) }}</td>
                     <td>{{ __('medical_cases.plan_status_' . strtolower(str_replace(' ', '_', $plan->status))) }}</td>
@@ -229,7 +279,7 @@
         <table>
             <tr>
                 <th>{{ __('medical_cases.blood_pressure') }}</th>
-                <td>{{ $latestVitalSign->blood_pressure_formatted }}</td>
+                <td>{{ $latestVitalSign->blood_pressure_systolic }}/{{ $latestVitalSign->blood_pressure_diastolic }} mmHg</td>
                 <th>{{ __('medical_cases.heart_rate') }}</th>
                 <td>{{ $latestVitalSign->heart_rate }} bpm</td>
             </tr>
@@ -272,17 +322,58 @@
             <table>
                 <tr>
                     <td width="50%" style="border: none; text-align: center;">
+                        @if($case->signature && str_starts_with($case->signature, 'data:image'))
+                            <img src="{{ $case->signature }}" class="signature-image" alt="Signature">
+                        @else
+                            <div style="height: 60px;"></div>
+                        @endif
                         <div style="border-top: 1px solid #333; width: 200px; margin: 0 auto; padding-top: 5px;">
                             {{ __('medical_cases.doctor_signature') }}
                         </div>
                     </td>
                     <td width="50%" style="border: none; text-align: center;">
+                        <div style="height: 60px; line-height: 60px;">
+                            {{ $case->signed_at ? $case->signed_at->format('Y-m-d H:i') : '' }}
+                        </div>
                         <div style="border-top: 1px solid #333; width: 200px; margin: 0 auto; padding-top: 5px;">
                             {{ __('medical_cases.date') }}
                         </div>
                     </td>
                 </tr>
             </table>
+        </div>
+
+        {{-- Audit Trail Summary --}}
+        @if(isset($auditTrail) && $auditTrail->count() > 0)
+        <div class="section-title" style="font-size: 11px;">{{ __('medical_cases.version_history') }}</div>
+        <table class="audit-trail">
+            <thead>
+                <tr>
+                    <th>{{ __('common.time') }}</th>
+                    <th>{{ __('common.operator') }}</th>
+                    <th>{{ __('common.action') }}</th>
+                    <th>{{ __('medical_cases.modification_reason') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($auditTrail->take(10) as $audit)
+                <tr>
+                    <td>{{ $audit->created_at->format('Y-m-d H:i') }}</td>
+                    <td>{{ $audit->user ? $audit->user->full_name : '-' }}</td>
+                    <td>{{ __('common.audit_event_' . $audit->event) }}</td>
+                    <td>{{ $audit->getMetadata()['modification_reason'] ?? '-' }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
+
+        {{-- Footer --}}
+        <div class="print-footer">
+            {{ config('app.name') }} &mdash;
+            {{ __('medical_cases.case_no') }}: {{ $case->case_no }} &mdash;
+            v{{ $case->version_number ?? 1 }} &mdash;
+            {{ __('print.printed_at') }}: {{ now()->format('Y-m-d H:i:s') }}
         </div>
     </div>
 @endsection

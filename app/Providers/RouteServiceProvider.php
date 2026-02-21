@@ -26,8 +26,22 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // Default API rate limit: 120/min for authenticated users, 60/min for guests
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            return $request->user()
+                ? Limit::perMinute(120)->by($request->user()->id)
+                : Limit::perMinute(60)->by($request->ip());
+        });
+
+        // Strict rate limit for login endpoint: 5 attempts/min per IP
+        RateLimiter::for('auth', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip())
+                ->response(function () {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Too many login attempts. Please try again later.',
+                    ], 429);
+                });
         });
 
         parent::boot();
@@ -81,7 +95,7 @@ class RouteServiceProvider extends ServiceProvider
     protected function mapApiV1Routes()
     {
         Route::prefix('api/v1')
-             ->middleware(['api', 'auth:sanctum'])
+             ->middleware(['api', 'auth:sanctum', 'api.version:v1'])
              ->namespace($this->namespace . '\Api\V1')
              ->group(base_path('routes/api/v1.php'));
     }

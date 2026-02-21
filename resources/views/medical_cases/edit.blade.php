@@ -16,7 +16,7 @@
 @section('content')
 <div class="row">
     {{-- Main Form Panel (Left) --}}
-    <div class="col-md-9">
+    <div class="col-md-8">
         <div class="portlet light bordered">
             <div class="portlet-title">
                 <div class="caption font-dark">
@@ -122,21 +122,23 @@
     </div>
 
     {{-- Sidebar (Right) --}}
-    <div class="col-md-3">
-        {{-- Patient Info Card --}}
-        @include('medical_cases.partials.sidebar_patient', [
-            'needPatientSelection' => $needPatientSelection,
-            'currentPatient' => $currentPatient
-        ])
+    <div class="col-md-4">
+        <div class="sidebar-sticky-wrapper">
+            {{-- Patient Info Card --}}
+            @include('medical_cases.partials.sidebar_patient', [
+                'needPatientSelection' => $needPatientSelection,
+                'currentPatient' => $currentPatient
+            ])
 
-        {{-- Tooth Chart Mini --}}
-        @include('medical_cases.partials.sidebar_tooth_chart')
+            {{-- Tooth Chart Mini --}}
+            @include('medical_cases.partials.sidebar_tooth_chart')
 
-        {{-- History Records --}}
-        @include('medical_cases.partials.sidebar_history', ['historyRecords' => $historyRecords ?? []])
+            {{-- History Records --}}
+            @include('medical_cases.partials.sidebar_history', ['historyRecords' => $historyRecords ?? []])
 
-        {{-- Quick Phrases --}}
-        @include('medical_cases.partials.sidebar_quick_phrases')
+            {{-- Quick Phrases --}}
+            @include('medical_cases.partials.sidebar_quick_phrases')
+        </div>
     </div>
 </div>
 
@@ -153,6 +155,27 @@
 
 {{-- Image Upload Modal --}}
 @include('medical_cases.partials.image_upload_modal')
+
+{{-- Signature Pad Modal --}}
+<div class="modal fade" id="signatureModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title">{{ __('medical_cases.doctor_signature') }}</h4>
+            </div>
+            <div class="modal-body text-center">
+                <p class="text-muted">{{ __('medical_cases.signature_hint') }}</p>
+                <canvas id="signature-canvas" width="460" height="200" style="border:1px solid #ddd; border-radius:4px; cursor:crosshair;"></canvas>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" id="btn-clear-signature">{{ __('common.clear') }}</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.cancel') }}</button>
+                <button type="button" class="btn btn-primary" id="btn-confirm-signature">{{ __('common.confirm') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('js')
@@ -202,7 +225,14 @@ var MedicalRecordConfig = {
         // Messages
         draftSaved: '{{ __("medical_cases.draft_saved") }}',
         recordSubmitted: '{{ __("medical_cases.record_submitted") }}',
-        errorOccurred: '{{ __("messages.error_occurred") }}'
+        errorOccurred: '{{ __("messages.error_occurred") }}',
+        amendmentSubmitted: '{{ __("medical_cases.amendment_submitted") }}',
+
+        // Signature
+        signatureRequired: '{{ __("medical_cases.signature_required") }}',
+        signatureSaved: '{{ __("medical_cases.signature_saved") }}',
+        editRequiresApproval: '{{ __("medical_cases.edit_requires_approval") }}',
+        modificationReason: '{{ __("medical_cases.modification_reason") }}'
     }
 };
 
@@ -213,5 +243,6 @@ LanguageManager.loadAllFromPHP({
 </script>
 <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
 <script src="{{ asset('include_js/template_picker.js') }}"></script>
+<script src="{{ asset('include_js/signature_pad.umd.min.js') }}"></script>
 <script src="{{ asset('include_js/medical_record_edit.js') }}"></script>
 @endsection
