@@ -46,7 +46,7 @@
                 @for($i = 18; $i >= 11; $i--)
                     <div class="tooth-mini" data-tooth="{{ $i }}" title="{{ $i }}">{{ $i }}</div>
                 @endfor
-                <div style="width: 8px;"></div>
+                <div style="flex: 0 0 4px;"></div>
                 @for($i = 21; $i <= 28; $i++)
                     <div class="tooth-mini" data-tooth="{{ $i }}" title="{{ $i }}">{{ $i }}</div>
                 @endfor
@@ -58,7 +58,7 @@
                 @for($i = 48; $i >= 41; $i--)
                     <div class="tooth-mini" data-tooth="{{ $i }}" title="{{ $i }}">{{ $i }}</div>
                 @endfor
-                <div style="width: 8px;"></div>
+                <div style="flex: 0 0 4px;"></div>
                 @for($i = 31; $i <= 38; $i++)
                     <div class="tooth-mini" data-tooth="{{ $i }}" title="{{ $i }}">{{ $i }}</div>
                 @endfor
@@ -82,7 +82,7 @@
                 @for($i = 55; $i >= 51; $i--)
                     <div class="tooth-mini deciduous" data-tooth="{{ $i }}" title="{{ $i }}">{{ $i }}</div>
                 @endfor
-                <div style="width: 8px;"></div>
+                <div style="flex: 0 0 4px;"></div>
                 @for($i = 61; $i <= 65; $i++)
                     <div class="tooth-mini deciduous" data-tooth="{{ $i }}" title="{{ $i }}">{{ $i }}</div>
                 @endfor
@@ -94,7 +94,7 @@
                 @for($i = 85; $i >= 81; $i--)
                     <div class="tooth-mini deciduous" data-tooth="{{ $i }}" title="{{ $i }}">{{ $i }}</div>
                 @endfor
-                <div style="width: 8px;"></div>
+                <div style="flex: 0 0 4px;"></div>
                 @for($i = 71; $i <= 75; $i++)
                     <div class="tooth-mini deciduous" data-tooth="{{ $i }}" title="{{ $i }}">{{ $i }}</div>
                 @endfor
