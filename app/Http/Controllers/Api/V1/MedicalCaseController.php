@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\AccessLog;
 use App\Http\Resources\MedicalCaseResource;
 use App\MedicalCase;
+use App\MedicalCaseAmendment;
 use App\Services\MedicalCaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * @group Medical Cases
+ */
 class MedicalCaseController extends ApiController
 {
     public function __construct(
@@ -144,6 +149,12 @@ class MedicalCaseController extends ApiController
             ]);
         }
 
+        if (!empty($result['amendment_id'])) {
+            return $this->success([
+                'amendment_id' => $result['amendment_id'],
+            ], 'Amendment submitted for approval', 202);
+        }
+
         if (!$result['status']) {
             return $this->error('Failed to update medical case', 500);
         }
@@ -176,5 +187,142 @@ class MedicalCaseController extends ApiController
         $results = $this->medicalCaseService->searchIcd10($request->input('q', ''));
 
         return $this->success($results);
+    }
+
+    // ─── Compliance Endpoints ────────────────────────────────────────────
+
+    /**
+     * List amendments
+     *
+     * Get all amendment requests for a medical case.
+     *
+     * @group Medical Cases
+     * @subgroup Compliance
+     */
+    public function amendments(int $id): JsonResponse
+    {
+        MedicalCase::findOrFail($id);
+
+        $amendments = MedicalCaseAmendment::where('medical_case_id', $id)
+            ->with(['requestedBy', 'approvedBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return $this->success($amendments);
+    }
+
+    /**
+     * Version history
+     *
+     * Get the audit trail / version history for a medical case.
+     *
+     * @group Medical Cases
+     * @subgroup Compliance
+     */
+    public function versionHistory(int $id): JsonResponse
+    {
+        $case = MedicalCase::findOrFail($id);
+
+        return $this->success($case->versionHistory());
+    }
+
+    /**
+     * Approve amendment
+     *
+     * Approve a pending amendment request. Requires `approve-medical-case-amendment` permission.
+     *
+     * @group Medical Cases
+     * @subgroup Compliance
+     */
+    public function approveAmendment(Request $request, int $id): JsonResponse
+    {
+        $this->authorize('approve-medical-case-amendment');
+
+        $amendment = MedicalCaseAmendment::findOrFail($id);
+
+        if ($amendment->status !== MedicalCaseAmendment::STATUS_PENDING) {
+            return $this->error('Amendment already reviewed', 409);
+        }
+
+        $amendment->approve(auth()->id(), $request->input('review_notes'));
+
+        return $this->success(null, 'Amendment approved');
+    }
+
+    /**
+     * Reject amendment
+     *
+     * Reject a pending amendment request. Requires `approve-medical-case-amendment` permission.
+     *
+     * @group Medical Cases
+     * @subgroup Compliance
+     * @bodyParam review_notes string required Reason for rejection (min 5 chars). Example: Insufficient justification for change
+     */
+    public function rejectAmendment(Request $request, int $id): JsonResponse
+    {
+        $this->authorize('approve-medical-case-amendment');
+
+        $amendment = MedicalCaseAmendment::findOrFail($id);
+
+        if ($amendment->status !== MedicalCaseAmendment::STATUS_PENDING) {
+            return $this->error('Amendment already reviewed', 409);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'review_notes' => 'required|string|min:5',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('Validation failed', 422, $validator->errors());
+        }
+
+        $amendment->reject(auth()->id(), $request->input('review_notes'));
+
+        return $this->success(null, 'Amendment rejected');
+    }
+
+    /**
+     * Export PDF
+     *
+     * Download the medical case as a compliance PDF with signature, version number, and watermark.
+     *
+     * @group Medical Cases
+     * @subgroup Compliance
+     * @response file
+     */
+    public function exportPdf(int $id)
+    {
+        AccessLog::log('MedicalCase', 'export_pdf', $id);
+        $data = $this->medicalCaseService->getPrintData($id);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('medical_cases.print', $data)
+            ->setPaper('a4');
+
+        $filename = $data['case']->case_no . '_v' . ($data['case']->version_number ?? 1) . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Archive PDF
+     *
+     * Generate and store a compliance PDF to server storage for long-term archival.
+     *
+     * @group Medical Cases
+     * @subgroup Compliance
+     */
+    public function archivePdf(int $id): JsonResponse
+    {
+        $data = $this->medicalCaseService->getPrintData($id);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('medical_cases.print', $data)
+            ->setPaper('a4');
+
+        $filename = $data['case']->case_no . '_v' . ($data['case']->version_number ?? 1) . '.pdf';
+        $path = 'medical_records/' . $filename;
+
+        \Illuminate\Support\Facades\Storage::put($path, $pdf->output());
+
+        return $this->success(['path' => $path], 'PDF archived successfully');
     }
 }

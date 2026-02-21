@@ -9,6 +9,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * @group Lab Cases
+ */
 class LabCaseController extends ApiController
 {
     public function __construct(

@@ -7,8 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * @group Authentication
+ */
 class AuthController extends ApiController
 {
+    /**
+     * @unauthenticated
+     */
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [

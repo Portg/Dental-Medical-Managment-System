@@ -32,9 +32,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Auth — login does NOT require auth:sanctum
+// Auth — login does NOT require auth:sanctum, uses stricter rate limit
 Route::withoutMiddleware('auth:sanctum')->group(function () {
-    Route::post('auth/login', [AuthController::class, 'login']);
+    Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:auth');
 });
 
 Route::post('auth/logout', [AuthController::class, 'logout']);
@@ -65,6 +65,14 @@ Route::apiResource('invoices', InvoiceController::class)->except(['update']);
 Route::get('medical-cases/icd10-search', [MedicalCaseController::class, 'icd10Search']);
 Route::get('medical-cases/patient/{patientId}', [MedicalCaseController::class, 'patientCases']);
 Route::apiResource('medical-cases', MedicalCaseController::class);
+
+// Medical Cases — Compliance (amendments, version history, PDF)
+Route::get('medical-cases/{id}/amendments', [MedicalCaseController::class, 'amendments']);
+Route::get('medical-cases/{id}/version-history', [MedicalCaseController::class, 'versionHistory']);
+Route::get('medical-cases/{id}/export-pdf', [MedicalCaseController::class, 'exportPdf']);
+Route::post('medical-cases/{id}/archive-pdf', [MedicalCaseController::class, 'archivePdf']);
+Route::post('medical-case-amendments/{id}/approve', [MedicalCaseController::class, 'approveAmendment']);
+Route::post('medical-case-amendments/{id}/reject', [MedicalCaseController::class, 'rejectAmendment']);
 
 // ─── Group A: Inventory / Members / Doctor Claims ─────────────────────
 

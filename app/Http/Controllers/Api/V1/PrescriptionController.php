@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * @group Prescriptions
+ */
 class PrescriptionController extends ApiController
 {
     public function __construct(
