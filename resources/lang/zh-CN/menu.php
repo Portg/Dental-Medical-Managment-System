@@ -267,4 +267,7 @@ return [
     'search_placeholder' => '搜索患者...',
     'search' => '搜索',
 
+    // 系统维护
+    'system_maintenance' => '系统维护',
+
 ];

@@ -340,6 +340,15 @@
                             <li class="nav-item"><a href="{{ url('role-permissions') }}" class="nav-link"><span class="title">{{ __('menu.role_permissions') }}</span></a></li>
                         </ul>
                     </li>
+                    {{-- 6.3 System Maintenance --}}
+                    @can('manage-system-maintenance')
+                    <li class="nav-item">
+                        <a href="{{ url('system-maintenance') }}" class="nav-link">
+                            <i class="icon-wrench"></i>
+                            <span class="title">{{ __('menu.system_maintenance') }}</span>
+                        </a>
+                    </li>
+                    @endcan
                 </ul>
             </li>
         </ul>

@@ -45,6 +45,7 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'manage-payroll', 'manage-leave', 'manage-employees', 'manage-holidays',
                 'manage-schedules', 'manage-insurance', 'manage-members',
                 'manage-patient-settings', 'manage-sms', 'manage-settings',
+                'manage-system-maintenance',
             ])->get();
 
             foreach ($adminPermissions as $permission) {

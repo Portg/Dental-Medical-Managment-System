@@ -201,4 +201,7 @@ return [
     'search_placeholder' => 'Search patients...',
     'search' => 'Search',
 
+    // System Maintenance
+    'system_maintenance' => 'System Maintenance',
+
 ];
