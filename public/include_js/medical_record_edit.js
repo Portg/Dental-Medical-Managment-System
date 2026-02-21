@@ -21,6 +21,7 @@ $(document).ready(function() {
     initQuickPhrases();
     initToothMiniChart();
     initTemplatePicker();
+    initSignaturePad();
     updateMiniChartHighlights();
 });
 
@@ -457,6 +458,39 @@ function runQualityCheck() {
 /**
  * Save medical record (draft or submit)
  */
+// ==========================================================================
+// Signature Pad
+// ==========================================================================
+var signaturePad = null;
+var pendingSignatureAction = null;
+
+function initSignaturePad() {
+    var canvas = document.getElementById('signature-canvas');
+    if (!canvas || typeof SignaturePad === 'undefined') return;
+    signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)'
+    });
+    $('#btn-clear-signature').on('click', function() { signaturePad.clear(); });
+    $('#btn-confirm-signature').on('click', function() {
+        if (signaturePad.isEmpty()) {
+            toastr.warning(MedicalRecordConfig.translations.signatureRequired);
+            return;
+        }
+        var signatureData = signaturePad.toDataURL('image/png');
+        $('#signatureModal').modal('hide');
+        doSaveMedicalRecord(pendingSignatureAction, signatureData);
+    });
+    $('#signatureModal').on('shown.bs.modal', function() {
+        // Resize canvas to fit modal
+        var ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext('2d').scale(ratio, ratio);
+        signaturePad.clear();
+    });
+}
+
 function saveMedicalRecord(action) {
     // If submitting, run quality check first
     if (action === 'submit') {
@@ -480,11 +514,25 @@ function saveMedicalRecord(action) {
         return;
     }
 
+    // For submit action, require signature
+    if (action === 'submit' && signaturePad) {
+        pendingSignatureAction = action;
+        $('#signatureModal').modal('show');
+        return;
+    }
+
+    doSaveMedicalRecord(action, null);
+}
+
+function doSaveMedicalRecord(action, signatureData) {
     $.LoadingOverlay("show");
     $('#btn-save-draft, #btn-submit-record').attr('disabled', true);
 
     var formData = $('#medical-record-form').serialize();
     formData += '&is_draft=' + (action === 'draft' ? '1' : '0');
+    if (signatureData) {
+        formData += '&signature=' + encodeURIComponent(signatureData);
+    }
 
     var caseId = $('#case_id').val();
     var url = caseId ? '/medical-cases/' + caseId : '/medical-cases';
@@ -497,6 +545,11 @@ function saveMedicalRecord(action) {
         success: function(response) {
             $.LoadingOverlay("hide");
             $('#btn-save-draft, #btn-submit-record').attr('disabled', false);
+
+            if (response.amendment_id) {
+                toastr.info(MedicalRecordConfig.translations.amendmentSubmitted);
+                return;
+            }
 
             if (response.status) {
                 if (action === 'draft') {
@@ -511,7 +564,12 @@ function saveMedicalRecord(action) {
                     }
                 }
             } else {
-                toastr.error(response.message || MedicalRecordConfig.translations.errorOccurred);
+                if (response.require_reason) {
+                    // Prompt for modification reason
+                    promptModificationReason(action, signatureData);
+                } else {
+                    toastr.error(response.message || MedicalRecordConfig.translations.errorOccurred);
+                }
             }
         },
         error: function(xhr) {
@@ -527,6 +585,46 @@ function saveMedicalRecord(action) {
             } else {
                 toastr.error(MedicalRecordConfig.translations.errorOccurred);
             }
+        }
+    });
+}
+
+function promptModificationReason(action, signatureData) {
+    bootbox.prompt({
+        title: MedicalRecordConfig.translations.editRequiresApproval,
+        inputType: 'textarea',
+        placeholder: MedicalRecordConfig.translations.modificationReason,
+        callback: function(reason) {
+            if (!reason) return;
+            // Re-submit with modification reason
+            $.LoadingOverlay("show");
+            var formData = $('#medical-record-form').serialize();
+            formData += '&is_draft=' + (action === 'draft' ? '1' : '0');
+            formData += '&modification_reason=' + encodeURIComponent(reason);
+            if (signatureData) {
+                formData += '&signature=' + encodeURIComponent(signatureData);
+            }
+            var caseId = $('#case_id').val();
+            $.ajax({
+                type: 'PUT',
+                url: '/medical-cases/' + caseId,
+                data: formData,
+                success: function(response) {
+                    $.LoadingOverlay("hide");
+                    if (response.amendment_id) {
+                        toastr.info(MedicalRecordConfig.translations.amendmentSubmitted);
+                    } else if (response.status) {
+                        toastr.success(MedicalRecordConfig.translations.recordSubmitted);
+                        if (response.id) window.location.href = '/medical-cases/' + response.id;
+                    } else {
+                        toastr.error(response.message || MedicalRecordConfig.translations.errorOccurred);
+                    }
+                },
+                error: function() {
+                    $.LoadingOverlay("hide");
+                    toastr.error(MedicalRecordConfig.translations.errorOccurred);
+                }
+            });
         }
     });
 }

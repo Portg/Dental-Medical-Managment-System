@@ -49,8 +49,13 @@ class MedicalCaseResource extends JsonResource
             'locked_at'     => $this->locked_at?->toIso8601String(),
             'modified_at'   => $this->modified_at?->toIso8601String(),
 
+            // Compliance
+            'version_number' => $this->version_number ?? 1,
+            'is_locked'      => !is_null($this->locked_at),
+
             // Signature
             'signature' => $this->signature,
+            'signed_at' => $this->signed_at?->toIso8601String(),
 
             // Relations
             'patient_id' => $this->patient_id,

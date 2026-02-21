@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\AccessLog;
+use App\MedicalCaseAmendment;
 use App\Services\MedicalCaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -100,6 +102,11 @@ class MedicalCaseController extends Controller
         $case = $this->medicalCaseService->createCase($data, $isDraft);
 
         if ($case) {
+            // Sign the case if signature data provided
+            if (!$isDraft && $request->filled('signature')) {
+                $case->sign($request->input('signature'));
+            }
+
             return response()->json([
                 'message' => $isDraft ? __('medical_cases.draft_saved') : __('medical_cases.record_submitted'),
                 'status' => true,
@@ -117,6 +124,7 @@ class MedicalCaseController extends Controller
      */
     public function show($id)
     {
+        AccessLog::log('MedicalCase', 'view', $id);
         $detail = $this->medicalCaseService->getCaseDetail((int) $id);
 
         return view('medical_cases.show', $detail);
@@ -228,6 +236,15 @@ class MedicalCaseController extends Controller
             ]);
         }
 
+        if (!empty($result['amendment_id'])) {
+            return response()->json([
+                'message' => __('medical_cases.amendment_submitted'),
+                'status' => true,
+                'amendment_id' => $result['amendment_id'],
+                'id' => $id
+            ]);
+        }
+
         if ($result['status']) {
             return response()->json([
                 'message' => $isDraft ? __('medical_cases.draft_saved') : __('medical_cases.case_updated_successfully'),
@@ -261,9 +278,48 @@ class MedicalCaseController extends Controller
      */
     public function printCase($id)
     {
+        AccessLog::log('MedicalCase', 'print', $id);
         $data = $this->medicalCaseService->getPrintData((int) $id);
 
         return view('medical_cases.print', $data);
+    }
+
+    /**
+     * Export medical case as PDF download.
+     */
+    public function exportPdf($id)
+    {
+        AccessLog::log('MedicalCase', 'export_pdf', $id);
+        $data = $this->medicalCaseService->getPrintData((int) $id);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('medical_cases.print', $data)
+            ->setPaper('a4');
+
+        $filename = $data['case']->case_no . '_v' . ($data['case']->version_number ?? 1) . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Archive medical case PDF to storage.
+     */
+    public function archivePdf($id)
+    {
+        $data = $this->medicalCaseService->getPrintData((int) $id);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('medical_cases.print', $data)
+            ->setPaper('a4');
+
+        $filename = $data['case']->case_no . '_v' . ($data['case']->version_number ?? 1) . '.pdf';
+        $path = 'medical_records/' . $filename;
+
+        \Illuminate\Support\Facades\Storage::put($path, $pdf->output());
+
+        return response()->json([
+            'message' => __('medical_cases.pdf_archived'),
+            'status' => true,
+            'path' => $path,
+        ]);
     }
 
     /**
@@ -276,5 +332,81 @@ class MedicalCaseController extends Controller
     {
         $query = $request->input('q', '');
         return response()->json($this->medicalCaseService->searchIcd10($query));
+    }
+
+    /**
+     * List amendments for a medical case.
+     */
+    public function amendments($id)
+    {
+        $amendments = MedicalCaseAmendment::forCase($id)
+            ->with(['requestedBy', 'approvedBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json(['status' => true, 'data' => $amendments]);
+    }
+
+    /**
+     * Approve an amendment request.
+     */
+    public function approveAmendment(Request $request, $amendmentId)
+    {
+        $this->authorize('approve-medical-case-amendment');
+
+        $amendment = MedicalCaseAmendment::findOrFail($amendmentId);
+
+        if ($amendment->status !== MedicalCaseAmendment::STATUS_PENDING) {
+            return response()->json([
+                'message' => __('medical_cases.amendment_already_reviewed'),
+                'status' => false,
+            ]);
+        }
+
+        $amendment->approve(auth()->id(), $request->input('review_notes'));
+
+        return response()->json([
+            'message' => __('medical_cases.amendment_approved'),
+            'status' => true,
+        ]);
+    }
+
+    /**
+     * Reject an amendment request.
+     */
+    public function rejectAmendment(Request $request, $amendmentId)
+    {
+        $this->authorize('approve-medical-case-amendment');
+
+        $amendment = MedicalCaseAmendment::findOrFail($amendmentId);
+
+        if ($amendment->status !== MedicalCaseAmendment::STATUS_PENDING) {
+            return response()->json([
+                'message' => __('medical_cases.amendment_already_reviewed'),
+                'status' => false,
+            ]);
+        }
+
+        Validator::make($request->all(), [
+            'review_notes' => 'required|string|min:5',
+        ])->validate();
+
+        $amendment->reject(auth()->id(), $request->input('review_notes'));
+
+        return response()->json([
+            'message' => __('medical_cases.amendment_rejected'),
+            'status' => true,
+        ]);
+    }
+
+    /**
+     * Get version history (audit trail) for a medical case.
+     */
+    public function versionHistory($id)
+    {
+        $case = \App\MedicalCase::findOrFail($id);
+        $history = $case->versionHistory();
+
+        return response()->json(['status' => true, 'data' => $history]);
     }
 }

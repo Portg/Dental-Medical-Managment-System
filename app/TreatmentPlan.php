@@ -4,10 +4,19 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class TreatmentPlan extends Model
+class TreatmentPlan extends Model implements AuditableContract
 {
-    use SoftDeletes;
+    use SoftDeletes, Auditable;
+
+    protected $auditExclude = ['updated_at', 'created_at', 'final_price'];
+
+    public function generateTags(): array
+    {
+        return ['treatment'];
+    }
 
     const STATUS_PLANNED = 'Planned';
     const STATUS_IN_PROGRESS = 'In Progress';

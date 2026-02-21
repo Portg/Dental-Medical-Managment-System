@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Diagnosis;
 use App\Http\Helper\ActionColumnHelper;
 use App\MedicalCase;
+use App\MedicalCaseAmendment;
+use App\OperationLog;
 use App\Patient;
 use App\TreatmentPlan;
 use App\User;
@@ -32,7 +34,8 @@ class MedicalCaseService
                 DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                 'patients.patient_no',
                 DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(doctors.surname, doctors.othername) as doctor_name" : "CONCAT(doctors.surname, ' ', doctors.othername) as doctor_name"),
-                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name")
+                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name"),
+                DB::raw("(SELECT COUNT(*) FROM medical_case_amendments WHERE medical_case_amendments.medical_case_id = medical_cases.id AND medical_case_amendments.status = 'pending') as pending_amendments_count")
             )
             ->get();
 
@@ -210,10 +213,15 @@ class MedicalCaseService
     public function createCase(array $data, bool $isDraft): ?MedicalCase
     {
         $data['is_draft'] = $isDraft;
+        $data['version_number'] = 1;
         $case = MedicalCase::create($data);
 
         if ($case && !$isDraft) {
             $case->lock();
+        }
+
+        if ($case) {
+            OperationLog::logCreate('medical', 'MedicalCase', $case->id);
         }
 
         return $case;
@@ -222,17 +230,21 @@ class MedicalCaseService
     /**
      * Update an existing medical case.
      *
-     * @return array{status: bool, require_reason?: bool}
+     * @return array{status: bool, require_reason?: bool, amendment_id?: int}
      */
     public function updateCase(int $id, array $data, bool $isDraft, ?string $modificationReason = null, ?string $closingStatus = null, ?string $closingNotes = null): array
     {
         $case = MedicalCase::findOrFail($id);
 
-        // Check if case can be modified
+        // Locked cases require amendment approval (compliance)
         if ($case->is_locked && !$case->canModifyWithoutApproval()) {
             if (!$modificationReason) {
                 return ['status' => false, 'require_reason' => true];
             }
+
+            // Create amendment request instead of direct update
+            $amendment = $this->createAmendment($case, $data, $modificationReason);
+            return ['status' => true, 'amendment_id' => $amendment->id];
         }
 
         $data['is_draft'] = $isDraft;
@@ -243,11 +255,7 @@ class MedicalCaseService
             $data['closing_notes'] = $closingNotes;
         }
 
-        // Record modification if case was already locked
-        if ($case->is_locked && $modificationReason) {
-            $case->recordModification($modificationReason);
-        }
-
+        $case->increment('version_number');
         $status = MedicalCase::where('id', $id)->update($data);
 
         // If transitioning from draft to submitted, lock the record
@@ -260,10 +268,41 @@ class MedicalCaseService
     }
 
     /**
+     * Create an amendment request for a locked medical case.
+     */
+    public function createAmendment(MedicalCase $case, array $newData, string $reason): MedicalCaseAmendment
+    {
+        // Compute changed fields only
+        $oldValues = [];
+        $newValues = [];
+        $amendmentFields = [];
+
+        foreach ($newData as $key => $value) {
+            $original = $case->getOriginal($key);
+            if ($original != $value && in_array($key, $case->getFillable())) {
+                $oldValues[$key] = $original;
+                $newValues[$key] = $value;
+                $amendmentFields[] = $key;
+            }
+        }
+
+        return MedicalCaseAmendment::create([
+            'medical_case_id' => $case->id,
+            'requested_by' => Auth::id(),
+            'amendment_reason' => $reason,
+            'amendment_fields' => $amendmentFields,
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
+            'status' => MedicalCaseAmendment::STATUS_PENDING,
+        ]);
+    }
+
+    /**
      * Delete a medical case (soft-delete).
      */
     public function deleteCase(int $id): bool
     {
+        OperationLog::logDelete('medical', 'MedicalCase', $id);
         return (bool) MedicalCase::where('id', $id)->delete();
     }
 
@@ -289,7 +328,10 @@ class MedicalCaseService
             ->orderBy('recorded_at', 'desc')
             ->first();
 
-        return compact('case', 'diagnoses', 'treatmentPlans', 'latestVitalSign');
+        // Include audit trail for compliance PDF
+        $auditTrail = $case->audits()->with('user')->latest()->take(10)->get();
+
+        return compact('case', 'diagnoses', 'treatmentPlans', 'latestVitalSign', 'auditTrail');
     }
 
     /**
@@ -356,11 +398,17 @@ class MedicalCaseService
                 elseif ($row->status == MedicalCase::STATUS_CLOSED) $class = 'danger';
                 elseif ($row->status == MedicalCase::STATUS_FOLLOW_UP) $class = 'warning';
                 $statusKey = strtolower(str_replace([' ', '-'], '_', $row->status));
-                return '<span class="label label-' . $class . '">' . __('medical_cases.status_' . $statusKey) . '</span>';
+                $html = '<span class="label label-' . $class . '">' . __('medical_cases.status_' . $statusKey) . '</span>';
+                if (!empty($row->pending_amendments_count)) {
+                    $html .= ' <span class="label label-warning" title="' . __('medical_cases.amendment_pending') . '"><i class="fa fa-clock-o"></i> ' . $row->pending_amendments_count . '</span>';
+                }
+                return $html;
             })
             ->addColumn('action', function ($row) {
                 return ActionColumnHelper::make($row->id)
+                    ->add('view')
                     ->primaryIf($row->deleted_at == null, 'edit')
+                    ->add('export_pdf', __('medical_cases.export_pdf'), '/medical-cases/' . $row->id . '/export-pdf')
                     ->add('delete')
                     ->render();
             })

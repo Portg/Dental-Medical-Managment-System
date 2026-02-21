@@ -4,10 +4,19 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class Prescription extends Model
+class Prescription extends Model implements AuditableContract
 {
-    use SoftDeletes;
+    use SoftDeletes, Auditable;
+
+    protected $auditExclude = ['updated_at', 'created_at'];
+
+    public function generateTags(): array
+    {
+        return ['prescription'];
+    }
 
     protected $fillable = [
         'prescription_no', 'drug', 'qty', 'directions',

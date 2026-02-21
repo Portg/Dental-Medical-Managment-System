@@ -170,6 +170,10 @@
         window.location.href = '/medical-cases/' + id;
     }
 
+    function exportPdf(id) {
+        window.open('/medical-cases/' + id + '/export-pdf', '_blank');
+    }
+
     function clearCustomFilters() {
         $('#quickSearch').val('');
         $('#filter_status').val('');

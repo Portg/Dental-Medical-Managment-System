@@ -4,10 +4,19 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+use OwenIt\Auditing\Auditable;
 
-class MedicalCase extends Model
+class MedicalCase extends Model implements AuditableContract
 {
-    use SoftDeletes;
+    use SoftDeletes, Auditable;
+
+    protected $auditExclude = ['updated_at', 'created_at'];
+
+    public function generateTags(): array
+    {
+        return ['medical-record'];
+    }
 
     const STATUS_OPEN = 'Open';
     const STATUS_CLOSED = 'Closed';
@@ -19,7 +28,7 @@ class MedicalCase extends Model
         'related_teeth', 'related_images', 'diagnosis_code',
         'auxiliary_examination', 'diagnosis', 'treatment', 'treatment_services', // SOAP: A & P
         'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup', 'visit_type',
-        'signature', 'locked_at', 'modified_at', 'modified_by', 'modification_reason',
+        'signature', 'signed_at', 'locked_at', 'modified_at', 'modified_by', 'modification_reason', 'version_number',
         'status', 'is_draft', 'case_date', 'closed_date', 'closing_notes',
         'patient_id', 'doctor_id', '_who_added'
     ];
@@ -30,6 +39,7 @@ class MedicalCase extends Model
         'next_visit_date' => 'date',
         'locked_at' => 'datetime',
         'modified_at' => 'datetime',
+        'signed_at' => 'datetime',
         'related_teeth' => 'array',
         'related_images' => 'array',
         'examination_teeth' => 'array',
@@ -108,6 +118,11 @@ class MedicalCase extends Model
         return $this->hasMany('App\PatientFollowup', 'medical_case_id');
     }
 
+    public function amendments()
+    {
+        return $this->hasMany('App\MedicalCaseAmendment', 'medical_case_id');
+    }
+
     /**
      * Check if case is locked
      */
@@ -117,15 +132,20 @@ class MedicalCase extends Model
     }
 
     /**
-     * Check if case can be modified without approval
+     * Check if case can be modified without approval.
+     * Locked cases always require amendment approval (compliance).
      */
     public function canModifyWithoutApproval()
     {
-        if (!$this->locked_at) {
-            return true;
-        }
-        // Within 24 hours of locking
-        return $this->locked_at->diffInHours(now()) < 24;
+        return !$this->locked_at;
+    }
+
+    /**
+     * Check if case has a pending amendment.
+     */
+    public function hasPendingAmendment()
+    {
+        return $this->amendments()->where('status', MedicalCaseAmendment::STATUS_PENDING)->exists();
     }
 
     /**
@@ -148,6 +168,25 @@ class MedicalCase extends Model
         $this->modification_reason = $reason;
         $this->save();
         return $this;
+    }
+
+    /**
+     * Sign the medical case with electronic signature.
+     */
+    public function sign($signatureData)
+    {
+        $this->signature = $signatureData;
+        $this->signed_at = now();
+        $this->save();
+        return $this;
+    }
+
+    /**
+     * Get version history from audits table.
+     */
+    public function versionHistory()
+    {
+        return $this->audits()->with('user')->latest()->get();
     }
 
     /**
