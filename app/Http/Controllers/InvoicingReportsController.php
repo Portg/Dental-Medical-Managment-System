@@ -103,22 +103,4 @@ class InvoicingReportsController extends Controller
         }
         return view('reports.daily_expenses');
     }
-
-    public function todaysInsurance(Request $request)
-    {
-        if ($request->ajax()) {
-            $data = $this->invoicingReportService->getTodaysInsurance();
-
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->filter(function ($instance) use ($request) {
-                })
-                ->addColumn('amount', function ($row) {
-                    return number_format($row->amount);
-                })
-                ->rawColumns(['amount'])
-                ->make(true);
-        }
-        return view('reports.daily_insurance');
-    }
 }

@@ -31,7 +31,12 @@ return [
     'patient_source_report' => '患者来源分析',
     'revisit_rate_report' => '复诊率统计',
     'satisfaction_survey' => '满意度调查',
-    'insurance_reports' => '保险报表',
+    'appointment_analytics_report' => '预约分析报表',
+    'treatment_plan_completion_report' => '治疗方案完成率',
+    'monthly_business_summary_report' => '月度经营总览',
+    'patient_demographics_report' => '患者画像报表',
+    'doctor_workload_report' => '医生工作量报表',
+    'quotation_conversion_report' => '报价转化率',
     'finance' => '财务',
     'system' => '系统',
     'invoicing' => '开票管理',
@@ -118,7 +123,6 @@ return [
     'reports' => '报表',
     'daily_cash_report' => '每日现金报表',
     'daily_expenses_report' => '每日费用报表',
-    'daily_insurance_report' => '每日保险报表',
     'debtors_report' => '债务人报表',
     'doctor_performance_report' => '医生绩效报表',
     'procedures_income_report' => '治疗项目收入报表',
@@ -128,8 +132,6 @@ return [
     'general_income_report' => '总收入报表',
     'aged_receivable_report' => '应收账款账龄报表',
     'aged_payables_report' => '应付账款账龄报表',
-    'budget_line_report' => '预算科目报表',
-
     // SMS Manager Submenu
     'sms_messages' => '短信消息',
     'send_sms' => '发送短信',
@@ -269,5 +271,8 @@ return [
 
     // 系统维护
     'system_maintenance' => '系统维护',
+
+    // 菜单管理
+    'menu_management' => '菜单管理',
 
 ];

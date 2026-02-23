@@ -26,10 +26,12 @@ Route::group(['middleware' => ['auth']], function () {
 
     // get the todays report
     Route::get('todays-cash', 'InvoicingReportsController@todaysCash');
-    Route::get('todays-insurance', 'InvoicingReportsController@todaysInsurance');
-
     Route::get('todays-expenses', 'InvoicingReportsController@todaysExpenses');
     Route::resource('roles', 'RoleController');
+    Route::post('roles/{id}/sync-permissions', 'RoleController@syncPermissions');
+    Route::post('roles/{id}/menu-overrides', 'RoleController@saveMenuOverrides');
+    Route::get('roles/{id}/users', 'RoleController@roleUsers');
+    Route::get('roles/templates/{slug}/permissions', 'RoleController@templatePermissions');
     Route::get('search-role', 'RoleController@filterRoles');
     Route::resource('users', 'UsersController');
     //current user profile
@@ -188,18 +190,12 @@ Route::group(['middleware' => ['auth']], function () {
     //reports
     Route::get('invoice-payments-report', 'InvoicingReportsController@invoicePaymentReport');
     Route::get('export-invoice-payments-report', 'InvoicingReportsController@exportInvoicePayments');
-    Route::get('insurance-reports', 'InsuranceReportsController@index');
-    Route::get('insurance-claims', 'InsuranceReportsController@claims');
-
 
     Route::get('doctor-performance-report', 'DoctorPerformanceReport@index');
     Route::get('download-performance-report', 'DoctorPerformanceReport@downloadPerformanceReport');
 
     Route::get('procedure-income-report', 'ProceduresReportController@index');
     Route::get('export-procedure-sales-report', 'ProceduresReportController@downloadProcedureSalesReport');
-
-    Route::get('budget-line-report', 'BudgetLineReportController@index');
-    Route::get('export-budget-line', 'BudgetLineReportController@exportBudgetLineReport');
 
     //end reports
 
@@ -263,6 +259,14 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('system-maintenance/logs/operations', 'SystemMaintenanceController@operationLogs');
     Route::get('system-maintenance/logs/access', 'SystemMaintenanceController@accessLogs');
     Route::get('system-maintenance/logs/audits', 'SystemMaintenanceController@auditLogs');
+
+    // Menu Management
+    Route::get('menu-items', 'MenuItemController@index');
+    Route::get('menu-items/tree', 'MenuItemController@tree');
+    Route::post('menu-items', 'MenuItemController@store');
+    Route::put('menu-items/{id}', 'MenuItemController@update');
+    Route::delete('menu-items/{id}', 'MenuItemController@destroy');
+    Route::post('menu-items/reorder', 'MenuItemController@reorder');
 
     //debtors report
     Route::get('/debtors', 'DebtorsReportController@index');
@@ -407,6 +411,24 @@ Route::group(['middleware' => ['auth']], function () {
 
     // Revisit Rate Statistics Report
     Route::get('revisit-rate-report', 'RevisitRateReportController@index');
+
+    // Appointment Analytics Report
+    Route::get('appointment-analytics-report', 'AppointmentAnalyticsReportController@index');
+
+    // Treatment Plan Completion Report
+    Route::get('treatment-plan-completion-report', 'TreatmentPlanCompletionReportController@index');
+
+    // Monthly Business Summary Report
+    Route::get('monthly-business-summary-report', 'MonthlyBusinessSummaryReportController@index');
+
+    // Patient Demographics Report
+    Route::get('patient-demographics-report', 'PatientDemographicsReportController@index');
+
+    // Doctor Workload Report
+    Route::get('doctor-workload-report', 'DoctorWorkloadReportController@index');
+
+    // Quotation Conversion Report
+    Route::get('quotation-conversion-report', 'QuotationConversionReportController@index');
 
     // ============================================================
     // Patient Satisfaction Survey System

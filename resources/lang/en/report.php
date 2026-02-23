@@ -12,8 +12,6 @@ return [
     'report' => 'Report',
     'daily_cash' => 'Daily Cash',
     'daily_cash_report' => 'Daily Cash Report',
-    'daily_insurance' => 'Daily Insurance',
-    'daily_insurance_report' => 'Daily Insurance Report',
     'daily_expenses' => 'Daily Expenses',
     'daily_expenses_report' => 'Daily Expenses Report',
     'debtors_report' => 'Debtors Report',
@@ -21,10 +19,6 @@ return [
     'procedures_income_report' => 'Procedures Income Report',
     'invoice_payments_report' => 'Invoice Payments Report',
     'invoicing_report' => 'Invoicing Report',
-    'insurance_report' => 'Insurance Report',
-    'budget_line_report' => 'Budget Line Report',
-    'preview_budget_line' => 'Preview Budget Line',
-
     // Report Actions
     'generate_report' => 'Generate Report',
     'view_report' => 'View Report',
@@ -66,7 +60,6 @@ return [
     // Report Specific Fields
     'todays_cash_report' => "Today's Cash Report",
     'todays_expense_report' => "Today's Expense Report",
-    'todays_insurance_report' => "Today's Insurance Report",
     'receivables_report' => 'Receivables Report',
 
     // Daily Cash
@@ -88,8 +81,6 @@ return [
     'procedure_sales' => 'Procedure Sales',
     'procedure_income' => 'Procedure Income',
 
-    // Budget Line Report
-    'budget_lines' => 'Budget Lines',
     'total_items' => 'Total Items',
 
     // Filters
@@ -119,7 +110,6 @@ return [
     'monthly_overall_income_chart' => 'Monthly Overall Income Chart',
     'monthly_overall_chart_income_expenditure' => 'Monthly Overall Chart (Income & Expenditure)',
     'daily_cash_payments' => 'Daily Cash Payments',
-    'daily_insurance_payments' => 'Daily Insurance Payments',
     'over_roll' => 'Over Roll',
     'income' => 'Income',
     'expenditure' => 'Expenditure',
@@ -168,4 +158,97 @@ return [
     'interval_31_60_days' => '31-60 days',
     'interval_61_90_days' => '61-90 days',
     'interval_over_90_days' => 'Over 90 days',
+
+    // Appointment Analytics Report
+    'appointment_analytics' => 'Appointment Analytics',
+    'total_appointments' => 'Total Appointments',
+    'completion_rate' => 'Completion Rate',
+    'cancellation_rate' => 'Cancellation Rate',
+    'no_show_rate' => 'No-Show Rate',
+    'daily_appointment_trend' => 'Daily Appointment Trend',
+    'peak_hours_distribution' => 'Peak Hours Distribution',
+    'by_doctor_breakdown' => 'By Doctor Breakdown',
+    'appointment_source_distribution' => 'Appointment Source Distribution',
+    'chair_utilization' => 'Chair Utilization',
+    'appointments_count' => 'Appointments',
+    'doctor_name' => 'Doctor',
+    'total' => 'Total',
+    'completed' => 'Completed',
+    'cancelled' => 'Cancelled',
+    'no_show' => 'No Show',
+    'hour_suffix' => ':00',
+
+    // Treatment Plan Completion Report
+    'treatment_plan_completion' => 'Treatment Plan Completion',
+    'total_quotations' => 'Total Quotations',
+    'converted_count' => 'Converted',
+    'conversion_rate' => 'Conversion Rate',
+    'total_quoted_amount' => 'Total Quoted Amount',
+    'avg_conversion_days' => 'Avg Conversion Days',
+    'days_unit' => ' days',
+    'monthly_conversion_trend' => 'Monthly Conversion Trend',
+    'by_doctor_conversion' => 'Doctor Conversion Rate',
+    'by_service_category' => 'By Service Category',
+    'service_name' => 'Service Name',
+    'category' => 'Category',
+    'quoted_count' => 'Quoted',
+    'quoted_amount' => 'Quoted Amount',
+    'doctor_conversion_table' => 'Doctor Conversion Stats',
+    'unconverted_high_value' => 'Unconverted High-Value Quotations',
+    'quotation_no' => 'Quotation No.',
+    'patient' => 'Patient',
+    'amount' => 'Amount',
+    'days_since_quoted' => 'Days Since Quoted',
+    'uncategorized' => 'Uncategorized',
+
+    // Monthly Business Summary Report
+    'monthly_business_summary' => 'Monthly Business Summary',
+    'monthly_revenue' => 'Monthly Revenue',
+    'monthly_expenses' => 'Monthly Expenses',
+    'gross_profit' => 'Gross Profit',
+    'new_patients' => 'New Patients',
+    'prev_month' => 'Prev Month',
+    'daily_revenue_trend' => 'Daily Revenue Trend',
+    'top_services' => 'Top Services Revenue',
+    'qty' => 'Qty',
+    'revenue' => 'Revenue',
+
+    // Patient Demographics Report
+    'patient_demographics' => 'Patient Demographics',
+    'total_patients' => 'Total Patients',
+    'active_patients' => 'Active Patients',
+    'lost_patients' => 'Lost Patients',
+    'active_rate' => 'Active Rate',
+    'age_distribution' => 'Age Distribution',
+    'gender_distribution' => 'Gender Distribution',
+    'source_distribution' => 'Source Distribution',
+    'new_patient_trend' => 'New Patient Monthly Trend',
+    'top_spenders' => 'Top 20 Spenders',
+    'male' => 'Male',
+    'female' => 'Female',
+    'unknown' => 'Unknown',
+    'gender_col' => 'Gender',
+    'total_spent' => 'Total Spent',
+    'invoice_count' => 'Invoices',
+    'last_invoice_date' => 'Last Invoice Date',
+
+    // Doctor Workload Report
+    'doctor_workload' => 'Doctor Workload',
+    'doctor_ranking' => 'Doctor Appointment Ranking',
+    'daily_workload_trend' => 'Daily Workload Trend',
+    'total_appointments_col' => 'Total Appointments',
+    'completed_col' => 'Completed',
+    'no_show_col' => 'No Show',
+    'completion_rate_col' => 'Completion Rate',
+    'no_show_rate_col' => 'No-Show Rate',
+    'daily_avg' => 'Daily Avg',
+
+    // Quotation Conversion Report
+    'quotation_conversion' => 'Quotation Conversion',
+    'total_quoted' => 'Total Quoted',
+    'total_converted' => 'Converted',
+    'avg_quoted_amount' => 'Avg Quoted Amount',
+    'avg_invoice_amount' => 'Avg Invoice Amount',
+    'monthly_quotation_trend' => 'Monthly Quotation Trend',
+    'unconverted_list' => 'Unconverted Quotations',
 ];

@@ -30,7 +30,6 @@ return [
     'patient_source_report' => 'Patient Source Analysis',
     'revisit_rate_report' => 'Revisit Rate Report',
     'satisfaction_survey' => 'Satisfaction Survey',
-    'insurance_reports' => 'Insurance Reports',
     'finance' => 'Finance',
     'system' => 'System',
     'patients_list' => 'Patients List',
@@ -76,13 +75,17 @@ return [
     'claim_rates' => 'Claim Rates',
     'doctor_claims' => 'Doctor Claims',
     'insurance' => 'Insurance Reports',
+    'appointment_analytics_report' => 'Appointment Analytics',
+    'treatment_plan_completion_report' => 'Treatment Plan Completion',
+    'monthly_business_summary_report' => 'Monthly Business Summary',
+    'patient_demographics_report' => 'Patient Demographics',
+    'doctor_workload_report' => 'Doctor Workload',
+    'quotation_conversion_report' => 'Quotation Conversion',
     'general_income_report' => 'General Income Report',
     'doctor_performance_report' => 'Doctor Performance Report',
     'procedures_income_report' => 'Procedures Income Report',
     'aged_receivable_report' => 'Aged Receivable Report',
     'aged_payables_report' => 'Aged Payables Report',
-    'budget_line_report' => 'Budget line Report',
-
     // Settings Submenu
     'settings' => 'Settings',
     'charts_of_accounts' => 'Charts Of Accounts',
@@ -203,5 +206,8 @@ return [
 
     // System Maintenance
     'system_maintenance' => 'System Maintenance',
+
+    // Menu Management
+    'menu_management' => 'Menu Management',
 
 ];

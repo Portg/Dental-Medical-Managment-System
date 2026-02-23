@@ -102,29 +102,6 @@ class InvoicingReportService
     }
 
     /**
-     * Get today's insurance payments for DataTables.
-     */
-    public function getTodaysInsurance(): Collection
-    {
-        return DB::table('invoice_payments')
-            ->leftJoin('invoices', 'invoices.id', 'invoice_payments.invoice_id')
-            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-            ->leftJoin('users', 'users.id', 'invoice_payments._who_added')
-            ->whereNull('invoice_payments.deleted_at')
-            ->where('payment_method', 'Insurance')
-            ->whereDate('payment_date', date('Y-m-d'))
-            ->select(
-                'invoice_payments.*',
-                'patients.surname',
-                'patients.othername',
-                DB::raw('TIME(invoice_payments.updated_at) AS created_date'),
-                'users.othername as added_by'
-            )
-            ->get();
-    }
-
-    /**
      * Get insurance providers list.
      */
     public function getInsuranceProviders(): Collection
