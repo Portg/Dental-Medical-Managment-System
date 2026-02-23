@@ -36,6 +36,25 @@ class PaySlipService
     }
 
     /**
+     * Get pay slips for a specific employee (individual payslip page).
+     */
+    public function getPaySlipListForEmployee(int $employeeId): Collection
+    {
+        return DB::table('pay_slips')
+            ->leftJoin('employee_contracts', 'employee_contracts.id', 'pay_slips.employee_contract_id')
+            ->where('pay_slips.employee_id', $employeeId)
+            ->whereNull('pay_slips.deleted_at')
+            ->select(
+                'pay_slips.*',
+                'employee_contracts.payroll_type',
+                'employee_contracts.gross_salary',
+                'employee_contracts.commission_percentage'
+            )
+            ->orderBy('pay_slips.id', 'desc')
+            ->get();
+    }
+
+    /**
      * Calculate the wage for a pay slip row.
      */
     public function calculateWage(object $row): float

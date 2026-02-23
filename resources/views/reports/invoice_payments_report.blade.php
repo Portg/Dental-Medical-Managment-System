@@ -3,7 +3,7 @@
 {{-- ========================================================================
      Page Configuration
      ======================================================================== --}}
-@section('page_title', __('report.invoice_payments_report'))
+@section('page_title', __('menu.general_income_report'))
 @section('table_id', 'payment-report')
 
 {{-- ========================================================================

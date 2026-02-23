@@ -9,7 +9,11 @@ use Illuminate\Support\Facades\Cache;
 class Role extends Model
 {
     use SoftDeletes;
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'slug', 'hidden_menu_items'];
+
+    protected $casts = [
+        'hidden_menu_items' => 'array',
+    ];
 
     public function users()
     {
@@ -24,6 +28,12 @@ class Role extends Model
     public function permissions()
     {
         return $this->belongsToMany('App\Permission', 'role_permissions', 'role_id', 'permission_id');
+    }
+
+    public function menuItems()
+    {
+        return $this->belongsToMany('App\Models\MenuItem', 'role_menu_items')
+            ->withPivot('url_override');
     }
 
     public function hasPermission($permissionSlug)

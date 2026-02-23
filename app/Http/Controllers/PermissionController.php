@@ -38,6 +38,13 @@ class PermissionController extends Controller
 
             return Datatables::of($data)
                 ->addIndexColumn()
+                ->addColumn('module', function ($row) {
+                    if ($row->module) {
+                        return '<span class="label" style="background:#e0f7fa;color:#00838f;font-weight:500;border-radius:4px;padding:3px 8px;">'
+                               . e($row->module) . '</span>';
+                    }
+                    return '-';
+                })
                 ->addColumn('editBtn', function ($row) {
                     $btn = '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                     return $btn;
@@ -46,7 +53,7 @@ class PermissionController extends Controller
                     $btn = '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                     return $btn;
                 })
-                ->rawColumns(['editBtn', 'deleteBtn'])
+                ->rawColumns(['module', 'editBtn', 'deleteBtn'])
                 ->make(true);
         }
         return view('permissions.index');
@@ -85,7 +92,7 @@ class PermissionController extends Controller
         );
 
         if ($status) {
-            return response()->json(['message' => __('permissions.permission_added_successfully'), 'status' => true]);
+            return response()->json(['message' => __('permissions.added_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
@@ -137,7 +144,7 @@ class PermissionController extends Controller
         );
 
         if ($status) {
-            return response()->json(['message' => __('permissions.permission_updated_successfully'), 'status' => true]);
+            return response()->json(['message' => __('permissions.updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }
@@ -152,7 +159,7 @@ class PermissionController extends Controller
     {
         $status = $this->permissionService->deletePermission((int) $id);
         if ($status) {
-            return response()->json(['message' => __('permissions.permission_deleted_successfully'), 'status' => true]);
+            return response()->json(['message' => __('permissions.deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }

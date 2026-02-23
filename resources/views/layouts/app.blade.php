@@ -33,7 +33,7 @@
     {{-- Sidebar + Content Container --}}
     <div class="page-container">
         {{-- Sidebar --}}
-        @include('partials.sidebar-admin')
+        @include('partials.sidebar-dynamic')
 
         {{-- Content --}}
         <div class="page-content-wrapper">

@@ -54,7 +54,22 @@ return [
             'strict' => false,
             'engine' => null,
             'dump' => [
-                'dump_binary_path' => '/usr/bin',
+                'dump_binary_path' => env('MYSQL_DUMP_PATH', '/usr/bin'),
+                'useSingleTransaction' => true,
+                'excludeTables' => [
+                    'audits',
+                    'operation_logs',
+                    'access_logs',
+                    'login_logs',
+                    'exception_logs',
+                    'jobs',
+                    'failed_jobs',
+                    'notifications',
+                    'sms_loggings',
+                    'sms_transactions',
+                    'password_resets',
+                    'personal_access_tokens',
+                ],
             ],
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),

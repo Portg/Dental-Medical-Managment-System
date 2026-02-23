@@ -24,7 +24,7 @@ class MedicalCaseCrudSmokeTest extends TestCase
         Bus::fake();
 
         $branch    = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
-        $adminRole = Role::create(['name' => 'Administrator']);
+        $adminRole = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
 
         $this->admin = User::factory()->create([
             'role_id'   => $adminRole->id,

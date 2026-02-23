@@ -366,4 +366,14 @@ return [
 
     // 上传
     'uploading' => '上传中',
+
+    // 通用分类
+    'general' => '通用',
+
+    // 可见性
+    'visible' => '可见',
+    'hidden' => '已隐藏',
+    'no_permission' => '无权限',
+    'legend' => '图例',
+    'statistics' => '统计',
 ];

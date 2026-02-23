@@ -12,11 +12,11 @@ class DefaultRolePermissionsSeeder extends Seeder
     public function run()
     {
         // 获取角色
-        $superAdmin = Role::where('name', 'Super Administrator')->first();
-        $admin = Role::where('name', 'Administrator')->first();
-        $doctor = Role::where('name', 'Doctor')->first();
-        $nurse = Role::where('name', 'Nurse')->first();
-        $receptionist = Role::where('name', 'Receptionist')->first();
+        $superAdmin = Role::where('slug', 'super-admin')->first();
+        $admin = Role::where('slug', 'admin')->first();
+        $doctor = Role::where('slug', 'doctor')->first();
+        $nurse = Role::where('slug', 'nurse')->first();
+        $receptionist = Role::where('slug', 'receptionist')->first();
 
         // 超级管理员拥有所有权限
         if ($superAdmin) {

@@ -83,7 +83,7 @@ return [
          *
          * If you do not want any compressor at all, set it to null.
          */
-        'database_dump_compressor' => null,
+        'database_dump_compressor' => \Spatie\DbDumper\Compressors\GzipCompressor::class,
 
         'destination' => [
 
@@ -116,12 +116,12 @@ return [
     'notifications' => [
 
         'notifications' => [
-            \Spatie\Backup\Notifications\Notifications\BackupHasFailed::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFound::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\CleanupHasFailed::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\BackupWasSuccessful::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFound::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\CleanupWasSuccessful::class => ['mail'],
+            \App\Notifications\Backup\BackupHasFailedNotification::class => ['mail'],
+            \App\Notifications\Backup\UnhealthyBackupWasFoundNotification::class => ['mail'],
+            \App\Notifications\Backup\CleanupHasFailedNotification::class => ['mail'],
+            \App\Notifications\Backup\BackupWasSuccessfulNotification::class => [],
+            \App\Notifications\Backup\HealthyBackupWasFoundNotification::class => [],
+            \App\Notifications\Backup\CleanupWasSuccessfulNotification::class => [],
         ],
 
         /*

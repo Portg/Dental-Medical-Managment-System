@@ -12,7 +12,7 @@
                 <input type="hidden" id="permission_id">
                 <div class="form-group">
                     <label>{{ __('permissions.name') }} <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="name" placeholder="{{ __('permissions.enter_permission_name') }}">
+                    <input type="text" class="form-control" id="name" placeholder="{{ __('permissions.enter_name') }}">
                 </div>
                 <div class="form-group">
                     <label>{{ __('permissions.slug') }} <span class="text-danger">*</span></label>
@@ -20,7 +20,7 @@
                 </div>
                 <div class="form-group">
                     <label>{{ __('permissions.module') }}</label>
-                    <input type="text" class="form-control" id="module" placeholder="{{ __('permissions.enter_module_name') }}">
+                    <input type="text" class="form-control" id="module" placeholder="{{ __('permissions.enter_module') }}">
                 </div>
                 <div class="form-group">
                     <label>{{ __('permissions.description') }}</label>

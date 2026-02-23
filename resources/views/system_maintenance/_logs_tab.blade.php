@@ -61,7 +61,7 @@
             <table id="operation-logs-table" class="table table-bordered table-hover" style="width: 100%;">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>{{ __('common.id') }}</th>
                         <th>{{ __('system_maintenance.user') }}</th>
                         <th>{{ __('system_maintenance.operation_type') }}</th>
                         <th>{{ __('system_maintenance.module') }}</th>

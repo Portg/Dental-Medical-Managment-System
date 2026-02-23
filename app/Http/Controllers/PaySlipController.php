@@ -6,6 +6,7 @@ use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
 use App\Services\PaySlipService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -176,8 +177,38 @@ class PaySlipController extends Controller
 
     public function individualPaySlip(Request $request)
     {
-        $data['employee'] = $this->service->getPaySlipDetail((int) $request->pay_slip_id);
-        $data['pay_slip_id'] = $request->pay_slip_id;
+        if ($request->ajax()) {
+            $data = $this->service->getPaySlipListForEmployee(Auth::id());
+
+            return Datatables::of($data)
+                ->addIndexColumn()
+                ->addColumn('basic_salary', function ($row) {
+                    $wage = $this->service->calculateWage($row);
+                    return '<span class="text-primary">' . number_format($wage) . '</span>';
+                })
+                ->addColumn('total_advances', function ($row) {
+                    $advances = $this->service->employeeAdvances($row);
+                    return '<span class="text-primary">' . number_format($advances) . '</span>';
+                })
+                ->addColumn('total_allowances', function ($row) {
+                    $allowances = $this->service->employeeAllowances($row);
+                    return '<span class="text-primary">' . number_format($allowances) . '</span>';
+                })
+                ->addColumn('total_deductions', function ($row) {
+                    $deductions = $this->service->employeeDeductions($row);
+                    return '<span class="text-primary">' . number_format($deductions) . '</span>';
+                })
+                ->addColumn('due_balance', function ($row) {
+                    $deductions = $this->service->employeeDeductions($row);
+                    $allowance = $this->service->employeeAllowances($row);
+                    $advances = $this->service->employeeAdvances($row);
+                    $wage = $this->service->calculateWage($row);
+                    $balance = ($allowance + $wage) - ($deductions + $advances);
+                    return '<span class="text-primary">' . number_format($balance) . '</span>';
+                })
+                ->rawColumns(['basic_salary', 'total_advances', 'total_allowances', 'total_deductions', 'due_balance'])
+                ->make(true);
+        }
 
         return view('payslips.individual_payslips');
     }

@@ -33,11 +33,11 @@ class PermissionCacheTest extends TestCase
 
         $branch = Branch::create(['name' => 'Test Branch', 'is_active' => true]);
 
-        $this->superAdminRole   = Role::create(['name' => 'Super Administrator']);
-        $this->adminRole        = Role::create(['name' => 'Administrator']);
-        $this->doctorRole       = Role::create(['name' => 'Doctor']);
-        $this->nurseRole        = Role::create(['name' => 'Nurse']);
-        $this->receptionistRole = Role::create(['name' => 'Receptionist']);
+        $this->superAdminRole   = Role::create(['name' => 'Super Administrator', 'slug' => 'super-admin']);
+        $this->adminRole        = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
+        $this->doctorRole       = Role::create(['name' => 'Doctor', 'slug' => 'doctor']);
+        $this->nurseRole        = Role::create(['name' => 'Nurse', 'slug' => 'nurse']);
+        $this->receptionistRole = Role::create(['name' => 'Receptionist', 'slug' => 'receptionist']);
 
         $this->superAdminUser = User::factory()->create(['role_id' => $this->superAdminRole->id, 'branch_id' => $branch->id]);
         $this->adminUser      = User::factory()->create(['role_id' => $this->adminRole->id, 'branch_id' => $branch->id]);

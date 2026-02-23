@@ -30,7 +30,7 @@ class RefundWorkflowTest extends TestCase
         parent::setUp();
 
         $branch = Branch::create(['name' => 'Test Branch', 'is_active' => true]);
-        $role   = Role::create(['name' => 'Administrator']);
+        $role   = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
 
         $this->admin = User::factory()->create([
             'role_id'   => $role->id,

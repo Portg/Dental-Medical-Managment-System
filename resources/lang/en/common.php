@@ -173,4 +173,12 @@ return [
     'already_exists' => 'Already exists',
     'confirm' => 'Confirm',
     'only' => 'only',
+    'general' => 'General',
+
+    // Visibility
+    'visible' => 'Visible',
+    'hidden' => 'Hidden',
+    'no_permission' => 'No Permission',
+    'legend' => 'Legend',
+    'statistics' => 'Statistics',
 ];

@@ -78,7 +78,7 @@
     {{-- Sidebar + Content Container --}}
     <div class="page-container">
         {{-- Sidebar --}}
-        @include('partials.sidebar-nurse')
+        @include('partials.sidebar-dynamic')
 
         {{-- Content --}}
         <div class="page-content-wrapper">

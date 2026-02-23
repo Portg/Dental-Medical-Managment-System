@@ -13,15 +13,15 @@ class FunctionsHelper
 
     public static function navigation()
     {
-        if (Auth::User()->UserRole->name == "Super Administrator") {
+        if (Auth::User()->UserRole->slug === 'super-admin') {
             $layoutDirectory = 'superadmin::layouts.master';
-        } elseif (Auth::User()->UserRole->name == "Administrator") {
+        } elseif (Auth::User()->UserRole->slug === 'admin') {
             $layoutDirectory = 'layouts.app';
-        } elseif (Auth::User()->UserRole->name == "Doctor") {
+        } elseif (Auth::User()->UserRole->slug === 'doctor') {
             $layoutDirectory = 'doctor::layouts.master';
-        } elseif (Auth::User()->UserRole->name == "Nurse") {
+        } elseif (Auth::User()->UserRole->slug === 'nurse') {
             $layoutDirectory = 'nurse::layouts.master';
-        } elseif (Auth::User()->UserRole->name == "Receptionist") {
+        } elseif (Auth::User()->UserRole->slug === 'receptionist') {
             $layoutDirectory = 'receptionist::layouts.master';
         }
         /** @var TYPE_NAME $layoutDirectory */
