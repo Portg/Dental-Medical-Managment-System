@@ -22,8 +22,8 @@ class AuthSmokeTest extends TestCase
 
         $branch = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
 
-        $adminRole  = Role::create(['name' => 'Administrator']);
-        $doctorRole = Role::create(['name' => 'Doctor']);
+        $adminRole  = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
+        $doctorRole = Role::create(['name' => 'Doctor', 'slug' => 'doctor']);
 
         $this->admin = User::factory()->create([
             'role_id'   => $adminRole->id,

@@ -8,10 +8,9 @@ use App\Role;
 use App\RolePermission;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
-class MedicalCaseCrudSmokeTest extends TestCase
+class IndividualPayslipTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -20,8 +19,6 @@ class MedicalCaseCrudSmokeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        Bus::fake();
 
         $branch    = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
         $adminRole = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
@@ -32,25 +29,28 @@ class MedicalCaseCrudSmokeTest extends TestCase
             'password'  => bcrypt('password'),
         ]);
 
-        $permission = Permission::firstOrCreate(
-            ['slug' => 'manage-medical-cases'],
-            ['name' => 'Manage Medical Cases']
-        );
-        RolePermission::firstOrCreate([
-            'role_id'       => $adminRole->id,
-            'permission_id' => $permission->id,
-        ]);
+        $perm = Permission::firstOrCreate(['slug' => 'manage-payroll', 'name' => 'Manage Payroll']);
+        RolePermission::create(['role_id' => $adminRole->id, 'permission_id' => $perm->id]);
     }
 
     /** @test */
-    public function medical_cases_datatable_returns_success(): void
+    public function individual_payslips_page_loads(): void
     {
         $response = $this->actingAs($this->admin)
-            ->get('/medical-cases?draw=1&start=0&length=10', [
+            ->get('/individual-payslips');
+
+        $response->assertOk();
+    }
+
+    /** @test */
+    public function individual_payslips_ajax_returns_valid_json(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->get('/individual-payslips', [
                 'X-Requested-With' => 'XMLHttpRequest',
             ]);
 
-        $response->assertStatus(200)
-                 ->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+        $response->assertOk();
+        $response->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
     }
 }

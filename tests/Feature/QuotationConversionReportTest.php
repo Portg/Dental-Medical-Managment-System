@@ -10,7 +10,7 @@ use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ProceduresReportSmokeTest extends TestCase
+class QuotationConversionReportTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -29,38 +29,30 @@ class ProceduresReportSmokeTest extends TestCase
             'password'  => bcrypt('password'),
         ]);
 
-        // Grant view-reports permission
         $perm = Permission::firstOrCreate(['slug' => 'view-reports', 'name' => 'View Reports']);
         RolePermission::create(['role_id' => $adminRole->id, 'permission_id' => $perm->id]);
     }
 
     /** @test */
-    public function procedure_income_report_ajax_returns_json_with_dates(): void
+    public function quotation_conversion_report_loads_without_sql_error(): void
     {
         $response = $this->actingAs($this->admin)
-            ->get('/procedure-income-report?' . http_build_query([
-                'draw'       => 1,
-                'start'      => 0,
-                'length'     => 10,
-                'start_date' => now()->format('Y-m-d'),
-                'end_date'   => now()->format('Y-m-d'),
-            ]), ['X-Requested-With' => 'XMLHttpRequest']);
+            ->get('/quotation-conversion-report');
 
         $response->assertOk();
-        $response->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+        $response->assertViewHas('summary');
+        $response->assertViewHas('byDoctor');
+        $response->assertViewHas('monthlyTrend');
+        $response->assertViewHas('unconvertedList');
     }
 
     /** @test */
-    public function procedure_income_report_ajax_returns_json_without_dates(): void
+    public function quotation_conversion_report_accepts_date_range(): void
     {
         $response = $this->actingAs($this->admin)
-            ->get('/procedure-income-report?' . http_build_query([
-                'draw'   => 1,
-                'start'  => 0,
-                'length' => 10,
-            ]), ['X-Requested-With' => 'XMLHttpRequest']);
+            ->get('/quotation-conversion-report?start_date=2026-01-01&end_date=2026-02-28');
 
         $response->assertOk();
-        $response->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+        $response->assertViewHas('summary');
     }
 }

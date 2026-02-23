@@ -31,7 +31,7 @@ class QuotationSmokeTest extends TestCase
             'phone_no' => '123',
         ]);
 
-        $role = Role::create(['name' => 'Super Administrator']);
+        $role = Role::create(['name' => 'Super Administrator', 'slug' => 'super-admin']);
         $perm = Permission::create([
             'name' => 'Manage Quotations',
             'slug' => 'manage-quotations',
