@@ -18,7 +18,7 @@ class UsersTableSeeder extends Seeder
     public function run()
     {
         // 获取管理员角色的ID
-        $adminRole = Role::where('name', 'Super Administrator')->first();
+        $adminRole = Role::where('slug', 'super-admin')->first();
         $mainBranch = Branch::where('name', '瑞贝口腔')->whereNull('deleted_at')  ->first();
 
         // 创建一个管理员账号

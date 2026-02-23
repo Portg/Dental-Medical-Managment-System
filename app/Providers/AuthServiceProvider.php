@@ -28,35 +28,35 @@ class AuthServiceProvider extends ServiceProvider
 
         //system access levels
         Gate::define('Super-Administrator-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Super Administrator") {
+            if ($user->UserRole->slug === 'super-admin') {
                 return true;
             }
             return false;
         });
 
         Gate::define('Admin-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Administrator") {
+            if ($user->UserRole->slug === 'admin') {
                 return true;
             }
             return false;
         });
 
         Gate::define('Doctor-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Doctor") {
+            if ($user->UserRole->slug === 'doctor') {
                 return true;
             }
             return false;
         });
 
         Gate::define('Receptionist-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Receptionist") {
+            if ($user->UserRole->slug === 'receptionist') {
                 return true;
             }
             return false;
         });
 
         Gate::define('Nurse-Dashboard', function ($user) {
-            if ($user->UserRole->name == "Nurse") {
+            if ($user->UserRole->slug === 'nurse') {
                 return true;
             }
             return false;
@@ -65,7 +65,7 @@ class AuthServiceProvider extends ServiceProvider
         //individual records permissions
         Gate::define('action-settings', function ($user, $model) {
             // If user is administrator, then can edit any data
-            if ($user->UserRole->name == "Administrator") {
+            if ($user->UserRole->slug === 'admin') {
                 return true;
             } elseif ($user->id == $model->_who_added) {
                 // Check if user is the data author
@@ -78,7 +78,7 @@ class AuthServiceProvider extends ServiceProvider
         // 动态权限检查 — 使用 Gate::before 避免 boot 阶段查询 DB
         Gate::before(function ($user, $ability) {
             // Super Administrator 跳过所有权限检查
-            if ($user->UserRole && $user->UserRole->name === 'Super Administrator') {
+            if ($user->UserRole && $user->UserRole->slug === 'super-admin') {
                 return true;
             }
 

@@ -99,8 +99,9 @@
             cache: true
         }
     }).on('change', function (e) {
-        let selectedRole = $("#role option:selected").text();
-        if (selectedRole == "Super Administrator") {
+        let data = $('#role').select2('data');
+        let slug = data.length ? data[0].slug : '';
+        if (slug === 'super-admin') {
             $('#branch_block').hide();
         } else {
             $('#branch_block').show();
