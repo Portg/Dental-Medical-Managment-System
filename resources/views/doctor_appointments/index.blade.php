@@ -1,0 +1,342 @@
+@extends(\App\Http\Helper\FunctionsHelper::navigation())
+@section('content')
+@section('css')
+    @include('layouts.page_loader')
+@endsection
+<div class="row">
+    <div class="col-md-12">
+        <div class="portlet light bordered">
+            <div class="portlet-body">
+                <div class="tabbable tabbable-tabdrop">
+                    <ul class="nav nav-pills">
+
+                        <li class="active" id="appointments_tab_link">
+                            <a href="#appointments_tab" data-toggle="tab" aria-expanded="true">{{ __('appointment.appointments') }}</a>
+                        </li>
+                        <li class="" id="appointment_calender_tab_link">
+                            <a href="#appointment_calender_tab" data-toggle="tab" aria-expanded="false">{{ __('appointment.appointment_calendar') }}</a>
+                        </li>
+
+
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="appointments_tab">
+                            <div class="row">
+                                <div class="portlet light">
+                                    <div class="portlet-title">
+                                        <div class="caption font-dark">
+                                            <span class="caption-subject">{{ __('appointment.appointment_mgt') }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="portlet-body">
+                                        <div class="table-toolbar">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="btn-group">
+{{--                                                        <a class="btn blue btn-outline sbold" href="#"--}}
+{{--                                                           onclick="createRecord()"> Add New <i--}}
+{{--                                                                    class="fa fa-plus"></i> </a>--}}
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="btn-group pull-right">
+{{--                                                        <a href="{{ url('export-appointments') }}" class="text-danger">--}}
+{{--                                                            <i class="icon-cloud-download"></i> Download Excel Report--}}
+{{--                                                        </a>--}}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <br>
+                                        <div class="col-md-12">
+
+                                            <form action="#" class="form-horizontal">
+                                                <div class="form-body">
+
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <div class="form-group">
+                                                                <label class="control-label col-md-3">{{ __('appointment.appointment_no') }}</label>
+                                                                <div class="col-md-9">
+                                                                    <input type="text" class="form-control"
+                                                                           placeholder="{{ __('appointment.enter_appointment_no') }}"
+                                                                           name="appointment_no"
+                                                                           id="appointment_no_filter">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="form-group">
+                                                                <label class="control-label col-md-3">{{ __('datetime.period') }}</label>
+                                                                <div class="col-md-9">
+                                                                    <select class="form-control" id="period_selector">
+                                                                        <option>{{ __('common.all') }}</option>
+                                                                        <option value="Today">{{ __('datetime.today') }}</option>
+                                                                        <option value="Yesterday">{{ __('datetime.yesterday') }}</option>
+                                                                        <option value="This week">{{ __('datetime.this_week') }}</option>
+                                                                        <option value="Last week">{{ __('datetime.last_week') }}</option>
+                                                                        <option value="This Month">{{ __('datetime.this_month') }}</option>
+                                                                        <option value="Last Month">{{ __('datetime.last_month') }}</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <div class="form-group">
+                                                                <label class="control-label col-md-3">{{ __('datetime.date_range.start_date') }}</label>
+                                                                <div class="col-md-9">
+                                                                    <input type="text" class="form-control start_date">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="form-group">
+                                                                <label class="control-label col-md-3">{{ __('datetime.date_range.end_date') }}</label>
+                                                                <div class="col-md-9">
+                                                                    <input type="text" class="form-control end_date">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="form-actions">
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <div class="row">
+                                                                <div class="col-md-offset-3 col-md-9">
+                                                                    <button type="button" id="customFilterBtn"
+                                                                            class="btn purple-intense">{{ __('appointment.filter_appointments') }}
+                                                                    </button>
+                                                                    <button type="button" class="btn default">{{ __('common.clear') }}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6"></div>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        <br>
+                                        <table class="table table-striped table-bordered table-hover table-checkable order-column"
+                                               id="doctor-appointments-table">
+                                            <thead>
+                                            <tr>
+                                                <th>{{ __('common.id') }}</th>
+                                                <th>{{ __('appointment.appointment_no') }}</th>
+                                                <th>{{ __('appointment.appointment_date') }}</th>
+                                                <th>{{ __('appointment.appointment_time') }}</th>
+                                                <th>{{ __('patient.patient') }}</th>
+                                                <th>{{ __('medical_treatment.treatment') }}</th>
+                                            </thead>
+                                            <tbody>
+
+                                            </tbody>
+                                        </table>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="tab-pane" id="appointment_calender_tab">
+                            <div class="row">
+                                <div class="portlet light">
+                                    <div class="portlet-title">
+                                        <div class="caption font-dark">
+                                            <span class="caption-subject">{{ __('appointment.appointment_calendar') }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="portlet-body">
+                                        <div id="calendar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="loading">
+    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
+    <span>{{ __('common.loading') }}</span>
+</div>
+@include('doctor_appointments.create_claim')
+@endsection
+@section('js')
+
+    <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+    <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
+    <script type="text/javascript">
+        // Load page-specific translations
+        LanguageManager.loadAllFromPHP({
+            'appointment': @json(__('appointment'))
+        });
+
+        function default_todays_data() {
+            // initially load today's date filtered data
+            $('.start_date').val(todaysDate());
+            $('.end_date').val(todaysDate());
+            $("#period_selector").val('Today');
+        }
+
+        $('#period_selector').on('change', function () {
+            switch (this.value) {
+                case'Today':
+                    $('.start_date').val(todaysDate());
+                    $('.end_date').val(todaysDate());
+                    break;
+                case'Yesterday':
+                    $('.start_date').val(YesterdaysDate());
+                    $('.end_date').val(YesterdaysDate());
+                    break;
+                case'This week':
+                    $('.start_date').val(thisWeek());
+                    $('.end_date').val(todaysDate());
+                    break;
+                case'Last week':
+                    lastWeek();
+                    break;
+                case'This Month':
+                    $('.start_date').val(formatDate(thisMonth()));
+                    $('.end_date').val(todaysDate());
+                    break;
+                case'Last Month':
+                    lastMonth();
+                    break;
+            }
+        });
+
+        $(function () {
+
+            default_todays_data();  //filter  date
+
+            var table = $('#doctor-appointments-table').DataTable({
+                destroy: true,
+                processing: true,
+                serverSide: true,
+                language: LanguageManager.getDataTableLang(),
+                ajax: {
+                    url: "{{ url('/doctor-appointments/') }}",
+                    data: function (d) {
+                        d.start_date = $('.start_date').val();
+                        d.end_date = $('.end_date').val();
+                        d.appointment_no = $('#appointment_no_filter').val();
+                        d.search = $('input[type="search"]').val();
+                    }
+                },
+                dom: 'Bfrtip',
+                buttons: {
+                    buttons: [
+                        // {extend: 'pdfHtml5', className: 'pdfButton'},
+                        // {extend: 'excelHtml5', className: 'excelButton'},
+
+                    ]
+                },
+                columns: [
+                    {data: 'DT_RowIndex', name: 'DT_RowIndex'},
+                    {data: 'appointment_no', name: 'appointment_no'},
+                    {data: 'start_date', name: 'start_date'},
+                    {data: 'start_time', name: 'start_time'},
+                    {data: 'patient', name: 'patient'},
+                    {data: 'treatment', name: 'treatment'}
+                ]
+            });
+        });
+        $('#customFilterBtn').click(function () {
+            $('#doctor-appointments-table').DataTable().draw(true);
+        });
+
+        function CreateClaim(appointment_id) {
+            $("#claims-form")[0].reset();
+            $('#appointment_id').val(appointment_id);
+            $('#claims-modal').modal('show');
+        }
+
+
+        function save_data() {
+            $.LoadingOverlay("show");
+            $('#btnSave').attr('disabled', true);
+            $('#btnSave').text('{{ __('common.processing') }}');
+            $.ajax({
+                type: 'POST',
+                data: $('#claims-form').serialize(),
+                url: "/claims",
+                success: function (data) {
+                    $('#claims-modal').modal('hide');
+                    $.LoadingOverlay("hide");
+                    if (data.status) {
+                        alert_dialog(data.message, "success");
+                    } else {
+                        swal("{{ __('common.warning') }}", data.message);
+                    }
+                },
+                error: function (request, status, error) {
+                    $.LoadingOverlay("hide");
+                    json = $.parseJSON(request.responseText);
+                    $.each(json.errors, function (key, value) {
+                        $('.alert-danger').show();
+                        $('.alert-danger').append('<p>' + value + '</p>');
+                    });
+                }
+            });
+        }
+
+
+        function alert_dialog(message, status) {
+
+            if (status) {
+                let oTable = $('#doctor-appointments-table').dataTable();
+                oTable.fnDraw(false);
+                swal("{{ __('common.alert') }}", message, status);
+            }
+        }
+
+
+    </script>
+
+    {{--load appointment calender script via FullCalendar 5.x CDN--}}
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
+    @if(app()->getLocale() === 'zh-CN')
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/locales/zh-cn.min.js"></script>
+    @endif
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            if (calendarEl) {
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    locale: '{{ app()->getLocale() === "zh-CN" ? "zh-cn" : "en" }}',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    },
+                    events: {
+                        url: '{{ url("doctor-appointments/calendar-events") }}',
+                        method: 'GET',
+                        failure: function() {
+                            console.error('Failed to load calendar events');
+                        }
+                    }
+                });
+                // Render calendar when tab is shown
+                $('a[href="#appointment_calender_tab"]').on('shown.bs.tab', function () {
+                    calendar.render();
+                });
+            }
+        });
+    </script>
+@endsection
+
+
+
+
+
