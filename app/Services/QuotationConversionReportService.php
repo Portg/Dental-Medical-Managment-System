@@ -103,17 +103,20 @@ class QuotationConversionReportService
 
     private function getByDoctor(Carbon $startDate, Carbon $endDate): Collection
     {
-        $convertedIds = $this->getConvertedIds($startDate, $endDate);
+        $convertedSub = $this->buildConvertedSubquery($startDate, $endDate);
 
         return DB::table('quotations as q')
             ->join('users as u', 'q._who_added', '=', 'u.id')
+            ->leftJoinSub($convertedSub, 'converted', function ($join) {
+                $join->on('q.id', '=', 'converted.id');
+            })
             ->whereBetween('q.created_at', [$startDate, $endDate])
             ->whereNull('q.deleted_at')
             ->select(
                 'u.id as doctor_id',
                 'u.surname as doctor_name',
-                DB::raw('COUNT(q.id) as total_quotations'),
-                DB::raw('SUM(CASE WHEN q.id IN (' . ($convertedIds->isNotEmpty() ? $convertedIds->implode(',') : '0') . ') THEN 1 ELSE 0 END) as converted_count')
+                DB::raw('COUNT(DISTINCT q.id) as total_quotations'),
+                DB::raw('COUNT(DISTINCT converted.id) as converted_count')
             )
             ->groupBy('u.id', 'u.surname')
             ->orderByDesc('total_quotations')
@@ -124,6 +127,28 @@ class QuotationConversionReportService
                     : 0;
                 return $row;
             });
+    }
+
+    /**
+     * Build a subquery returning distinct converted quotation IDs (for use with leftJoinSub).
+     */
+    private function buildConvertedSubquery(Carbon $startDate, Carbon $endDate)
+    {
+        return DB::table('quotations as q2')
+            ->join('quotation_items as qi2', 'q2.id', '=', 'qi2.quotation_id')
+            ->join('invoices as inv2', 'q2.patient_id', '=', 'inv2.patient_id')
+            ->join('invoice_items as ii2', function ($join) {
+                $join->on('inv2.id', '=', 'ii2.invoice_id')
+                     ->on('qi2.medical_service_id', '=', 'ii2.medical_service_id');
+            })
+            ->whereColumn('inv2.created_at', '>=', 'q2.created_at')
+            ->whereBetween('q2.created_at', [$startDate, $endDate])
+            ->whereNull('q2.deleted_at')
+            ->whereNull('qi2.deleted_at')
+            ->whereNull('inv2.deleted_at')
+            ->whereNull('ii2.deleted_at')
+            ->select('q2.id')
+            ->distinct();
     }
 
     private function getMonthlyTrend(Carbon $startDate, Carbon $endDate): array

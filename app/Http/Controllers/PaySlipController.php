@@ -94,16 +94,6 @@ class PaySlipController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
@@ -137,29 +127,6 @@ class PaySlipController extends Controller
         $data['employee'] = $this->service->getPaySlipDetail((int) $pay_slip_id);
         $data['pay_slip_id'] = $pay_slip_id;
         return view('payslips.show.index')->with($data);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param \App\PaySlip $paySlip
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(\App\PaySlip $paySlip)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param \App\PaySlip $paySlip
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, \App\PaySlip $paySlip)
-    {
-        //
     }
 
     /**

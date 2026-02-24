@@ -131,7 +131,7 @@ $(document).ready(function() {
     var ageColors = ['#1A237E', '#283593', '#303F9F', '#3949AB', '#3F51B5', '#5C6BC0', '#7986CB', '#9FA8DA'];
 
     // 年龄段分布
-    var ageData = {!! json_encode($ageDistribution) !!};
+    var ageData = @json($ageDistribution);
     new Chart(document.getElementById('ageChart').getContext('2d'), {
         type: 'bar',
         data: {
@@ -149,7 +149,7 @@ $(document).ready(function() {
     });
 
     // 性别比
-    var genderData = {!! json_encode($genderDistribution) !!};
+    var genderData = @json($genderDistribution);
     new Chart(document.getElementById('genderChart').getContext('2d'), {
         type: 'doughnut',
         data: {
@@ -163,7 +163,7 @@ $(document).ready(function() {
     });
 
     // 来源分布
-    var sourceData = {!! json_encode($sourceDistribution) !!};
+    var sourceData = @json($sourceDistribution);
     var srcColors = ['#1A237E', '#3949AB', '#5C6BC0', '#7986CB', '#9FA8DA', '#C5CAE9', '#E8EAF6'];
     new Chart(document.getElementById('sourceChart').getContext('2d'), {
         type: 'doughnut',
@@ -178,7 +178,7 @@ $(document).ready(function() {
     });
 
     // 新患月趋势
-    var trendData = {!! json_encode($newPatientTrend) !!};
+    var trendData = @json($newPatientTrend);
     new Chart(document.getElementById('newPatientTrendChart').getContext('2d'), {
         type: 'line',
         data: {

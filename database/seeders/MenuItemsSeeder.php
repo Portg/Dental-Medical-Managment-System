@@ -58,9 +58,9 @@ class MenuItemsSeeder extends Seeder
 
     private function seedPatientCenter(int $parentId): void
     {
-        // 2.1 Patient Files — SA sees group with children, DNR sees direct link
-        $pfGroup = $this->item($parentId, 'menu.group_patient_management', 'patients', 'icon-list', 'view-patients', 10, 'SADNR');
-        $this->item($pfGroup, 'menu.patients_list', 'patients', null, 'view-patients', 10, 'SA');
+        // 2.1 Patient Files — always a group (directory), all roles see patients_list
+        $pfGroup = $this->item($parentId, 'menu.group_patient_management', null, 'icon-list', 'view-patients', 10, 'SADNR');
+        $this->item($pfGroup, 'menu.patients_list', 'patients', null, 'view-patients', 10, 'SADNR');
         $this->item($pfGroup, 'menu.patient_tags', 'patient-tags', null, 'manage-patient-settings', 20, 'SA');
         $this->item($pfGroup, 'menu.patient_sources', 'patient-sources', null, 'manage-patient-settings', 30, 'SA');
 
@@ -166,16 +166,17 @@ class MenuItemsSeeder extends Seeder
         $leaveGroup = $this->item($parentId, 'menu.group_attendance_leave', null, 'icon-calendar', null, 90, 'SA');
         $this->item($leaveGroup, 'menu.holidays', 'holidays', null, 'manage-holidays', 10, 'SA');
         $this->item($leaveGroup, 'menu.leave_types', 'leave-types', null, 'manage-leave', 20, 'SA');
-        $this->item($leaveGroup, 'menu.leave_requests', 'leave-requests', null, 'manage-leave', 30, 'SA');
+        $this->item($leaveGroup, 'menu.leave_requests', 'leave-requests', null, null, 30, 'SADNR');
         $this->item($leaveGroup, 'menu.leave_approval', 'leave-requests-approval', null, 'manage-leave', 40, 'SA');
-
-        $this->item($parentId, 'menu.leave_requests', 'leave-requests', 'icon-calendar', null, 91, 'DNR');
     }
 
     // ── 5. Data Center ─────────────────────────────────────────────────
 
     private function seedDataCenter(int $parentId): void
     {
+        // 5.0 Business Cockpit — 经营驾驶舱
+        $this->item($parentId, 'menu.business_cockpit', 'business-cockpit', 'icon-speedometer', 'view-reports', 5, 'SA');
+
         // 5.1 Revenue Analysis — GROUP for SA
         $revGroup = $this->item($parentId, 'menu.group_revenue_analysis', null, 'icon-bar-chart', null, 10, 'SA');
         $this->item($revGroup, 'menu.general_income_report', 'invoice-payments-report', null, 'view-reports', 10, 'SA');

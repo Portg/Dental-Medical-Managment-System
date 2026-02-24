@@ -61,6 +61,7 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('patients', 'PatientController');
     Route::get('patients/{patientId}/medicalHistory', 'PatientController@patientMedicalHistory');
+    Route::post('patients/{id}/reveal-pii', 'PatientController@revealPii');
 
     Route::get('export-patients', 'PatientController@exportPatients');
     Route::get('search-patient', 'PatientController@filterPatients');
@@ -81,7 +82,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('chronic-diseases', 'ChronicDiseasesController');
 
     Route::get('allergies/{patient_id}', 'AllergyController@index');
-    Route::resource('allergies', 'AllergyController');
+    Route::resource('allergies', 'AllergyController')->except(['create', 'show']);
 
     Route::resource('medical-cards', 'MedicalCardController');
     Route::resource('medical-cards-items', 'MedicalCardItemController');
@@ -91,6 +92,14 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::get('search-medical-service', 'MedicalServiceController@filterServices');
     Route::get('services-array', 'MedicalServiceController@servicesArray');
+
+    // Discount Approval (PRD 4.1.2 BR-035) — must be before resource route
+    Route::get('invoices/pending-discount-approvals', 'InvoiceController@pendingDiscountApprovals');
+    Route::post('invoices/{id}/approve-discount', 'InvoiceController@approveDiscount');
+    Route::post('invoices/{id}/reject-discount', 'InvoiceController@rejectDiscount');
+
+    // Credit/Deferred Payment (PRD 4.1.3)
+    Route::post('invoices/{id}/set-credit', 'InvoiceController@setCredit');
 
     Route::resource('invoices', 'InvoiceController');
     Route::get('patient-invoices/{patient_id}', 'InvoiceController@patientInvoices');
@@ -128,14 +137,6 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('refunds/{id}/reject', 'RefundController@reject');
     Route::get('refunds/{id}/print', 'RefundController@print');
     Route::resource('refunds', 'RefundController');
-
-    // Discount Approval (PRD 4.1.2 BR-035)
-    Route::get('invoices/pending-discount-approvals', 'InvoiceController@pendingDiscountApprovals');
-    Route::post('invoices/{id}/approve-discount', 'InvoiceController@approveDiscount');
-    Route::post('invoices/{id}/reject-discount', 'InvoiceController@rejectDiscount');
-
-    // Credit/Deferred Payment (PRD 4.1.3)
-    Route::post('invoices/{id}/set-credit', 'InvoiceController@setCredit');
 
     // Coupons
     Route::resource('coupons', 'CouponController');
@@ -175,7 +176,7 @@ Route::group(['middleware' => ['auth']], function () {
     // categories array
 
     Route::get('search-expense-category', 'ExpenseCategoryController@searchCategory');
-    Route::resource('expenses', 'ExpenseController');
+    Route::resource('expenses', 'ExpenseController')->except(['create', 'edit', 'update']);
     Route::get('export-expenses', 'ExpenseController@exportReport');
     Route::resource('suppliers', 'SupplierController');
     Route::get('filter-suppliers', 'SupplierController@filterSuppliers');
@@ -202,10 +203,10 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('dental-charting', 'DentalChartController');
     //payroll management
-    Route::resource('employee-contracts', 'EmployeeContractController');
+    Route::resource('employee-contracts', 'EmployeeContractController')->except(['create', 'show']);
     Route::get('search-employee', 'UsersController@filterEmployees');
     Route::resource('salary-advances', 'SalaryAdvanceController');
-    Route::resource('payslips', 'PaySlipController');
+    Route::resource('payslips', 'PaySlipController')->except(['create', 'edit', 'update']);
     Route::get('individual-payslips', 'PaySlipController@individualPaySlip');
 
     Route::get('allowances/{payslip_id}', 'SalaryAllowanceController@index');
@@ -227,7 +228,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('chairs', 'ChairController');
 
     //leave mgt
-    Route::resource('holidays', 'HolidayController');
+    Route::resource('holidays', 'HolidayController')->except(['create', 'show']);
     Route::resource('leave-types', 'LeaveTypeController');
     Route::get('search-leave-type', 'LeaveTypeController@filter'); //search leave type
     Route::get('get-all-leave-types', 'LeaveTypeController@getAll'); //get all leave types for dropdown
@@ -238,10 +239,10 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('reject-leave-request/{id}', 'LeaveRequestApprovalController@rejectRequest');
 
     //sms manager
-    Route::resource('outbox-sms', 'SmsLoggingController');
+    Route::resource('outbox-sms', 'SmsLoggingController')->only(['index']);
     Route::get('export-sms-report', 'SmsLoggingController@exportReport');
-    Route::resource('sms-transactions', 'SmsTransactionController');
-    Route::resource('birthday-wishes', 'BirthDayMessageController');
+    Route::resource('sms-transactions', 'SmsTransactionController')->only(['index']);
+    Route::resource('birthday-wishes', 'BirthDayMessageController')->except(['create', 'show']);
 
 
     //accounting
@@ -418,6 +419,9 @@ Route::group(['middleware' => ['auth']], function () {
     // Treatment Plan Completion Report
     Route::get('treatment-plan-completion-report', 'TreatmentPlanCompletionReportController@index');
 
+    // Business Cockpit (经营驾驶舱)
+    Route::get('business-cockpit', 'BusinessCockpitController@index');
+
     // Monthly Business Summary Report
     Route::get('monthly-business-summary-report', 'MonthlyBusinessSummaryReportController@index');
 
@@ -469,4 +473,28 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('lab-cases/{id}/update-status', 'LabCaseController@updateStatus');
     Route::get('api/lab-case/{id}', 'LabCaseController@getCase');
     Route::get('print-lab-case/{id}', 'LabCaseController@printLabCase');
+
+    // ============================================================
+    // Role Dashboards (migrated from Modules/)
+    // ============================================================
+
+    Route::get('superadmin', 'SuperAdminDashboardController@index');
+    Route::get('doctor', 'DoctorDashboardController@index');
+    Route::get('nurse', 'NurseDashboardController@index');
+    Route::get('receptionist', 'ReceptionistDashboardController@index');
+    Route::get('pharmacy', 'PharmacyDashboardController@index');
+
+    // ============================================================
+    // Doctor Appointments (migrated from Modules/Doctor)
+    // ============================================================
+
+    Route::get('doctor-appointments/calendar-events', 'DoctorAppointmentController@calendarEvents');
+    Route::resource('doctor-appointments', 'DoctorAppointmentController');
+    Route::post('appointment-status', 'DoctorAppointmentController@updateAppointmentStatus');
+
+    // ============================================================
+    // Doctor Self Claims (migrated from Modules/Doctor)
+    // ============================================================
+
+    Route::resource('claims', 'DoctorSelfClaimController');
 });

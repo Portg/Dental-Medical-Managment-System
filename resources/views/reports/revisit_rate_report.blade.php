@@ -145,10 +145,10 @@ $(document).ready(function() {
     new Chart(trendCtx, {
         type: 'line',
         data: {
-            labels: {!! json_encode(array_column($monthlyTrend, 'month_label')) !!},
+            labels: @json(array_column($monthlyTrend, 'month_label')),
             datasets: [{
                 label: '{{ __("report.revisit_rate") }}',
-                data: {!! json_encode(array_column($monthlyTrend, 'revisit_rate')) !!},
+                data: @json(array_column($monthlyTrend, 'revisit_rate')),
                 borderColor: '#1A237E',
                 backgroundColor: 'rgba(26, 35, 126, 0.1)',
                 fill: true,
@@ -169,9 +169,9 @@ $(document).ready(function() {
     new Chart(intervalCtx, {
         type: 'bar',
         data: {
-            labels: {!! json_encode(array_column($intervalDistribution, 'label')) !!},
+            labels: @json(array_column($intervalDistribution, 'label')),
             datasets: [{
-                data: {!! json_encode(array_column($intervalDistribution, 'count')) !!},
+                data: @json(array_column($intervalDistribution, 'count')),
                 backgroundColor: ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#FF5722', '#F44336']
             }]
         },

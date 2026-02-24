@@ -17,15 +17,28 @@ class AppointmentExport implements FromArray, WithHeadings, ShouldAutoSize
 
     public function array(): array
     {
+        $statusMap = [
+            'Pending' => __('appointment.pending'),
+            'Confirmed' => __('appointment.confirmed'),
+            'Scheduled' => __('appointment.scheduled'),
+            'Arrived' => __('appointment.arrived'),
+            'In Progress' => __('appointment.in_progress'),
+            'Completed' => __('appointment.completed'),
+            'Cancelled' => __('appointment.cancelled'),
+            'No Show' => __('appointment.no_show'),
+            'Rescheduled' => __('appointment.rescheduled'),
+            'Waiting' => __('appointment.waiting'),
+        ];
+
         $rows = [];
         foreach ($this->data as $row) {
+            $fullName = trim(($row->surname ?? '') . ($row->othername ?? ''));
             $rows[] = [
-                $row->surname,
-                $row->othername,
+                $fullName,
                 $row->start_date,
                 $row->start_time,
                 $row->visit_information,
-                $row->status,
+                $statusMap[$row->status] ?? $row->status,
             ];
         }
         return $rows;
@@ -34,8 +47,7 @@ class AppointmentExport implements FromArray, WithHeadings, ShouldAutoSize
     public function headings(): array
     {
         return [
-            'Surname',
-            'Other Name',
+            __('patient.full_name'),
             __('appointment.appointment_date'),
             __('appointment.appointment_time'),
             __('appointment.visit_information'),

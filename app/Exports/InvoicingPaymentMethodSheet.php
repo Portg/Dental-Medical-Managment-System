@@ -42,7 +42,7 @@ class InvoicingPaymentMethodSheet implements FromArray, WithHeadings, WithStyles
             $grand_total += $row->amount;
         }
 
-        $rows[] = ['', '', '', 'Total= ' . number_format($grand_total), ''];
+        $rows[] = ['', '', '', __('common.total') . '= ' . number_format($grand_total), ''];
         $this->totalRowIndex = count($rows) + 1;
 
         return $rows;
@@ -50,7 +50,13 @@ class InvoicingPaymentMethodSheet implements FromArray, WithHeadings, WithStyles
 
     public function headings(): array
     {
-        return ['Invoice No', 'Payment Date', 'Patient Name', 'Amount Paid', 'Payment Method'];
+        return [
+            __('financial.invoice_number'),
+            __('financial.payment_date'),
+            __('financial.patient_name'),
+            __('financial.amount_paid'),
+            __('financial.payment_method'),
+        ];
     }
 
     public function title(): string

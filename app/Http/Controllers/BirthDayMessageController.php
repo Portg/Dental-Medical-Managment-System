@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Helper\FunctionsHelper;
 use App\Services\BirthDayMessageService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -54,16 +53,6 @@ class BirthDayMessageController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
@@ -80,17 +69,6 @@ class BirthDayMessageController extends Controller
         $success = $this->birthDayMessageService->create($request->message);
 
         return FunctionsHelper::messageResponse(__("messages.message_added_successfully"), $success);
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param int $id
-     * @return Response
-     */
-    public function show($id)
-    {
-        //
     }
 
     /**

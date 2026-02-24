@@ -83,6 +83,22 @@ class DiscountWorkflowTest extends TestCase
         $this->invoiceService = new InvoiceService();
     }
 
+    // ─── Pending discount approvals page ──────────────────────────
+
+    public function test_pending_discount_approvals_page_loads(): void
+    {
+        $saRole = Role::create(['name' => 'Super Administrator', 'slug' => 'super-admin']);
+        $sa = User::factory()->create([
+            'role_id'   => $saRole->id,
+            'branch_id' => $this->admin->branch_id,
+        ]);
+
+        $response = $this->actingAs($sa)
+            ->get('/invoices/pending-discount-approvals');
+
+        $response->assertOk();
+    }
+
     // ─── Discount threshold (BR-035) ─────────────────────────────
 
     public function test_discount_below_threshold_no_approval(): void

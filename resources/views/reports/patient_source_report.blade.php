@@ -169,10 +169,10 @@ $(document).ready(function() {
     new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: {!! json_encode(array_column($sourceAnalysis, 'name')) !!},
+            labels: @json(array_column($sourceAnalysis, 'name')),
             datasets: [{
-                data: {!! json_encode(array_column($sourceAnalysis, 'patient_count')) !!},
-                backgroundColor: {!! json_encode(array_column($sourceAnalysis, 'color')) !!},
+                data: @json(array_column($sourceAnalysis, 'patient_count')),
+                backgroundColor: @json(array_column($sourceAnalysis, 'color')),
                 borderWidth: 0
             }]
         },

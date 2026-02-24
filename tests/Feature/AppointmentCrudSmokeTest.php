@@ -4,10 +4,13 @@ namespace Tests\Feature;
 
 use App\Branch;
 use App\Patient;
+use App\Permission;
 use App\Role;
+use App\RolePermission;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class AppointmentCrudSmokeTest extends TestCase
@@ -52,6 +55,11 @@ class AppointmentCrudSmokeTest extends TestCase
         ]);
 
         $this->token = $this->admin->createToken('test')->plainTextToken;
+
+        // Grant view-patients permission to admin role
+        $viewPatientsPerm = Permission::create(['name' => 'View Patients', 'slug' => 'view-patients', 'module' => 'patients']);
+        RolePermission::create(['role_id' => $adminRole->id, 'permission_id' => $viewPatientsPerm->id]);
+        Cache::flush();
     }
 
     private function authHeader(): array
@@ -207,5 +215,34 @@ class AppointmentCrudSmokeTest extends TestCase
     public function test_unauthenticated_cannot_access_appointments(): void
     {
         $this->getJson('/api/v1/appointments')->assertStatus(401);
+    }
+
+    // ─── Patient search for appointment form ─────────────────────
+
+    public function test_search_patient_with_full_returns_complete_data(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->getJson('/search-patient?q=张&full=1');
+
+        $response->assertOk();
+        $data = $response->json();
+        $this->assertNotEmpty($data);
+        $this->assertArrayHasKey('surname', $data[0]);
+        $this->assertArrayHasKey('othername', $data[0]);
+        $this->assertArrayHasKey('phone_no', $data[0]);
+        $this->assertArrayHasKey('gender', $data[0]);
+    }
+
+    public function test_search_patient_without_full_returns_id_text(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->getJson('/search-patient?q=张');
+
+        $response->assertOk();
+        $data = $response->json();
+        $this->assertNotEmpty($data);
+        $this->assertArrayHasKey('id', $data[0]);
+        $this->assertArrayHasKey('text', $data[0]);
+        $this->assertArrayNotHasKey('surname', $data[0]);
     }
 }
