@@ -62,13 +62,13 @@ $("#addInvoiceItem").click(function () {
         ajax: {
             url: '/search-medical-service',
             dataType: 'json',
+            delay: 300,
             data: function (params) {
                 return {
                     q: $.trim(params.term)
                 };
             },
             processResults: function (data) {
-                // console.log(data);
                 return {
                     results: data
                 };
@@ -150,13 +150,13 @@ $('#service').select2({
     ajax: {
         url: '/search-medical-service',
         dataType: 'json',
+        delay: 300,
         data: function (params) {
             return {
                 q: $.trim(params.term)
             };
         },
         processResults: function (data) {
-            // console.log(data);
             return {
                 results: data
             };
@@ -178,13 +178,13 @@ $('#medical_service_id').select2({
     ajax: {
         url: '/search-medical-service',
         dataType: 'json',
+        delay: 300,
         data: function (params) {
             return {
                 q: $.trim(params.term)
             };
         },
         processResults: function (data) {
-            // console.log(data);
             return {
                 results: data
             };

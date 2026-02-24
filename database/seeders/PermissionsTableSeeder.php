@@ -50,6 +50,10 @@ class PermissionsTableSeeder extends Seeder
             ['name' => '查看报表', 'slug' => 'view-reports', 'module' => '报表管理', 'description' => '查看各类统计报表'],
             ['name' => '导出报表', 'slug' => 'export-reports', 'module' => '报表管理', 'description' => '导出报表数据'],
 
+            // 数据安全
+            ['name' => '导出患者', 'slug' => 'export-patients', 'module' => '数据安全', 'description' => '导出患者数据（含PII）'],
+            ['name' => '查看敏感信息', 'slug' => 'view-sensitive-data', 'module' => '数据安全', 'description' => '查看脱敏字段的完整信息'],
+
             // 医疗管理
             ['name' => '管理病例', 'slug' => 'manage-medical-cases', 'module' => '医疗管理', 'description' => '管理病例记录'],
             ['name' => '管理治疗', 'slug' => 'manage-treatments', 'module' => '医疗管理', 'description' => '管理治疗方案与处方'],

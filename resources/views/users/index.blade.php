@@ -86,6 +86,7 @@
         ajax: {
             url: '/search-role',
             dataType: 'json',
+            delay: 300,
             data: function (params) {
                 return {
                     q: $.trim(params.term)
@@ -117,13 +118,13 @@
         ajax: {
             url: '/search-branch',
             dataType: 'json',
+            delay: 300,
             data: function (params) {
                 return {
                     q: $.trim(params.term)
                 };
             },
             processResults: function (data) {
-                console.log(data);
                 return {
                     results: data
                 };

@@ -104,6 +104,9 @@ class InvoiceController extends Controller
 
         $data = $this->invoiceService->getExportData($from, $to);
 
+        \App\OperationLog::log('export', '账单管理', 'Invoice');
+        \App\OperationLog::checkExportFrequency();
+
         return Excel::download(new InvoiceExport($data), 'invoicing-report-' . date('Y-m-d') . '.xlsx');
     }
 

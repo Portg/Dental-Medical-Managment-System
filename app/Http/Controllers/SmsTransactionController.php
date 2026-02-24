@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
 use App\Services\SmsTransactionService;
-use App\SmsTransaction;
 use Illuminate\Http\Request;
 use Yajra\DataTables\DataTables;
 
@@ -56,69 +55,4 @@ class SmsTransactionController extends Controller
         return view('sms_transactions.index')->with($data);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param \App\SmsTransaction $smsTransaction
-     * @return \Illuminate\Http\Response
-     */
-    public function show(SmsTransaction $smsTransaction)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param \App\SmsTransaction $smsTransaction
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(SmsTransaction $smsTransaction)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param \App\SmsTransaction $smsTransaction
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, SmsTransaction $smsTransaction)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param \App\SmsTransaction $smsTransaction
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(SmsTransaction $smsTransaction)
-    {
-        //
-    }
 }

@@ -42,7 +42,7 @@ class ExpenseExport implements FromArray, WithHeadings, WithStyles, WithTitle, S
             $grand_total += $amount;
         }
 
-        $rows[] = ['', '', '', '', '', '', 'Total= ' . number_format($grand_total)];
+        $rows[] = ['', '', '', '', '', '', __('common.total') . '= ' . number_format($grand_total)];
         $this->totalRowIndex = count($rows) + 1;
 
         return $rows;
@@ -50,7 +50,15 @@ class ExpenseExport implements FromArray, WithHeadings, WithStyles, WithTitle, S
 
     public function headings(): array
     {
-        return ['ID', 'Purchase Date', 'Item Name', 'Budget Line', 'Quantity', 'Unit Price', 'Total Amount'];
+        return [
+            __('common.id'),
+            __('expenses.purchase_date'),
+            __('financial.item_name'),
+            __('expenses.expense_category'),
+            __('expenses.quantity'),
+            __('expenses.unit_price'),
+            __('expenses.total_amount'),
+        ];
     }
 
     public function title(): string

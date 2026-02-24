@@ -6,7 +6,6 @@ use App\Http\Helper\ActionColumnHelper;
 use App\Http\Helper\FunctionsHelper;
 use App\Services\HolidayService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -55,17 +54,6 @@ class HolidayController extends Controller
         return view('holidays.index');
     }
 
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
     /**
      * Store a newly created resource in storage.
      *
@@ -87,17 +75,6 @@ class HolidayController extends Controller
 
         $success = $this->holidayService->createHoliday($request->only(['name', 'holiday_date', 'repeat_date']));
         return FunctionsHelper::messageResponse(__('holidays.added_successfully'), $success);
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        //
     }
 
     /**
@@ -140,7 +117,7 @@ class HolidayController extends Controller
      * Remove the specified resource from storage.
      *
      * @param $id
-     * @return Response
+     * @return \Illuminate\Http\Response
      * @throws \Exception
      */
     public function destroy($id)

@@ -393,7 +393,8 @@ class PatientService
             ->filter(function ($instance) {
             })
             ->addColumn('full_name', function ($row) {
-                return NameHelper::join($row->surname, $row->othername);
+                $fullName = NameHelper::join($row->surname, $row->othername);
+                return DataMaskingService::maskName($fullName);
             })
             ->addColumn('gender', function ($row) {
                 if ($row->gender == 'Male') {
@@ -405,6 +406,9 @@ class PatientService
             })
             ->addColumn('patient_no', function ($row) {
                 return '<a href="#"> ' . $row->patient_no . '</a>';
+            })
+            ->addColumn('phone_no', function ($row) {
+                return DataMaskingService::maskPhone($row->phone_no);
             })
             ->addColumn('tags_badges', function ($row) {
                 return $row->tags_badges ?: '';

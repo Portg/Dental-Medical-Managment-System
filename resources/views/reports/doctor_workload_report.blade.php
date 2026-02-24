@@ -137,7 +137,7 @@
 $(document).ready(function() {
     $('.datepicker').datepicker({ language: '{{ app()->getLocale() }}', format: 'yyyy-mm-dd', autoclose: true });
 
-    var trendData = {!! json_encode($dailyTrend) !!};
+    var trendData = @json($dailyTrend);
     var colors = ['#1A237E', '#E91E63', '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4', '#795548', '#607D8B'];
 
     // 每日工作量趋势（按医生分线）
@@ -169,7 +169,7 @@ $(document).ready(function() {
     });
 
     // 医生预约量排名柱状图
-    var doctorData = {!! json_encode($doctorStats) !!};
+    var doctorData = @json($doctorStats);
     new Chart(document.getElementById('doctorRankingChart').getContext('2d'), {
         type: 'bar',
         data: {

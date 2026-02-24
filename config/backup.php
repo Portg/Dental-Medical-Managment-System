@@ -98,6 +98,12 @@ return [
             'disks' => [
                 'local',
             ],
+
+            /*
+             * Password to encrypt the backup ZIP archive.
+             * Set BACKUP_ARCHIVE_PASSWORD in .env to enable.
+             */
+            'password' => env('BACKUP_ARCHIVE_PASSWORD'),
         ],
 
         /*

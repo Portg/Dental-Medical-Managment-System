@@ -204,7 +204,7 @@ $(document).ready(function() {
     $('.datepicker').datepicker({ language: '{{ app()->getLocale() }}', format: 'yyyy-mm-dd', autoclose: true });
 
     // 月度转化趋势
-    var trendData = {!! json_encode($monthlyTrend) !!};
+    var trendData = @json($monthlyTrend);
     new Chart(document.getElementById('monthlyTrendChart').getContext('2d'), {
         type: 'bar',
         data: {
@@ -245,7 +245,7 @@ $(document).ready(function() {
     });
 
     // 按医生转化率（水平条形图）
-    var doctorData = {!! json_encode($byDoctor) !!};
+    var doctorData = @json($byDoctor);
     if (doctorData.length > 0) {
         new Chart(document.getElementById('doctorConversionChart').getContext('2d'), {
             type: 'bar',

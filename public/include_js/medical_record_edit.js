@@ -9,6 +9,7 @@
 
 var selectedPatientData = null;
 var currentToothField = 'related';
+var lastFocusedTextarea = null;
 
 // ==========================================================================
 // Initialization
@@ -114,8 +115,15 @@ function initCharacterCounter() {
 
 /**
  * Initialize quick phrase insertion (using event delegation)
+ * Tracks last focused textarea to avoid losing focus when clicking phrase buttons
  */
 function initQuickPhrases() {
+    // Track the last focused textarea so clicking a quick-phrase button
+    // doesn't lose the insertion target (click moves focus to the button)
+    $(document).on('focus', '#medical-record-form textarea', function() {
+        lastFocusedTextarea = this;
+    });
+
     // Use event delegation to handle clicks on .quick-phrase elements
     $(document).on('click', '.quick-phrase', function(e) {
         e.preventDefault();
@@ -128,15 +136,17 @@ function initQuickPhrases() {
         var phrase = $(this).data('phrase');
         if (!phrase) return;
 
-        var $focused = $(':focus');
-        if ($focused.is('textarea')) {
-            var curPos = $focused[0].selectionStart;
-            var textBefore = $focused.val().substring(0, curPos);
-            var textAfter = $focused.val().substring(curPos);
-            $focused.val(textBefore + phrase + textAfter);
-            $focused[0].selectionStart = $focused[0].selectionEnd = curPos + phrase.length;
-            $focused.focus();
+        // Use last focused textarea (survives focus-shift to button)
+        var $target = lastFocusedTextarea ? $(lastFocusedTextarea) : null;
+        if ($target && $target.is('textarea') && $target.closest('#medical-record-form').length) {
+            var curPos = $target[0].selectionStart;
+            var textBefore = $target.val().substring(0, curPos);
+            var textAfter = $target.val().substring(curPos);
+            $target.val(textBefore + phrase + textAfter);
+            $target[0].selectionStart = $target[0].selectionEnd = curPos + phrase.length;
+            $target.focus();
         } else {
+            // Fallback: append to examination
             var $exam = $('#examination');
             $exam.val($exam.val() + phrase);
             $exam.focus();
@@ -201,6 +211,7 @@ function initToothMiniChart() {
  */
 function addToothToField(field, tooth) {
     var toothStr = tooth.toString();
+    var oldTeethStr = getTeethStringByField('#examination_teeth');
 
     // Add to the target field
     _addToothUI(field, toothStr);
@@ -209,6 +220,9 @@ function addToothToField(field, tooth) {
     if (field === 'examination') {
         _addToothUI('related', toothStr);
     }
+
+    // Sync teeth references in text fields
+    syncTeethInTextFields(oldTeethStr, getTeethStringByField('#examination_teeth'));
 }
 
 /**
@@ -218,6 +232,7 @@ function addToothToField(field, tooth) {
  */
 function removeToothFromField(field, tooth) {
     var toothStr = tooth.toString();
+    var oldTeethStr = getTeethStringByField('#examination_teeth');
 
     // Remove from the target field
     _removeToothUI(field, toothStr);
@@ -226,6 +241,30 @@ function removeToothFromField(field, tooth) {
     if (field === 'examination') {
         _removeToothUI('related', toothStr);
     }
+
+    // Sync teeth references in text fields
+    syncTeethInTextFields(oldTeethStr, getTeethStringByField('#examination_teeth'));
+}
+
+/**
+ * Sync tooth number references in examination/diagnosis text fields.
+ * When teeth selection changes, replaces old teeth string (e.g. "46") with
+ * new teeth string (e.g. "46,47") in textarea content.
+ * The placeholder "__" (from templates) is also replaced on first tooth selection.
+ */
+function syncTeethInTextFields(oldTeethStr, newTeethStr) {
+    if (oldTeethStr === newTeethStr) return;
+
+    var fields = ['#examination', '#diagnosis'];
+    fields.forEach(function(selector) {
+        var $field = $(selector);
+        if (!$field.length) return;
+        var val = $field.val();
+        if (!val) return;
+        if (val.indexOf(oldTeethStr) !== -1) {
+            $field.val(val.split(oldTeethStr).join(newTeethStr));
+        }
+    });
 }
 
 /**

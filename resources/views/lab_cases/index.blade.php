@@ -277,6 +277,7 @@ $('#create_patient_id').select2({
     ajax: {
         url: '/search-patient',
         dataType: 'json',
+        delay: 300,
         data: function (params) { return { q: $.trim(params.term) }; },
         processResults: function (data) { return { results: data }; },
         cache: true
@@ -291,6 +292,7 @@ $('#create_doctor_id').select2({
     ajax: {
         url: '/search-doctor',
         dataType: 'json',
+        delay: 300,
         data: function (params) { return { q: $.trim(params.term) }; },
         processResults: function (data) { return { results: data }; },
         cache: true

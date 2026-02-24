@@ -236,6 +236,7 @@ return [
     'group_performance' => '绩效管理',
     'group_attendance_leave' => '考勤假期',
     // 数据中心 (Level 2)
+    'business_cockpit' => '经营驾驶舱',
     'group_revenue_analysis' => '营收分析',
     'group_business_analysis' => '经营分析',
     'group_expense_analysis' => '费用分析',

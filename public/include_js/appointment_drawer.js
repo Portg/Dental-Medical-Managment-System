@@ -397,7 +397,7 @@
                     dataType: 'json',
                     delay: 300,
                     data: function(params) {
-                        return { q: params.term };
+                        return { q: params.term, full: 1 };
                     },
                     processResults: function(data) {
                         return {
@@ -428,6 +428,7 @@
                 ajax: {
                     url: '/search-doctor',
                     dataType: 'json',
+                    delay: 300,
                     data: function(params) {
                         return {
                             q: params.term,
@@ -451,6 +452,7 @@
                 ajax: {
                     url: '/api/chairs',
                     dataType: 'json',
+                    delay: 300,
                     processResults: function(data) {
                         return { results: data };
                     }
@@ -466,6 +468,7 @@
                 ajax: {
                     url: '/search-medical-service',
                     dataType: 'json',
+                    delay: 300,
                     data: function(params) {
                         return { q: params.term };
                     },

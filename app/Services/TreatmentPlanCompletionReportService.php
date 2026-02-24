@@ -145,14 +145,14 @@ class TreatmentPlanCompletionReportService
      */
     private function getByDoctor(Carbon $startDate, Carbon $endDate): Collection
     {
-        $convertedSubquery = DB::table('quotations as q2')
+        $convertedSub = DB::table('quotations as q2')
             ->join('quotation_items as qi2', 'q2.id', '=', 'qi2.quotation_id')
             ->join('invoices as inv2', 'q2.patient_id', '=', 'inv2.patient_id')
             ->join('invoice_items as ii2', function ($join) {
                 $join->on('inv2.id', '=', 'ii2.invoice_id')
                      ->on('qi2.medical_service_id', '=', 'ii2.medical_service_id');
             })
-            ->where('inv2.created_at', '>=', DB::raw('q2.created_at'))
+            ->whereColumn('inv2.created_at', '>=', 'q2.created_at')
             ->whereNull('inv2.deleted_at')
             ->whereNull('ii2.deleted_at')
             ->whereNull('qi2.deleted_at')
@@ -161,15 +161,17 @@ class TreatmentPlanCompletionReportService
 
         return DB::table('quotations as q')
             ->join('users as u', 'q._who_added', '=', 'u.id')
+            ->leftJoinSub($convertedSub, 'converted', function ($join) {
+                $join->on('q.id', '=', 'converted.id');
+            })
             ->whereBetween('q.created_at', [$startDate, $endDate])
             ->whereNull('q.deleted_at')
             ->select(
                 'u.id as doctor_id',
                 'u.surname as doctor_name',
-                DB::raw('COUNT(q.id) as total_quotations'),
-                DB::raw('SUM(CASE WHEN q.id IN (' . $convertedSubquery->toSql() . ') THEN 1 ELSE 0 END) as converted_count')
+                DB::raw('COUNT(DISTINCT q.id) as total_quotations'),
+                DB::raw('COUNT(DISTINCT converted.id) as converted_count')
             )
-            ->addBinding($convertedSubquery->getBindings(), 'select')
             ->groupBy('u.id', 'u.surname')
             ->orderByDesc('total_quotations')
             ->get()

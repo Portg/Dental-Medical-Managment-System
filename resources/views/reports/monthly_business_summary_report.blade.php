@@ -125,7 +125,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
 $(document).ready(function() {
-    var revenueData = {!! json_encode($revenueByDay) !!};
+    var revenueData = @json($revenueByDay);
     new Chart(document.getElementById('dailyRevenueChart').getContext('2d'), {
         type: 'bar',
         data: {

@@ -33,6 +33,9 @@ class PatientSourceReportController extends Controller
      */
     public function export(Request $request)
     {
+        \App\OperationLog::log('export', '来源报表', 'PatientSource');
+        \App\OperationLog::checkExportFrequency();
+
         // TODO: Implement Excel export
     }
 }

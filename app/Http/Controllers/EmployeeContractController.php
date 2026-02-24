@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Helper\NameHelper;
 use App\Services\EmployeeContractService;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -88,16 +87,6 @@ class EmployeeContractController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param Request $request
@@ -132,17 +121,6 @@ class EmployeeContractController extends Controller
         }
         return response()->json(['message' => __('messages.error_occurred_later'),
             'status' => false]);
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param \App\EmployeeContract $employeeContract
-     * @return Response
-     */
-    public function show($employeeContract)
-    {
-        //
     }
 
     /**

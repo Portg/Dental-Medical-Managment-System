@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Helper\FunctionsHelper;
 use App\Services\AccountingEquationService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 
 class AccountingEquationController extends Controller
@@ -30,16 +29,6 @@ class AccountingEquationController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
@@ -59,17 +48,6 @@ class AccountingEquationController extends Controller
         $success = $this->accountingEquationService->createEquation($request->only(['name', 'sort_by']));
 
         return FunctionsHelper::messageResponse(__('messages.accounting_equation_added_successfully'), $success);
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        //
     }
 
     /**

@@ -153,10 +153,10 @@ $(document).ready(function() {
     new Chart(document.getElementById('dailyTrendChart').getContext('2d'), {
         type: 'line',
         data: {
-            labels: {!! json_encode(array_column($dailyTrend, 'date')) !!},
+            labels: @json(array_column($dailyTrend, 'date')),
             datasets: [{
                 label: '{{ __("report.appointments_count") }}',
-                data: {!! json_encode(array_column($dailyTrend, 'count')) !!},
+                data: @json(array_column($dailyTrend, 'count')),
                 borderColor: '#1A237E',
                 backgroundColor: 'rgba(26, 35, 126, 0.1)',
                 fill: true,
@@ -171,7 +171,7 @@ $(document).ready(function() {
     });
 
     // 就诊高峰时段
-    var peakHoursData = {!! json_encode($peakHours) !!};
+    var peakHoursData = @json($peakHours);
     var hourLabels = [];
     var hourValues = [];
     for (var h = 8; h <= 20; h++) {
@@ -195,7 +195,7 @@ $(document).ready(function() {
     });
 
     // 预约来源分布
-    var sourceData = {!! json_encode($sourceDistribution) !!};
+    var sourceData = @json($sourceDistribution);
     if (sourceData.length > 0) {
         var sourceColors = ['#1A237E', '#3949AB', '#5C6BC0', '#7986CB', '#9FA8DA', '#C5CAE9', '#E8EAF6'];
         new Chart(document.getElementById('sourceChart').getContext('2d'), {
@@ -212,7 +212,7 @@ $(document).ready(function() {
     }
 
     // 诊椅使用率
-    var chairData = {!! json_encode($chairUtilization) !!};
+    var chairData = @json($chairUtilization);
     if (chairData.length > 0) {
         new Chart(document.getElementById('chairChart').getContext('2d'), {
             type: 'bar',

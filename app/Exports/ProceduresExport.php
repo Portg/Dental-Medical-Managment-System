@@ -34,7 +34,7 @@ class ProceduresExport implements FromArray, WithHeadings, WithStyles, WithTitle
             $grand_total += $row->procedure_income;
         }
 
-        $rows[] = ['', 'Total= ' . number_format($grand_total)];
+        $rows[] = ['', __('common.total') . '= ' . number_format($grand_total)];
         $this->totalRowIndex = count($rows) + 1;
 
         return $rows;
@@ -42,7 +42,10 @@ class ProceduresExport implements FromArray, WithHeadings, WithStyles, WithTitle
 
     public function headings(): array
     {
-        return ['Procedure', 'Sales Amount'];
+        return [
+            __('report.procedure_name'),
+            __('report.procedure_income'),
+        ];
     }
 
     public function title(): string

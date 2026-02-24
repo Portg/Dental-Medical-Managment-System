@@ -33,6 +33,9 @@ class RevisitRateReportController extends Controller
      */
     public function export(Request $request)
     {
+        \App\OperationLog::log('export', '回访报表', 'RevisitRate');
+        \App\OperationLog::checkExportFrequency();
+
         // TODO: Implement Excel export
     }
 }

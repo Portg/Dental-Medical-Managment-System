@@ -40,7 +40,7 @@ class DebtorsExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSi
         }
 
         // Total row
-        $rows[] = ['', '', '', 'Total= ' . number_format($grand_total), 'Total Paid = ' . number_format($grand_total_paid), 'Total Outstanding = ' . number_format($grand_outstanding)];
+        $rows[] = ['', '', '', __('common.total') . '= ' . number_format($grand_total), __('financial.amount_paid') . ' = ' . number_format($grand_total_paid), __('invoices.outstanding_balance') . ' = ' . number_format($grand_outstanding)];
         $this->totalRowIndex = count($rows) + 1;
 
         return $rows;
@@ -48,7 +48,14 @@ class DebtorsExport implements FromArray, WithHeadings, WithStyles, ShouldAutoSi
 
     public function headings(): array
     {
-        return ['Invoice No', 'Invoice Date', 'Patient Name', 'Total Amount', 'Paid Amount', 'Outstanding Balance'];
+        return [
+            __('financial.invoice_number'),
+            __('financial.invoice_date'),
+            __('financial.patient_name'),
+            __('financial.total_amount'),
+            __('financial.amount_paid'),
+            __('invoices.outstanding_balance'),
+        ];
     }
 
     public function styles(Worksheet $sheet)

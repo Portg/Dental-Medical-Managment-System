@@ -679,6 +679,7 @@
         ajax: {
             url: '/search-insurance-company',
             dataType: 'json',
+            delay: 300,
             data: function(params) {
                 return { q: $.trim(params.term) };
             },
@@ -697,6 +698,7 @@
         ajax: {
             url: '/patient-sources-list',
             dataType: 'json',
+            delay: 300,
             processResults: function(data) {
                 return { results: data };
             },
@@ -713,6 +715,7 @@
         ajax: {
             url: '/patient-tags-list',
             dataType: 'json',
+            delay: 300,
             processResults: function(data) {
                 return { results: data };
             },
@@ -728,6 +731,7 @@
         ajax: {
             url: '/search-insurance-company',
             dataType: 'json',
+            delay: 300,
             data: function(params) {
                 return { q: $.trim(params.term) };
             },

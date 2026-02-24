@@ -64,6 +64,9 @@ class InvoicingReportsController extends Controller
         $sheet_title = "From " . date('d-m-Y', strtotime($from)) . " To " .
             date('d-m-Y', strtotime($to));
 
+        \App\OperationLog::log('export', '收费报表', 'InvoicePayment');
+        \App\OperationLog::checkExportFrequency();
+
         return Excel::download(new InvoicingReportExport($data, $sheet_title), 'invoice-payments-report-' . date('Y-m-d') . '.xlsx');
     }
 

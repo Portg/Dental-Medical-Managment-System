@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\AccessLog;
 use App\Http\Helper\FunctionsHelper;
+use App\OperationLog;
+use App\Patient;
+use App\Services\DataMaskingService;
 use App\Services\PatientService;
 use Illuminate\Http\Request;
 use App\Exports\PatientExport;
@@ -20,6 +24,8 @@ class PatientController extends Controller
         $this->middleware('can:create-patients')->only(['create', 'store']);
         $this->middleware('can:edit-patients')->only(['edit', 'update']);
         $this->middleware('can:delete-patients')->only(['destroy']);
+        $this->middleware('can:export-patients')->only(['exportPatients']);
+        $this->middleware('can:view-sensitive-data')->only(['revealPii']);
     }
 
     /**
@@ -52,6 +58,12 @@ class PatientController extends Controller
         $to = $request->session()->get('to') ?: null;
 
         $data = $this->patientService->getExportData($from, $to);
+
+        OperationLog::log('export', '患者管理', 'Patient', null, null, [
+            'record_count' => $data->count(),
+            'masking_enabled' => DataMaskingService::isExportMaskingEnabled(),
+        ]);
+        OperationLog::checkExportFrequency();
 
         return Excel::download(new PatientExport($data), 'patients-' . date('Y-m-d') . '.xlsx');
     }
@@ -120,6 +132,8 @@ class PatientController extends Controller
      */
     public function show($id)
     {
+        AccessLog::log('Patient:view_detail', 'Patient', $id);
+
         $detail = $this->patientService->getPatientDetail($id);
 
         return view('patients.show', $detail);
@@ -133,7 +147,34 @@ class PatientController extends Controller
      */
     public function edit($id)
     {
+        AccessLog::log('Patient:edit_form', 'Patient', $id);
+
         return response()->json($this->patientService->getPatientForEdit($id));
+    }
+
+    /**
+     * Reveal masked PII fields for a patient.
+     * Requires 'view-sensitive-data' permission.
+     */
+    public function revealPii($id)
+    {
+        AccessLog::log('Patient:reveal_pii', 'Patient', $id);
+
+        $patient = Patient::findOrFail($id);
+
+        return response()->json([
+            'full_name' => $patient->full_name,
+            'full_name_summary' => $patient->full_name,
+            'full_name_detail' => $patient->full_name,
+            'phone_no' => $patient->phone_no,
+            'alternative_no' => $patient->alternative_no,
+            'nin' => $patient->nin,
+            'email' => $patient->email,
+            'address' => $patient->address,
+            'next_of_kin' => $patient->next_of_kin,
+            'next_of_kin_no' => $patient->next_of_kin_no,
+            'next_of_kin_address' => $patient->next_of_kin_address,
+        ]);
     }
 
     /**

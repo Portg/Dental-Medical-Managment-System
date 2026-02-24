@@ -164,7 +164,7 @@ $(document).ready(function() {
     $('.datepicker').datepicker({ language: '{{ app()->getLocale() }}', format: 'yyyy-mm-dd', autoclose: true });
 
     // 月度报价趋势
-    var trendData = {!! json_encode($monthlyTrend) !!};
+    var trendData = @json($monthlyTrend);
     new Chart(document.getElementById('monthlyTrendChart').getContext('2d'), {
         type: 'bar',
         data: {
@@ -205,7 +205,7 @@ $(document).ready(function() {
     });
 
     // 医生转化率
-    var doctorData = {!! json_encode($byDoctor) !!};
+    var doctorData = @json($byDoctor);
     if (doctorData.length > 0) {
         new Chart(document.getElementById('doctorChart').getContext('2d'), {
             type: 'bar',
