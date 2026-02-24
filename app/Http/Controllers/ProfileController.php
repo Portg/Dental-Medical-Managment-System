@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\NameHelper;
+use App\Rules\StrongPassword;
 use App\Services\ProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -74,9 +75,9 @@ class ProfileController extends Controller
     public function changePassword(Request $request)
     {
         Validator::make($request->only('old_password', 'new_password', 'confirm_password'), [
-            'old_password' => 'required|string|min:6',
-            'new_password' => 'required|string|min:6|different:old_password',
-            'confirm_password' => 'required_with:new_password|same:new_password|string|min:6',
+            'old_password' => 'required|string',
+            'new_password' => ['required', 'string', 'different:old_password', new StrongPassword],
+            'confirm_password' => 'required_with:new_password|same:new_password|string',
         ], [
             'confirm_password.required_with' => __('validation.required_with', ['attribute' => __('users.confirm_password')])
         ])->validate();

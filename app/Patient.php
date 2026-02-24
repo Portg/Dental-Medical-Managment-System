@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Traits\EncryptsNin;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
@@ -9,7 +10,7 @@ use Thomasjohnkane\Snooze\Traits\SnoozeNotifiable;
 
 class Patient extends Model
 {
-    use Notifiable, SoftDeletes, SnoozeNotifiable;
+    use EncryptsNin, Notifiable, SoftDeletes, SnoozeNotifiable;
 
     protected $fillable = [
         'patient_no', 'patient_code', 'status', 'merged_to_id',

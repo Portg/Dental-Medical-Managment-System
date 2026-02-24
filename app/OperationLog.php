@@ -85,4 +85,30 @@ class OperationLog extends Model
     {
         return static::log('delete', $module, $resourceType, $resourceId, $oldValues, null);
     }
+
+    /**
+     * Check if current user is exporting too frequently.
+     * Logs a warning if threshold is exceeded.
+     */
+    public static function checkExportFrequency(): void
+    {
+        $threshold = config('data_security.export_alert.threshold', 5);
+        $windowMinutes = config('data_security.export_alert.window_minutes', 60);
+
+        $userId = Auth::id();
+        if (!$userId) {
+            return;
+        }
+
+        $recentCount = static::where('user_id', $userId)
+            ->where('operation_type', 'export')
+            ->where('operation_time', '>=', now()->subMinutes($windowMinutes))
+            ->count();
+
+        if ($recentCount >= $threshold) {
+            \Illuminate\Support\Facades\Log::warning(
+                "频繁导出告警: 用户 {$userId} 在 {$windowMinutes} 分钟内导出 {$recentCount} 次"
+            );
+        }
+    }
 }

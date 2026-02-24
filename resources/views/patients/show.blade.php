@@ -1,4 +1,5 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
+@php use App\Services\DataMaskingService; @endphp
 @section('content')
 @section('css')
     @include('layouts.page_loader')
@@ -10,8 +11,13 @@
                 <div class="caption font-dark">
                     <span class="caption-subject">
                         <a href="{{ url('patients') }}" class="text-primary">{{ __('patient.patients') }}</a>
-                        / {{ $patient->full_name }} ({{ $patient->patient_no }})
+                        / <span class="pii-field" data-field="full_name">{{ DataMaskingService::maskName($patient->full_name) }}</span> ({{ $patient->patient_no }})
                     </span>
+                    @can('view-sensitive-data')
+                    <button id="revealPiiBtn" class="btn btn-sm btn-default" style="margin-left: 10px;">
+                        <i class="fa fa-eye"></i> {{ __('data_security.reveal_sensitive') }}
+                    </button>
+                    @endcan
                 </div>
                 <div class="actions">
                     <button type="button" class="btn btn-default btn-sm" onclick="window.location.href='{{ url('patients') }}'">
@@ -35,7 +41,7 @@
                                 <p><strong>{{ __('patient.patient_no') }}:</strong><br>{{ $patient->patient_no }}</p>
                             </div>
                             <div class="col-md-3">
-                                <p><strong>{{ __('patient.name') }}:</strong><br>{{ $patient->full_name }}</p>
+                                <p><strong>{{ __('patient.name') }}:</strong><br><span class="pii-field" data-field="full_name_summary">{{ DataMaskingService::maskName($patient->full_name) }}</span></p>
                             </div>
                             <div class="col-md-3">
                                 <p><strong>{{ __('patient.gender') }}:</strong><br>{{ $patient->gender == 'Male' ? __('patient.male') : __('patient.female') }}</p>
@@ -46,10 +52,10 @@
                         </div>
                         <div class="row">
                             <div class="col-md-3">
-                                <p><strong>{{ __('patient.phone') }}:</strong><br>{{ $patient->phone_no ?? '-' }}</p>
+                                <p><strong>{{ __('patient.phone') }}:</strong><br><span class="pii-field" data-field="phone_no">{{ DataMaskingService::maskPhone($patient->phone_no) ?? '-' }}</span></p>
                             </div>
                             <div class="col-md-3">
-                                <p><strong>{{ __('patient.email') }}:</strong><br>{{ $patient->email ?? '-' }}</p>
+                                <p><strong>{{ __('patient.email') }}:</strong><br><span class="pii-field" data-field="email">{{ DataMaskingService::maskEmail($patient->email) ?? '-' }}</span></p>
                             </div>
                             <div class="col-md-3">
                                 <p><strong>{{ __('patient.insurance') }}:</strong><br>
@@ -61,7 +67,7 @@
                                 </p>
                             </div>
                             <div class="col-md-3">
-                                <p><strong>{{ __('patient.address') }}:</strong><br>{{ $patient->address ?? '-' }}</p>
+                                <p><strong>{{ __('patient.address') }}:</strong><br><span class="pii-field" data-field="address">{{ DataMaskingService::maskAddress($patient->address) ?? '-' }}</span></p>
                             </div>
                         </div>
                     </div>
@@ -109,12 +115,8 @@
                                     <h4>{{ __('patient.personal_info') }}</h4>
                                     <table class="table table-bordered">
                                         <tr>
-                                            <th width="40%">{{ __('patient.surname') }}</th>
-                                            <td>{{ $patient->surname }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>{{ __('patient.othername') }}</th>
-                                            <td>{{ $patient->othername }}</td>
+                                            <th width="40%">{{ __('patient.name') }}</th>
+                                            <td><span class="pii-field" data-field="full_name_detail">{{ DataMaskingService::maskName($patient->full_name) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.gender') }}</th>
@@ -126,7 +128,7 @@
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.nin') }}</th>
-                                            <td>{{ $patient->nin ?? '-' }}</td>
+                                            <td><span class="pii-field" data-field="nin">{{ DataMaskingService::maskNin($patient->nin) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.ethnicity') }}</th>
@@ -164,27 +166,27 @@
                                     <table class="table table-bordered">
                                         <tr>
                                             <th width="40%">{{ __('patient.phone') }}</th>
-                                            <td>{{ $patient->phone_no ?? '-' }}</td>
+                                            <td><span class="pii-field" data-field="phone_no">{{ DataMaskingService::maskPhone($patient->phone_no) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.alternative_phone') }}</th>
-                                            <td>{{ $patient->alternative_no ?? '-' }}</td>
+                                            <td><span class="pii-field" data-field="alternative_no">{{ DataMaskingService::maskPhone($patient->alternative_no) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.email') }}</th>
-                                            <td>{{ $patient->email ?? '-' }}</td>
+                                            <td><span class="pii-field" data-field="email">{{ DataMaskingService::maskEmail($patient->email) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.address') }}</th>
-                                            <td>{{ $patient->address ?? '-' }}</td>
+                                            <td><span class="pii-field" data-field="address">{{ DataMaskingService::maskAddress($patient->address) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.next_of_kin') }}</th>
-                                            <td>{{ $patient->next_of_kin ?? '-' }}</td>
+                                            <td><span class="pii-field" data-field="next_of_kin">{{ DataMaskingService::maskName($patient->next_of_kin) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.next_of_kin_phone') }}</th>
-                                            <td>{{ $patient->next_of_kin_no ?? '-' }}</td>
+                                            <td><span class="pii-field" data-field="next_of_kin_no">{{ DataMaskingService::maskPhone($patient->next_of_kin_no) ?? '-' }}</span></td>
                                         </tr>
                                     </table>
 
@@ -362,4 +364,22 @@
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/patient_detail.js') }}"></script>
+    <script>
+        $('#revealPiiBtn').click(function() {
+            var btn = $(this);
+            btn.prop('disabled', true);
+            $.post('/patients/{{ $patient->id }}/reveal-pii', {_token: '{{ csrf_token() }}'}, function(resp) {
+                $('.pii-field').each(function() {
+                    var field = $(this).data('field');
+                    if (resp[field] !== undefined && resp[field] !== null) {
+                        $(this).text(resp[field]);
+                    }
+                });
+                btn.html('<i class="fa fa-eye-slash"></i> {{ __("data_security.revealed") }}');
+            }).fail(function() {
+                btn.prop('disabled', false);
+                alert('{{ __("data_security.reveal_failed") }}');
+            });
+        });
+    </script>
 @endsection

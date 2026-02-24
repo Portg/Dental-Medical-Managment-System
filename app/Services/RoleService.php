@@ -121,7 +121,7 @@ class RoleService
             'view-users', 'create-users', 'edit-users',
             'view-branches', 'create-branches', 'edit-branches',
             'view-chairs', 'create-chairs', 'edit-chairs', 'delete-chairs',
-            'view-reports', 'export-reports',
+            'view-reports', 'export-reports', 'export-patients', 'view-sensitive-data',
             'manage-medical-cases', 'manage-treatments', 'manage-medical-services',
             'manage-quotations', 'manage-refunds', 'manage-doctor-claims', 'manage-expenses',
             'manage-accounting', 'manage-inventory', 'manage-labs',

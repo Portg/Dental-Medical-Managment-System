@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
 use App\Services\SmsLoggingService;
-use App\SmsLogging;
 use Illuminate\Http\Request;
 use Yajra\DataTables\DataTables;
 use App\Exports\SmsLoggingExport;
@@ -71,72 +70,10 @@ class SmsLoggingController extends Controller
 
         $data = $this->smsLoggingService->getExportData($from, $to);
 
+        \App\OperationLog::log('export', '短信管理', 'SmsLog');
+        \App\OperationLog::checkExportFrequency();
+
         return Excel::download(new SmsLoggingExport($data), 'sms-logging-report-' . date('Y-m-d') . '.xlsx');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param \App\SmsLogging $smsLogging
-     * @return \Illuminate\Http\Response
-     */
-    public function show(SmsLogging $smsLogging)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param \App\SmsLogging $smsLogging
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(SmsLogging $smsLogging)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param \App\SmsLogging $smsLogging
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, SmsLogging $smsLogging)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param \App\SmsLogging $smsLogging
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(SmsLogging $smsLogging)
-    {
-        //
-    }
 }

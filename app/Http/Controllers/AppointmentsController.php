@@ -56,6 +56,9 @@ class AppointmentsController extends Controller
 
         $data = $this->appointmentService->getExportData($from, $to);
 
+        \App\OperationLog::log('export', '预约管理', 'Appointment');
+        \App\OperationLog::checkExportFrequency();
+
         return Excel::download(new AppointmentExport($data), 'appointments-report-' . date('Y-m-d') . '.xlsx');
     }
 

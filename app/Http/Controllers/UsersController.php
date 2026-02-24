@@ -105,16 +105,16 @@ class UsersController extends Controller
             Validator::make($request->all(), [
                 'full_name' => ['required', 'min:2'],
                 'email' => 'required',
-                'password' => 'min:6 | required_with:password_confirmation',
-                'password_confirmation' => 'min:6 | same:password_confirmation'
+                'password' => ['required_with:password_confirmation', new \App\Rules\StrongPassword],
+                'password_confirmation' => 'same:password'
             ])->validate();
         } else {
             Validator::make($request->all(), [
                 'surname' => ['required'],
                 'othername' => ['required'],
                 'email' => 'required',
-                'password' => 'min:6 | required_with:password_confirmation',
-                'password_confirmation' => 'min:6 | same:password_confirmation'
+                'password' => ['required_with:password_confirmation', new \App\Rules\StrongPassword],
+                'password_confirmation' => 'same:password'
             ])->validate();
         }
 

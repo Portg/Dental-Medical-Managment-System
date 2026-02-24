@@ -98,16 +98,6 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
@@ -160,30 +150,10 @@ class ExpenseController extends Controller
         $sheet_title = "From " . date('d-m-Y', strtotime($request->session()->get('from'))) . " To " .
             date('d-m-Y', strtotime($request->session()->get('to')));
 
+        \App\OperationLog::log('export', '支出管理', 'Expense');
+        \App\OperationLog::checkExportFrequency();
+
         return Excel::download(new ExpenseExport($data, $sheet_title), 'expenses-report-' . date('Y-m-d') . '.xlsx');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param \App\Expense $expense
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(\App\Expense $expense)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param \App\Expense $expense
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, \App\Expense $expense)
-    {
-        //
     }
 
     /**
