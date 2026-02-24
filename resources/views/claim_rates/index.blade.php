@@ -65,6 +65,7 @@
             ajax: {
                 url: '/search-doctor',
                 dataType: 'json',
+                delay: 300,
                 data: function (params) {
                     return {
                         q: $.trim(params.term)

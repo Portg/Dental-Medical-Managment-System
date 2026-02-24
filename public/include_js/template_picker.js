@@ -11,6 +11,7 @@ var TemplatePicker = (function () {
     var isVisible = false;
     var searchTimeout = null;
     var onInsertCallback = null;
+    var initialized = false;
 
     // CSS styles for the picker dropdown
     var pickerStyles = `
@@ -104,8 +105,13 @@ var TemplatePicker = (function () {
     `;
 
     function init(options) {
+        // Allow re-init to update callback, but skip duplicate event binding
+        onInsertCallback = options.onInsert || onInsertCallback || null;
+
+        if (initialized) return;
+        initialized = true;
+
         baseUrl = options.baseUrl || '';
-        onInsertCallback = options.onInsert || null;
 
         // Inject styles
         if (!document.getElementById('template-picker-styles')) {
@@ -475,8 +481,12 @@ var TemplatePicker = (function () {
 var QuickPhrasePicker = (function () {
     var baseUrl = '';
     var phraseCache = {};
+    var initialized = false;
 
     function init(options) {
+        if (initialized) return;
+        initialized = true;
+
         baseUrl = options.baseUrl || '';
 
         // Load all phrases on init
@@ -545,6 +555,7 @@ var PhrasePicker = (function () {
     var currentPhrases = [];
     var selectedIndex = 0;
     var isVisible = false;
+    var initialized = false;
     var searchTimeout = null;
 
     // CSS styles for the phrase picker dropdown
@@ -619,6 +630,9 @@ var PhrasePicker = (function () {
     ';
 
     function init(options) {
+        if (initialized) return;
+        initialized = true;
+
         baseUrl = options.baseUrl || '';
 
         // Inject styles

@@ -87,6 +87,7 @@
             ajax: {
                 url: '/search-patient',
                 dataType: 'json',
+                delay: 300,
                 data: function (params) {
                     return {
                         q: $.trim(params.term)

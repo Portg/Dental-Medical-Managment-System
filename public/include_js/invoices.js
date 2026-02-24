@@ -105,13 +105,13 @@ $('#medical_service_id').select2({
     ajax: {
         url: '/search-medical-service',
         dataType: 'json',
+        delay: 300,
         data: function (params) {
             return {
                 q: $.trim(params.term)
             };
         },
         processResults: function (data) {
-            console.log(data);
             return {
                 results: data
             };
@@ -127,13 +127,13 @@ $('#doctor_id').select2({
     ajax: {
         url: '/search-doctor',
         dataType: 'json',
+        delay: 300,
         data: function (params) {
             return {
                 q: $.trim(params.term)
             };
         },
         processResults: function (data) {
-            console.log(data);
             return {
                 results: data
             };

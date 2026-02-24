@@ -135,13 +135,13 @@
             ajax: {
                 url: '/search-insurance-company',
                 dataType: 'json',
+                delay: 300,
                 data: function (params) {
                     return {
                         q: $.trim(params.term)
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };
@@ -159,13 +159,13 @@
             ajax: {
                 url: '/search-doctor',
                 dataType: 'json',
+                delay: 300,
                 data: function (params) {
                     return {
                         q: $.trim(params.term)
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };

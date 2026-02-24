@@ -7,8 +7,8 @@ use App\Patient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Modules\Doctor\Charts\MonthlyAppointmentsChart;
-use Modules\Doctor\Charts\MonthlyAppointmentsClassificationChart;
+use App\Charts\MonthlyAppointmentsChart;
+use App\Charts\MonthlyAppointmentsClassificationChart;
 
 class DoctorDashboardService
 {

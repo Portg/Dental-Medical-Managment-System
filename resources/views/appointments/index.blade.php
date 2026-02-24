@@ -347,6 +347,7 @@
             ajax: {
                 url: '/search-patient',
                 dataType: 'json',
+                delay: 300,
                 data: function (params) {
                     return {
                         q: $.trim(params.term)
@@ -369,13 +370,13 @@
             ajax: {
                 url: '/search-doctor',
                 dataType: 'json',
+                delay: 300,
                 data: function (params) {
                     return {
                         q: $.trim(params.term)
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };
@@ -393,6 +394,7 @@
             ajax: {
                 url: '/search-doctor',
                 dataType: 'json',
+                delay: 300,
                 data: function (params) {
                     return {
                         q: $.trim(params.term)
@@ -724,6 +726,7 @@
             ajax: {
                 url: '/search-medical-service',
                 dataType: 'json',
+                delay: 300,
                 data: function (params) {
                     return {
                         q: $.trim(params.term)
@@ -821,13 +824,13 @@
                 ajax: {
                     url: '/search-doctor',
                     dataType: 'json',
+                    delay: 300,
                     data: function (params) {
                         return {
                             q: $.trim(params.term)
                         };
                     },
                     processResults: function (data) {
-                        console.log(data);
                         return {
                             results: data
                         };
@@ -844,6 +847,7 @@
                 ajax: {
                     url: '/search-medical-service',
                     dataType: 'json',
+                    delay: 300,
                     data: function (params) {
                         return {
                             q: $.trim(params.term)

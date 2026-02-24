@@ -185,8 +185,8 @@ class MedicalTemplateController extends Controller
     {
         $templates = $this->medicalTemplateService->searchTemplates(
             Auth::user()->id,
-            $request->get('type', 'progress_note'),
-            $request->get('q', '')
+            $request->get('type') ?? 'progress_note',
+            $request->get('q') ?? ''
         );
 
         return response()->json([

@@ -212,19 +212,21 @@ class MedicalCaseService
      */
     public function createCase(array $data, bool $isDraft): ?MedicalCase
     {
-        $data['is_draft'] = $isDraft;
-        $data['version_number'] = 1;
-        $case = MedicalCase::create($data);
+        return DB::transaction(function () use ($data, $isDraft) {
+            $data['is_draft'] = $isDraft;
+            $data['version_number'] = 1;
+            $case = MedicalCase::create($data);
 
-        if ($case && !$isDraft) {
-            $case->lock();
-        }
+            if ($case && !$isDraft) {
+                $case->lock();
+            }
 
-        if ($case) {
-            OperationLog::logCreate('medical', 'MedicalCase', $case->id);
-        }
+            if ($case) {
+                OperationLog::logCreate('medical', 'MedicalCase', $case->id, $case->toArray());
+            }
 
-        return $case;
+            return $case;
+        });
     }
 
     /**
