@@ -133,7 +133,6 @@ function editTreatment(id) {
         type: 'get',
         url: "/treatments/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#treatment_id').val(id);
             let appointment_id = $('#global_appointment_id').val();
             $('#treatment_appointment_id').val(appointment_id);

@@ -114,7 +114,6 @@
                 type: 'get',
                 url: "self-accounts/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     $('[name="name"]').val(data.account_holder);
                     $('[name="email"]').val(data.holder_email);

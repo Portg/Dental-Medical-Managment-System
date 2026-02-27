@@ -114,7 +114,6 @@
             type: 'get',
             url: "{{ url('/leave-types') }}/" + id + "/edit",
             success: function (data) {
-                console.log(data);
                 $('#id').val(id);
                 $('[name="name"]').val(data.name);
                 $('[name="max_days"]').val(data.max_days);

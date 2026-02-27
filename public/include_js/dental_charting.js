@@ -307,7 +307,6 @@ function Mark_Tooth(contexto, num_Tooth, color_pas) {
 
 // Full Tooth shading function
 function Mark_Extraction(contexto, num_Tooth, color_pas) {
-    console.log(" Tooth: " + num_Tooth + " color: " + color_pas)
     var ctx = contexto;
     // Defining drawing points
     med = medida;
@@ -617,7 +616,6 @@ function getPosition(event) {
                 }
             }
             if (key_cod != '') {
-                console.log(key_cod);
                 if (parseInt(last[0], 10) < 16) {
                     section_p = 1;
                     ctx4.clearRect(0, 0, 810, 130);

@@ -630,7 +630,6 @@
                 type: 'get',
                 url: "appointments/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     let patient_data = {
                         id: data.patient_id,
@@ -760,7 +759,6 @@
             $('#procedure_qty').on('keyup change', function () {
                 if ($(this).val() && $('#procedure_price').val()) {
                     $('#total_amount').val(structureMoney("" + $(this).val() * ($('#procedure_price').val().replace(/,/g, ""))))
-                    console.log($('#total_amount').val())
                 } else if (!$(this).val()) {
                     $('#total_amount').val("")
                 }

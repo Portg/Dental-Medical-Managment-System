@@ -263,7 +263,6 @@
             $('#qty').on('keyup change', function () {
                 if ($(this).val() && $('#price-single-unit').val()) {
                     $('#total_amount').val(structureMoney("" + $(this).val() * ($('#price-single-unit').val().replace(/,/g, ""))))
-                    console.log($('#total_amount').val())
                 } else if (!$(this).val()) {
                     $('#total_amount').val("")
                 }
@@ -337,7 +336,6 @@
                         },
                         url: "/expenses/" + id,
                         success: function (data) {
-                            console.log(data.message);
                             if (data.status) {
                                 alert_dialog(data.message, "success");
                             } else {
@@ -367,7 +365,6 @@
                 type: 'get',
                 url: "purchase-balance/" + expense_id,
                 success: function (data) {
-                    console.log(data);
                     $('#expense_id').val(expense_id);
                     $('[name="amount"]').val(data.amount);
                     $('[name="payment_date"]').val(data.today_date);

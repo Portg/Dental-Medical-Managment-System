@@ -156,7 +156,6 @@ function edit_Payment(id) {
         type: 'get',
         url: "/payments/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#receipt_id').val(id);
             $('[name="payment_date"]').val(data.payment_date);
             $('[name="amount"]').val(data.amount);

@@ -291,7 +291,6 @@
             $('#procedure_qty').on('keyup change', function () {
                 if ($(this).val() && $('#procedure_price').val()) {
                     $('#total_amount').val(structureMoney("" + $(this).val() * ($('#procedure_price').val().replace(/,/g, ""))))
-                    console.log($('#total_amount').val())
                 } else if (!$(this).val()) {
                     $('#total_amount').val("")
                 }
@@ -367,7 +366,6 @@
                 type: 'GET',
                 url: "/share-quotation-details/" + quotation_id,
                 success: function (data) {
-                    console.log(data)
                     $.LoadingOverlay("hide");
                     $('[name="quotation_id"]').val(data.id);
                     $('[name="quotation_no"]').val(data.quotation_no);

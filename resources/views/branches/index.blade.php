@@ -104,7 +104,6 @@
                 type: 'get',
                 url: "branches/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     $('[name="name"]').val(data.name);
                    $.LoadingOverlay("hide");

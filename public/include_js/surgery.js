@@ -91,7 +91,6 @@ function editSurgery(id) {
         type: 'get',
         url: "/surgeries/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#surgery_id').val(id);
             $('[name="surgery"]').val(data.surgery);
             $('[name="surgery_date"]').val(data.surgery_date);

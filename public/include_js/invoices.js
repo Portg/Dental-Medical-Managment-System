@@ -45,7 +45,6 @@ function editItem(id) {
         type: 'get',
         url: "/invoice-items/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#invoice_item_id').val(id);
             $('[name="qty"]').val(data.qty);
             $('[name="price"]').val(data.price);
@@ -82,7 +81,6 @@ $(document).ready(function () {
     $('#procedure_qty').on('keyup change', function () {
         if ($(this).val() && $('#procedure_price').val()) {
             $('#total_amount').val(structureMoney("" + $(this).val() * ($('#procedure_price').val().replace(/,/g, ""))))
-            console.log($('#total_amount').val())
         } else if (!$(this).val()) {
             $('#total_amount').val("")
         }

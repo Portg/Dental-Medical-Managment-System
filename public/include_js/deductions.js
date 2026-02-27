@@ -90,7 +90,6 @@ function editDeductionRecord(id) {
         type: 'get',
         url: "/deductions/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#deduction_id').val(id);
             $('[name="amount"]').val(data.deduction_amount);
             $('input[name^="deduction"][value="' + data.deduction + '"').prop('checked', true);

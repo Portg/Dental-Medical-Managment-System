@@ -94,7 +94,6 @@ function editAllergy(id) {
         type: 'get',
         url: "/allergies/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#allergy_id').val(id);
             $('[name="body_reaction"]').val(data.body_reaction);
 

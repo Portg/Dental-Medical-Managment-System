@@ -63,7 +63,6 @@
                 type: 'get',
                 url: "claims/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     $('[name="amount"]').val(data.claim_amount);
                    $.LoadingOverlay("hide");

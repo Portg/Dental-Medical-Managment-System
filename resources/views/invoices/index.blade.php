@@ -369,7 +369,6 @@
                 type: 'get',
                 url: "invoice-amount/" + id,
                 success: function (data) {
-                    console.log(data);
                     $('#invoice_id').val(id);
 
                     $('[name="amount"]').val(data.amount);
@@ -436,7 +435,6 @@
                 type: 'GET',
                 url: "/share-invoice-details/" + invoice_id,
                 success: function (data) {
-                    console.log(data)
                     $.LoadingOverlay("hide");
                     $('[name="invoice_id"]').val(data.id);
                     $('[name="invoice_no"]').val(data.invoice_no);

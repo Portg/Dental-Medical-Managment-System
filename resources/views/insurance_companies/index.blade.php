@@ -105,7 +105,6 @@
                 type: 'get',
                 url: "insurance-companies/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     $('[name="name"]').val(data.name);
                     $('[name="email"]').val(data.email);

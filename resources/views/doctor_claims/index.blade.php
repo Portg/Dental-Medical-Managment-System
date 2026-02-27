@@ -135,7 +135,6 @@
             type: 'get',
             url: "doctor-claims/" + id + "/edit",
             success: function (data) {
-                console.log(data);
                 $('#id').val(id);
                 $('[name="insurance_amount"]').val(data.insurance_amount);
                 $('[name="cash_amount"]').val(data.cash_amount);

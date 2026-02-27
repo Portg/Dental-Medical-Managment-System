@@ -122,7 +122,6 @@
                     };
                 },
                 processResults: function (data) {
-                    console.log(data);
                     return {
                         results: data
                     };
@@ -217,7 +216,6 @@
                 type: 'get',
                 url: "payslips/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#id').val(id);
                     $('[name="amount"]').val(data.advance_amount);
                     $('[name="advance_month"]').val(data.advance_month);

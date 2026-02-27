@@ -93,7 +93,6 @@ function editIllness(id) {
         type: 'get',
         url: "/chronic-diseases/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#illness_id').val(id);
             $('[name="disease"]').val(data.disease);
             $('input[name^="status"][value="' + data.status + '"').prop('checked', true);

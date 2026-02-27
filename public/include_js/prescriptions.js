@@ -128,7 +128,6 @@ function editPrescription(id) {
         type: 'get',
         url: "/prescriptions/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#prescription_id').val(id);
 
             $('[name="drug"]').val(data.drug);

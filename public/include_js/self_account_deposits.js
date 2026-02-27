@@ -91,7 +91,6 @@ function editDeposit(id) {
         type: 'get',
         url: "/self-account-deposits/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#deposit_id').val(id);
             $('[name="payment_date"]').val(data.payment_date);
             $('[name="amount"]').val(data.amount);

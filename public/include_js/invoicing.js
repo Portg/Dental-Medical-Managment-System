@@ -121,7 +121,6 @@ function editItem(id) {
         type: 'get',
         url: "/invoice-items/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#invoice_item_id').val(id);
             $('[name="amount"]').val(data.amount);
             $('[name="tooth_no"]').val(data.tooth_no);

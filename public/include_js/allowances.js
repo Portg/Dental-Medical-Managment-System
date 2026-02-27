@@ -91,7 +91,6 @@ function editAllowanceRecord(id) {
         type: 'get',
         url: "/allowances/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#allowance_id').val(id);
             $('[name="amount"]').val(data.allowance_amount);
             $('input[name^="allowance"][value="' + data.allowance + '"').prop('checked', true);

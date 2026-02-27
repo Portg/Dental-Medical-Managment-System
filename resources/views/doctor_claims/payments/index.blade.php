@@ -94,7 +94,6 @@
                 type: 'get',
                 url: "/claims-payment/" + id + "/edit",
                 success: function (data) {
-                    console.log(data);
                     $('#claim_id').val(id);
                     $('[name="payment_date"]').val(data.payment_date);
                     $('[name="amount"]').val(data.amount);

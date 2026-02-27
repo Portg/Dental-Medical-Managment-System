@@ -63,7 +63,6 @@ $(document).ready(function () {
     $('#qty').on('keyup change', function () {
         if ($(this).val() && $('#price-single-unit').val()) {
             $('#total_amount').val(structureMoney("" + $(this).val() * ($('#price-single-unit').val().replace(/,/g, ""))))
-            console.log($('#total_amount').val())
         } else if (!$(this).val()) {
             $('#total_amount').val("")
         }
@@ -135,7 +134,6 @@ function editItemRecord(id) {
         type: 'get',
         url: "/expense-items/" + id + "/edit",
         success: function (data) {
-            console.log(data);
             $('#item_id').val(id);
             $('[name="item"]').val(data.name);
             $('[name="price"]').val(data.price);
