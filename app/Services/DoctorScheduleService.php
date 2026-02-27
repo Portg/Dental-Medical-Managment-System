@@ -24,8 +24,8 @@ class DoctorScheduleService
             ->whereNull('doctor_schedules.deleted_at')
             ->select([
                 'doctor_schedules.*',
-                'doctor.surname as doctor_name',
-                'creator.surname as added_by',
+                DB::raw("CONCAT(doctor.surname, doctor.othername) as doctor_name"),
+                DB::raw("CONCAT(creator.surname, creator.othername) as added_by"),
                 'branches.name as branch_name',
             ])
             ->orderBy('doctor_schedules.schedule_date', 'desc')
@@ -119,7 +119,7 @@ class DoctorScheduleService
             ->map(function ($schedule) {
                 return [
                     'id' => $schedule->id,
-                    'title' => $schedule->doctor->surname . ' (' . substr($schedule->start_time, 0, 5) . '-' . substr($schedule->end_time, 0, 5) . ')',
+                    'title' => $schedule->doctor->full_name . ' (' . substr($schedule->start_time, 0, 5) . '-' . substr($schedule->end_time, 0, 5) . ')',
                     'start' => $schedule->schedule_date->format('Y-m-d') . 'T' . $schedule->start_time,
                     'end' => $schedule->schedule_date->format('Y-m-d') . 'T' . $schedule->end_time,
                     'color' => $this->getDoctorColor($schedule->doctor_id),

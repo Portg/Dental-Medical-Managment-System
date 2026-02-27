@@ -19,7 +19,7 @@
                                 <select name="doctor_id" class="form-control" required>
                                     <option value="">{{ __('doctor_schedules.select_doctor') }}</option>
                                     @foreach($doctors as $doctor)
-                                        <option value="{{ $doctor->id }}">{{ $doctor->surname }}</option>
+                                        <option value="{{ $doctor->id }}">{{ $doctor->full_name }}</option>
                                     @endforeach
                                 </select>
                             </div>

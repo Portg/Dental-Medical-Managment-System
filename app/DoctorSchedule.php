@@ -25,8 +25,8 @@ class DoctorSchedule extends Model
     ];
 
     protected $casts = [
-        'schedule_date' => 'date',
-        'recurring_until' => 'date',
+        'schedule_date' => 'date:Y-m-d',
+        'recurring_until' => 'date:Y-m-d',
         'is_recurring' => 'boolean',
     ];
 

@@ -35,7 +35,7 @@
                                     <select id="filter_doctor" class="form-control">
                                         <option value="">{{ __('doctor_schedules.all_doctors') }}</option>
                                         @foreach($doctors as $doctor)
-                                            <option value="{{ $doctor->id }}">{{ $doctor->surname }}</option>
+                                            <option value="{{ $doctor->id }}">{{ $doctor->full_name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -80,6 +80,15 @@
 @endif
 <script type="text/javascript">
 $(function () {
+    // Initialize datepicker for schedule form
+    $('#schedule-modal').on('shown.bs.modal', function () {
+        $(this).find('.datepicker').datepicker({
+            autoclose: true,
+            todayHighlight: true,
+            format: 'yyyy-mm-dd'
+        });
+    });
+
     var table = $('#schedules_table').DataTable({
         processing: true,
         serverSide: true,

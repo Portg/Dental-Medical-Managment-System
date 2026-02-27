@@ -322,12 +322,16 @@ class AppointmentService
     /**
      * Get available chairs for a branch.
      */
-    public function getChairs(int $branchId): Collection
+    public function getChairs(?int $branchId): Collection
     {
-        return Chair::where('branch_id', $branchId)
-            ->where('is_active', true)
-            ->select('id', 'name as text')
-            ->get();
+        $query = Chair::active()
+            ->select('id', 'chair_name as text');
+
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        return $query->get();
     }
 
     /**
@@ -335,35 +339,29 @@ class AppointmentService
      */
     public function getDoctorTimeSlots(int $doctorId, string $date): array
     {
-        $dayOfWeek = date('l', strtotime($date));
         $schedule = DoctorSchedule::where('doctor_id', $doctorId)
-            ->where('day_of_week', $dayOfWeek)
-            ->where('is_active', true)
+            ->where('schedule_date', $date)
             ->first();
 
         $slots = [];
         if ($schedule) {
             $startTime = strtotime($schedule->start_time);
             $endTime = strtotime($schedule->end_time);
-            $lunchStart = $schedule->lunch_start ? strtotime($schedule->lunch_start) : strtotime('12:00');
-            $lunchEnd = $schedule->lunch_end ? strtotime($schedule->lunch_end) : strtotime('14:00');
             $interval = 30 * 60;
 
             for ($time = $startTime; $time < $endTime; $time += $interval) {
-                $isRest = ($time >= $lunchStart && $time < $lunchEnd);
                 $timeStr = date('H:i', $time);
                 $period = $time < strtotime('12:00') ? 'morning' : 'afternoon';
-                $slots[] = ['time' => $timeStr, 'period' => $period, 'is_rest' => $isRest];
+                $slots[] = ['time' => $timeStr, 'period' => $period, 'is_rest' => false];
             }
         } else {
-            $defaultTimes = [
-                ['09:00', 'morning'], ['09:30', 'morning'], ['10:00', 'morning'], ['10:30', 'morning'],
-                ['11:00', 'morning'], ['11:30', 'morning'],
-                ['14:00', 'afternoon'], ['14:30', 'afternoon'], ['15:00', 'afternoon'], ['15:30', 'afternoon'],
-                ['16:00', 'afternoon'], ['16:30', 'afternoon'], ['17:00', 'afternoon'], ['17:30', 'afternoon'],
-            ];
-            foreach ($defaultTimes as $dt) {
-                $slots[] = ['time' => $dt[0], 'period' => $dt[1], 'is_rest' => false];
+            $start = strtotime('08:30');
+            $end   = strtotime('18:30');
+            $interval = 30 * 60;
+            for ($time = $start; $time < $end; $time += $interval) {
+                $timeStr = date('H:i', $time);
+                $period  = $time < strtotime('12:00') ? 'morning' : 'afternoon';
+                $slots[] = ['time' => $timeStr, 'period' => $period, 'is_rest' => false];
             }
         }
 

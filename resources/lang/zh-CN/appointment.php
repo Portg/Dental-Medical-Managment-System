@@ -266,6 +266,9 @@ return [
     'notes' => '备注',
     'no_available_slots' => '暂无可用时段',
 
+    'past_slot' => '已过',
+    'all_slots_past' => '当天所有时段已过，请选择其他日期',
+
     // Validation messages
     'patient_required' => '请选择患者',
     'doctor_required' => '请选择医生',

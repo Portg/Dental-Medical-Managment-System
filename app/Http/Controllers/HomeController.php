@@ -30,9 +30,9 @@ class HomeController extends Controller
         $data = $this->homeService->getDashboardData();
 
         if (Gate::allows('Super-Administrator-Dashboard', auth()->user())) {
-            return redirect('superadmin');
+            return redirect('today-work');
         } elseif (Gate::allows('Admin-Dashboard', auth()->user())) {
-            return view('home')->with($data);
+            return redirect('today-work');
         } else if (Gate::allows('Receptionist-Dashboard', auth()->user())) {
             return redirect('receptionist');
         } else if (Gate::allows('Doctor-Dashboard', auth()->user())) {

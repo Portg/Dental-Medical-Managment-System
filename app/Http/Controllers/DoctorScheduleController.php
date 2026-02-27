@@ -71,7 +71,7 @@ class DoctorScheduleController extends Controller
 
         $success = $this->service->createSchedule($request->only([
             'doctor_id', 'schedule_date', 'start_time', 'end_time', 'max_patients',
-            'is_recurring', 'recurring_pattern', 'recurring_until',
+            'is_recurring', 'recurring_pattern', 'recurring_until', 'branch_id', 'notes',
         ]));
 
         return FunctionsHelper::messageResponse(__('doctor_schedules.added_successfully'), $success);
@@ -102,7 +102,7 @@ class DoctorScheduleController extends Controller
 
         $success = $this->service->updateSchedule((int) $id, $request->only([
             'doctor_id', 'schedule_date', 'start_time', 'end_time', 'max_patients',
-            'is_recurring', 'recurring_pattern', 'recurring_until',
+            'is_recurring', 'recurring_pattern', 'recurring_until', 'branch_id', 'notes',
         ]));
 
         return FunctionsHelper::messageResponse(__('doctor_schedules.updated_successfully'), $success);

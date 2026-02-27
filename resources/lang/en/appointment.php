@@ -113,6 +113,9 @@ return [
     'notes' => 'Notes',
     'no_available_slots' => 'No available time slots',
 
+    'past_slot' => 'Past',
+    'all_slots_past' => 'All time slots have passed for today. Please select another date.',
+
     // Validation messages
     'patient_required' => 'Please select a patient',
     'doctor_required' => 'Please select a doctor',

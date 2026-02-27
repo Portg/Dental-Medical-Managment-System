@@ -207,6 +207,7 @@
             $.ajax({
                 url: '/api/doctor-time-slots',
                 data: { doctor_id: doctorId, date: date },
+                dataType: 'json',
                 success: function(response) {
                     renderTimeSlots(response);
                 },
@@ -221,12 +222,17 @@
             var afternoonHtml = '';
 
             var defaultSlots = [
+                { time: '08:30', period: 'morning' },
                 { time: '09:00', period: 'morning' },
                 { time: '09:30', period: 'morning' },
                 { time: '10:00', period: 'morning' },
                 { time: '10:30', period: 'morning' },
                 { time: '11:00', period: 'morning' },
                 { time: '11:30', period: 'morning' },
+                { time: '12:00', period: 'afternoon' },
+                { time: '12:30', period: 'afternoon' },
+                { time: '13:00', period: 'afternoon' },
+                { time: '13:30', period: 'afternoon' },
                 { time: '14:00', period: 'afternoon' },
                 { time: '14:30', period: 'afternoon' },
                 { time: '15:00', period: 'afternoon' },
@@ -234,11 +240,22 @@
                 { time: '16:00', period: 'afternoon' },
                 { time: '16:30', period: 'afternoon' },
                 { time: '17:00', period: 'afternoon' },
-                { time: '17:30', period: 'afternoon' }
+                { time: '17:30', period: 'afternoon' },
+                { time: '18:00', period: 'afternoon' }
             ];
 
             var slots = data && data.slots ? data.slots : defaultSlots;
             var booked = data && data.booked ? data.booked : {};
+
+            // Check if selected date is today for past-slot detection
+            var selectedDate = $('#appointment_date').val();
+            var today = new Date();
+            var todayStr = today.getFullYear() + '-' +
+                String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                String(today.getDate()).padStart(2, '0');
+            var isToday = (selectedDate === todayStr);
+            var nowMinutes = today.getHours() * 60 + today.getMinutes();
+            var allPast = true;
 
             slots.forEach(function(slot) {
                 var slotTime = slot.time;
@@ -248,14 +265,27 @@
                 var slotContent = slotTime;
                 var onclick = '';
 
+                // Check if this slot is in the past (today only)
+                var isPast = false;
+                if (isToday) {
+                    var parts = slotTime.split(':');
+                    var slotMinutes = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                    isPast = slotMinutes < nowMinutes;
+                }
+
                 if (isRest) {
                     slotClass += ' rest';
+                } else if (isPast) {
+                    slotClass += ' past';
                 } else if (isBooked) {
                     slotClass += ' booked';
                     slotContent += '<span class="slot-patient">' + isBooked.patient_name + '</span>';
                 } else {
-                    onclick = 'selectTimeSlot(this, "' + slotTime + '")';
+                    allPast = false;
+                    onclick = "selectTimeSlot(this, '" + slotTime + "')";
                 }
+
+                if (!isPast && !isRest) { allPast = false; }
 
                 var html = '<div class="' + slotClass + '" onclick="' + onclick + '">' + slotContent + '</div>';
 
@@ -265,6 +295,17 @@
                     afternoonHtml += html;
                 }
             });
+
+            // Show warning if all slots are past
+            var warningHtml = '';
+            if (isToday && allPast) {
+                warningHtml = '<div class="time-slots-past-warning">' + t('all_slots_past') + '</div>';
+            }
+
+            $('#morning-slots-grid').closest('.time-slot-container').find('.time-slots-past-warning').remove();
+            if (warningHtml) {
+                $('#morning-slots-grid').closest('.time-slot-container').prepend(warningHtml);
+            }
 
             $('#morning-slots-grid').html(morningHtml ||
                 '<div class="text-muted" style="font-size: 12px;">' +

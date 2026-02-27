@@ -29,7 +29,7 @@ class AppointmentCrudSmokeTest extends TestCase
         Bus::fake();
 
         $branch     = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
-        $adminRole  = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
+        $adminRole  = Role::create(['name' => 'Super Administrator', 'slug' => 'super-admin']);
         $doctorRole = Role::create(['name' => 'Doctor', 'slug' => 'doctor']);
 
         $this->admin = User::factory()->create([
@@ -244,5 +244,33 @@ class AppointmentCrudSmokeTest extends TestCase
         $this->assertArrayHasKey('id', $data[0]);
         $this->assertArrayHasKey('text', $data[0]);
         $this->assertArrayNotHasKey('surname', $data[0]);
+    }
+
+    // ─── Chairs endpoint ─────────────────────────────────────────
+
+    public function test_get_chairs_returns_json(): void
+    {
+        // Grant view-appointments permission
+        $perm = Permission::create(['name' => 'View Appointments', 'slug' => 'view-appointments', 'module' => 'appointments']);
+        RolePermission::create(['role_id' => $this->admin->role_id, 'permission_id' => $perm->id]);
+        Cache::flush();
+
+        \App\Chair::create([
+            'chair_code' => 'C01',
+            'chair_name' => '牙椅 1 号',
+            'status'     => 'active',
+            'branch_id'  => $this->admin->branch_id,
+            '_who_added' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/api/chairs');
+
+        $response->assertOk();
+        $data = $response->json();
+        $this->assertNotEmpty($data);
+        $this->assertArrayHasKey('id', $data[0]);
+        $this->assertArrayHasKey('text', $data[0]);
+        $this->assertEquals('牙椅 1 号', $data[0]['text']);
     }
 }
