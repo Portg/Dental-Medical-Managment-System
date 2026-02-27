@@ -1,0 +1,187 @@
+/**
+ * Today Work - Kanban View Styles
+ * ================================
+ * Horizontal kanban board with status columns and patient cards.
+ */
+
+/* ── Kanban Container ──────────────────────────────── */
+.kanban-row {
+    display: flex;
+    gap: 12px;
+    min-height: 300px;
+    align-items: flex-start;
+}
+
+/* ── Kanban Column ─────────────────────────────────── */
+.kanban-col {
+    flex: 1;
+    min-width: 0;
+    background: #f5f6fa;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 340px);
+}
+
+.kanban-col-header {
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    border-bottom: 2px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.kanban-col-header .badge {
+    font-size: 12px;
+    min-width: 22px;
+    padding: 3px 7px;
+}
+
+/* Column header colors by status */
+.kanban-col[data-status="not_arrived"] .kanban-col-header { border-bottom-color: #FF9800; }
+.kanban-col[data-status="waiting"] .kanban-col-header     { border-bottom-color: #2196F3; }
+.kanban-col[data-status="called"] .kanban-col-header      { border-bottom-color: #673AB7; }
+.kanban-col[data-status="in_treatment"] .kanban-col-header { border-bottom-color: #4CAF50; }
+.kanban-col[data-status="completed"] .kanban-col-header    { border-bottom-color: #9E9E9E; }
+.kanban-col[data-status="no_show"] .kanban-col-header      { border-bottom-color: #F44336; }
+
+.kanban-col-body {
+    padding: 8px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.kanban-col-empty {
+    text-align: center;
+    color: #bbb;
+    font-size: 13px;
+    padding: 30px 10px;
+}
+
+/* ── Kanban Card ───────────────────────────────────── */
+.kanban-card {
+    background: #fff;
+    border-radius: 5px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.kanban-card:last-child {
+    margin-bottom: 0;
+}
+
+.kanban-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.kanban-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.kanban-card-header .patient-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+}
+
+.kanban-card-header .patient-name:hover {
+    color: #00838F;
+    text-decoration: underline;
+}
+
+.kanban-card-header .appointment-time {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+}
+
+.kanban-card-body {
+    margin-bottom: 8px;
+}
+
+.kanban-card-body .card-info {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.kanban-card-body .card-info .card-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+.kanban-card-body .card-tag.revisit {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.kanban-card-body .card-tag.first-visit {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.kanban-card-body .card-duration {
+    font-size: 11px;
+    color: #4CAF50;
+    margin-top: 4px;
+}
+
+.kanban-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.kanban-card-actions .btn {
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+/* Collapsed card (only shows name row) */
+.kanban-card.collapsed .kanban-card-body,
+.kanban-card.collapsed .kanban-card-actions {
+    display: none;
+}
+
+/* ── Column Collapse Toggle ────────────────────────── */
+.kanban-col-toggle {
+    cursor: pointer;
+    color: #999;
+    font-size: 11px;
+    margin-left: 6px;
+}
+
+.kanban-col-toggle:hover {
+    color: #333;
+}
+
+/* ── Responsive ────────────────────────────────────── */
+@media (max-width: 992px) {
+    .kanban-row {
+        flex-wrap: wrap;
+    }
+    .kanban-col {
+        flex: 0 0 calc(50% - 6px);
+        max-height: 400px;
+    }
+}
+
+@media (max-width: 576px) {
+    .kanban-col {
+        flex: 0 0 100%;
+    }
+}
