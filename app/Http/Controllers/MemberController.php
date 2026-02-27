@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\MemberLevel;
 use App\Services\MemberService;
 use Illuminate\Http\Request;
+use App\MemberSetting;
 use Illuminate\Support\Facades\Validator;
+use Yajra\DataTables\DataTables;
 
 class MemberController extends Controller
 {
@@ -57,7 +59,7 @@ class MemberController extends Controller
         ])->validate();
 
         return response()->json($this->memberService->registerMember($request->only([
-            'patient_id', 'member_level_id', 'initial_balance', 'payment_method', 'member_expiry',
+            'patient_id', 'member_level_id', 'initial_balance', 'payment_method', 'member_expiry', 'manual_card_number', 'referred_by',
         ])));
     }
 
@@ -115,7 +117,12 @@ class MemberController extends Controller
             return $this->memberService->buildLevelsDataTable($data);
         }
 
-        return view('members.levels.index');
+        $settings = MemberSetting::getAll();
+        $upgradeLevels = MemberLevel::active()->ordered()
+            ->where('min_consumption', '>', 0)
+            ->orderBy('min_consumption', 'asc')
+            ->get();
+        return view('members.levels.index', compact('settings', 'upgradeLevels'));
     }
 
     /**
@@ -129,10 +136,17 @@ class MemberController extends Controller
             'discount_rate' => 'required|numeric|min:0|max:100',
         ])->validate();
 
-        return response()->json($this->memberService->createLevel($request->only([
+        $data = $request->only([
             'name', 'code', 'discount_rate', 'color', 'min_consumption',
             'points_rate', 'benefits', 'sort_order', 'is_default', 'is_active',
-        ])));
+            'opening_fee', 'min_initial_deposit', 'referral_points',
+        ]);
+
+        // Parse JSON fields from form
+        $data['deposit_bonus_rules'] = $this->parseBonusRules($request);
+        $data['payment_method_points_rates'] = $this->parsePointsRates($request);
+
+        return response()->json($this->memberService->createLevel($data));
     }
 
     /**
@@ -154,10 +168,16 @@ class MemberController extends Controller
             'discount_rate' => 'required|numeric|min:0|max:100',
         ])->validate();
 
-        return response()->json($this->memberService->updateLevel($id, $request->only([
+        $data = $request->only([
             'name', 'code', 'discount_rate', 'color', 'min_consumption',
             'points_rate', 'benefits', 'sort_order', 'is_default', 'is_active',
-        ])));
+            'opening_fee', 'min_initial_deposit', 'referral_points',
+        ]);
+
+        $data['deposit_bonus_rules'] = $this->parseBonusRules($request);
+        $data['payment_method_points_rates'] = $this->parsePointsRates($request);
+
+        return response()->json($this->memberService->updateLevel($id, $data));
     }
 
     /**
@@ -166,5 +186,195 @@ class MemberController extends Controller
     public function destroyLevel($id)
     {
         return response()->json($this->memberService->deleteLevel($id));
+    }
+
+    /**
+     * Refund from member balance.
+     */
+    public function refund(Request $request, $id)
+    {
+        Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required',
+        ])->validate();
+
+        return response()->json($this->memberService->refund($id, $request->only([
+            'amount', 'payment_method', 'description',
+        ])));
+    }
+
+    /**
+     * Exchange member points for balance.
+     */
+    public function exchangePoints(Request $request, $id)
+    {
+        Validator::make($request->all(), [
+            'points' => 'required|integer|min:1',
+        ])->validate();
+
+        return response()->json($this->memberService->exchangePoints($id, (int) $request->input('points')));
+    }
+
+    // ============= Shared Card Holders =============
+
+    /**
+     * Get shared card holders for a member.
+     */
+    public function sharedHolders(Request $request, $id)
+    {
+        if ($request->ajax()) {
+            $data = $this->memberService->getSharedHolders($id);
+            return Datatables::of($data)
+                ->addIndexColumn()
+                ->addColumn('removeBtn', function ($row) {
+                    return '<button class="btn btn-xs btn-danger" onclick="removeSharedHolder(' . $row->id . ')"><i class="fa fa-times"></i> ' . __('common.delete') . '</button>';
+                })
+                ->rawColumns(['removeBtn'])
+                ->make(true);
+        }
+    }
+
+    /**
+     * Add a shared card holder.
+     */
+    public function addSharedHolder(Request $request, $id)
+    {
+        Validator::make($request->all(), [
+            'shared_patient_id' => 'required|exists:patients,id',
+            'relationship' => 'required|string|max:50',
+        ])->validate();
+
+        return response()->json($this->memberService->addSharedHolder(
+            (int) $id,
+            (int) $request->input('shared_patient_id'),
+            $request->input('relationship')
+        ));
+    }
+
+    /**
+     * Remove a shared card holder.
+     */
+    public function removeSharedHolder($holderId)
+    {
+        return response()->json($this->memberService->removeSharedHolder((int) $holderId));
+    }
+
+    /**
+     * Get audit logs for a member.
+     */
+    public function auditLogs(Request $request, $id)
+    {
+        if ($request->ajax()) {
+            $data = $this->memberService->getAuditLogs($id);
+            return Datatables::of($data)
+                ->addIndexColumn()
+                ->addColumn('actionBadge', function ($row) {
+                    $key = 'members.action_' . $row->action;
+                    return '<span class="label label-default">' . __($key) . '</span>';
+                })
+                ->rawColumns(['actionBadge'])
+                ->make(true);
+        }
+    }
+
+    // ============= Password & Print =============
+
+    /**
+     * Set member password.
+     */
+    public function setPassword(Request $request, $id)
+    {
+        Validator::make($request->all(), [
+            'password' => 'required|string|min:4|confirmed',
+        ])->validate();
+
+        return response()->json($this->memberService->setPassword((int) $id, $request->input('password')));
+    }
+
+    /**
+     * Print member card.
+     */
+    public function printCard($id)
+    {
+        $data = $this->memberService->getMemberDetail($id);
+        return view('members.print', $data);
+    }
+
+    // ============= Member Settings =============
+
+    /**
+     * Display member settings page.
+     */
+    public function settings()
+    {
+        return redirect('member-levels#tab_card_number');
+    }
+
+    /**
+     * Update member settings.
+     */
+    public function updateSettings(Request $request)
+    {
+        $keys = [
+            'points_enabled', 'points_expiry_days', 'card_number_mode',
+            'referral_bonus_enabled', 'points_exchange_rate', 'points_exchange_enabled',
+        ];
+
+        foreach ($keys as $key) {
+            if ($request->has($key)) {
+                MemberSetting::set($key, $request->input($key));
+            }
+        }
+
+        return response()->json(['message' => __('members.settings_saved'), 'status' => true]);
+    }
+
+    // ============= Private helpers =============
+
+    /**
+     * Parse deposit bonus rules from form input arrays.
+     */
+    private function parseBonusRules(Request $request): ?array
+    {
+        $minAmounts = $request->input('bonus_min_amount', []);
+        $bonusAmounts = $request->input('bonus_amount', []);
+
+        if (empty($minAmounts)) {
+            return null;
+        }
+
+        $rules = [];
+        foreach ($minAmounts as $i => $minAmount) {
+            if (!empty($minAmount) && isset($bonusAmounts[$i]) && $bonusAmounts[$i] !== '') {
+                $rules[] = [
+                    'min_amount' => (float) $minAmount,
+                    'bonus'      => (float) $bonusAmounts[$i],
+                ];
+            }
+        }
+
+        return empty($rules) ? null : $rules;
+    }
+
+    /**
+     * Parse payment method points rates from form input.
+     */
+    private function parsePointsRates(Request $request): ?array
+    {
+        $methods = $request->input('pm_points_method', []);
+        $rates = $request->input('pm_points_rate', []);
+
+        if (empty($methods)) {
+            return null;
+        }
+
+        $result = [];
+        foreach ($methods as $i => $method) {
+            if (!empty($method) && isset($rates[$i]) && $rates[$i] !== '') {
+                $result[$method] = (float) $rates[$i];
+            }
+        }
+
+        return empty($result) ? null : $result;
     }
 }

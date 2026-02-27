@@ -1,4 +1,4 @@
-<div class="modal fade modal-form" id="editMemberModal" tabindex="-1" role="dialog" aria-labelledby="editMemberModalLabel" aria-hidden="true">
+<div class="modal fade modal-form modal-form-sm" id="editMemberModal" tabindex="-1" role="dialog" aria-labelledby="editMemberModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -35,7 +35,8 @@
                             <select name="member_level_id" id="edit_member_level_id" class="form-control">
                                 <option value="">{{ __('common.select') }}</option>
                                 @foreach($levels as $level)
-                                    <option value="{{ $level->id }}" data-discount="{{ $level->discount_rate }}">{{ $level->name }} ({{ 100 - $level->discount_rate }}% {{ __('members.discount') }})</option>
+                                    @php $editDiscountText = $level->discount_rate < 100 ? number_format($level->discount_rate / 10, 1) . __('members.discount_unit') : __('members.no_discount'); @endphp
+                                    <option value="{{ $level->id }}" data-discount="{{ $level->discount_rate }}">{{ $level->name }} ({{ $editDiscountText }})</option>
                                 @endforeach
                             </select>
                         </div>

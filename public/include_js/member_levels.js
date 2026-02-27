@@ -16,7 +16,7 @@ function loadLevelsTable() {
             {data: 'colorBadge', name: 'colorBadge'},
             {data: 'code', name: 'code'},
             {data: 'discountDisplay', name: 'discountDisplay'},
-            {data: 'min_consumption', name: 'min_consumption'},
+            {data: 'minConsumptionDisplay', name: 'minConsumptionDisplay'},
             {data: 'points_rate', name: 'points_rate'},
             {data: 'statusBadge', name: 'statusBadge'},
             {data: 'editBtn', name: 'editBtn', orderable: false, searchable: false},
@@ -37,6 +37,11 @@ function addLevel() {
     $('#level_points_rate').val(1);
     $('#level_sort_order').val(0);
     $('#level_is_active').val(1);
+    $('#level_opening_fee').val(0);
+    $('#level_min_initial_deposit').val(0);
+    $('#level_referral_points').val(0);
+    $('#bonus_rules_body').empty();
+    $('#pm_points_body').empty();
     $('#levelModal').modal('show');
 }
 
@@ -94,6 +99,26 @@ function editLevel(id) {
             $('#edit_level_sort_order').val(level.sort_order);
             $('#edit_level_is_active').val(level.is_active ? 1 : 0);
             $('#edit_level_benefits').val(level.benefits);
+            $('#edit_level_opening_fee').val(level.opening_fee || 0);
+            $('#edit_level_min_initial_deposit').val(level.min_initial_deposit || 0);
+            $('#edit_level_referral_points').val(level.referral_points || 0);
+
+            // Populate bonus rules
+            $('#edit_bonus_rules_body').empty();
+            if (level.deposit_bonus_rules) {
+                level.deposit_bonus_rules.forEach(function(rule) {
+                    addBonusRule('edit_bonus_rules_body', rule.min_amount, rule.bonus);
+                });
+            }
+
+            // Populate payment method points rates
+            $('#edit_pm_points_body').empty();
+            if (level.payment_method_points_rates) {
+                $.each(level.payment_method_points_rates, function(method, rate) {
+                    addPointsRateRow('edit_pm_points_body', method, rate);
+                });
+            }
+
             $('#editLevelForm .alert').hide();
             $('#editLevelModal').modal('show');
         }
@@ -138,6 +163,36 @@ function updateLevel() {
             $('#editLevelForm .alert').show();
         }
     });
+}
+
+// ─── Dynamic row helpers ────────────────────────────────────────
+
+var paymentMethods = ['Cash', 'WeChat', 'Alipay', 'BankCard', 'StoredValue'];
+
+function addBonusRule(tbodyId, minAmount, bonus) {
+    var removeLabel = LanguageManager.trans('members.remove_rule');
+    var row = '<tr>' +
+        '<td><input type="number" name="bonus_min_amount[]" class="form-control input-sm" step="0.01" min="0" value="' + (minAmount || '') + '"></td>' +
+        '<td><input type="number" name="bonus_amount[]" class="form-control input-sm" step="0.01" min="0" value="' + (bonus || '') + '"></td>' +
+        '<td><button type="button" class="btn btn-sm btn-default" onclick="$(this).closest(\'tr\').remove()"><i class="fa fa-trash"></i> ' + removeLabel + '</button></td>' +
+        '</tr>';
+    $('#' + tbodyId).append(row);
+}
+
+function addPointsRateRow(tbodyId, method, rate) {
+    var removeLabel = LanguageManager.trans('members.remove_rule');
+    var options = '';
+    paymentMethods.forEach(function(m) {
+        var selected = (m === method) ? ' selected' : '';
+        var label = LanguageManager.trans('members.pm_' + m) || m;
+        options += '<option value="' + m + '"' + selected + '>' + label + '</option>';
+    });
+    var row = '<tr>' +
+        '<td><select name="pm_points_method[]" class="form-control input-sm">' + options + '</select></td>' +
+        '<td><input type="number" name="pm_points_rate[]" class="form-control input-sm" step="0.01" min="0" value="' + (rate || '') + '"></td>' +
+        '<td><button type="button" class="btn btn-sm btn-default" onclick="$(this).closest(\'tr\').remove()"><i class="fa fa-trash"></i> ' + removeLabel + '</button></td>' +
+        '</tr>';
+    $('#' + tbodyId).append(row);
 }
 
 function deleteLevel(id) {

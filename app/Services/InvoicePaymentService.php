@@ -8,6 +8,8 @@ use App\MemberTransaction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\MemberSetting;
+use App\Services\MemberService;
 
 class InvoicePaymentService
 {
@@ -134,22 +136,24 @@ class InvoicePaymentService
                         throw new \Exception(__('invoices.patient_required_for_stored_value'));
                     }
 
-                    $storedBalance = $patient->member_balance ?? 0;
+                    // Resolve primary member for shared card holders
+                    $payingPatient = app(MemberService::class)->resolvePrimaryMember($patient->id);
+                    $storedBalance = $payingPatient->member_balance ?? 0;
                     if ($amount > $storedBalance) {
                         throw new \Exception(__('invoices.insufficient_stored_balance'));
                     }
 
-                    $patient->member_balance = $storedBalance - $amount;
-                    $patient->save();
+                    $payingPatient->member_balance = $storedBalance - $amount;
+                    $payingPatient->save();
 
                     if (class_exists('\App\MemberTransaction')) {
                         MemberTransaction::create([
                             'transaction_no' => MemberTransaction::generateTransactionNo(),
                             'transaction_type' => 'Consumption',
-                            'patient_id' => $patient->id,
+                            'patient_id' => $payingPatient->id,
                             'amount' => -$amount,
                             'balance_before' => $storedBalance,
-                            'balance_after' => $patient->member_balance,
+                            'balance_after' => $payingPatient->member_balance,
                             'description' => __('invoices.stored_value_payment', ['invoice_no' => $invoice->invoice_no]),
                             '_who_added' => Auth::id(),
                         ]);
@@ -176,12 +180,52 @@ class InvoicePaymentService
             $invoice->paid_amount = ($invoice->paid_amount ?? 0) + $totalPayment;
             $invoice->save();
 
-            // Update member points (BR-036)
-            if ($patient && $patient->memberLevel && $patient->memberLevel->points_rate > 0) {
-                $points = floor($totalPayment * $patient->memberLevel->points_rate);
-                $patient->member_points = ($patient->member_points ?? 0) + $points;
+            // Update total consumption
+            if ($patient) {
                 $patient->total_consumption = ($patient->total_consumption ?? 0) + $totalPayment;
                 $patient->save();
+            }
+
+            // Update member points (BR-036) — per-payment-method rates
+            if ($patient && $patient->memberLevel && MemberSetting::get('points_enabled', true)) {
+                $level = $patient->memberLevel;
+                $totalPoints = 0;
+
+                foreach ($payments as $pd) {
+                    $m = $pd['payment_method'];
+                    $a = (float) $pd['amount'];
+                    if ($a <= 0) continue;
+
+                    $rate = $level->getPointsRateForMethod($m);
+                    $totalPoints += floor($a * $rate);
+                }
+
+                if ($totalPoints > 0) {
+                    $patient->member_points = ($patient->member_points ?? 0) + $totalPoints;
+                    $patient->save();
+
+                    // Record points transaction with optional expiry
+                    $expiryDays = (int) MemberSetting::get('points_expiry_days', 0);
+                    MemberTransaction::create([
+                        'transaction_no'    => MemberTransaction::generateTransactionNo(),
+                        'transaction_type'  => 'Points',
+                        'patient_id'        => $patient->id,
+                        'amount'            => 0,
+                        'balance_before'    => $patient->member_balance,
+                        'balance_after'     => $patient->member_balance,
+                        'points_change'     => $totalPoints,
+                        'points_expires_at' => $expiryDays > 0 ? now()->addDays($expiryDays)->toDateString() : null,
+                        'description'       => __('members.type_points') . ' +' . $totalPoints,
+                        'invoice_id'        => $invoice->id,
+                        '_who_added'        => Auth::id(),
+                    ]);
+                }
+            }
+
+            // Auto-upgrade check
+            if ($patient && $patient->member_level_id) {
+                $patient->refresh();
+                app(MemberService::class)->checkAndUpgrade($patient);
             }
 
             DB::commit();

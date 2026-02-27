@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Http\Helper\NameHelper;
+use App\MemberAuditLog;
 use App\MemberLevel;
+use App\MemberSetting;
 use App\MemberTransaction;
 use App\Patient;
 use Illuminate\Support\Collection;
@@ -92,31 +94,91 @@ class MemberService
             return ['message' => __('members.already_member'), 'status' => false];
         }
 
+        $level = MemberLevel::findOrFail($data['member_level_id']);
+        $initialBalance = (float) ($data['initial_balance'] ?? 0);
+
+        // Validate min initial deposit
+        if ($level->min_initial_deposit > 0 && $initialBalance < $level->min_initial_deposit) {
+            return [
+                'message' => __('members.min_deposit_required', ['amount' => $level->min_initial_deposit]),
+                'status'  => false,
+            ];
+        }
+
+        // Generate member number based on configured mode
+        $memberNo = Patient::generateMemberNo($patient, $data['manual_card_number'] ?? null);
+
+        // Calculate opening fee and bonus
+        $openingFee = (float) $level->opening_fee;
+        $bonus = $level->calculateBonus($initialBalance);
+        $creditAmount = $initialBalance - $openingFee + $bonus;
+
         $patient->update([
-            'member_no' => Patient::generateMemberNo(),
-            'member_level_id' => $data['member_level_id'],
-            'member_balance' => $data['initial_balance'] ?? 0,
-            'member_points' => 0,
+            'member_no'        => $memberNo,
+            'member_level_id'  => $data['member_level_id'],
+            'member_balance'   => max(0, $creditAmount),
+            'member_points'    => 0,
             'total_consumption' => 0,
-            'member_since' => now(),
-            'member_expiry' => $data['member_expiry'] ?? null,
-            'member_status' => 'Active',
+            'member_since'     => now(),
+            'member_expiry'    => $data['member_expiry'] ?? null,
+            'member_status'    => 'Active',
         ]);
 
-        // Record initial deposit if any
-        if (($data['initial_balance'] ?? 0) > 0) {
+        // Record initial deposit transaction if any
+        if ($initialBalance > 0) {
             MemberTransaction::create([
-                'transaction_no' => MemberTransaction::generateTransactionNo(),
+                'transaction_no'   => MemberTransaction::generateTransactionNo(),
                 'transaction_type' => 'Deposit',
-                'amount' => $data['initial_balance'],
-                'balance_before' => 0,
-                'balance_after' => $data['initial_balance'],
-                'payment_method' => $data['payment_method'] ?? 'Cash',
-                'description' => __('members.initial_deposit'),
-                'patient_id' => $patient->id,
-                '_who_added' => Auth::user()->id,
+                'amount'           => $initialBalance,
+                'balance_before'   => 0,
+                'balance_after'    => max(0, $creditAmount),
+                'bonus_amount'     => $bonus,
+                'payment_method'   => $data['payment_method'] ?? 'Cash',
+                'description'      => __('members.initial_deposit'),
+                'patient_id'       => $patient->id,
+                '_who_added'       => Auth::user()->id,
             ]);
         }
+
+        // Record opening fee transaction if any
+        if ($openingFee > 0) {
+            MemberTransaction::create([
+                'transaction_no'   => MemberTransaction::generateTransactionNo(),
+                'transaction_type' => 'Adjustment',
+                'amount'           => $openingFee,
+                'balance_before'   => $initialBalance,
+                'balance_after'    => max(0, $creditAmount),
+                'payment_method'   => $data['payment_method'] ?? 'Cash',
+                'description'      => __('members.opening_fee_label'),
+                'patient_id'       => $patient->id,
+                '_who_added'       => Auth::user()->id,
+            ]);
+        }
+
+        // Referral points
+        if (!empty($data['referred_by']) && MemberSetting::get('referral_bonus_enabled', false)) {
+            $referrer = Patient::find($data['referred_by']);
+            if ($referrer && $referrer->member_status === 'Active' && $level->referral_points > 0) {
+                $patient->update(['referred_by' => $data['referred_by']]);
+                $referrer->member_points = ($referrer->member_points ?? 0) + $level->referral_points;
+                $referrer->save();
+
+                MemberTransaction::create([
+                    'transaction_no'   => MemberTransaction::generateTransactionNo(),
+                    'transaction_type' => 'Points',
+                    'amount'           => 0,
+                    'balance_before'   => $referrer->member_balance,
+                    'balance_after'    => $referrer->member_balance,
+                    'points_change'    => $level->referral_points,
+                    'description'      => __('members.referral_bonus_awarded') . ': ' . $patient->full_name,
+                    'patient_id'       => $referrer->id,
+                    '_who_added'       => Auth::user()->id,
+                ]);
+            }
+        }
+
+        // Audit log
+        MemberAuditLog::log($patient->id, 'register', 'member_level_id', null, $data['member_level_id']);
 
         return ['message' => __('members.member_registered_successfully'), 'status' => true];
     }
@@ -146,30 +208,317 @@ class MemberService
      */
     public function deposit(int $id, array $data): array
     {
+        $patient = Patient::with('memberLevel')->findOrFail($id);
+
+        if ($patient->member_status !== 'Active') {
+            return ['message' => __('members.not_active_member'), 'status' => false];
+        }
+
+        $amount = (float) $data['amount'];
+        $bonus = $patient->memberLevel ? $patient->memberLevel->calculateBonus($amount) : 0;
+        $totalCredit = $amount + $bonus;
+
+        $balanceBefore = (float) $patient->member_balance;
+        $balanceAfter = $balanceBefore + $totalCredit;
+
+        $patient->update(['member_balance' => $balanceAfter]);
+
+        MemberTransaction::create([
+            'transaction_no'   => MemberTransaction::generateTransactionNo(),
+            'transaction_type' => 'Deposit',
+            'amount'           => $amount,
+            'balance_before'   => $balanceBefore,
+            'balance_after'    => $balanceAfter,
+            'bonus_amount'     => $bonus,
+            'payment_method'   => $data['payment_method'],
+            'description'      => $data['description'] ?? __('members.balance_deposit'),
+            'patient_id'       => $patient->id,
+            '_who_added'       => Auth::user()->id,
+        ]);
+
+        // Audit log
+        MemberAuditLog::log($patient->id, 'deposit', 'member_balance', $balanceBefore, $balanceAfter);
+
+        return [
+            'message'     => __('members.deposit_successful'),
+            'status'      => true,
+            'new_balance' => $balanceAfter,
+            'bonus'       => $bonus,
+        ];
+    }
+
+    /**
+     * Refund from member balance.
+     *
+     * @return array{message: string, status: bool}
+     */
+    public function refund(int $id, array $data): array
+    {
+        $patient = Patient::with('memberLevel')->findOrFail($id);
+
+        if ($patient->member_status !== 'Active') {
+            return ['message' => __('members.not_active_member'), 'status' => false];
+        }
+
+        $amount = (float) $data['amount'];
+        $balanceBefore = (float) $patient->member_balance;
+
+        if ($amount > $balanceBefore) {
+            return ['message' => __('members.refund_exceeds_balance'), 'status' => false];
+        }
+
+        $balanceAfter = $balanceBefore - $amount;
+
+        $patient->update(['member_balance' => $balanceAfter]);
+
+        MemberTransaction::create([
+            'transaction_no'   => MemberTransaction::generateTransactionNo(),
+            'transaction_type' => 'Refund',
+            'amount'           => $amount,
+            'balance_before'   => $balanceBefore,
+            'balance_after'    => $balanceAfter,
+            'payment_method'   => $data['payment_method'],
+            'description'      => $data['description'] ?? __('members.balance_refund'),
+            'patient_id'       => $patient->id,
+            '_who_added'       => Auth::user()->id,
+        ]);
+
+        MemberAuditLog::log($patient->id, 'refund', 'member_balance', $balanceBefore, $balanceAfter);
+
+        return [
+            'message'     => __('members.refund_successful'),
+            'status'      => true,
+            'new_balance' => $balanceAfter,
+        ];
+    }
+
+    /**
+     * Exchange member points for balance.
+     *
+     * @return array{message: string, status: bool}
+     */
+    public function exchangePoints(int $id, int $points): array
+    {
+        if (!MemberSetting::get('points_exchange_enabled', true)) {
+            return ['message' => __('members.exchange_disabled'), 'status' => false];
+        }
+
+        if (!MemberSetting::get('points_enabled', true)) {
+            return ['message' => __('members.points_disabled'), 'status' => false];
+        }
+
         $patient = Patient::findOrFail($id);
 
         if ($patient->member_status !== 'Active') {
             return ['message' => __('members.not_active_member'), 'status' => false];
         }
 
-        $balanceBefore = $patient->member_balance;
-        $balanceAfter = $balanceBefore + $data['amount'];
+        if (($patient->member_points ?? 0) < $points) {
+            return ['message' => __('members.insufficient_points'), 'status' => false];
+        }
 
-        $patient->update(['member_balance' => $balanceAfter]);
+        $exchangeRate = (int) MemberSetting::get('points_exchange_rate', 100);
+        $amount = round($points / $exchangeRate, 2);
+
+        $balanceBefore = (float) $patient->member_balance;
+        $balanceAfter = $balanceBefore + $amount;
+
+        $patient->member_points = $patient->member_points - $points;
+        $patient->member_balance = $balanceAfter;
+        $patient->save();
 
         MemberTransaction::create([
-            'transaction_no' => MemberTransaction::generateTransactionNo(),
-            'transaction_type' => 'Deposit',
-            'amount' => $data['amount'],
-            'balance_before' => $balanceBefore,
-            'balance_after' => $balanceAfter,
-            'payment_method' => $data['payment_method'],
-            'description' => $data['description'] ?? __('members.balance_deposit'),
-            'patient_id' => $patient->id,
-            '_who_added' => Auth::user()->id,
+            'transaction_no'   => MemberTransaction::generateTransactionNo(),
+            'transaction_type' => 'Points',
+            'amount'           => $amount,
+            'balance_before'   => $balanceBefore,
+            'balance_after'    => $balanceAfter,
+            'points_change'    => -$points,
+            'payment_method'   => null,
+            'description'      => __('members.points_exchange_desc'),
+            'patient_id'       => $patient->id,
+            '_who_added'       => Auth::user()->id,
         ]);
 
-        return ['message' => __('members.deposit_successful'), 'status' => true, 'new_balance' => $balanceAfter];
+        MemberAuditLog::log($patient->id, 'points_exchange', 'member_points', $balanceBefore, $balanceAfter);
+
+        return [
+            'message' => __('members.exchange_successful', ['points' => $points, 'amount' => $amount]),
+            'status'  => true,
+        ];
+    }
+
+    /**
+     * Check and auto-upgrade member based on total consumption.
+     */
+    public function checkAndUpgrade(Patient $patient): bool
+    {
+        if ($patient->member_status !== 'Active' || !$patient->member_level_id) {
+            return false;
+        }
+
+        $levels = MemberLevel::active()
+            ->ordered()
+            ->where('min_consumption', '>', 0)
+            ->orderBy('min_consumption', 'desc')
+            ->get();
+
+        foreach ($levels as $level) {
+            if (($patient->total_consumption ?? 0) >= $level->min_consumption
+                && $level->id !== $patient->member_level_id
+                && $level->min_consumption > ($patient->memberLevel->min_consumption ?? 0)) {
+
+                $oldLevelId = $patient->member_level_id;
+                $oldLevelName = $patient->memberLevel->name ?? '-';
+
+                $patient->member_level_id = $level->id;
+                $patient->save();
+
+                MemberAuditLog::log(
+                    $patient->id,
+                    'upgrade',
+                    'member_level_id',
+                    $oldLevelId,
+                    $level->id
+                );
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ─── Shared Card Holders ────────────────────────────────────────
+
+    /**
+     * Add a shared card holder.
+     */
+    public function addSharedHolder(int $primaryPatientId, int $sharedPatientId, string $relationship): array
+    {
+        if ($primaryPatientId === $sharedPatientId) {
+            return ['message' => __('members.cannot_share_self'), 'status' => false];
+        }
+
+        $exists = \App\MemberSharedHolder::where('primary_patient_id', $primaryPatientId)
+            ->where('shared_patient_id', $sharedPatientId)
+            ->whereNull('deleted_at')
+            ->exists();
+
+        if ($exists) {
+            return ['message' => __('members.shared_holder_exists'), 'status' => false];
+        }
+
+        \App\MemberSharedHolder::create([
+            'primary_patient_id' => $primaryPatientId,
+            'shared_patient_id'  => $sharedPatientId,
+            'relationship'       => $relationship,
+            'is_active'          => true,
+            '_who_added'         => Auth::user()->id,
+        ]);
+
+        MemberAuditLog::log($primaryPatientId, 'add_shared', 'shared_patient_id', null, $sharedPatientId);
+
+        return ['message' => __('members.shared_holder_added'), 'status' => true];
+    }
+
+    /**
+     * Remove a shared card holder.
+     */
+    public function removeSharedHolder(int $holderId): array
+    {
+        $holder = \App\MemberSharedHolder::findOrFail($holderId);
+
+        MemberAuditLog::log($holder->primary_patient_id, 'remove_shared', 'shared_patient_id', $holder->shared_patient_id, null);
+
+        $holder->delete();
+
+        return ['message' => __('members.shared_holder_removed'), 'status' => true];
+    }
+
+    /**
+     * Get shared card holders for a member.
+     */
+    public function getSharedHolders(int $patientId): Collection
+    {
+        return DB::table('member_shared_holders')
+            ->join('patients', 'patients.id', 'member_shared_holders.shared_patient_id')
+            ->where('member_shared_holders.primary_patient_id', $patientId)
+            ->whereNull('member_shared_holders.deleted_at')
+            ->select(
+                'member_shared_holders.*',
+                DB::raw(app()->getLocale() === 'zh-CN'
+                    ? "CONCAT(patients.surname, patients.othername) as patient_name"
+                    : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                'patients.phone_no'
+            )
+            ->get();
+    }
+
+    /**
+     * Resolve the primary member for a patient (for shared card payment).
+     * Returns the patient itself if they are a primary member, or their card holder's patient.
+     */
+    public function resolvePrimaryMember(int $patientId): Patient
+    {
+        $holder = \App\MemberSharedHolder::where('shared_patient_id', $patientId)
+            ->where('is_active', true)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if ($holder) {
+            return Patient::findOrFail($holder->primary_patient_id);
+        }
+
+        return Patient::findOrFail($patientId);
+    }
+
+    /**
+     * Get audit logs for a member.
+     */
+    public function getAuditLogs(int $patientId): Collection
+    {
+        return DB::table('member_audit_logs')
+            ->leftJoin('users', 'users.id', 'member_audit_logs._who_added')
+            ->where('member_audit_logs.patient_id', $patientId)
+            ->orderBy('member_audit_logs.created_at', 'desc')
+            ->select(
+                'member_audit_logs.*',
+                DB::raw(app()->getLocale() === 'zh-CN'
+                    ? "CONCAT(users.surname, users.othername) as operator_name"
+                    : "CONCAT(users.surname, ' ', users.othername) as operator_name")
+            )
+            ->get();
+    }
+
+    // ─── Password ───────────────────────────────────────────────────
+
+    /**
+     * Set member password.
+     */
+    public function setPassword(int $patientId, string $password): array
+    {
+        $patient = Patient::findOrFail($patientId);
+
+        $patient->update(['member_password' => bcrypt($password)]);
+
+        MemberAuditLog::log($patientId, 'password_change');
+
+        return ['message' => __('members.password_set_successfully'), 'status' => true];
+    }
+
+    /**
+     * Verify member password.
+     */
+    public function verifyPassword(int $patientId, string $password): bool
+    {
+        $patient = Patient::findOrFail($patientId);
+
+        if (!$patient->member_password) {
+            return false;
+        }
+
+        return \Illuminate\Support\Facades\Hash::check($password, $patient->member_password);
     }
 
     // ─── Transactions ────────────────────────────────────────────
@@ -222,17 +571,22 @@ class MemberService
     public function createLevel(array $data): array
     {
         MemberLevel::create([
-            'name' => $data['name'],
-            'code' => $data['code'],
-            'color' => $data['color'] ?? '#999999',
-            'discount_rate' => $data['discount_rate'],
-            'min_consumption' => $data['min_consumption'] ?? 0,
-            'points_rate' => $data['points_rate'] ?? 1,
-            'benefits' => $data['benefits'] ?? null,
-            'sort_order' => $data['sort_order'] ?? 0,
-            'is_default' => $data['is_default'] ?? false,
-            'is_active' => $data['is_active'] ?? true,
-            '_who_added' => Auth::user()->id,
+            'name'                        => $data['name'],
+            'code'                        => $data['code'],
+            'color'                       => $data['color'] ?? '#999999',
+            'discount_rate'               => $data['discount_rate'],
+            'min_consumption'             => $data['min_consumption'] ?? 0,
+            'points_rate'                 => $data['points_rate'] ?? 1,
+            'benefits'                    => $data['benefits'] ?? null,
+            'sort_order'                  => $data['sort_order'] ?? 0,
+            'is_default'                  => $data['is_default'] ?? false,
+            'is_active'                   => $data['is_active'] ?? true,
+            'opening_fee'                 => $data['opening_fee'] ?? 0,
+            'min_initial_deposit'         => $data['min_initial_deposit'] ?? 0,
+            'deposit_bonus_rules'         => $data['deposit_bonus_rules'] ?? null,
+            'referral_points'             => $data['referral_points'] ?? 0,
+            'payment_method_points_rates' => $data['payment_method_points_rates'] ?? null,
+            '_who_added'                  => Auth::user()->id,
         ]);
 
         Cache::forget(self::CACHE_KEY_LEVELS);
@@ -248,16 +602,21 @@ class MemberService
     public function updateLevel(int $id, array $data): array
     {
         MemberLevel::where('id', $id)->update([
-            'name' => $data['name'],
-            'code' => $data['code'],
-            'color' => $data['color'] ?? '#999999',
-            'discount_rate' => $data['discount_rate'],
-            'min_consumption' => $data['min_consumption'] ?? 0,
-            'points_rate' => $data['points_rate'] ?? 1,
-            'benefits' => $data['benefits'] ?? null,
-            'sort_order' => $data['sort_order'] ?? 0,
-            'is_default' => $data['is_default'] ?? false,
-            'is_active' => $data['is_active'] ?? true,
+            'name'                        => $data['name'],
+            'code'                        => $data['code'],
+            'color'                       => $data['color'] ?? '#999999',
+            'discount_rate'               => $data['discount_rate'],
+            'min_consumption'             => $data['min_consumption'] ?? 0,
+            'points_rate'                 => $data['points_rate'] ?? 1,
+            'benefits'                    => $data['benefits'] ?? null,
+            'sort_order'                  => $data['sort_order'] ?? 0,
+            'is_default'                  => $data['is_default'] ?? false,
+            'is_active'                   => $data['is_active'] ?? true,
+            'opening_fee'                 => $data['opening_fee'] ?? 0,
+            'min_initial_deposit'         => $data['min_initial_deposit'] ?? 0,
+            'deposit_bonus_rules'         => $data['deposit_bonus_rules'] ?? null,
+            'referral_points'             => $data['referral_points'] ?? 0,
+            'payment_method_points_rates' => $data['payment_method_points_rates'] ?? null,
         ]);
 
         Cache::forget(self::CACHE_KEY_LEVELS);
@@ -308,8 +667,23 @@ class MemberService
                 elseif ($row->member_status == 'Expired') $class = 'danger';
                 return '<span class="label label-' . $class . '">' . __('members.status_' . strtolower($row->member_status)) . '</span>';
             })
+            ->addColumn('phone', function ($row) {
+                return $row->phone_no ?? '-';
+            })
+            ->addColumn('discountDisplay', function ($row) {
+                if ($row->discount_rate && $row->discount_rate < 100) {
+                    return number_format($row->discount_rate / 10, 1) . __('members.discount_unit');
+                }
+                return '-';
+            })
             ->addColumn('balance', function ($row) {
                 return number_format($row->member_balance, 2);
+            })
+            ->addColumn('totalConsumption', function ($row) {
+                return number_format($row->total_consumption ?? 0, 2);
+            })
+            ->addColumn('expiryDate', function ($row) {
+                return $row->member_expiry ? \Carbon\Carbon::parse($row->member_expiry)->format('Y-m-d') : '-';
             })
             ->addColumn('viewBtn', function ($row) {
                 return '<a href="' . url('members/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
@@ -359,9 +733,15 @@ class MemberService
             })
             ->addColumn('discountDisplay', function ($row) {
                 if ($row->discount_rate < 100) {
-                    return (100 - $row->discount_rate) . '%';
+                    return number_format($row->discount_rate / 10, 1) . __('members.discount_unit');
                 }
                 return __('members.no_discount');
+            })
+            ->addColumn('minConsumptionDisplay', function ($row) {
+                if ($row->min_consumption > 0) {
+                    return '<span class="text-primary">&ge; ' . number_format($row->min_consumption, 0) . '</span>';
+                }
+                return '<span class="text-muted">-</span>';
             })
             ->addColumn('statusBadge', function ($row) {
                 $class = $row->is_active ? 'success' : 'default';
@@ -374,7 +754,7 @@ class MemberService
             ->addColumn('deleteBtn', function ($row) {
                 return '<a href="#" onclick="deleteLevel(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
             })
-            ->rawColumns(['colorBadge', 'statusBadge', 'editBtn', 'deleteBtn'])
+            ->rawColumns(['colorBadge', 'minConsumptionDisplay', 'statusBadge', 'editBtn', 'deleteBtn'])
             ->make(true);
     }
 }

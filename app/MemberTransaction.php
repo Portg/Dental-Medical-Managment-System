@@ -18,9 +18,15 @@ class MemberTransaction extends Model
         'points_change',
         'payment_method',
         'description',
+        'points_expires_at',
+        'bonus_amount',
         'patient_id',
         'invoice_id',
         '_who_added',
+    ];
+
+    protected $casts = [
+        'points_expires_at' => 'date',
     ];
 
     /**
