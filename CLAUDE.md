@@ -176,6 +176,20 @@ Always include `whereNull('deleted_at')` or use model's `SoftDeletes` trait.
 - **Calendar**: FullCalendar for appointments
 - **UI**: Bootstrap, Select2, Datepicker (all with zh-CN locale)
 
+### File Separation (Blade / CSS / JS)
+
+Blade 视图中**禁止**内联 `<style>` 和 `<script>` 大段代码。必须拆分为独立文件引入：
+
+| 类型 | 存放路径 | 引入方式 |
+|------|---------|---------|
+| CSS  | `public/css/<page-name>.css` | `<link rel="stylesheet" href="{{ asset('css/<page-name>.css') }}">` |
+| JS   | `public/include_js/<page_name>.js` | `<script src="{{ asset('include_js/<page_name>.js') }}?v={{ filemtime(public_path('include_js/<page_name>.js')) }}"></script>` |
+
+- Blade 只保留 HTML 结构和必要的 `@section` / `@yield`
+- JS 中使用 `LanguageManager.trans('module.key')` 获取翻译，不用 Blade `{{ __() }}`
+- 页面级翻译在 `@section('js')` 顶部通过一行 `LanguageManager.loadFromPHP(@json(__('module')), 'module')` 注入
+- `common` 和 `validation` 已在布局模板全局加载，无需重复注入
+
 ## Quick Start
 
 ```bash

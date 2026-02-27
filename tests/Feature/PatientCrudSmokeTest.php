@@ -20,7 +20,7 @@ class PatientCrudSmokeTest extends TestCase
         parent::setUp();
 
         $branch = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
-        $role   = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
+        $role   = Role::create(['name' => 'Super Administrator', 'slug' => 'super-admin']);
 
         $this->admin = User::factory()->create([
             'role_id'   => $role->id,

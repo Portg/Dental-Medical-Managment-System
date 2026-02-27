@@ -62,6 +62,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('patients', 'PatientController');
     Route::get('patients/{patientId}/medicalHistory', 'PatientController@patientMedicalHistory');
     Route::post('patients/{id}/reveal-pii', 'PatientController@revealPii');
+    Route::post('patients/{id}/quick-info', 'PatientController@updateQuickInfo');
 
     Route::get('export-patients', 'PatientController@exportPatients');
     Route::get('search-patient', 'PatientController@filterPatients');
@@ -326,11 +327,21 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('members', 'MemberController');
     Route::get('members/{id}/transactions', 'MemberController@transactions');
     Route::post('members/{id}/deposit', 'MemberController@deposit');
+    Route::post('members/{id}/refund', 'MemberController@refund');
     Route::get('member-levels', 'MemberController@levels');
     Route::post('member-levels', 'MemberController@storeLevel');
     Route::get('member-levels/{id}/edit', 'MemberController@editLevel');
     Route::put('member-levels/{id}', 'MemberController@updateLevel');
     Route::delete('member-levels/{id}', 'MemberController@destroyLevel');
+    Route::get('member-settings', 'MemberController@settings');
+    Route::put('member-settings', 'MemberController@updateSettings');
+    Route::post('members/{id}/exchange-points', 'MemberController@exchangePoints');
+    Route::get('members/{id}/shared-holders', 'MemberController@sharedHolders');
+    Route::post('members/{id}/shared-holders', 'MemberController@addSharedHolder');
+    Route::delete('members/shared-holders/{holderId}', 'MemberController@removeSharedHolder');
+    Route::get('members/{id}/audit-logs', 'MemberController@auditLogs');
+    Route::post('members/{id}/password', 'MemberController@setPassword');
+    Route::get('members/{id}/print', 'MemberController@printCard');
 
     // Language switching
     Route::get('/language/{locale}', 'LanguageController@switch')->name('language.switch');
@@ -351,6 +362,13 @@ Route::group(['middleware' => ['auth']], function () {
     // Patient Sources
     Route::resource('patient-sources', 'PatientSourceController');
     Route::get('patient-sources-list', 'PatientSourceController@list');
+
+    // Dict Items (通用字典)
+    Route::get('dict-items', 'DictItemController@index');
+    Route::get('dict-items-list', 'DictItemController@list');
+    Route::post('dict-items', 'DictItemController@store');
+    Route::put('dict-items/{id}', 'DictItemController@update');
+    Route::delete('dict-items/{id}', 'DictItemController@destroy');
 
     // ============================================================
     // Inventory Management System
@@ -382,6 +400,26 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('service-consumables', 'ServiceConsumableController');
 
     // ============================================================
+    // ============================================================
+    // Today's Work (今日工作一站式工作台)
+    // ============================================================
+    Route::get('today-work', 'TodayWorkController@index');
+    Route::get('today-work/data', 'TodayWorkController@getData');
+    Route::get('today-work/stats', 'TodayWorkController@getStats');
+    Route::post('today-work/mark-no-show/{appointmentId}', 'TodayWorkController@markNoShow');
+    Route::get('today-work/kanban-data', 'TodayWorkController@getKanbanData');
+    Route::get('today-work/patient-summary/{patientId}', 'TodayWorkController@getPatientSummary');
+    Route::get('today-work/billing', 'TodayWorkController@getBilling');
+    Route::get('today-work/followups', 'TodayWorkController@getFollowups');
+    Route::get('today-work/tomorrow', 'TodayWorkController@getTomorrow');
+    Route::get('today-work/week-missed', 'TodayWorkController@getWeekMissed');
+    Route::get('today-work/birthdays', 'TodayWorkController@getBirthdays');
+    Route::get('today-work/doctor-table', 'TodayWorkController@getDoctorTable');
+    Route::get('today-work/paid', 'TodayWorkController@getPaid');
+    Route::get('today-work/unpaid', 'TodayWorkController@getUnpaid');
+    Route::get('today-work/lab-cases', 'TodayWorkController@getLabCases');
+    Route::get('today-work/tab-counts', 'TodayWorkController@getTabCounts')->name('today-work.tab-counts');
+
     // Waiting Queue Management System (候诊与叫号)
     // ============================================================
 
@@ -450,8 +488,8 @@ Route::group(['middleware' => ['auth']], function () {
     // Doctor Schedule Management
     // ============================================================
 
-    Route::resource('doctor-schedules', 'DoctorScheduleController');
     Route::get('doctor-schedules/calendar', 'DoctorScheduleController@calendar');
+    Route::resource('doctor-schedules', 'DoctorScheduleController');
 
     // ============================================================
     // Commission Rules Management

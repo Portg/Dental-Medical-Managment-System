@@ -21,6 +21,7 @@ return [
     'add_new' => 'Add New',
     'edit' => 'Edit',
     'delete' => 'Delete',
+    'none' => 'None',
     'save' => 'Save',
     'save_changes' => 'Save changes',
     'save_record' => 'Save Record',
@@ -167,6 +168,9 @@ return [
     'new_password' => 'New Password',
     'confirm_password' => 'Confirm Password',
     'current_password' => 'Current Password',
+    'patient' => 'Patient',
+    'doctor' => 'Doctor',
+    'service' => 'Service',
 
     // Messages
     'alert' => 'Alert!',

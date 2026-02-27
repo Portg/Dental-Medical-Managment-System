@@ -14,6 +14,7 @@ return [
     // Main Menu (PRD Structure)
     'home' => '首页',
     'dashboard' => '工作台',
+    'today_work' => '今日工作',
     'patient_center' => '患者中心',
     'patients' => '患者',
     'appointments' => '预约',
@@ -181,6 +182,7 @@ return [
     'quick_phrases' => '常用短语',
     'patient_tags' => '患者标签',
     'patient_sources' => '患者来源',
+    'dict_items' => '字典管理',
 
     // User Menu
     'my_profile' => '我的资料',

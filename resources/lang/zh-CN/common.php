@@ -22,6 +22,7 @@ return [
     'add_new' => '添加新项',
     'edit' => '编辑',
     'delete' => '删除',
+    'none' => '无',
     'save' => '保存',
     'save_changes' => '保存更改',
     'save_record' => '保存记录',
@@ -168,6 +169,9 @@ return [
     'new_password' => '新密码',
     'confirm_password' => '确认密码',
     'current_password' => '当前密码',
+    'patient' => '患者',
+    'doctor' => '医生',
+    'service' => '项目',
 
     // Messages
     'alert' => '警报！',

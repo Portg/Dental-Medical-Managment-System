@@ -56,9 +56,9 @@ class PermissionCacheTest extends TestCase
 
     public function test_dashboard_gates_match_roles(): void
     {
-        // Super Admin
+        // Super Admin — Gate::before returns true for all abilities
         $this->assertTrue($this->superAdminUser->can('Super-Administrator-Dashboard'));
-        $this->assertFalse($this->superAdminUser->can('Admin-Dashboard'));
+        $this->assertTrue($this->superAdminUser->can('Admin-Dashboard'));
 
         // Admin
         $this->assertTrue($this->adminUser->can('Admin-Dashboard'));

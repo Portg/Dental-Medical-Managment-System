@@ -14,6 +14,7 @@ return [
     // Main Menu (PRD Structure)
     'home' => 'Home',
     'dashboard' => 'Dashboard',
+    'today_work' => "Today's Work",
     'patient_center' => 'Patient Center',
     'patients' => 'Patients',
     'appointments' => 'Appointments',
@@ -181,6 +182,7 @@ return [
     'quick_phrases' => 'Quick Phrases',
     'patient_tags' => 'Patient Tags',
     'patient_sources' => 'Patient Sources',
+    'dict_items' => 'Dictionary Management',
 
     // User Menu
     'my_profile' => 'My Profile',

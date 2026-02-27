@@ -87,9 +87,10 @@ class AuthSmokeTest extends TestCase
 
     public function test_authenticated_user_can_access_home(): void
     {
+        // Admin role now redirects /home to /today-work
         $this->actingAs($this->admin)
              ->get('/home')
-             ->assertStatus(200);
+             ->assertRedirect('today-work');
     }
 
     // ─── API (Sanctum) auth ────────────────────────────────────────

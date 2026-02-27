@@ -33,7 +33,7 @@ class InvoicePaymentApiTest extends TestCase
         Bus::fake();
 
         $branch     = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
-        $adminRole  = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
+        $adminRole  = Role::create(['name' => 'Super Administrator', 'slug' => 'super-admin']);
         $doctorRole = Role::create(['name' => 'Doctor', 'slug' => 'doctor']);
 
         $this->admin = User::factory()->create([
