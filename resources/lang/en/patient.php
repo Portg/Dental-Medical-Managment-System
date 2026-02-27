@@ -238,4 +238,38 @@ return [
     'blood_type_ab_rh_negative' => 'Type AB Rh-',
     'blood_type_o_rh_negative' => 'Type O Rh-',
     'blood_type_unknown' => 'Unknown',
+
+    // Demographics section
+    'demographics' => 'Demographics',
+
+    // Referral
+    'referred_by' => 'Referred By',
+    'referred_by_placeholder' => 'Search patient name or phone...',
+
+    // Kin Relations
+    'kin_relations' => 'Kin Relations',
+    'add_kin_relation' => 'Add Kin',
+    'kin_search_placeholder' => 'Search patient name or phone...',
+
+    // Patient Groups
+    'patient_group' => 'Patient Group',
+    'group_walk_in' => 'Walk-in',
+    'group_referral' => 'Referral',
+    'group_orthodontics' => 'Orthodontics',
+    'group_implant' => 'Implant',
+    'group_pediatric' => 'Pediatric',
+
+    // Photos
+    'photo' => 'Photo',
+    'upload_photo' => 'Upload Photo',
+    'change_photo' => 'Change Photo',
+    'remove_photo' => 'Remove Photo',
+
+    // Detail page summary bar
+    'first_visit_doctor' => 'First Visit',
+    'latest_visit' => 'Latest Visit',
+    'total_spending' => 'Total Spending',
+    'member_balance' => 'Member Balance',
+    'member_points' => 'Points',
+    'no_visit_record' => 'No visit records',
 ];

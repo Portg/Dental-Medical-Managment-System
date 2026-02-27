@@ -40,6 +40,8 @@ class PatientService
         'next_of_kin_address' => 'next_of_kin_address',
         'insurance_company_id' => 'insurance_company_id',
         'source_id' => 'source_id',
+        'referred_by' => 'referred_by',
+        'patient_group' => 'patient_group',
         'notes' => 'notes',
     ];
 
@@ -126,6 +128,20 @@ class PatientService
             });
         }
 
+        // Group filter (sidebar)
+        if (!empty($filters['filter_group'])) {
+            $query->where('patients.patient_group', $filters['filter_group']);
+        }
+
+        // Sidebar tag filter (single tag click)
+        if (!empty($filters['filter_sidebar_tag'])) {
+            $query->whereIn('patients.id', function ($subquery) use ($filters) {
+                $subquery->select('patient_id')
+                    ->from('patient_tag_pivot')
+                    ->where('tag_id', $filters['filter_sidebar_tag']);
+            });
+        }
+
         return $query->orderBy('patients.id', 'desc')->get();
     }
 
@@ -192,11 +208,40 @@ class PatientService
     }
 
     /**
+     * Get group sidebar data for the patient list page.
+     */
+    public function getGroupSidebarData(): array
+    {
+        $totalCount = Patient::count();
+
+        // 从字典表读取分组选项
+        $allGroups = \App\DictItem::ofType('patient_group')->active()->ordered()->get();
+
+        $groupCounts = Patient::select('patient_group', DB::raw('count(*) as cnt'))
+            ->whereNotNull('patient_group')
+            ->where('patient_group', '!=', '')
+            ->groupBy('patient_group')
+            ->pluck('cnt', 'patient_group')
+            ->toArray();
+
+        $tagCounts = DB::table('patient_tag_pivot')
+            ->join('patient_tags', 'patient_tags.id', '=', 'patient_tag_pivot.tag_id')
+            ->select('patient_tags.id', 'patient_tags.name', DB::raw('count(*) as cnt'))
+            ->groupBy('patient_tags.id', 'patient_tags.name')
+            ->get();
+
+        return compact('totalCount', 'allGroups', 'groupCounts', 'tagCounts');
+    }
+
+    /**
      * Get patient detail with related data counts.
      */
     public function getPatientDetail(int $id): array
     {
-        $patient = Patient::with(['InsuranceCompany'])->findOrFail($id);
+        $patient = Patient::with([
+            'InsuranceCompany', 'patientTags', 'source', 'referrer',
+            'sharedHolders.sharedPatient', 'memberLevel',
+        ])->findOrFail($id);
 
         $appointmentsCount = Appointment::where('patient_id', $id)->count();
 
@@ -213,9 +258,36 @@ class PatientService
             ->whereNull('appointments.deleted_at')
             ->count();
 
+        // 首诊信息 (first visit)
+        $firstVisit = Appointment::with('doctor')
+            ->where('patient_id', $id)
+            ->orderBy('start_date', 'asc')
+            ->first();
+
+        // 最新就诊 (latest visit)
+        $latestVisit = Appointment::with('doctor')
+            ->where('patient_id', $id)
+            ->orderBy('start_date', 'desc')
+            ->first();
+
+        // 消费总额 (total spending)
+        $totalSpending = DB::table('invoices')
+            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
+            ->where('appointments.patient_id', $id)
+            ->whereNull('invoices.deleted_at')
+            ->whereNull('appointments.deleted_at')
+            ->sum('invoices.total_amount');
+
+        // 所有标签（用于左侧面板复选框）
+        $allTags = \App\PatientTag::orderBy('name')->get(['id', 'name']);
+
+        // 所有分组（用于左侧面板单选）
+        $allGroups = \App\DictItem::ofType('patient_group')->active()->ordered()->get();
+
         return compact(
             'patient', 'appointmentsCount', 'medicalCasesCount',
-            'imagesCount', 'followupsCount', 'invoicesCount'
+            'imagesCount', 'followupsCount', 'invoicesCount',
+            'firstVisit', 'latestVisit', 'totalSpending', 'allTags', 'allGroups'
         );
     }
 
@@ -224,7 +296,7 @@ class PatientService
      */
     public function getPatientForEdit(int $id): array
     {
-        $patient = Patient::with(['patientTags', 'source'])->where('id', $id)->first();
+        $patient = Patient::with(['patientTags', 'source', 'referrer', 'sharedHolders.sharedPatient'])->where('id', $id)->first();
 
         $company = '';
         if ($patient->insurance_company_id != null) {
@@ -373,6 +445,33 @@ class PatientService
         }
 
         return (bool) $status;
+    }
+
+    /**
+     * Sync kin relations (shared holders) for a patient.
+     */
+    public function syncKinRelations(int $patientId, ?array $kinRelations = null): void
+    {
+        if ($kinRelations === null) {
+            return;
+        }
+
+        // Remove existing shared holders for this patient
+        \App\MemberSharedHolder::where('primary_patient_id', $patientId)->delete();
+
+        // Add new ones
+        foreach ($kinRelations as $relation) {
+            if (empty($relation['patient_id'])) {
+                continue;
+            }
+            \App\MemberSharedHolder::create([
+                'primary_patient_id' => $patientId,
+                'shared_patient_id' => $relation['patient_id'],
+                'relationship' => $relation['relationship'] ?? null,
+                'is_active' => true,
+                '_who_added' => \Illuminate\Support\Facades\Auth::id(),
+            ]);
+        }
     }
 
     /**

@@ -1,0 +1,197 @@
+/* ── Dict Items Management — Left-right layout ── */
+.dict-layout {
+    display: flex;
+    gap: 0;
+    min-height: 500px;
+    width: 100%;
+    margin: 0;
+}
+/* Remove parent wrapper padding so layout fills full width */
+.mt-content-body:has(.dict-layout) {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Left: type navigation */
+.dict-type-nav {
+    width: 200px;
+    min-width: 200px;
+    background: #fff;
+    border: 1px solid #e7ecf1;
+    border-radius: 4px 0 0 4px;
+    display: flex;
+    flex-direction: column;
+}
+.dict-type-nav .nav-search {
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.dict-type-nav .nav-search input {
+    width: 100%;
+    border: 1px solid #e0e0e0;
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-size: 12px;
+    outline: none;
+}
+.dict-type-nav .nav-search input:focus {
+    border-color: #3598dc;
+}
+.dict-type-nav .nav-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+.dict-type-nav .nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+    transition: all 0.12s;
+}
+.dict-type-nav .nav-item:hover {
+    background: #f5f7fa;
+    color: #333;
+}
+.dict-type-nav .nav-item.active {
+    background: #eef3fc;
+    color: #3598dc;
+    border-left-color: #3598dc;
+    font-weight: 600;
+}
+.dict-type-nav .nav-item .item-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dict-type-nav .nav-item .item-icon {
+    font-size: 12px;
+    color: #bbb;
+    width: 14px;
+    text-align: center;
+}
+.dict-type-nav .nav-item.active .item-icon {
+    color: #3598dc;
+}
+.dict-type-nav .nav-item .item-count {
+    font-size: 11px;
+    min-width: 20px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 9px;
+    background: #e8e8e8;
+    color: #666;
+}
+.dict-type-nav .nav-item.active .item-count {
+    background: #3598dc;
+    color: #fff;
+}
+.dict-type-nav .nav-footer {
+    padding: 8px 10px;
+    border-top: 1px solid #f0f0f0;
+}
+.dict-type-nav .nav-footer .btn { font-size: 12px; }
+
+/* Right: items content */
+.dict-content {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #e7ecf1;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.dict-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.dict-content-header .header-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+.dict-content-header .header-title .type-code {
+    font-size: 12px;
+    color: #aaa;
+    font-family: monospace;
+    margin-left: 6px;
+    font-weight: normal;
+}
+
+/* Table */
+.dict-item-table { margin: 0; table-layout: fixed; }
+.dict-item-table th {
+    background: #fafafa;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 12px;
+}
+.dict-item-table td {
+    font-size: 13px;
+    vertical-align: middle !important;
+    padding: 8px 12px;
+}
+.dict-item-table .form-control {
+    padding: 4px 8px;
+    height: 30px;
+    font-size: 13px;
+}
+.add-row td { background: #f9f9f9; }
+
+/* Action buttons — clearly visible */
+.btn-action-edit {
+    color: #3598dc;
+    background: #eef3fc;
+    border: 1px solid #c5ddf3;
+    padding: 3px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-right: 4px;
+}
+.btn-action-edit:hover { background: #3598dc; color: #fff; }
+.btn-action-delete {
+    color: #e74c3c;
+    background: #fdf0ef;
+    border: 1px solid #f3c5c1;
+    padding: 3px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.btn-action-delete:hover { background: #e74c3c; color: #fff; }
+.btn-action-save {
+    color: #fff;
+    background: #27ae60;
+    border: 1px solid #27ae60;
+    padding: 3px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-right: 4px;
+}
+.btn-action-cancel {
+    color: #666;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 3px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.dict-type-panel { display: none; }
+.dict-type-panel.active { display: block; }
+.dict-empty-hint { text-align: center; padding: 60px 20px; color: #bbb; }
+.dict-empty-hint i { font-size: 36px; margin-bottom: 8px; display: block; }

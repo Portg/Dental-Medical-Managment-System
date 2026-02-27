@@ -26,6 +26,45 @@
 @endsection
 
 {{-- ========================================================================
+     Left Sidebar (Patient Groups)
+     ======================================================================== --}}
+@section('left_sidebar')
+    <div class="patient-group-panel" style="background:#fff; border:1px solid #e7ecf1; border-radius:4px; padding:12px;">
+        <div style="font-size:14px; font-weight:600; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f0f0f0;">
+            {{ __('patient.patient_group') }}
+        </div>
+
+        <div class="group-list">
+            <a href="javascript:;" class="group-item active" data-group="" style="display:flex; justify-content:space-between; padding:6px 8px; border-radius:3px; margin-bottom:2px; color:#333; text-decoration:none; font-size:13px;">
+                <span>{{ __('common.all') }}</span>
+                <span class="badge" style="background:#eee; color:#666;">{{ $totalCount }}</span>
+            </a>
+
+            @foreach($allGroups as $g)
+                <a href="javascript:;" class="group-item" data-group="{{ $g->code }}" style="display:flex; justify-content:space-between; padding:6px 8px; border-radius:3px; margin-bottom:2px; color:#555; text-decoration:none; font-size:13px;">
+                    <span>{{ $g->name }}</span>
+                    <span class="badge" style="background:#eee; color:#666;">{{ $groupCounts[$g->code] ?? 0 }}</span>
+                </a>
+            @endforeach
+        </div>
+
+        @if($tagCounts->count())
+        <div style="font-size:13px; font-weight:600; margin:14px 0 8px; padding-top:10px; border-top:1px solid #f0f0f0; color:#666;">
+            {{ __('patient.tags') }}
+        </div>
+        <div class="tag-list">
+            @foreach($tagCounts as $tc)
+                <a href="javascript:;" class="tag-filter-item" data-tag-id="{{ $tc->id }}" style="display:flex; justify-content:space-between; padding:4px 8px; border-radius:3px; margin-bottom:2px; color:#555; text-decoration:none; font-size:12px;">
+                    <span>{{ $tc->name }}</span>
+                    <span class="badge" style="background:#eee; color:#666; font-size:11px;">{{ $tc->cnt }}</span>
+                </a>
+            @endforeach
+        </div>
+        @endif
+    </div>
+@endsection
+
+{{-- ========================================================================
      Header Actions
      ======================================================================== --}}
 @section('header_actions')
@@ -278,6 +317,8 @@
                     d.filter_tags = $('#filter_tags').val();
                     d.filter_source = $('#filter_source').val();
                     d.quick_search = $('#quickSearch').val();
+                    d.filter_group = window._activeGroup || '';
+                    d.filter_sidebar_tag = window._activeSidebarTag || '';
                 }
             },
             dom: 'rtip',
@@ -332,13 +373,15 @@
         $('#btnSave').attr('disabled', false);
         $('#btnSaveAndContinue').attr('disabled', false);
         $('#source_id').val(null).trigger('change');
-        $('#patient_tags').val(null).trigger('change');
         $('#company').val([]).trigger('change');
         $('.insurance_company').hide();
 
         // Reset intl-tel-input
         iti.setNumber('');
         $('#phone_number').val('');
+
+        // Reset referred_by
+        if (typeof setReferredBy === 'function') setReferredBy(null);
 
         if (typeof resetPatientFormToCreateMode === 'function') {
             resetPatientFormToCreateMode();
@@ -353,80 +396,126 @@
         $("#patient-form")[0].reset();
         $('#id').val('');
         $('#btnSave').attr('disabled', false);
+
+        // Reset left panel state
+        if (typeof resetAvatar === 'function') resetAvatar();
+        if (typeof clearKinRelations === 'function') clearKinRelations();
+        document.querySelectorAll('#left-panel-tags input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+        var noneRadio = document.querySelector('input[name="patient_group"][value=""]');
+        if (noneRadio) noneRadio.checked = true;
+        // Reset referred_by Select2
+        if (typeof setReferredBy === 'function') setReferredBy(null);
+
         $.LoadingOverlay("show");
         $.ajax({
             type: 'get',
             url: "patients/" + id + "/edit",
             success: function(data) {
+                var p = data.patient;
                 $('#id').val(id);
-                $('[name="surname"]').val(data.patient.surname);
-                $('[name="othername"]').val(data.patient.othername);
-                $('input[name^="gender"][value="' + data.patient.gender + '"').prop('checked', true);
-                $('[name="dob"]').val(data.patient.date_of_birth);
-                $('[name="email"]').val(data.patient.email);
-                $('[name="telephone"]').val(data.patient.phone_no);
-                if (data.patient.phone_no != null) {
-                    iti.setNumber(data.patient.phone_no);
+
+                // Name fields (locale-adaptive)
+                if ($('[name="full_name"]').length) {
+                    // zh-CN mode: combine surname + othername into full_name
+                    var fullName = (p.surname || '') + (p.othername || '');
+                    $('[name="full_name"]').val(fullName);
+                } else {
+                    $('[name="surname"]').val(p.surname);
+                    $('[name="othername"]').val(p.othername);
                 }
-                $('[name="alternative_no"]').val(data.patient.alternative_no);
-                $('[name="nin"]').val(data.patient.nin);
-                $('[name="age"]').val(data.patient.age);
-                $('[name="profession"]').val(data.patient.profession);
-                $('[name="next_of_kin"]').val(data.patient.next_of_kin);
-                $('[name="next_of_kin_no"]').val(data.patient.next_of_kin_no);
-                $('[name="next_of_kin_address"]').val(data.patient.next_of_kin_address);
-                $('[name="address"]').val(data.patient.address);
 
-                // Demographic fields (人口统计信息)
-                $('[name="ethnicity"]').val(data.patient.ethnicity);
-                $('[name="marital_status"]').val(data.patient.marital_status);
-                $('[name="education"]').val(data.patient.education);
-                $('[name="blood_type"]').val(data.patient.blood_type);
+                // Basic fields
+                $('input[name="gender"][value="' + p.gender + '"]').prop('checked', true);
+                $('[name="dob"]').val(p.date_of_birth);
+                $('[name="email"]').val(p.email);
+                $('[name="nin"]').val(p.nin);
+                $('[name="address"]').val(p.address);
 
-                $('input[name^="has_insurance"][value="' + (data.patient.has_insurance ? '1' : '0') + '"').prop('checked', true);
+                // Phone (intl-tel-input)
+                $('[name="telephone"]').val(p.phone_no);
+                if (p.phone_no != null) {
+                    iti.setNumber(p.phone_no);
+                }
 
-                if (!data.patient.has_insurance) {
+                // Demographics
+                $('[name="age"]').val(p.age);
+                $('[name="profession"]').val(p.profession);
+                $('[name="ethnicity"]').val(p.ethnicity);
+                $('[name="marital_status"]').val(p.marital_status);
+                $('[name="education"]').val(p.education);
+                $('[name="blood_type"]').val(p.blood_type);
+
+                // Emergency contact
+                $('[name="alternative_no"]').val(p.alternative_no);
+                $('[name="next_of_kin"]').val(p.next_of_kin);
+                $('[name="next_of_kin_no"]').val(p.next_of_kin_no);
+                $('[name="next_of_kin_address"]').val(p.next_of_kin_address);
+
+                // Insurance
+                $('input[name="has_insurance"][value="' + (p.has_insurance ? '1' : '0') + '"]').prop('checked', true);
+                if (!p.has_insurance) {
                     $('#company').val([]).trigger('change');
                     $('.insurance_company').hide();
                     $('#company').next(".select2-container").hide();
                 } else {
-                    let company_data = {
-                        id: data.patient.insurance_company_id,
-                        text: data.company
-                    };
-                    let newOption = new Option(company_data.text, company_data.id, true, true);
+                    let newOption = new Option(data.company, p.insurance_company_id, true, true);
                     $('#company').append(newOption).trigger('change');
                     $('.insurance_company').show();
                     $('#company').next(".select2-container").show();
                 }
 
-                // Load source
-                if (data.patient.source_id && data.source) {
+                // Source (Select2)
+                if (p.source_id && data.source) {
                     let sourceOption = new Option(data.source.name, data.source.id, true, true);
                     $('#source_id').append(sourceOption).trigger('change');
                 } else {
                     $('#source_id').val(null).trigger('change');
                 }
 
-                // Load tags
-                $('#patient_tags').empty();
+                // Tags (left panel checkboxes)
                 if (data.tags && data.tags.length > 0) {
-                    data.tags.forEach(function(tag) {
-                        let tagOption = new Option(tag.name, tag.id, true, true);
-                        $('#patient_tags').append(tagOption);
-                    });
-                    $('#patient_tags').trigger('change');
+                    var tagIds = data.tags.map(function(tag) { return tag.id; });
+                    if (typeof setLeftPanelTags === 'function') {
+                        setLeftPanelTags(tagIds);
+                    }
                 }
 
-                // Load additional fields
-                $('[name="medication_history"]').val(data.patient.medication_history || '');
-                $('[name="notes"]').val(data.patient.notes || '');
+                // Patient group (left panel radio)
+                if (p.patient_group) {
+                    var groupRadio = document.querySelector('input[name="patient_group"][value="' + p.patient_group + '"]');
+                    if (groupRadio) groupRadio.checked = true;
+                }
 
+                // Avatar/photo
+                if (p.photo && typeof setAvatarFromUrl === 'function') {
+                    setAvatarFromUrl('/storage/' + p.photo);
+                }
+
+                // Referred by (Select2)
+                if (p.referred_by && p.referrer) {
+                    if (typeof setReferredBy === 'function') {
+                        var refName = p.referrer.full_name || ((p.referrer.surname || '') + (p.referrer.othername || ''));
+                        setReferredBy(p.referred_by, refName);
+                    }
+                }
+
+                // Kin relations
+                if (typeof loadKinRelations === 'function') {
+                    loadKinRelations(p.shared_holders || []);
+                }
+
+                // Other text fields
+                $('[name="medication_history"]').val(p.medication_history || '');
+                $('[name="notes"]').val(p.notes || '');
+
+                // Health info checkboxes
                 if (typeof populateHealthInfo === 'function') {
-                    populateHealthInfo(data.patient);
+                    populateHealthInfo(p);
                 }
+
+                // Expand relevant sections
                 if (typeof setPatientFormToEditMode === 'function') {
-                    setPatientFormToEditMode(data.patient);
+                    setPatientFormToEditMode(p);
                 }
 
                 $.LoadingOverlay("hide");
@@ -518,10 +607,15 @@
         $('#btnSave').attr('disabled', true);
         $('#btnSaveAndContinue').attr('disabled', true);
         $('#btnSave').html('{{ __("common.saving") }}');
+
+        var formData = buildPatientFormData();
+
         $.ajax({
             type: 'POST',
-            data: $('#patient-form').serialize(),
+            data: formData,
             url: "/patients",
+            processData: false,
+            contentType: false,
             success: function(data) {
                 $.LoadingOverlay("hide");
                 $('#btnSave').attr('disabled', false);
@@ -534,7 +628,6 @@
                         var currentSource = $('#source_id').val();
                         $("#patient-form")[0].reset();
                         $('#id').val('');
-                        $('#patient_tags').val(null).trigger('change');
                         $('#company').val([]).trigger('change');
                         $('.insurance_company').hide();
                         // Reset intl-tel-input
@@ -576,10 +669,16 @@
         $.LoadingOverlay("show");
         $('#btnSave').attr('disabled', true);
         $('#btnSave').text("{{ __('common.updating') }}");
+
+        var formData = buildPatientFormData();
+        formData.append('_method', 'PUT');
+
         $.ajax({
-            type: 'PUT',
-            data: $('#patient-form').serialize(),
+            type: 'POST',
+            data: formData,
             url: "/patients/" + $('#id').val(),
+            processData: false,
+            contentType: false,
             success: function(data) {
                 $('#patients-modal').modal('hide');
                 if (data.status) {
@@ -752,16 +851,7 @@
         });
     });
 
-    // Tags multi-select
-    $.get('/patient-tags-list', function(data) {
-        $('#patient_tags').select2({
-            language: '{{ app()->getLocale() }}',
-            placeholder: "{{ __('patient_tags.select_tags') }}",
-            allowClear: true,
-            multiple: true,
-            data: data
-        });
-    });
+    // Tags are now loaded as checkboxes in left panel via loadLeftPanelTags()
 
     // Insurance company toggle in form
     $(document).ready(function() {
@@ -777,6 +867,37 @@
                 $('#company').next(".select2-container").show();
             }
         });
+    });
+
+    // ==========================================================================
+    // Left Sidebar Group/Tag Click Handlers
+    // ==========================================================================
+
+    window._activeGroup = '';
+    window._activeSidebarTag = '';
+
+    $(document).on('click', '.group-item', function() {
+        $('.group-item').css({'background': '', 'color': '#555'}).removeClass('active');
+        $(this).css({'background': '#3598dc', 'color': '#fff'}).addClass('active');
+        window._activeGroup = $(this).data('group');
+        window._activeSidebarTag = '';
+        $('.tag-filter-item').css({'background': '', 'color': '#555'});
+        doSearch();
+    });
+
+    $(document).on('click', '.tag-filter-item', function() {
+        $('.tag-filter-item').css({'background': '', 'color': '#555'});
+        $('.group-item').css({'background': '', 'color': '#555'}).removeClass('active');
+
+        if (window._activeSidebarTag == $(this).data('tag-id')) {
+            window._activeSidebarTag = '';
+            $('.group-item[data-group=""]').css({'background': '#3598dc', 'color': '#fff'}).addClass('active');
+        } else {
+            $(this).css({'background': '#3598dc', 'color': '#fff'});
+            window._activeSidebarTag = $(this).data('tag-id');
+            window._activeGroup = '';
+        }
+        doSearch();
     });
 </script>
 @endsection

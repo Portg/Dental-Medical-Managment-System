@@ -1,86 +1,282 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @php use App\Services\DataMaskingService; @endphp
-@section('content')
 @section('css')
     @include('layouts.page_loader')
+    <style>
+        /* ── Patient Detail Three-Zone Layout ── */
+        .patient-summary-bar {
+            background: #fff;
+            border: 1px solid #e7ecf1;
+            border-radius: 4px;
+            padding: 12px 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .patient-summary-bar .summary-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 8px;
+        }
+        .patient-summary-bar .summary-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-right: 6px;
+        }
+        .patient-summary-bar .summary-tag {
+            display: inline-block;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-right: 6px;
+            color: #fff;
+        }
+        .patient-summary-bar .summary-divider {
+            width: 1px;
+            height: 20px;
+            background: #ddd;
+            margin: 0 10px;
+        }
+        .patient-summary-bar .summary-item {
+            font-size: 13px;
+            color: #666;
+            white-space: nowrap;
+        }
+        .patient-summary-bar .summary-item strong {
+            color: #333;
+        }
+        .patient-summary-bar .summary-item .amount {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        .patient-summary-bar .summary-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 6px;
+        }
+
+        /* Left Panel */
+        .patient-left-panel {
+            background: #fff;
+            border: 1px solid #e7ecf1;
+            border-radius: 4px;
+            padding: 20px 15px;
+            position: sticky;
+            top: 10px;
+        }
+        .patient-left-panel .avatar-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .patient-left-panel .avatar-section img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e7ecf1;
+        }
+        .patient-left-panel .avatar-section .patient-name {
+            display: block;
+            font-size: 15px;
+            font-weight: 600;
+            margin-top: 8px;
+            color: #333;
+        }
+        .patient-left-panel .avatar-section .patient-group-badge {
+            display: inline-block;
+            margin-top: 4px;
+        }
+        .patient-left-panel .panel-section {
+            margin-bottom: 18px;
+        }
+        .patient-left-panel .panel-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .patient-left-panel .tag-checkbox,
+        .patient-left-panel .group-radio {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #555;
+            cursor: pointer;
+        }
+        .patient-left-panel .tag-checkbox input,
+        .patient-left-panel .group-radio input {
+            margin-right: 6px;
+        }
+        .patient-left-panel .panel-actions {
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 6px;
+        }
+        .patient-left-panel .panel-actions .btn {
+            flex: 1;
+            font-size: 12px;
+        }
+
+        /* Right content area */
+        .patient-right-content .portlet {
+            margin-bottom: 0;
+        }
+        .patient-right-content .nav-tabs > li > a {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+    </style>
 @endsection
-<div class="row">
-    <div class="col-md-12">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">
-                        <a href="{{ url('patients') }}" class="text-primary">{{ __('patient.patients') }}</a>
-                        / <span class="pii-field" data-field="full_name">{{ DataMaskingService::maskName($patient->full_name) }}</span> ({{ $patient->patient_no }})
-                    </span>
-                    @can('view-sensitive-data')
-                    <button id="revealPiiBtn" class="btn btn-sm btn-default" style="margin-left: 10px;">
-                        <i class="fa fa-eye"></i> {{ __('data_security.reveal_sensitive') }}
-                    </button>
-                    @endcan
-                </div>
-                <div class="actions">
-                    <button type="button" class="btn btn-default btn-sm" onclick="window.location.href='{{ url('patients') }}'">
-                        {{ __('common.back') }}
-                    </button>
-                </div>
-            </div>
-            <div class="portlet-body">
-                <!-- Patient Info Summary -->
-                <div class="row">
-                    <div class="col-md-2 text-center">
-                        @if($patient->photo)
-                            <img src="{{ asset('images/' . $patient->photo) }}" class="img-circle" style="width:100px; height:100px; object-fit:cover;">
-                        @else
-                            <img src="{{ asset('images/default-avatar.png') }}" class="img-circle" style="width:100px; height:100px;">
-                        @endif
-                    </div>
-                    <div class="col-md-10">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <p><strong>{{ __('patient.patient_no') }}:</strong><br>{{ $patient->patient_no }}</p>
-                            </div>
-                            <div class="col-md-3">
-                                <p><strong>{{ __('patient.name') }}:</strong><br><span class="pii-field" data-field="full_name_summary">{{ DataMaskingService::maskName($patient->full_name) }}</span></p>
-                            </div>
-                            <div class="col-md-3">
-                                <p><strong>{{ __('patient.gender') }}:</strong><br>{{ $patient->gender == 'Male' ? __('patient.male') : __('patient.female') }}</p>
-                            </div>
-                            <div class="col-md-3">
-                                <p><strong>{{ __('patient.dob') }}:</strong><br>{{ $patient->dob ?? '-' }}</p>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-3">
-                                <p><strong>{{ __('patient.phone') }}:</strong><br><span class="pii-field" data-field="phone_no">{{ DataMaskingService::maskPhone($patient->phone_no) ?? '-' }}</span></p>
-                            </div>
-                            <div class="col-md-3">
-                                <p><strong>{{ __('patient.email') }}:</strong><br><span class="pii-field" data-field="email">{{ DataMaskingService::maskEmail($patient->email) ?? '-' }}</span></p>
-                            </div>
-                            <div class="col-md-3">
-                                <p><strong>{{ __('patient.insurance') }}:</strong><br>
-                                    @if($patient->has_insurance && $patient->InsuranceCompany)
-                                        {{ $patient->InsuranceCompany->name }}
-                                    @else
-                                        {{ __('common.no') }}
-                                    @endif
-                                </p>
-                            </div>
-                            <div class="col-md-3">
-                                <p><strong>{{ __('patient.address') }}:</strong><br><span class="pii-field" data-field="address">{{ DataMaskingService::maskAddress($patient->address) ?? '-' }}</span></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+
+@section('content')
+
+{{-- ═══════════════ Summary Bar (Top) ═══════════════ --}}
+<div class="patient-summary-bar">
+    @if($patient->photo)
+        <img src="{{ asset('storage/' . $patient->photo) }}" class="summary-avatar">
+    @else
+        <img src="{{ asset('images/default-avatar.png') }}" class="summary-avatar">
+    @endif
+
+    <span class="summary-name pii-field" data-field="full_name">{{ DataMaskingService::maskName($patient->full_name) }}</span>
+
+    @if($patient->member_status === 'Active' && $patient->memberLevel)
+        <span class="summary-tag" style="background:#3598dc;">{{ $patient->memberLevel->name }}</span>
+    @endif
+
+    <div class="summary-divider"></div>
+
+    <span class="summary-item">{{ $patient->patient_no }}</span>
+
+    <div class="summary-divider"></div>
+
+    <span class="summary-item">
+        <span class="pii-field" data-field="phone_no">{{ DataMaskingService::maskPhone($patient->phone_no) ?? '-' }}</span>
+    </span>
+
+    <div class="summary-divider"></div>
+
+    <span class="summary-item">
+        {{ __('patient.first_visit_doctor') }}:
+        @if($firstVisit)
+            <strong>{{ $firstVisit->doctor->name ?? '-' }}</strong>/{{ $firstVisit->start_date?->format('Y-m-d') }}
+        @else
+            {{ __('patient.no_visit_record') }}
+        @endif
+    </span>
+
+    <div class="summary-divider"></div>
+
+    <span class="summary-item">
+        {{ __('patient.latest_visit') }}:
+        @if($latestVisit)
+            <strong>{{ $latestVisit->doctor->name ?? '-' }}</strong>/{{ $latestVisit->start_date?->format('Y-m-d') }}
+        @else
+            -
+        @endif
+    </span>
+
+    <div class="summary-divider"></div>
+
+    <span class="summary-item">
+        {{ __('patient.total_spending') }}: <span class="amount">&yen;{{ number_format($totalSpending, 2) }}</span>
+    </span>
+
+    @if($patient->member_status === 'Active')
+        <div class="summary-divider"></div>
+        <span class="summary-item">
+            {{ __('patient.member_balance') }}: <span class="amount">&yen;{{ number_format($patient->member_balance ?? 0, 2) }}</span>
+        </span>
+    @endif
+
+    @can('view-sensitive-data')
+    <div class="summary-actions">
+        <button id="revealPiiBtn" class="btn btn-xs btn-default">
+            <i class="fa fa-eye"></i> {{ __('data_security.reveal_sensitive') }}
+        </button>
     </div>
+    @endcan
 </div>
 
+{{-- ═══════════════ Left Panel + Right Content ═══════════════ --}}
 <input type="hidden" id="global_patient_id" value="{{ $patient->id }}">
 
 <div class="row">
-    <div class="col-md-12">
+    {{-- Left Panel (col-md-2) --}}
+    <div class="col-md-2">
+        <div class="patient-left-panel">
+            {{-- Avatar --}}
+            <div class="avatar-section">
+                @if($patient->photo)
+                    <img src="{{ asset('storage/' . $patient->photo) }}" alt="">
+                @else
+                    <img src="{{ asset('images/default-avatar.png') }}" alt="">
+                @endif
+                <span class="patient-name pii-field" data-field="full_name_summary">{{ DataMaskingService::maskName($patient->full_name) }}</span>
+                @if($patient->patient_group)
+                    <div class="patient-group-badge">
+                        @php $groupLabel = $allGroups->firstWhere('code', $patient->patient_group); @endphp
+                        <span class="label label-info">{{ $groupLabel ? $groupLabel->name : $patient->patient_group }}</span>
+                    </div>
+                @endif
+            </div>
+
+            {{-- Tags --}}
+            <div class="panel-section">
+                <div class="panel-section-title">{{ __('patient.tags') }}</div>
+                @php $patientTagIds = $patient->patientTags->pluck('id')->toArray(); @endphp
+                @foreach($allTags as $tag)
+                    <label class="tag-checkbox">
+                        <input type="checkbox" name="panel_tags[]" value="{{ $tag->id }}"
+                            {{ in_array($tag->id, $patientTagIds) ? 'checked' : '' }}>
+                        {{ $tag->name }}
+                    </label>
+                @endforeach
+            </div>
+
+            {{-- Groups --}}
+            <div class="panel-section">
+                <div class="panel-section-title">{{ __('patient.patient_group') }}</div>
+                <label class="group-radio">
+                    <input type="radio" name="panel_group" value="" {{ !$patient->patient_group ? 'checked' : '' }}>
+                    {{ __('common.none') }}
+                </label>
+                @foreach($allGroups as $g)
+                    <label class="group-radio">
+                        <input type="radio" name="panel_group" value="{{ $g->code }}" {{ $patient->patient_group === $g->code ? 'checked' : '' }}>
+                        {{ $g->name }}
+                    </label>
+                @endforeach
+            </div>
+
+            {{-- Actions --}}
+            <div class="panel-actions">
+                @if(!$patient->member_status || $patient->member_status === 'Inactive')
+                    <a href="{{ url('members?patient_id=' . $patient->id) }}" class="btn btn-success btn-xs" title="{{ __('members.quick_register') }}">
+                        <i class="fa fa-id-card"></i> {{ __('members.quick_register') }}
+                    </a>
+                @else
+                    <a href="{{ url('members/' . $patient->id) }}" class="btn btn-info btn-xs" title="{{ __('members.member_details') }}">
+                        <i class="fa fa-id-card"></i>
+                    </a>
+                @endif
+                <button type="button" class="btn btn-default btn-xs" onclick="window.location.href='{{ url('patients') }}'">
+                    <i class="fa fa-arrow-left"></i> {{ __('common.back') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Right Content (col-md-10) --}}
+    <div class="col-md-10 patient-right-content">
         <div class="portlet light bordered">
             <div class="portlet-body">
                 <div class="tabbable-line">
@@ -160,6 +356,58 @@
                                             <td>{{ $patient->profession ?? '-' }}</td>
                                         </tr>
                                     </table>
+
+                                    <h4>{{ __('patient.health_info') }}</h4>
+                                    <table class="table table-bordered">
+                                        <tr>
+                                            <th width="40%">{{ __('patient.drug_allergy') }}</th>
+                                            <td>
+                                                @if($patient->drug_allergies)
+                                                    @foreach(json_decode($patient->drug_allergies, true) ?? [] as $allergy)
+                                                        <span class="label label-danger" style="margin-right:4px;">{{ __('patient.allergy_' . $allergy) }}</span>
+                                                    @endforeach
+                                                    @if($patient->drug_allergies_other)
+                                                        <span class="label label-danger">{{ $patient->drug_allergies_other }}</span>
+                                                    @endif
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>{{ __('patient.chronic_diseases') }}</th>
+                                            <td>
+                                                @if($patient->systemic_diseases)
+                                                    @foreach(json_decode($patient->systemic_diseases, true) ?? [] as $disease)
+                                                        <span class="label label-warning" style="margin-right:4px;">{{ __('patient.disease_' . $disease) }}</span>
+                                                    @endforeach
+                                                    @if($patient->systemic_diseases_other)
+                                                        <span class="label label-warning">{{ $patient->systemic_diseases_other }}</span>
+                                                    @endif
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <th>{{ __('patient.current_medication') }}</th>
+                                            <td>{{ $patient->current_medication ?? '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>{{ __('patient.special_conditions') }}</th>
+                                            <td>
+                                                @if($patient->is_pregnant)
+                                                    <span class="label label-info">{{ __('patient.pregnant') }}</span>
+                                                @endif
+                                                @if($patient->is_breastfeeding)
+                                                    <span class="label label-info">{{ __('patient.breastfeeding') }}</span>
+                                                @endif
+                                                @if(!$patient->is_pregnant && !$patient->is_breastfeeding)
+                                                    -
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </div>
                                 <div class="col-md-6">
                                     <h4>{{ __('patient.contact_info') }}</h4>
@@ -203,6 +451,54 @@
                                         </tr>
                                         @endif
                                     </table>
+
+                                    @if($patient->source || $patient->referrer)
+                                    <h4>{{ __('patient.source') }} / {{ __('patient.referred_by') }}</h4>
+                                    <table class="table table-bordered">
+                                        <tr>
+                                            <th width="40%">{{ __('patient.source') }}</th>
+                                            <td>{{ $patient->source ? $patient->source->name : '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>{{ __('patient.referred_by') }}</th>
+                                            <td>
+                                                @if($patient->referrer)
+                                                    <a href="{{ url('patients/' . $patient->referrer->id) }}">{{ $patient->referrer->full_name }}</a>
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    @endif
+
+                                    @if($patient->sharedHolders && $patient->sharedHolders->count())
+                                    <h4>{{ __('patient.kin_relations') }}</h4>
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ __('patient.name') }}</th>
+                                                <th>{{ __('common.type') }}</th>
+                                                <th>{{ __('patient.phone') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($patient->sharedHolders as $kin)
+                                                @if($kin->sharedPatient)
+                                                <tr>
+                                                    <td>
+                                                        <a href="{{ url('patients/' . $kin->sharedPatient->id) }}">
+                                                            {{ $kin->sharedPatient->full_name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ __('members.relationship_' . ($kin->relationship ?? 'other')) }}</td>
+                                                    <td>{{ $kin->sharedPatient->phone_no ?? '-' }}</td>
+                                                </tr>
+                                                @endif
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -365,6 +661,7 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/patient_detail.js') }}"></script>
     <script>
+        // Reveal PII
         $('#revealPiiBtn').click(function() {
             var btn = $(this);
             btn.prop('disabled', true);
@@ -379,6 +676,25 @@
             }).fail(function() {
                 btn.prop('disabled', false);
                 alert('{{ __("data_security.reveal_failed") }}');
+            });
+        });
+
+        // Left panel: auto-save tags and group changes
+        $(document).on('change', 'input[name="panel_tags[]"], input[name="panel_group"]', function() {
+            var tagIds = [];
+            $('input[name="panel_tags[]"]:checked').each(function() {
+                tagIds.push($(this).val());
+            });
+            var group = $('input[name="panel_group"]:checked').val();
+
+            $.post('/patients/{{ $patient->id }}/quick-info', {
+                _token: '{{ csrf_token() }}',
+                tag_ids: tagIds,
+                patient_group: group
+            }, function(resp) {
+                if (resp.status) {
+                    toastr.success(resp.message);
+                }
             });
         });
     </script>

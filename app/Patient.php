@@ -20,11 +20,12 @@ class Patient extends Model
         'medication_history', 'drug_allergies', 'drug_allergies_other',
         'systemic_diseases', 'systemic_diseases_other', 'current_medication',
         'is_pregnant', 'is_breastfeeding',
-        'tags', 'notes', 'nin', 'photo', 'profession',
+        'tags', 'patient_group', 'notes', 'nin', 'photo', 'profession',
         'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
         'has_insurance', 'insurance_company_id', 'source_id', '_who_added',
         'member_no', 'member_level_id', 'member_balance', 'member_points',
-        'total_consumption', 'member_since', 'member_expiry', 'member_status'
+        'total_consumption', 'member_since', 'member_expiry', 'member_status',
+        'member_password', 'referred_by'
     ];
 
     /**
@@ -254,6 +255,26 @@ class Patient extends Model
         return $this->hasMany('App\MemberTransaction', 'patient_id');
     }
 
+    public function referrer()
+    {
+        return $this->belongsTo(Patient::class, 'referred_by');
+    }
+
+    public function referrals()
+    {
+        return $this->hasMany(Patient::class, 'referred_by');
+    }
+
+    public function sharedHolders()
+    {
+        return $this->hasMany('App\MemberSharedHolder', 'primary_patient_id');
+    }
+
+    public function primaryCardHolder()
+    {
+        return $this->hasOne('App\MemberSharedHolder', 'shared_patient_id');
+    }
+
     public function appointments()
     {
         return $this->hasMany('App\Appointment', 'patient_id');
@@ -348,10 +369,25 @@ class Patient extends Model
     }
 
     /**
-     * Generate unique member number
+     * Generate unique member number based on configured mode.
+     *
+     * @param  self|null  $patient  Required for 'phone' mode
+     * @param  string|null  $manual  Required for 'manual' mode
+     * @return string
      */
-    public static function generateMemberNo()
+    public static function generateMemberNo(?self $patient = null, ?string $manual = null): string
     {
+        $mode = MemberSetting::get('card_number_mode', 'auto');
+
+        if ($mode === 'phone' && $patient && $patient->phone_no) {
+            return $patient->phone_no;
+        }
+
+        if ($mode === 'manual' && $manual) {
+            return $manual;
+        }
+
+        // Default: auto mode — M + YYYY + 5-digit sequence
         $year = date('Y');
         $lastMember = self::whereNotNull('member_no')
             ->whereYear('member_since', $year)

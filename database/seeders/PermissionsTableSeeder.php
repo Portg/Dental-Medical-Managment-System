@@ -83,7 +83,7 @@ class PermissionsTableSeeder extends Seeder
             ['name' => '管理角色权限', 'slug' => 'manage-role-permissions', 'module' => '系统设置', 'description' => '分配角色权限'],
             ['name' => '管理保险', 'slug' => 'manage-insurance', 'module' => '系统设置', 'description' => '管理保险公司与保险方案'],
             ['name' => '管理会员', 'slug' => 'manage-members', 'module' => '系统设置', 'description' => '管理会员体系'],
-            ['name' => '管理患者设置', 'slug' => 'manage-patient-settings', 'module' => '系统设置', 'description' => '管理患者标签与来源'],
+            ['name' => '管理患者设置', 'slug' => 'manage-patient-settings', 'module' => '系统设置', 'description' => '管理患者标签、来源与字典项'],
             ['name' => '管理短信', 'slug' => 'manage-sms', 'module' => '系统设置', 'description' => '管理短信设置与发送记录'],
             ['name' => '管理系统设置', 'slug' => 'manage-settings', 'module' => '系统设置', 'description' => '管理系统全局设置'],
             ['name' => '管理系统维护', 'slug' => 'manage-system-maintenance', 'module' => '系统设置', 'description' => '访问系统维护页面（备份、清理、日志）'],

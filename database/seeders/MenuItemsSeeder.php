@@ -36,7 +36,7 @@ class MenuItemsSeeder extends Seeder
     {
         // ── Level 1: Top-level sections ────────────────────────────────
 
-        $dashboard = $this->item(null, 'menu.dashboard', 'home', 'icon-home', null, 10, 'SADNR');
+        $todayWork = $this->item(null, 'menu.today_work', 'today-work', 'icon-energy', null, 10, 'SADNR');
 
         $patientCenter = $this->item(null, 'menu.patient_center', null, 'icon-users', null, 20, 'SADNR');
         $this->seedPatientCenter($patientCenter);
@@ -216,11 +216,14 @@ class MenuItemsSeeder extends Seeder
         $this->item($permGroup, 'menu.users', 'users', null, 'view-users', 11, 'A');
         $this->item($permGroup, 'menu.roles', 'roles', null, 'manage-roles', 20, 'SA');
 
-        // 6.3 System Maintenance — DIRECT for SA
-        $this->item($parentId, 'menu.system_maintenance', 'system-maintenance', 'icon-wrench', 'manage-system-maintenance', 30, 'SA');
+        // 6.3 Menu Management — DIRECT for S only
+        $this->item($parentId, 'menu.menu_management', 'menu-items', 'icon-layers', 'manage-menu-items', 30, 'S');
 
-        // 6.4 Menu Management — DIRECT for S only
-        $this->item($parentId, 'menu.menu_management', 'menu-items', 'icon-layers', 'manage-menu-items', 40, 'S');
+        // 6.4 Dictionary Management — DIRECT for SA
+        $this->item($parentId, 'menu.dict_items', 'dict-items', 'icon-book-open', 'manage-patient-settings', 35, 'SA');
+
+        // 6.5 System Maintenance — DIRECT for SA
+        $this->item($parentId, 'menu.system_maintenance', 'system-maintenance', 'icon-wrench', 'manage-system-maintenance', 40, 'SA');
     }
 
     // ── Helper ──────────────────────────────────────────────────────────

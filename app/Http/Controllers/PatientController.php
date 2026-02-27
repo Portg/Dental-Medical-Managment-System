@@ -22,7 +22,7 @@ class PatientController extends Controller
 
         $this->middleware('can:view-patients')->only(['index', 'show', 'filterPatients', 'patientMedicalHistory', 'exportPatients']);
         $this->middleware('can:create-patients')->only(['create', 'store']);
-        $this->middleware('can:edit-patients')->only(['edit', 'update']);
+        $this->middleware('can:edit-patients')->only(['edit', 'update', 'updateQuickInfo']);
         $this->middleware('can:delete-patients')->only(['destroy']);
         $this->middleware('can:export-patients')->only(['exportPatients']);
         $this->middleware('can:view-sensitive-data')->only(['revealPii']);
@@ -45,11 +45,14 @@ class PatientController extends Controller
             $data = $this->patientService->getPatientList($request->only([
                 'quick_search', 'search', 'start_date', 'end_date',
                 'insurance_company', 'filter_source', 'filter_tags',
+                'filter_group', 'filter_sidebar_tag',
             ]));
 
             return $this->patientService->buildIndexDataTable($data);
         }
-        return view('patients.index');
+
+        $sidebarData = $this->patientService->getGroupSidebarData();
+        return view('patients.index', $sidebarData);
     }
 
     public function exportPatients(Request $request)
@@ -109,16 +112,25 @@ class PatientController extends Controller
             'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
             'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
             'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
-            'insurance_company_id', 'source_id', 'notes',
+            'insurance_company_id', 'source_id', 'referred_by', 'patient_group', 'notes',
             'drug_allergies', 'systemic_diseases',
             'drug_allergies_other', 'systemic_diseases_other', 'current_medication',
             'is_pregnant', 'is_breastfeeding',
         ]);
         $nameParts = $this->patientService->validateAndParseInput($patientFields);
         $data = $this->patientService->buildPatientData($patientFields, $nameParts);
+
+        // Handle photo upload
+        if ($request->hasFile('photo')) {
+            $data['photo'] = $request->file('photo')->store('patients/photos', 'public');
+        }
+
         $patient = $this->patientService->createPatient($data, $request->tags);
 
         if ($patient) {
+            // Sync kin relations
+            $this->patientService->syncKinRelations($patient->id, $request->kin_relations);
+
             return response()->json(['message' => __('messages.patient_added_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
@@ -178,6 +190,26 @@ class PatientController extends Controller
     }
 
     /**
+     * Update tags and group from the detail page left panel (AJAX).
+     */
+    public function updateQuickInfo(Request $request, $id)
+    {
+        $patient = Patient::findOrFail($id);
+
+        if ($request->has('patient_group')) {
+            $patient->patient_group = $request->input('patient_group') ?: null;
+            $patient->save();
+        }
+
+        if ($request->has('tag_ids')) {
+            $tagIds = array_filter((array) $request->input('tag_ids', []));
+            $patient->patientTags()->sync($tagIds);
+        }
+
+        return response()->json(['status' => 1, 'message' => __('common.saved_successfully')]);
+    }
+
+    /**
      * Update the specified resource in storage.
      *
      * @param \Illuminate\Http\Request $request
@@ -191,16 +223,25 @@ class PatientController extends Controller
             'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
             'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
             'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
-            'insurance_company_id', 'source_id', 'notes',
+            'insurance_company_id', 'source_id', 'referred_by', 'patient_group', 'notes',
             'drug_allergies', 'systemic_diseases',
             'drug_allergies_other', 'systemic_diseases_other', 'current_medication',
             'is_pregnant', 'is_breastfeeding',
         ]);
         $nameParts = $this->patientService->validateAndParseInput($patientFields);
         $data = $this->patientService->buildPatientData($patientFields, $nameParts, isUpdate: true);
+
+        // Handle photo upload
+        if ($request->hasFile('photo')) {
+            $data['photo'] = $request->file('photo')->store('patients/photos', 'public');
+        }
+
         $status = $this->patientService->updatePatient($id, $data, $request->tags);
 
         if ($status) {
+            // Sync kin relations
+            $this->patientService->syncKinRelations($id, $request->kin_relations);
+
             return response()->json(['message' => __('messages.patient_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);

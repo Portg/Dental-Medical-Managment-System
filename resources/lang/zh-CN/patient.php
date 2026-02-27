@@ -381,4 +381,32 @@ return [
     'blood_type_ab_rh_negative' => 'AB型Rh阴性（熊猫血）',
     'blood_type_o_rh_negative' => 'O型Rh阴性（熊猫血）',
     'blood_type_unknown' => '未知',
+
+    // Demographics section
+    'demographics' => '人口统计',
+
+    // Referral
+    'referred_by' => '介绍人',
+    'referred_by_placeholder' => '搜索患者姓名或电话...',
+
+    // Kin Relations
+    'kin_relations' => '亲友关系',
+    'add_kin_relation' => '添加亲友',
+    'kin_search_placeholder' => '搜索患者姓名或电话...',
+
+    // Patient Groups
+    'patient_group' => '客户分组',
+    'group_walk_in' => '直客',
+    'group_referral' => '转介绍',
+    'group_orthodontics' => '正畸',
+    'group_implant' => '种植',
+    'group_pediatric' => '儿童',
+
+    // Detail page summary bar
+    'first_visit_doctor' => '首诊',
+    'latest_visit' => '最新就诊',
+    'total_spending' => '消费总额',
+    'member_balance' => '会员余额',
+    'member_points' => '积分',
+    'no_visit_record' => '暂无就诊',
 ];
