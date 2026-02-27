@@ -9,6 +9,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         updateBreadcrumb();
         updateActiveMenu();
+
+        // Reveal breadcrumb area (hidden initially to prevent "工作台" flash)
+        var pageHead = document.querySelector('.page-head');
+        if (pageHead) {
+            pageHead.style.visibility = 'visible';
+        }
     });
 
     /**

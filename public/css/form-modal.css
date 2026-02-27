@@ -65,6 +65,148 @@
 }
 
 /* ==========================================================================
+   Two-Column Layout: Left Panel + Right Form
+   ========================================================================== */
+
+.form-split-layout {
+    display: flex;
+    gap: 0;
+    min-height: 400px;
+}
+
+.form-left-panel {
+    width: 180px;
+    min-width: 180px;
+    border-right: 1px solid #e8e8e8;
+    padding: 16px;
+    background: #fafafa;
+    overflow-y: auto;
+}
+
+.form-right-main {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Avatar Upload */
+.avatar-upload-area {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.avatar-upload-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 2px dashed #d9d9d9;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    background: #f5f5f5;
+    transition: border-color 0.2s;
+}
+
+.avatar-upload-circle:hover {
+    border-color: #00ACC1;
+}
+
+.avatar-upload-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-upload-circle .avatar-placeholder {
+    text-align: center;
+    color: #999;
+}
+
+.avatar-upload-circle .avatar-placeholder i {
+    font-size: 28px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.avatar-upload-circle .avatar-placeholder span {
+    font-size: 11px;
+}
+
+.avatar-upload-label {
+    font-size: 12px;
+    color: #00ACC1;
+    cursor: pointer;
+}
+
+.avatar-upload-label:hover {
+    text-decoration: underline;
+}
+
+/* Left Panel Section */
+.left-panel-section {
+    margin-bottom: 16px;
+}
+
+.left-panel-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.left-panel-section .tag-checkbox-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.left-panel-section .tag-checkbox-list li {
+    margin-bottom: 6px;
+}
+
+.left-panel-section .tag-checkbox-list label {
+    font-weight: normal;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.left-panel-section .tag-checkbox-list label input {
+    margin-right: 6px;
+}
+
+.left-panel-section .tag-checkbox-list .tag-color-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+}
+
+/* Override modal-body padding when using split layout */
+.modal-form .modal-body.split-body {
+    padding: 0;
+    display: flex;
+}
+
+/* Kin relation row alignment */
+.kin-relation-row .btn-danger {
+    padding: 5px 10px;
+    margin-top: 0;
+}
+
+.kin-relation-row .select2-container {
+    width: 100% !important;
+}
+
+/* ==========================================================================
    Form Section - Collapsible Card Style
    ========================================================================== */
 
@@ -352,6 +494,32 @@
 
     .form-section-body {
         padding: 12px;
+    }
+
+    /* Stack split layout vertically on mobile */
+    .form-split-layout {
+        flex-direction: column;
+    }
+
+    .form-left-panel {
+        width: 100%;
+        min-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e8e8e8;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 12px;
+    }
+
+    .form-left-panel .avatar-upload-area {
+        margin-bottom: 0;
+    }
+
+    .form-left-panel .left-panel-section {
+        margin-bottom: 0;
+        flex: 1;
+        min-width: 120px;
     }
 }
 

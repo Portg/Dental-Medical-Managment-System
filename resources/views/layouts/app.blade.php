@@ -38,8 +38,8 @@
         {{-- Content --}}
         <div class="page-content-wrapper">
             <div class="page-content">
-                {{-- Breadcrumb --}}
-                <div class="page-head">
+                {{-- Breadcrumb (hidden until breadcrumb-auto.js updates it) --}}
+                <div class="page-head" style="visibility:hidden">
                     <div class="container-fluid">
                         <ul class="page-breadcrumb">
                             <li class="home-icon"><a href="{{ url('home') }}"><i class="icon-home"></i></a></li>
@@ -51,7 +51,7 @@
                             @if(isset($breadcrumb_current))
                                 <li class="current">{{ $breadcrumb_current }}</li>
                             @else
-                                <li class="current">{{ __('menu.dashboard') }}</li>
+                                <li class="current">{{ __('menu.today_work') }}</li>
                             @endif
                         </ul>
                     </div>

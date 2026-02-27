@@ -44,7 +44,14 @@
 
 @section('content')
 <div class="row">
-    <div class="col-md-12">
+    {{-- Optional Left Sidebar --}}
+    @hasSection('left_sidebar')
+    <div class="col-md-2">
+        @yield('left_sidebar')
+    </div>
+    @endif
+
+    <div class="{{ View::hasSection('left_sidebar') ? 'col-md-10' : 'col-md-12' }}">
         <div class="portlet light bordered">
             <div class="portlet-body">
                 {{-- L1: Page Header --}}

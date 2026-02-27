@@ -113,8 +113,8 @@
     color: #909399;
 }
 
-.search-input-wrapper input {
-    padding-left: 32px;
+.search-input-wrapper input.form-control {
+    padding-left: 32px !important;
 }
 
 /* Advanced Filter */
