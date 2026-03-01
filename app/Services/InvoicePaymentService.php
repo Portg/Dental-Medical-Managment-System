@@ -8,7 +8,7 @@ use App\MemberTransaction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\MemberSetting;
+use App\SystemSetting;
 use App\Services\MemberService;
 
 class InvoicePaymentService
@@ -187,7 +187,7 @@ class InvoicePaymentService
             }
 
             // Update member points (BR-036) — per-payment-method rates
-            if ($patient && $patient->memberLevel && MemberSetting::get('points_enabled', true)) {
+            if ($patient && $patient->memberLevel && SystemSetting::get('member.points_enabled', true)) {
                 $level = $patient->memberLevel;
                 $totalPoints = 0;
 
@@ -205,7 +205,7 @@ class InvoicePaymentService
                     $patient->save();
 
                     // Record points transaction with optional expiry
-                    $expiryDays = (int) MemberSetting::get('points_expiry_days', 0);
+                    $expiryDays = (int) SystemSetting::get('member.points_expiry_days', 0);
                     MemberTransaction::create([
                         'transaction_no'    => MemberTransaction::generateTransactionNo(),
                         'transaction_type'  => 'Points',

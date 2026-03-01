@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\MemberLevel;
 use App\Services\MemberService;
 use Illuminate\Http\Request;
-use App\MemberSetting;
+use App\SystemSetting;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -117,7 +117,7 @@ class MemberController extends Controller
             return $this->memberService->buildLevelsDataTable($data);
         }
 
-        $settings = MemberSetting::getAll();
+        $settings = SystemSetting::getGroup('member');
         $upgradeLevels = MemberLevel::active()->ordered()
             ->where('min_consumption', '>', 0)
             ->orderBy('min_consumption', 'asc')
@@ -322,7 +322,7 @@ class MemberController extends Controller
 
         foreach ($keys as $key) {
             if ($request->has($key)) {
-                MemberSetting::set($key, $request->input($key));
+                SystemSetting::set('member.' . $key, $request->input($key));
             }
         }
 

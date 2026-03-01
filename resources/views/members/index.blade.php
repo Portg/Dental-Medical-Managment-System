@@ -64,7 +64,7 @@
 <script>
     var levels = @json($levels);
     var patients = @json($patients);
-    var memberSettings = @json(\App\MemberSetting::getAll());
+    var memberSettings = @json(\App\SystemSetting::getGroup('member'));
 
     LanguageManager.loadAllFromPHP({
         'members': @json(__('members')),

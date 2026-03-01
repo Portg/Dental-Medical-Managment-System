@@ -272,10 +272,16 @@ return [
     'search_placeholder' => '搜索患者...',
     'search' => '搜索',
 
+    // 软件设置
+    'software_settings' => '软件设置',
+
     // 系统维护
     'system_maintenance' => '系统维护',
 
     // 菜单管理
     'menu_management' => '菜单管理',
+
+    // OCR 识别
+    'ocr_recognize' => '病历OCR识别',
 
 ];

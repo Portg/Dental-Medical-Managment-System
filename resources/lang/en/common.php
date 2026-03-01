@@ -336,6 +336,7 @@ return [
 
     // Vue Form Additional
     'years_old' => ' years old',
+    'yuan' => '',
     'save_and_continue' => 'Save and Continue',
     'saving' => 'Saving...',
     'confirm_cancel_form' => 'Are you sure you want to discard the content?',

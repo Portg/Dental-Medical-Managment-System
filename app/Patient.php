@@ -377,7 +377,7 @@ class Patient extends Model
      */
     public static function generateMemberNo(?self $patient = null, ?string $manual = null): string
     {
-        $mode = MemberSetting::get('card_number_mode', 'auto');
+        $mode = SystemSetting::get('member.card_number_mode', 'auto');
 
         if ($mode === 'phone' && $patient && $patient->phone_no) {
             return $patient->phone_no;

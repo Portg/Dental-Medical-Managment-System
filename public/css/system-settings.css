@@ -1,0 +1,86 @@
+/* ===== System Settings Page ===== */
+
+.ss-form {
+    padding-top: 20px;
+}
+
+.ss-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    padding: 10px 0 8px;
+    margin: 20px 0 12px;
+    border-bottom: 1px solid #eee;
+}
+.ss-section-title:first-child {
+    margin-top: 0;
+}
+.ss-section-title i {
+    margin-right: 6px;
+    color: #666;
+}
+
+.ss-form .form-group {
+    margin-bottom: 18px;
+}
+.ss-form .control-label {
+    font-weight: 500;
+    color: #555;
+}
+.ss-form small.text-muted {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+.ss-inline-hint {
+    line-height: 34px;
+}
+
+/* Toggle switch */
+.ss-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 22px;
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+.ss-switch input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.ss-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    border-radius: 22px;
+    transition: .3s;
+}
+.ss-slider::before {
+    content: "";
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .3s;
+}
+.ss-switch input:checked + .ss-slider {
+    background-color: #36b37e;
+}
+.ss-switch input:checked + .ss-slider::before {
+    transform: translateX(22px);
+}
+
+/* Tab styling */
+#settingsTabs > li > a {
+    font-size: 14px;
+}
+#settingsTabs > li > a > i {
+    margin-right: 4px;
+}

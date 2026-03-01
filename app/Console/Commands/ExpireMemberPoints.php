@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\MemberSetting;
+use App\SystemSetting;
 use App\MemberTransaction;
 use App\Patient;
 use Illuminate\Console\Command;
@@ -17,7 +17,7 @@ class ExpireMemberPoints extends Command
     public function handle()
     {
         $dryRun = $this->option('dry-run');
-        $expiryDays = (int) MemberSetting::get('points_expiry_days', 0);
+        $expiryDays = (int) SystemSetting::get('member.points_expiry_days', 0);
 
         if ($expiryDays === 0) {
             $this->info('Points expiry is disabled (points_expiry_days = 0). Nothing to do.');

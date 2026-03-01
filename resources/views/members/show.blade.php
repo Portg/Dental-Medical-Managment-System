@@ -111,7 +111,7 @@
                                 <button class="btn btn-danger btn-block" onclick="refundMember({{ $patient->id }})">
                                     <i class="fa fa-minus"></i> {{ __('members.refund') }}
                                 </button>
-                                @if(\App\MemberSetting::get('points_exchange_enabled', true) && \App\MemberSetting::get('points_enabled', true))
+                                @if(\App\SystemSetting::get('member.points_exchange_enabled', true) && \App\SystemSetting::get('member.points_enabled', true))
                                 <button class="btn btn-warning btn-block" onclick="showExchangePoints({{ $patient->id }}, {{ $patient->member_points ?? 0 }})">
                                     <i class="fa fa-exchange"></i> {{ __('members.exchange_points') }}
                                 </button>
@@ -221,7 +221,7 @@
     <script>
         var memberId = {{ $patient->id }};
         var levels = @json($levels);
-        var memberSettings = @json(\App\MemberSetting::getAll());
+        var memberSettings = @json(\App\SystemSetting::getGroup('member'));
 
         LanguageManager.loadAllFromPHP({
             'members': @json(__('members')),

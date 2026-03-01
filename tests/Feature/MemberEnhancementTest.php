@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Branch;
 use App\MemberAuditLog;
 use App\MemberLevel;
-use App\MemberSetting;
+use App\SystemSetting;
 use App\MemberSharedHolder;
 use App\MemberTransaction;
 use App\Patient;
@@ -335,7 +335,7 @@ class MemberEnhancementTest extends TestCase
         ]);
 
         // Enable referral bonus
-        MemberSetting::set('referral_bonus_enabled', '1');
+        SystemSetting::set('member.referral_bonus_enabled', '1');
 
         $newPatient = Patient::create([
             'patient_no' => '20260004',
@@ -383,7 +383,7 @@ class MemberEnhancementTest extends TestCase
 
     public function test_card_number_phone_mode(): void
     {
-        MemberSetting::set('card_number_mode', 'phone');
+        SystemSetting::set('member.card_number_mode', 'phone');
 
         $memberNo = Patient::generateMemberNo($this->patient);
         $this->assertEquals('13800138000', $memberNo);
@@ -391,7 +391,7 @@ class MemberEnhancementTest extends TestCase
 
     public function test_card_number_manual_mode(): void
     {
-        MemberSetting::set('card_number_mode', 'manual');
+        SystemSetting::set('member.card_number_mode', 'manual');
 
         $memberNo = Patient::generateMemberNo($this->patient, 'VIP-001');
         $this->assertEquals('VIP-001', $memberNo);
@@ -399,7 +399,7 @@ class MemberEnhancementTest extends TestCase
 
     public function test_card_number_auto_mode(): void
     {
-        MemberSetting::set('card_number_mode', 'auto');
+        SystemSetting::set('member.card_number_mode', 'auto');
 
         $memberNo = Patient::generateMemberNo();
         $this->assertStringStartsWith('M' . date('Y'), $memberNo);
@@ -450,7 +450,7 @@ class MemberEnhancementTest extends TestCase
 
         $this->patient->update(['member_points' => 500]);
 
-        MemberSetting::set('points_enabled', '0');
+        SystemSetting::set('member.points_enabled', '0');
 
         $result = $this->memberService->exchangePoints($this->patient->id, 100);
         $this->assertFalse($result['status']);
@@ -490,12 +490,12 @@ class MemberEnhancementTest extends TestCase
 
     public function test_member_setting_get_set(): void
     {
-        MemberSetting::set('test_key', 'test_value');
-        $this->assertEquals('test_value', MemberSetting::get('test_key'));
+        SystemSetting::set('member.test_key', 'test_value');
+        $this->assertEquals('test_value', SystemSetting::get('member.test_key'));
     }
 
     public function test_member_setting_default(): void
     {
-        $this->assertEquals('fallback', MemberSetting::get('nonexistent_key', 'fallback'));
+        $this->assertEquals('fallback', SystemSetting::get('member.nonexistent_key', 'fallback'));
     }
 }

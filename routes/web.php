@@ -59,6 +59,12 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('self-account-bills/{self_account_id}', 'SelfAccountBillPayment@index');
 
 
+    Route::post('patients/batch-tags', 'PatientController@batchUpdateTags');
+    Route::post('patients/batch-group', 'PatientController@batchUpdateGroup');
+    Route::post('patients/merge-preview', 'PatientController@mergePreview');
+    Route::post('patients/merge', 'PatientController@mergePatients');
+    Route::get('patients/import-template', 'PatientController@downloadImportTemplate');
+    Route::post('patients/import', 'PatientController@importPatients');
     Route::resource('patients', 'PatientController');
     Route::get('patients/{patientId}/medicalHistory', 'PatientController@patientMedicalHistory');
     Route::post('patients/{id}/reveal-pii', 'PatientController@revealPii');
@@ -67,6 +73,9 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('export-patients', 'PatientController@exportPatients');
     Route::get('search-patient', 'PatientController@filterPatients');
     Route::get('appointments/calendar-events', 'AppointmentsController@calendarEvents');
+    Route::get('appointments/doctors', 'AppointmentsController@doctors');
+    Route::get('appointments/doctor-info/{id}', 'AppointmentsController@doctorInfo');
+    Route::post('appointments/{id}/send-reminder', 'AppointmentsController@sendReminder');
     Route::resource('appointments', 'AppointmentsController');
     Route::post('appointments-reschedule', 'AppointmentsController@sendReschedule');
 
@@ -252,6 +261,11 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('permissions', 'PermissionController');
     Route::resource('role-permissions', 'RolePermissionController');
+    // System Settings (unified)
+    Route::get('system-settings', 'SystemSettingController@index');
+    Route::put('system-settings/{group}', 'SystemSettingController@update');
+    Route::get('system-settings/api/{group}', 'SystemSettingController@getGroup');
+
     // System Maintenance
     Route::get('system-maintenance', 'SystemMaintenanceController@index');
     Route::post('system-maintenance/backup/run', 'SystemMaintenanceController@triggerBackup');
@@ -535,4 +549,12 @@ Route::group(['middleware' => ['auth']], function () {
     // ============================================================
 
     Route::resource('claims', 'DoctorSelfClaimController');
+
+    // ============================================================
+    // OCR Medical Record Recognition (病历 OCR 识别)
+    // ============================================================
+
+    Route::get('ocr-recognize', 'OcrRecognizeController@index');
+    Route::post('ocr-recognize/recognize', 'OcrRecognizeController@recognize');
+    Route::post('ocr-recognize/create', 'OcrRecognizeController@createFromOcr');
 });

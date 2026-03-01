@@ -272,10 +272,16 @@ return [
     'search_placeholder' => 'Search patients...',
     'search' => 'Search',
 
+    // Software Settings
+    'software_settings' => 'Software Settings',
+
     // System Maintenance
     'system_maintenance' => 'System Maintenance',
 
     // Menu Management
     'menu_management' => 'Menu Management',
+
+    // OCR Recognition
+    'ocr_recognize' => 'Medical Record OCR',
 
 ];

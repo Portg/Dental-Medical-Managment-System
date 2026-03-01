@@ -340,6 +340,7 @@ return [
 
     // Vue表单附加
     'years_old' => '岁',
+    'yuan' => '元',
     'save_and_continue' => '保存并继续',
     'saving' => '保存中...',
     'confirm_cancel_form' => '是否放弃已填写的内容？',

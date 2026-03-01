@@ -61,6 +61,7 @@ class MenuItemsSeeder extends Seeder
         // 2.1 Patient Files — always a group (directory), all roles see patients_list
         $pfGroup = $this->item($parentId, 'menu.group_patient_management', null, 'icon-list', 'view-patients', 10, 'SADNR');
         $this->item($pfGroup, 'menu.patients_list', 'patients', null, 'view-patients', 10, 'SADNR');
+        $this->item($pfGroup, 'menu.ocr_recognize', 'ocr-recognize', null, 'create-patients', 15, 'SAR');
         $this->item($pfGroup, 'menu.patient_tags', 'patient-tags', null, 'manage-patient-settings', 20, 'SA');
         $this->item($pfGroup, 'menu.patient_sources', 'patient-sources', null, 'manage-patient-settings', 30, 'SA');
 
@@ -222,7 +223,10 @@ class MenuItemsSeeder extends Seeder
         // 6.4 Dictionary Management — DIRECT for SA
         $this->item($parentId, 'menu.dict_items', 'dict-items', 'icon-book-open', 'manage-patient-settings', 35, 'SA');
 
-        // 6.5 System Maintenance — DIRECT for SA
+        // 6.5 System Settings (unified) — DIRECT for SA
+        $this->item($parentId, 'menu.software_settings', 'system-settings', 'icon-equalizer', 'manage-settings', 38, 'SA');
+
+        // 6.6 System Maintenance — DIRECT for SA
         $this->item($parentId, 'menu.system_maintenance', 'system-maintenance', 'icon-wrench', 'manage-system-maintenance', 40, 'SA');
     }
 

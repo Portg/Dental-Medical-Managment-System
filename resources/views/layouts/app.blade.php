@@ -150,6 +150,9 @@
             'validation': @json(__('validation'))
         });
 
+        // Inject clinic settings for JS consumption
+        window._clinicSettings = @json(\App\SystemSetting::getGroup('clinic'));
+
         // Set Select2 default language globally
         if (typeof $.fn.select2 !== 'undefined') {
             $.fn.select2.defaults.set('language', '{{ app()->getLocale() }}');

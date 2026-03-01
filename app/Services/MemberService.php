@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Http\Helper\NameHelper;
 use App\MemberAuditLog;
 use App\MemberLevel;
-use App\MemberSetting;
+use App\SystemSetting;
 use App\MemberTransaction;
 use App\Patient;
 use Illuminate\Support\Collection;
@@ -156,7 +156,7 @@ class MemberService
         }
 
         // Referral points
-        if (!empty($data['referred_by']) && MemberSetting::get('referral_bonus_enabled', false)) {
+        if (!empty($data['referred_by']) && SystemSetting::get('member.referral_bonus_enabled', false)) {
             $referrer = Patient::find($data['referred_by']);
             if ($referrer && $referrer->member_status === 'Active' && $level->referral_points > 0) {
                 $patient->update(['referred_by' => $data['referred_by']]);
@@ -299,11 +299,11 @@ class MemberService
      */
     public function exchangePoints(int $id, int $points): array
     {
-        if (!MemberSetting::get('points_exchange_enabled', true)) {
+        if (!SystemSetting::get('member.points_exchange_enabled', true)) {
             return ['message' => __('members.exchange_disabled'), 'status' => false];
         }
 
-        if (!MemberSetting::get('points_enabled', true)) {
+        if (!SystemSetting::get('member.points_enabled', true)) {
             return ['message' => __('members.points_disabled'), 'status' => false];
         }
 
@@ -317,7 +317,7 @@ class MemberService
             return ['message' => __('members.insufficient_points'), 'status' => false];
         }
 
-        $exchangeRate = (int) MemberSetting::get('points_exchange_rate', 100);
+        $exchangeRate = (int) SystemSetting::get('member.points_exchange_rate', 100);
         $amount = round($points / $exchangeRate, 2);
 
         $balanceBefore = (float) $patient->member_balance;
