@@ -44,26 +44,36 @@
         // Drawer open/close
         // =====================================================================
 
+        // Pending prefill time — set before async loadTimeSlots so
+        // renderTimeSlots can auto-highlight the matching slot.
+        var _pendingPrefillTime = null;
+
         window.openAppointmentDrawer = function(prefillData) {
             document.getElementById('appointment-drawer').classList.add('open');
             document.getElementById('appointment-drawer-overlay').classList.add('open');
             document.body.style.overflow = 'hidden';
 
+            _pendingPrefillTime = null;
             resetAppointmentForm();
 
             if (prefillData) {
                 if (prefillData.patient_id) {
                     loadPatientById(prefillData.patient_id);
                 }
-                if (prefillData.doctor_id) {
-                    loadDoctorById(prefillData.doctor_id);
-                }
                 if (prefillData.date) {
                     $('#appointment_date').val(prefillData.date);
                     updateWeekday(prefillData.date);
                 }
                 if (prefillData.time) {
+                    _pendingPrefillTime = prefillData.time;
                     $('#appointment_time').val(prefillData.time);
+                }
+                if (prefillData.duration) {
+                    $('#duration_minutes').val(prefillData.duration);
+                }
+                // Load doctor last so change → loadTimeSlots sees date already set
+                if (prefillData.doctor_id) {
+                    loadDoctorById(prefillData.doctor_id);
                 }
             }
         };
@@ -86,7 +96,8 @@
             $('#date-weekday').text('');
             clearTimeSlots();
             $('input[name="appointment_type"][value="revisit"]').prop('checked', true);
-            $('#duration_minutes').val(30);
+            var cs = window._clinicSettings || {};
+            $('#duration_minutes').val(cs.default_duration || 30);
         };
 
         window.clearTimeSlots = function() {
@@ -221,28 +232,21 @@
             var morningHtml = '';
             var afternoonHtml = '';
 
-            var defaultSlots = [
-                { time: '08:30', period: 'morning' },
-                { time: '09:00', period: 'morning' },
-                { time: '09:30', period: 'morning' },
-                { time: '10:00', period: 'morning' },
-                { time: '10:30', period: 'morning' },
-                { time: '11:00', period: 'morning' },
-                { time: '11:30', period: 'morning' },
-                { time: '12:00', period: 'afternoon' },
-                { time: '12:30', period: 'afternoon' },
-                { time: '13:00', period: 'afternoon' },
-                { time: '13:30', period: 'afternoon' },
-                { time: '14:00', period: 'afternoon' },
-                { time: '14:30', period: 'afternoon' },
-                { time: '15:00', period: 'afternoon' },
-                { time: '15:30', period: 'afternoon' },
-                { time: '16:00', period: 'afternoon' },
-                { time: '16:30', period: 'afternoon' },
-                { time: '17:00', period: 'afternoon' },
-                { time: '17:30', period: 'afternoon' },
-                { time: '18:00', period: 'afternoon' }
-            ];
+            var cs = window._clinicSettings || {};
+            var defaultSlots = (function() {
+                var startParts = (cs.start_time || '08:30').split(':');
+                var endParts   = (cs.end_time   || '18:30').split(':');
+                var interval   = parseInt(cs.slot_interval, 10) || 30;
+                var startMin   = parseInt(startParts[0], 10) * 60 + parseInt(startParts[1], 10);
+                var endMin     = parseInt(endParts[0], 10) * 60 + parseInt(endParts[1], 10);
+                var result = [];
+                for (var m = startMin; m < endMin; m += interval) {
+                    var hh = ('0' + Math.floor(m / 60)).slice(-2);
+                    var mm = ('0' + (m % 60)).slice(-2);
+                    result.push({ time: hh + ':' + mm, period: m < 720 ? 'morning' : 'afternoon' });
+                }
+                return result;
+            })();
 
             var slots = data && data.slots ? data.slots : defaultSlots;
             var booked = data && data.booked ? data.booked : {};
@@ -312,6 +316,31 @@
                 t('no_available_slots') + '</div>'
             );
             $('#afternoon-slots-grid').html(afternoonHtml);
+
+            // Show schedule warning if doctor has no schedule for this date
+            $('#morning-slots-grid').closest('.time-slot-container')
+                .find('.no-schedule-warning').remove();
+            if (data && data.has_schedule === false) {
+                var noSchedHtml = '<div class="no-schedule-warning">' +
+                    t('doctor_no_schedule_warning') + '</div>';
+                $('#morning-slots-grid').closest('.time-slot-container')
+                    .prepend(noSchedHtml);
+            }
+
+            // Auto-highlight prefilled time slot
+            if (_pendingPrefillTime) {
+                var prefillTime = _pendingPrefillTime;
+                _pendingPrefillTime = null;
+                $('.time-slot').each(function() {
+                    var $slot = $(this);
+                    var slotText = $slot.text().trim().substring(0, 5);
+                    if (slotText === prefillTime && !$slot.hasClass('booked') &&
+                        !$slot.hasClass('rest') && !$slot.hasClass('past')) {
+                        $slot.addClass('selected');
+                        $('#appointment_time').val(prefillTime);
+                    }
+                });
+            }
         };
 
         window.selectTimeSlot = function(element, time) {
@@ -362,8 +391,11 @@
                         if (typeof refreshAppointments === 'function') {
                             refreshAppointments();
                         }
-                        if ($('#calendar').length && typeof $('#calendar').fullCalendar === 'function') {
-                            $('#calendar').fullCalendar('refetchEvents');
+                        if (window._appointmentCalendar) {
+                            window._appointmentCalendar.refetchEvents();
+                        }
+                        if (window._drgInstance) {
+                            window._drgInstance._load();
                         }
                         if ($('#appointments-table').length) {
                             $('#appointments-table').DataTable().draw(false);
@@ -410,7 +442,8 @@
 
         window.loadDoctorById = function(doctorId) {
             $.ajax({
-                url: '/users/' + doctorId,
+                url: '/appointments/doctor-info/' + doctorId,
+                dataType: 'json',
                 success: function(user) {
                     var option = new Option(
                         LanguageManager.joinName(user.surname, user.othername),
@@ -524,14 +557,22 @@
                 }
             });
 
-            // Date picker
-            $('#appointment_date').datepicker({
+            // Date picker with advance booking limits
+            var dpOptions = {
                 language: locale,
                 format: 'yyyy-mm-dd',
                 autoclose: true,
                 startDate: new Date(),
                 todayHighlight: true
-            }).on('changeDate', function(e) {
+            };
+            var cs = window._clinicSettings || {};
+            var maxDays = parseInt(cs.max_advance_days) || 0;
+            if (maxDays > 0) {
+                var maxDate = new Date();
+                maxDate.setDate(maxDate.getDate() + maxDays);
+                dpOptions.endDate = maxDate;
+            }
+            $('#appointment_date').datepicker(dpOptions).on('changeDate', function(e) {
                 updateWeekday(e.format('yyyy-mm-dd'));
                 loadTimeSlots();
             });

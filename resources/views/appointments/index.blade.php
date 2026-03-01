@@ -23,7 +23,9 @@
                             <a href="#appointment_calender_tab" data-toggle="tab" aria-expanded="false">{{ __('appointment.appointments_calender') }}
                             </a>
                         </li>
-
+                        <li class="" id="doctor_day_view_tab_link">
+                            <a href="#doctor_day_view_tab" data-toggle="tab" aria-expanded="false">{{ __('appointment.doctor_day_view') }}</a>
+                        </li>
 
                     </ul>
                     <div class="tab-content">
@@ -151,6 +153,72 @@
                                     </div>
                                 </div>
                             </div>
+                            {{-- Appointment event popover (hidden template, positioned by JS) --}}
+                            <div id="apt-popover" class="apt-popover" style="display:none;">
+                                <div class="apt-popover-header">
+                                    <span id="apt-popover-patient"></span>
+                                    <span id="apt-popover-phone" class="apt-popover-phone"></span>
+                                </div>
+                                <div class="apt-popover-body">
+                                    <div class="apt-popover-row">
+                                        <span class="apt-popover-label">{{ __('appointment.popover_time') }}</span>
+                                        <span id="apt-popover-time"></span>
+                                    </div>
+                                    <div class="apt-popover-row">
+                                        <span class="apt-popover-label">{{ __('appointment.doctor') }}</span>
+                                        <span id="apt-popover-doctor"></span>
+                                    </div>
+                                    <div class="apt-popover-row">
+                                        <span class="apt-popover-label">{{ __('appointment.popover_project') }}</span>
+                                        <span id="apt-popover-service"></span>
+                                    </div>
+                                    <div class="apt-popover-row">
+                                        <span class="apt-popover-label">{{ __('appointment.popover_status') }}</span>
+                                        <span id="apt-popover-status" class="apt-popover-status-badge"></span>
+                                    </div>
+                                    <div class="apt-popover-row" id="apt-popover-notes-row" style="display:none;">
+                                        <span class="apt-popover-label">{{ __('appointment.notes') }}</span>
+                                        <span id="apt-popover-notes"></span>
+                                    </div>
+                                </div>
+                                <div class="apt-popover-actions">
+                                    <button type="button" class="btn btn-xs btn-primary" id="apt-popover-edit">
+                                        <i class="fa fa-pencil"></i> {{ __('common.edit') }}
+                                    </button>
+                                    <button type="button" class="btn btn-xs btn-info" id="apt-popover-reschedule">
+                                        <i class="fa fa-calendar"></i> {{ __('appointment.reschedule') }}
+                                    </button>
+                                    <button type="button" class="btn btn-xs btn-warning" id="apt-popover-sms">
+                                        <i class="fa fa-envelope"></i> {{ __('appointment.popover_send_sms') }}
+                                    </button>
+                                    <button type="button" class="btn btn-xs btn-danger" id="apt-popover-delete">
+                                        <i class="fa fa-trash"></i> {{ __('common.delete') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {{-- Doctor Day View Tab --}}
+                        <div class="tab-pane" id="doctor_day_view_tab">
+                            <div class="row">
+                                <div class="portlet light">
+                                    <div class="portlet-title">
+                                        <div class="caption font-dark">
+                                            <span class="caption-subject">{{ __('appointment.doctor_day_view') }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="portlet-body">
+                                        <div class="drg-toolbar">
+                                            <button type="button" class="btn btn-sm btn-default" id="drg-prev"><i class="fa fa-chevron-left"></i></button>
+                                            <button type="button" class="btn btn-sm btn-default" id="drg-today">{{ __('appointment.today') }}</button>
+                                            <button type="button" class="btn btn-sm btn-default" id="drg-next"><i class="fa fa-chevron-right"></i></button>
+                                            <span class="drg-date-label" id="drg-date-label"></span>
+                                        </div>
+                                        <div class="drg-container" id="drg-container">
+                                            {{-- Rendered by appointment_resource_grid.js --}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -245,15 +313,13 @@
             $(this).toggleClass('active');
         });
 
-        // Clear all filters
+        // Reset filters to initial defaults (today's date)
         $('#clearFilters').on('click', function() {
             $('#quickSearch').val('');
             $('#appointment_no_filter').val('');
             $('#filter_doctor').val('');
             $('#filter_invoice_status').val('');
-            $('#period_selector').val('');
-            $('.start_date').val('');
-            $('.end_date').val('');
+            default_todays_data();
             $('#appointments-table').DataTable().draw(true);
         });
 
@@ -686,6 +752,9 @@
                         success: function (data) {
                             if (data.status) {
                                 alert_dialog(data.message, "success");
+                                if (window._appointmentCalendar) window._appointmentCalendar.refetchEvents();
+                                if (window._drgInstance) window._drgInstance._load();
+                                if ($('#appointments-table').length) $('#appointments-table').DataTable().draw(false);
                             } else {
                                 alert_dialog(data.message, "danger");
                             }
@@ -958,6 +1027,7 @@
                     },
                     editable: false,
                     selectable: true,
+                    selectMirror: true,
                     eventDisplay: 'block',
                     events: {
                         url: '{{ url("appointments/calendar-events") }}',
@@ -966,24 +1036,115 @@
                             console.error('Failed to load calendar events');
                         }
                     },
-                    dateClick: function(info) {
-                        if (typeof openAppointmentDrawer === 'function') {
-                            openAppointmentDrawer({ date: info.dateStr.substring(0, 10) });
+                    select: function(info) {
+                        var prefill = { date: info.startStr.substring(0, 10) };
+                        if (info.view.type !== 'dayGridMonth') {
+                            prefill.time = info.startStr.substring(11, 16);
+                            var durationMs = info.end - info.start;
+                            prefill.duration = Math.round(durationMs / 60000);
                         }
+                        if (typeof openAppointmentDrawer === 'function') {
+                            openAppointmentDrawer(prefill);
+                        }
+                        calendar.unselect();
                     },
                     eventClick: function(info) {
                         info.jsEvent.preventDefault();
-                        var eventId = info.event.id;
-                        if (eventId && typeof editRecord === 'function') {
-                            editRecord(eventId);
-                        }
+                        showAppointmentPopover(info.event, info.jsEvent);
                     }
+                });
+                window._appointmentCalendar = calendar;
+
+                // --- Appointment Popover Logic (shared by calendar & resource grid) ---
+                var $popover = $('#apt-popover');
+                window._aptPopoverEventId = null;
+
+                function showAppointmentPopover(event, jsEvent) {
+                    var ep = event.extendedProps;
+                    window._aptPopoverEventId = event.id;
+
+                    $('#apt-popover-patient').text(ep.patient_name || '');
+                    $('#apt-popover-phone').text(ep.patient_phone || '');
+                    $('#apt-popover-time').text((ep.start_time || '') + ' - ' + (ep.end_time || ''));
+                    $('#apt-popover-doctor').text(ep.doctor_name || '');
+                    $('#apt-popover-service').text(ep.service_name || '-');
+                    var statusText = ep.status || '';
+                    $('#apt-popover-status').text(statusText).css('background-color', event.backgroundColor || '#3a87ad');
+
+                    if (typeof ep.notes !== 'undefined' && ep.notes) {
+                        $('#apt-popover-notes').text(ep.notes);
+                        $('#apt-popover-notes-row').show();
+                    } else {
+                        $('#apt-popover-notes-row').hide();
+                    }
+
+                    var x = jsEvent.pageX, y = jsEvent.pageY;
+                    $popover.css({ top: y + 8, left: x + 8, display: 'block' });
+
+                    setTimeout(function() {
+                        var pw = $popover.outerWidth(), ph = $popover.outerHeight();
+                        var ww = $(window).width(), wh = $(window).height();
+                        var st = $(window).scrollTop(), sl = $(window).scrollLeft();
+                        if (x + 8 + pw > sl + ww) $popover.css('left', x - pw - 8);
+                        if (y + 8 + ph > st + wh) $popover.css('top', y - ph - 8);
+                    }, 0);
+                }
+                window.showAppointmentPopover = showAppointmentPopover;
+
+                $(document).on('click', function(e) {
+                    if (!$(e.target).closest('#apt-popover, .fc-event, .drg-event').length) {
+                        $popover.hide();
+                        window._aptPopoverEventId = null;
+                    }
+                });
+
+                $('#apt-popover-edit').on('click', function() {
+                    var eid = window._aptPopoverEventId;
+                    $popover.hide();
+                    if (eid && typeof editRecord === 'function') editRecord(eid);
+                });
+                $('#apt-popover-reschedule').on('click', function() {
+                    var eid = window._aptPopoverEventId;
+                    $popover.hide();
+                    if (eid && typeof RescheduleAppointment === 'function') RescheduleAppointment(eid);
+                });
+                $('#apt-popover-delete').on('click', function() {
+                    var eid = window._aptPopoverEventId;
+                    $popover.hide();
+                    if (eid && typeof deleteRecord === 'function') deleteRecord(eid);
+                });
+                $('#apt-popover-sms').on('click', function() {
+                    var eid = window._aptPopoverEventId;
+                    if (!eid) return;
+                    var phone = $('#apt-popover-phone').text();
+                    if (!phone) { toastr.warning('{{ __("appointment.no_phone_for_sms") }}'); return; }
+                    $popover.hide();
+                    var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
+                    $.ajax({
+                        type: 'POST',
+                        url: '{{ url("appointments") }}/' + eid + '/send-reminder',
+                        data: { _token: CSRF_TOKEN },
+                        success: function(res) {
+                            if (res.status) toastr.success(res.message);
+                            else toastr.error(res.message);
+                        },
+                        error: function() { toastr.error('{{ __("common.error") }}'); }
+                    });
                 });
                 // Render calendar when tab is shown
                 $('a[href="#appointment_calender_tab"]').on('shown.bs.tab', function () {
                     calendar.render();
                 });
             }
+        });
+    </script>
+    <link rel="stylesheet" href="{{ asset('css/appointment-resource-grid.css') }}">
+    <script src="{{ asset('include_js/appointment_resource_grid.js') }}?v={{ filemtime(public_path('include_js/appointment_resource_grid.js')) }}"></script>
+    <script>
+        $(function() {
+            $('a[href="#doctor_day_view_tab"]').on('shown.bs.tab', function () {
+                if (window._drgInstance) window._drgInstance.render();
+            });
         });
     </script>
 @endsection

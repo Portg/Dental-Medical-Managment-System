@@ -311,3 +311,75 @@
     color: #666;
     font-size: 13px;
 }
+
+/* ===== Appointment Event Popover ===== */
+.apt-popover {
+    position: absolute;
+    z-index: 10000;
+    width: 280px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.18);
+    border: 1px solid #e0e0e0;
+    font-size: 13px;
+}
+.apt-popover-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.apt-popover-header span:first-child {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+}
+.apt-popover-phone {
+    color: #888;
+    font-size: 12px;
+}
+.apt-popover-body {
+    padding: 8px 14px;
+}
+.apt-popover-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    line-height: 1.6;
+}
+.apt-popover-label {
+    color: #888;
+    min-width: 45px;
+}
+.apt-popover-status-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 12px;
+}
+.apt-popover-actions {
+    padding: 8px 14px 10px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.apt-popover-actions .btn {
+    flex: 1;
+    min-width: 50px;
+    font-size: 11px;
+    padding: 3px 6px;
+}
+
+/* Doctor schedule warning in time-slot container */
+.no-schedule-warning {
+    background: #fcf8e3;
+    border: 1px solid #faebcc;
+    color: #8a6d3b;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 8px;
+}

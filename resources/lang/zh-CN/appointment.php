@@ -274,4 +274,25 @@ return [
     'doctor_required' => '请选择医生',
     'date_required' => '请选择预约日期',
     'time_required' => '请选择预约时间',
+
+    // Popover (calendar event card)
+    'popover_time' => '时间',
+    'popover_project' => '项目',
+    'popover_status' => '状态',
+    'popover_send_sms' => '短信',
+    'doctor_day_view' => '医生日视图',
+    'no_appointments' => '暂无预约',
+    'doctor_no_schedule_warning' => '该医生当日无排班记录，显示的为默认时段',
+    'no_phone_for_sms' => '该患者无手机号，无法发送短信',
+
+    // Resource grid schedule
+    'no_schedule' => '未排班',
+    'off_schedule_warning' => '该时段不在医生排班范围内',
+
+    // Overbooking
+    'overbooking_conflict' => '该医生在所选时段已有预约，时间冲突，请选择其他时间',
+
+    // Advance booking limits
+    'max_advance_days_exceeded' => '最多只能提前 :days 天预约',
+    'min_advance_hours_not_met' => '至少需要提前 :hours 小时预约',
 ];

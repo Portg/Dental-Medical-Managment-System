@@ -27,6 +27,7 @@ $drawerTrans = [
     'doctor_required' => __('appointment.doctor_required'),
     'date_required' => __('appointment.date_required'),
     'time_required' => __('appointment.time_required'),
+    'doctor_no_schedule_warning' => __('appointment.doctor_no_schedule_warning'),
 ];
 @endphp
 <div class="appointment-drawer" id="appointment-drawer"
@@ -156,7 +157,7 @@ $drawerTrans = [
                 <label class="form-section-label">{{ __('appointment.estimated_duration_label') }}</label>
                 <div class="duration-input-group">
                     <input type="number" id="duration_minutes" name="duration_minutes"
-                           class="form-control drawer-form-control" value="30" min="15" max="240" step="15">
+                           class="form-control drawer-form-control" value="{{ \App\SystemSetting::get('clinic.default_duration', 30) }}" min="15" max="240" step="15">
                     <span>{{ __('appointment.minutes') }}</span>
                 </div>
             </div>

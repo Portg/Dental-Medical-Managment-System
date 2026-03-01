@@ -121,4 +121,25 @@ return [
     'doctor_required' => 'Please select a doctor',
     'date_required' => 'Please select an appointment date',
     'time_required' => 'Please select an appointment time',
+
+    // Popover (calendar event card)
+    'popover_time' => 'Time',
+    'popover_project' => 'Service',
+    'popover_status' => 'Status',
+    'popover_send_sms' => 'SMS',
+    'doctor_day_view' => 'Doctor Day View',
+    'no_appointments' => 'No appointments',
+    'doctor_no_schedule_warning' => 'This doctor has no schedule for the selected date. Showing default time slots.',
+    'no_phone_for_sms' => 'Patient has no phone number. Cannot send SMS.',
+
+    // Resource grid schedule
+    'no_schedule' => 'No schedule',
+    'off_schedule_warning' => 'This time slot is outside the doctor\'s schedule',
+
+    // Overbooking
+    'overbooking_conflict' => 'This doctor already has an appointment during the selected time slot',
+
+    // Advance booking limits
+    'max_advance_days_exceeded' => 'Appointments can only be booked up to :days days in advance',
+    'min_advance_hours_not_met' => 'Appointments must be booked at least :hours hours in advance',
 ];

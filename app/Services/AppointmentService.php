@@ -11,6 +11,7 @@ use App\Http\Helper\NameHelper;
 use App\Jobs\SendAppointmentSms;
 use App\Notifications\ReminderNotification;
 use App\Patient;
+use App\SystemSetting;
 use Carbon\Carbon;
 use DateTime;
 use Illuminate\Support\Collection;
@@ -101,40 +102,82 @@ class AppointmentService
         $query = DB::table('appointments')
             ->join('patients', 'patients.id', 'appointments.patient_id')
             ->join('users', 'users.id', 'appointments.doctor_id')
+            ->leftJoin('medical_services', 'medical_services.id', 'appointments.service_id')
             ->whereNull('appointments.deleted_at')
-            ->select('appointments.*', 'patients.surname', 'patients.othername',
-                'users.surname as d_surname', 'users.othername as d_othername');
+            ->select(
+                'appointments.*',
+                'patients.surname', 'patients.othername', 'patients.phone_no as p_phone',
+                'patients.gender as p_gender',
+                'users.surname as d_surname', 'users.othername as d_othername',
+                'medical_services.name as service_name'
+            );
 
         if ($start && $end) {
             $query->whereBetween('appointments.sort_by', [$start, $end]);
         }
 
+        $statusColorMap = [
+            Appointment::STATUS_WAITING => '#f0ad4e',
+            Appointment::STATUS_SCHEDULED => '#5bc0de',
+            Appointment::STATUS_CHECKED_IN => '#337ab7',
+            Appointment::STATUS_IN_PROGRESS => '#5cb85c',
+            Appointment::STATUS_COMPLETED => '#5cb85c',
+            Appointment::STATUS_TREATMENT_COMPLETE => '#5cb85c',
+            Appointment::STATUS_CANCELLED => '#d9534f',
+            Appointment::STATUS_NO_SHOW => '#777777',
+            Appointment::STATUS_RESCHEDULED => '#f0ad4e',
+            Appointment::STATUS_REJECTED => '#d9534f',
+        ];
+
         $events = [];
         foreach ($query->get() as $value) {
             $startDt = date_create($value->sort_by);
-            $duration = $value->duration_minutes ?? 30;
+            $duration = $value->duration_minutes ?? (int) SystemSetting::get('clinic.default_duration', 30);
             $endDt = clone $startDt;
             $endDt->modify("+{$duration} minutes");
 
             $patientName = NameHelper::join($value->surname, $value->othername);
             $doctorName = NameHelper::join($value->d_surname, $value->d_othername);
+            $bgColor = $statusColorMap[$value->status] ?? '#3a87ad';
+
+            $extendedProps = [
+                'patient_name' => $patientName,
+                'doctor_name' => $doctorName,
+                'patient_phone' => $value->p_phone ?? '',
+                'patient_gender' => $value->p_gender ?? '',
+                'status' => $this->translateStatus($value->status ?? ''),
+                'service_name' => $value->service_name ?? '',
+                'start_time' => date_format($startDt, 'H:i'),
+                'end_time' => date_format($endDt, 'H:i'),
+                'appointment_no' => $value->appointment_no ?? '',
+                'doctor_id' => $value->doctor_id,
+            ];
+
+            if ((bool) SystemSetting::get('clinic.show_appointment_notes', true)) {
+                $extendedProps['notes'] = $value->notes ?? '';
+            }
 
             $events[] = [
                 'id' => $value->id,
                 'title' => $patientName . ' - ' . $doctorName,
                 'start' => date_format($startDt, "Y-m-d\TH:i:s"),
                 'end' => date_format($endDt, "Y-m-d\TH:i:s"),
-                'backgroundColor' => '#3a87ad',
-                'borderColor' => '#3a87ad',
+                'resourceId' => $value->doctor_id,
+                'backgroundColor' => $bgColor,
+                'borderColor' => $bgColor,
                 'textColor' => '#ffffff',
-                'extendedProps' => [
-                    'patient_name' => $patientName,
-                    'doctor_name' => $doctorName,
-                ],
+                'extendedProps' => $extendedProps,
             ];
         }
 
         return $events;
+    }
+
+    private function translateStatus(string $status): string
+    {
+        $key = 'appointment.' . strtolower(str_replace(' ', '_', $status));
+        $translated = __($key);
+        return $translated !== $key ? $translated : $status;
     }
 
     /**
@@ -173,6 +216,45 @@ class AppointmentService
             ->first();
     }
 
+    // ─── Conflict detection ───────────────────────────────────────
+
+    /**
+     * Check if the doctor already has an appointment that overlaps with the given time range.
+     * Returns the conflicting appointment or null.
+     */
+    public function checkOverbooking(int $doctorId, string $date, string $time, int $durationMinutes, ?int $excludeId = null): ?object
+    {
+        if ((bool) SystemSetting::get('clinic.allow_overbooking', true)) {
+            return null;
+        }
+
+        $sortBy = $date . ' ' . date('H:i:s', strtotime($time));
+        $newStart = strtotime($sortBy);
+        $newEnd = $newStart + ($durationMinutes * 60);
+
+        $query = DB::table('appointments')
+            ->where('doctor_id', $doctorId)
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', [Appointment::STATUS_CANCELLED, Appointment::STATUS_NO_SHOW])
+            ->whereDate('start_date', $date);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        foreach ($query->get() as $existing) {
+            $existStart = strtotime($existing->sort_by);
+            $existDuration = $existing->duration_minutes ?? (int) SystemSetting::get('clinic.default_duration', 30);
+            $existEnd = $existStart + ($existDuration * 60);
+
+            if ($newStart < $existEnd && $newEnd > $existStart) {
+                return $existing;
+            }
+        }
+
+        return null;
+    }
+
     // ─── CUD operations ──────────────────────────────────────────
 
     /**
@@ -200,7 +282,7 @@ class AppointmentService
             'chair_id' => $data['chair_id'] ?? null,
             'service_id' => $data['service_id'] ?? null,
             'appointment_type' => $data['appointment_type'] ?? 'revisit',
-            'duration_minutes' => $data['duration_minutes'] ?? 30,
+            'duration_minutes' => $data['duration_minutes'] ?? (int) SystemSetting::get('clinic.default_duration', 30),
             '_who_added' => Auth::user()->id,
         ]);
 
@@ -343,22 +425,25 @@ class AppointmentService
             ->where('schedule_date', $date)
             ->first();
 
+        $slotInterval = (int) SystemSetting::get('clinic.slot_interval', 30);
+        $intervalSec = $slotInterval * 60;
+
         $slots = [];
         if ($schedule) {
             $startTime = strtotime($schedule->start_time);
             $endTime = strtotime($schedule->end_time);
-            $interval = 30 * 60;
 
-            for ($time = $startTime; $time < $endTime; $time += $interval) {
+            for ($time = $startTime; $time < $endTime; $time += $intervalSec) {
                 $timeStr = date('H:i', $time);
                 $period = $time < strtotime('12:00') ? 'morning' : 'afternoon';
                 $slots[] = ['time' => $timeStr, 'period' => $period, 'is_rest' => false];
             }
         } else {
-            $start = strtotime('08:30');
-            $end   = strtotime('18:30');
-            $interval = 30 * 60;
-            for ($time = $start; $time < $end; $time += $interval) {
+            $defaultStart = SystemSetting::get('clinic.start_time', '08:30');
+            $defaultEnd   = SystemSetting::get('clinic.end_time', '18:30');
+            $start = strtotime($defaultStart);
+            $end   = strtotime($defaultEnd);
+            for ($time = $start; $time < $end; $time += $intervalSec) {
                 $timeStr = date('H:i', $time);
                 $period  = $time < strtotime('12:00') ? 'morning' : 'afternoon';
                 $slots[] = ['time' => $timeStr, 'period' => $period, 'is_rest' => false];
@@ -383,7 +468,11 @@ class AppointmentService
             ];
         }
 
-        return ['slots' => $slots, 'booked' => $booked];
+        return [
+            'slots' => $slots,
+            'booked' => $booked,
+            'has_schedule' => $schedule !== null,
+        ];
     }
 
     // ─── DataTable formatting ────────────────────────────────────

@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
+use App\Jobs\SendAppointmentSms;
 use App\Services\AppointmentService;
+use App\SystemSetting;
 use App\Exports\AppointmentExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class AppointmentsController extends Controller
@@ -83,6 +86,22 @@ class AppointmentsController extends Controller
             'doctor_id' => 'required',
         ])->validate();
 
+        $advanceError = $this->validateAdvanceBooking($request->appointment_date, $request->appointment_time);
+        if ($advanceError) {
+            return response()->json(['message' => $advanceError, 'status' => false]);
+        }
+
+        $duration = (int) ($request->duration_minutes ?: SystemSetting::get('clinic.default_duration', 30));
+        $conflict = $this->appointmentService->checkOverbooking(
+            (int) $request->doctor_id, $request->appointment_date, $request->appointment_time, $duration
+        );
+        if ($conflict) {
+            return response()->json([
+                'message' => __('appointment.overbooking_conflict'),
+                'status' => false,
+            ]);
+        }
+
         $appointment = $this->appointmentService->createAppointment($request->only([
             'visit_information', 'appointment_date', 'appointment_time',
             'patient_id', 'doctor_id', 'notes', 'chair_id', 'service_id',
@@ -124,6 +143,17 @@ class AppointmentsController extends Controller
             'doctor_id' => 'required',
         ])->validate();
 
+        $duration = (int) ($request->duration_minutes ?: SystemSetting::get('clinic.default_duration', 30));
+        $conflict = $this->appointmentService->checkOverbooking(
+            (int) $request->doctor_id, $request->appointment_date, $request->appointment_time, $duration, (int) $id
+        );
+        if ($conflict) {
+            return response()->json([
+                'message' => __('appointment.overbooking_conflict'),
+                'status' => false,
+            ]);
+        }
+
         $status = $this->appointmentService->updateAppointment((int) $id, $request->only([
             'visit_information', 'patient_id', 'appointment_date',
             'appointment_time', 'doctor_id', 'notes',
@@ -140,6 +170,11 @@ class AppointmentsController extends Controller
      */
     public function sendReschedule(Request $request): JsonResponse
     {
+        $advanceError = $this->validateAdvanceBooking($request->appointment_date, $request->appointment_time);
+        if ($advanceError) {
+            return response()->json(['message' => $advanceError, 'status' => false]);
+        }
+
         $success = $this->appointmentService->rescheduleAppointment((int) $request->id, $request->only([
             'appointment_date', 'appointment_time',
         ]));
@@ -185,5 +220,132 @@ class AppointmentsController extends Controller
         return response()->json(
             $this->appointmentService->getDoctorTimeSlots((int) $request->doctor_id, $request->date)
         );
+    }
+
+    /**
+     * Send an SMS reminder for a specific appointment.
+     */
+    public function sendReminder(int $id): JsonResponse
+    {
+        $record = DB::table('appointments')
+            ->join('patients', 'patients.id', 'appointments.patient_id')
+            ->where('appointments.id', $id)
+            ->whereNull('appointments.deleted_at')
+            ->select('patients.othername', 'patients.phone_no',
+                'appointments.start_date', 'appointments.start_time',
+                DB::raw('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as formatted_date'))
+            ->first();
+
+        if (!$record || !$record->phone_no) {
+            return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
+        }
+
+        $message = __('sms.appointment_scheduled', [
+            'name' => $record->othername,
+            'company' => config('app.name', 'Laravel'),
+            'date' => $record->formatted_date,
+            'time' => $record->start_time,
+        ]);
+
+        dispatch(new SendAppointmentSms($record->phone_no, $message, 'Appointment'));
+
+        return response()->json(['message' => __('appointment.reminder_sent'), 'status' => true]);
+    }
+
+    /**
+     * Get active doctors for calendar resource view.
+     * When ?date= is provided, also returns each doctor's schedule for that date.
+     */
+    public function doctors(Request $request): JsonResponse
+    {
+        $date = $request->query('date');
+
+        $doctors = DB::table('users')
+            ->where('is_doctor', 1)
+            ->whereNull('deleted_at')
+            ->select('id', 'surname', 'othername')
+            ->orderBy('surname')
+            ->get();
+
+        $scheduleMap = [];
+        if ($date) {
+            $schedules = DB::table('doctor_schedules')
+                ->whereNull('deleted_at')
+                ->where('schedule_date', $date)
+                ->select('doctor_id', 'start_time', 'end_time')
+                ->get();
+
+            foreach ($schedules as $s) {
+                $scheduleMap[$s->doctor_id] = [
+                    'start_time' => substr($s->start_time, 0, 5),
+                    'end_time'   => substr($s->end_time, 0, 5),
+                ];
+            }
+        }
+
+        $hideOffDuty = (bool) SystemSetting::get('clinic.hide_off_duty_doctors', false);
+
+        $result = $doctors->map(function ($row) use ($scheduleMap) {
+            $item = [
+                'id'    => $row->id,
+                'title' => \App\Http\Helper\NameHelper::join($row->surname, $row->othername),
+            ];
+            if (isset($scheduleMap[$row->id])) {
+                $item['schedule'] = $scheduleMap[$row->id];
+            }
+            return $item;
+        });
+
+        if ($hideOffDuty && $date && !empty($scheduleMap)) {
+            $result = $result->filter(fn ($doc) => isset($scheduleMap[$doc['id']]));
+        }
+
+        return response()->json($result->values());
+    }
+
+    /**
+     * Get a single doctor's basic info (for Select2 prefill).
+     */
+    public function doctorInfo(int $id): JsonResponse
+    {
+        $doctor = DB::table('users')
+            ->where('id', $id)
+            ->whereNull('deleted_at')
+            ->select('id', 'surname', 'othername')
+            ->first();
+
+        if (!$doctor) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json($doctor);
+    }
+
+    /**
+     * Validate appointment date/time against max_advance_days and min_advance_hours.
+     * Returns error message string on failure, or null on success.
+     */
+    private function validateAdvanceBooking(string $date, string $time): ?string
+    {
+        $appointmentDt = \Carbon\Carbon::parse($date . ' ' . date('H:i:s', strtotime($time)));
+        $now = \Carbon\Carbon::now();
+
+        $maxDays = (int) SystemSetting::get('clinic.max_advance_days', 0);
+        if ($maxDays > 0) {
+            $maxDate = $now->copy()->addDays($maxDays)->endOfDay();
+            if ($appointmentDt->gt($maxDate)) {
+                return __('appointment.max_advance_days_exceeded', ['days' => $maxDays]);
+            }
+        }
+
+        $minHours = (int) SystemSetting::get('clinic.min_advance_hours', 0);
+        if ($minHours > 0) {
+            $minDt = $now->copy()->addHours($minHours);
+            if ($appointmentDt->lt($minDt)) {
+                return __('appointment.min_advance_hours_not_met', ['hours' => $minHours]);
+            }
+        }
+
+        return null;
     }
 }
