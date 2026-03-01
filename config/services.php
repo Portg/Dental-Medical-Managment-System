@@ -30,4 +30,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'ocr' => [
+        'python_path' => env('OCR_PYTHON_PATH', 'python3'),
+        'script_path' => env('OCR_SCRIPT_PATH', base_path('scripts/ocr_service.py')),
+        'timeout' => env('OCR_TIMEOUT', 60),
+    ],
+
 ];
