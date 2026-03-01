@@ -3,6 +3,7 @@
 return [
     'reveal_sensitive' => 'Reveal Sensitive Info',
     'revealed' => 'Sensitive Info Revealed',
+    'hide_sensitive' => 'Hide Sensitive Info',
     'reveal_failed' => 'Failed to reveal sensitive info. Please check your permissions.',
 
     'password_min_length' => 'Password must be at least :min characters',

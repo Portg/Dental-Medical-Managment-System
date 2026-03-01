@@ -655,15 +655,39 @@
             'medical_cases': @json(__('medical_cases')),
             'appointment': @json(__('appointment')),
             'invoices': @json(__('invoices')),
-            'messages': @json(__('messages'))
+            'messages': @json(__('messages')),
+            'data_security': @json(__('data_security'))
         });
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/patient_detail.js') }}"></script>
     <script>
-        // Reveal PII
+        // Reveal / Hide PII toggle
+        var piiRevealed = false;
+        var piiMaskedValues = {};
+        // Store initial masked values
+        $('.pii-field').each(function() {
+            var field = $(this).data('field');
+            piiMaskedValues[field] = $(this).text();
+        });
+
         $('#revealPiiBtn').click(function() {
             var btn = $(this);
+
+            if (piiRevealed) {
+                // Hide: restore masked values
+                $('.pii-field').each(function() {
+                    var field = $(this).data('field');
+                    if (piiMaskedValues[field] !== undefined) {
+                        $(this).text(piiMaskedValues[field]);
+                    }
+                });
+                piiRevealed = false;
+                btn.html('<i class="fa fa-eye"></i> ' + LanguageManager.trans('data_security.reveal_sensitive'));
+                return;
+            }
+
+            // Reveal: fetch real data
             btn.prop('disabled', true);
             $.post('/patients/{{ $patient->id }}/reveal-pii', {_token: '{{ csrf_token() }}'}, function(resp) {
                 $('.pii-field').each(function() {
@@ -672,10 +696,12 @@
                         $(this).text(resp[field]);
                     }
                 });
-                btn.html('<i class="fa fa-eye-slash"></i> {{ __("data_security.revealed") }}');
+                piiRevealed = true;
+                btn.prop('disabled', false);
+                btn.html('<i class="fa fa-eye-slash"></i> ' + LanguageManager.trans('data_security.hide_sensitive'));
             }).fail(function() {
                 btn.prop('disabled', false);
-                alert('{{ __("data_security.reveal_failed") }}');
+                alert(LanguageManager.trans('data_security.reveal_failed'));
             });
         });
 

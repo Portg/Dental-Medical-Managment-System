@@ -15,6 +15,7 @@
 @section('table_id', 'patients-table')
 
 @section('table_headers')
+    <th class="col-checkbox"><input type="checkbox" id="selectAll"></th>
     <th>{{ __('patient.id') }}</th>
     <th>{{ __('patient.full_name') }}</th>
     <th>{{ __('patient.gender') }}</th>
@@ -68,8 +69,23 @@
      Header Actions
      ======================================================================== --}}
 @section('header_actions')
+    <div class="btn-group" id="batchActions" style="display:none;">
+        <button class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            {{ __('patient.batch_actions') }} <span class="badge batch-count">0</span> <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+            <li><a href="javascript:;" onclick="batchSetTags()">{{ __('patient.batch_set_tags') }}</a></li>
+            <li><a href="javascript:;" onclick="batchSetGroup()">{{ __('patient.batch_set_group') }}</a></li>
+            <li><a href="javascript:;" onclick="batchRemoveGroup()">{{ __('patient.batch_remove_group') }}</a></li>
+            <li class="divider"></li>
+            <li id="mergeMenuItem" class="disabled"><a href="javascript:;" onclick="mergePatients()">{{ __('patient.merge_patients') }}</a></li>
+        </ul>
+    </div>
     <button type="button" class="btn btn-default" onclick="exportPatients()">
         {{ __('common.export') }}
+    </button>
+    <button type="button" class="btn btn-default" onclick="$('#importModal').modal('show')">
+        <i class="fa fa-upload"></i> {{ __('patient.import') }}
     </button>
     <button type="button" class="btn btn-primary" onclick="createRecord()">
         {{ __('patient.add_new_patient') }}
@@ -141,6 +157,28 @@
                 </div>
             </div>
         </div>
+        <div class="row filter-row" style="margin-top:10px;">
+            <div class="col-md-3">
+                <div class="filter-label">{{ __('patient.age_range') }}</div>
+                <div class="input-group input-group-sm">
+                    <input type="number" id="filter_age_min" class="form-control" min="0" max="120" placeholder="{{ __('patient.min_placeholder') }}">
+                    <span class="input-group-addon">~</span>
+                    <input type="number" id="filter_age_max" class="form-control" min="0" max="120" placeholder="{{ __('patient.max_placeholder') }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="filter-label">{{ __('patient.spending_range') }}</div>
+                <div class="input-group input-group-sm">
+                    <input type="number" id="filter_spend_min" class="form-control" min="0" step="0.01" placeholder="{{ __('patient.min_amount') }}">
+                    <span class="input-group-addon">~</span>
+                    <input type="number" id="filter_spend_max" class="form-control" min="0" step="0.01" placeholder="{{ __('patient.max_amount') }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="filter-label">{{ __('patient.first_visit_doctor') }}</div>
+                <select id="filter_doctor" class="form-control select2" style="width:100%;"></select>
+            </div>
+        </div>
     </div>
 
     {{-- Advanced Filter Toggle --}}
@@ -176,6 +214,134 @@
 @section('modals')
     @include('patients.create')
     @include('patients.patient_history')
+
+    {{-- Batch Tags Modal --}}
+    <div class="modal fade" id="batchTagsModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title">{{ __('patient.batch_set_tags') }}</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>{{ __('patient_tags.tags') }}</label>
+                        <select id="batch_tag_ids" class="form-control select2" multiple style="width:100%;"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ __('patient.batch_tag_mode') }}</label>
+                        <div class="radio">
+                            <label><input type="radio" name="batch_tag_mode" value="append" checked> {{ __('patient.batch_tag_append') }}</label>
+                        </div>
+                        <div class="radio">
+                            <label><input type="radio" name="batch_tag_mode" value="replace"> {{ __('patient.batch_tag_replace') }}</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.cancel') }}</button>
+                    <button type="button" class="btn btn-primary" onclick="submitBatchTags()">{{ __('common.confirm') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Batch Group Modal --}}
+    <div class="modal fade" id="batchGroupModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title">{{ __('patient.batch_set_group') }}</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>{{ __('patient.patient_group') }}</label>
+                        @foreach($allGroups as $g)
+                            <div class="radio">
+                                <label><input type="radio" name="batch_group_code" value="{{ $g->code }}"> {{ $g->name }}</label>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.cancel') }}</button>
+                    <button type="button" class="btn btn-primary" onclick="submitBatchGroup()">{{ __('common.confirm') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Merge Patients Modal --}}
+    <div class="modal fade" id="mergeModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title" style="display:inline-block;">{{ __('patient.merge_patients') }}</h4>
+                    <button type="button" class="btn btn-sm btn-default pull-right" onclick="swapMergePrimary()" style="margin-top:-2px;">
+                        <i class="fa fa-exchange"></i> {{ __('patient.merge_swap') }}
+                    </button>
+                </div>
+                <div class="modal-body" id="mergePreviewBody">
+                    <div class="text-center" style="padding:40px;">
+                        <i class="fa fa-spinner fa-spin fa-2x"></i>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.cancel') }}</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmMerge" onclick="submitMerge()">
+                        <i class="fa fa-compress"></i> {{ __('common.confirm') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Import Patients Modal --}}
+    <div class="modal fade" id="importModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title">{{ __('patient.import_patients') }}</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>1. {{ __('patient.download_template') }}</label>
+                        <div>
+                            <a href="{{ url('patients/import-template') }}" class="btn btn-sm btn-default">
+                                <i class="fa fa-download"></i> {{ __('patient.download_template') }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>2. {{ __('patient.upload_file') }}</label>
+                        <input type="file" id="importFile" class="form-control" accept=".xlsx,.xls,.csv">
+                        <p class="help-block">{{ __('patient.import_supported_formats') }}</p>
+                    </div>
+                    <div class="alert alert-info" style="font-size:13px; margin-bottom:10px;">
+                        <ul style="padding-left:18px; margin-bottom:0;">
+                            <li>{{ __('patient.import_hint_required') }}</li>
+                            <li>{{ __('patient.import_hint_header') }}</li>
+                            <li>{{ __('patient.import_hint_limit') }}</li>
+                        </ul>
+                    </div>
+                    <div id="importResultArea" style="display:none;">
+                        <hr>
+                        <h5>{{ __('patient.import_result') }}</h5>
+                        <div id="importResultContent"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.cancel') }}</button>
+                    <button type="button" class="btn btn-primary" id="btnSubmitImport" onclick="submitImport()">
+                        <i class="fa fa-upload"></i> {{ __('patient.import_start') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 {{-- ========================================================================
@@ -259,9 +425,10 @@
     // ==========================================================================
 
     function default_todays_data() {
-        $('.start_date').val('');
-        $('.end_date').val('');
-        $("#period_selector").val('');
+        // initially load today's date filtered data
+        $('.start_date').val(todaysDate());
+        $('.end_date').val(todaysDate());
+        $("#period_selector").val('Today');
     }
 
     // Period selector change handler
@@ -307,6 +474,7 @@
         dataTable = $('#patients-table').DataTable({
             processing: true,
             serverSide: true,
+            order: [],
             language: LanguageManager.getDataTableLang(),
             ajax: {
                 url: "{{ url('/patients/') }}",
@@ -319,10 +487,16 @@
                     d.quick_search = $('#quickSearch').val();
                     d.filter_group = window._activeGroup || '';
                     d.filter_sidebar_tag = window._activeSidebarTag || '';
+                    d.filter_age_min = $('#filter_age_min').val();
+                    d.filter_age_max = $('#filter_age_max').val();
+                    d.filter_spend_min = $('#filter_spend_min').val();
+                    d.filter_spend_max = $('#filter_spend_max').val();
+                    d.filter_doctor = $('#filter_doctor').val();
                 }
             },
             dom: 'rtip',
             columns: [
+                {data: 'checkbox', name: 'checkbox', orderable: false, searchable: false, className: 'col-checkbox'},
                 {data: 'DT_RowIndex', name: 'DT_RowIndex', visible: true},
                 {data: 'full_name', name: 'full_name'},
                 {data: 'gender', name: 'gender'},
@@ -364,6 +538,8 @@
         $('#filter_company').val(null).trigger('change');
         $('#filter_tags').val(null).trigger('change');
         $('#filter_source').val(null).trigger('change');
+        $('#filter_age_min, #filter_age_max, #filter_spend_min, #filter_spend_max').val('');
+        $('#filter_doctor').val(null).trigger('change');
         doSearch();
     }
 
@@ -579,6 +755,82 @@
         let queryString = $.param(params);
         window.location.href = '/export-patients?' + queryString;
     }
+
+    // ========================================================================
+    // Patient Import
+    // ========================================================================
+
+    function submitImport() {
+        var fileInput = $('#importFile')[0];
+        if (!fileInput.files || !fileInput.files[0]) {
+            toastr.warning(LanguageManager.trans('patient.import_file_required'));
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        var btn = $('#btnSubmitImport');
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> ' + LanguageManager.trans('patient.import_processing'));
+        $('#importResultArea').hide();
+
+        $.ajax({
+            url: '/patients/import',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                btn.prop('disabled', false).html('<i class="fa fa-upload"></i> ' + LanguageManager.trans('patient.import_start'));
+                showImportResult(res);
+
+                if (res.status === 1) {
+                    // Refresh DataTable
+                    table.ajax.reload(null, false);
+                }
+            },
+            error: function(xhr) {
+                btn.prop('disabled', false).html('<i class="fa fa-upload"></i> ' + LanguageManager.trans('patient.import_start'));
+                toastr.error(xhr.responseJSON?.message || 'Import failed');
+            }
+        });
+    }
+
+    function showImportResult(res) {
+        var html = '';
+        var data = res.data || {};
+
+        if (data.success > 0) {
+            html += '<div class="text-success" style="margin-bottom:8px;"><i class="fa fa-check-circle"></i> '
+                  + LanguageManager.trans('patient.import_success_count', {count: data.success}) + '</div>';
+        }
+
+        if (data.failures && data.failures.length > 0) {
+            html += '<div class="text-danger" style="margin-bottom:6px;"><i class="fa fa-times-circle"></i> '
+                  + LanguageManager.trans('patient.import_fail_count', {count: data.failures.length}) + '</div>';
+            html += '<ul style="font-size:12px; color:#c0392b; max-height:200px; overflow-y:auto; padding-left:18px;">';
+            data.failures.forEach(function(f) {
+                var rowLabel = f.row > 0 ? LanguageManager.trans('patient.import_row_error', {row: f.row}) + ': ' : '';
+                html += '<li>' + rowLabel + f.errors.join('; ') + '</li>';
+            });
+            html += '</ul>';
+        }
+
+        if (!data.success && (!data.failures || data.failures.length === 0)) {
+            html = '<div class="text-warning">' + (res.message || 'No data') + '</div>';
+        }
+
+        $('#importResultContent').html(html);
+        $('#importResultArea').show();
+    }
+
+    // Reset import modal on close
+    $('#importModal').on('hidden.bs.modal', function() {
+        $('#importFile').val('');
+        $('#importResultArea').hide();
+        $('#importResultContent').html('');
+    });
 
     // ==========================================================================
     // Form CRUD Functions
@@ -899,5 +1151,347 @@
         }
         doSearch();
     });
+
+    // ==========================================================================
+    // Doctor Filter Select2
+    // ==========================================================================
+
+    $('#filter_doctor').select2({
+        language: '{{ app()->getLocale() }}',
+        placeholder: "{{ __('patient.first_visit_doctor') }}",
+        allowClear: true,
+        ajax: {
+            url: '/search-doctor',
+            dataType: 'json',
+            delay: 250,
+            data: function(params) { return { q: params.term }; },
+            processResults: function(data) { return { results: data }; }
+        }
+    });
+
+    // ==========================================================================
+    // Batch Operations — Checkbox Management
+    // ==========================================================================
+
+    function getSelectedIds() {
+        var ids = [];
+        $('.patient-checkbox:checked').each(function() {
+            ids.push($(this).val());
+        });
+        return ids;
+    }
+
+    function updateBatchActions() {
+        var count = getSelectedIds().length;
+        if (count > 0) {
+            $('#batchActions').show();
+            $('.batch-count').text(count);
+        } else {
+            $('#batchActions').hide();
+            $('.batch-count').text(0);
+        }
+        // Merge requires exactly 2 patients
+        if (count === 2) {
+            $('#mergeMenuItem').removeClass('disabled').find('a').css({'color': '', 'pointer-events': ''});
+        } else {
+            $('#mergeMenuItem').addClass('disabled').find('a').css({'color': '#999', 'pointer-events': 'none'});
+        }
+    }
+
+    $(document).on('change', '#selectAll', function() {
+        var checked = $(this).is(':checked');
+        $('.patient-checkbox').prop('checked', checked);
+        updateBatchActions();
+    });
+
+    $(document).on('change', '.patient-checkbox', function() {
+        var allChecked = $('.patient-checkbox').length === $('.patient-checkbox:checked').length;
+        $('#selectAll').prop('checked', allChecked);
+        updateBatchActions();
+    });
+
+    // Reset selectAll when DataTable redraws
+    if (dataTable) {
+        dataTable.on('draw', function() {
+            $('#selectAll').prop('checked', false);
+            updateBatchActions();
+        });
+    }
+
+    // ==========================================================================
+    // Batch Operations — Tags
+    // ==========================================================================
+
+    // Initialize batch tags Select2
+    $('#batchTagsModal').on('shown.bs.modal', function() {
+        $('#batch_tag_ids').select2({
+            language: '{{ app()->getLocale() }}',
+            placeholder: "{{ __('patient_tags.select_tags') }}",
+            allowClear: true,
+            multiple: true,
+            dropdownParent: $('#batchTagsModal'),
+            ajax: {
+                url: '/patient-tags-list',
+                dataType: 'json',
+                delay: 300,
+                processResults: function(data) { return { results: data }; },
+                cache: true
+            }
+        });
+    });
+
+    function batchSetTags() {
+        var ids = getSelectedIds();
+        if (!ids.length) return toastr.warning(LanguageManager.trans('common.please_select_checkbox'));
+        $('#batch_tag_ids').val(null).trigger('change');
+        $('input[name="batch_tag_mode"][value="append"]').prop('checked', true);
+        $('#batchTagsModal').modal('show');
+    }
+
+    function submitBatchTags() {
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        $.post('/patients/batch-tags', {
+            _token: csrfToken,
+            patient_ids: getSelectedIds(),
+            tag_ids: $('#batch_tag_ids').val(),
+            mode: $('input[name="batch_tag_mode"]:checked').val()
+        }, function(resp) {
+            if (resp.status) {
+                toastr.success(resp.message);
+                dataTable.draw(false);
+            }
+            $('#batchTagsModal').modal('hide');
+        });
+    }
+
+    // ==========================================================================
+    // Batch Operations — Group
+    // ==========================================================================
+
+    function batchSetGroup() {
+        var ids = getSelectedIds();
+        if (!ids.length) return toastr.warning(LanguageManager.trans('common.please_select_checkbox'));
+        $('input[name="batch_group_code"]').prop('checked', false);
+        $('#batchGroupModal').modal('show');
+    }
+
+    function submitBatchGroup() {
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        var groupCode = $('input[name="batch_group_code"]:checked').val();
+        if (!groupCode) return toastr.warning(LanguageManager.trans('common.please_select'));
+        $.post('/patients/batch-group', {
+            _token: csrfToken,
+            patient_ids: getSelectedIds(),
+            group_code: groupCode
+        }, function(resp) {
+            if (resp.status) {
+                toastr.success(resp.message);
+                dataTable.draw(false);
+            }
+            $('#batchGroupModal').modal('hide');
+        });
+    }
+
+    function batchRemoveGroup() {
+        var ids = getSelectedIds();
+        if (!ids.length) return toastr.warning(LanguageManager.trans('common.please_select_checkbox'));
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        swal({
+            title: LanguageManager.trans('patient.batch_confirm_remove_group'),
+            type: 'warning',
+            showCancelButton: true,
+            confirmButtonClass: 'btn-warning',
+            confirmButtonText: LanguageManager.trans('common.confirm'),
+            cancelButtonText: LanguageManager.trans('common.cancel'),
+            closeOnConfirm: true
+        }, function() {
+            $.post('/patients/batch-group', {
+                _token: csrfToken,
+                patient_ids: ids,
+                group_code: null
+            }, function(resp) {
+                if (resp.status) {
+                    toastr.success(resp.message);
+                    dataTable.draw(false);
+                }
+            });
+        });
+    }
+
+    // ==========================================================================
+    // Patient Merge
+    // ==========================================================================
+
+    var _mergeData = null; // stores the preview data from server
+
+    function mergePatients() {
+        var ids = getSelectedIds();
+        if (ids.length !== 2) {
+            return toastr.warning(LanguageManager.trans('patient.merge_select_exactly_two'));
+        }
+
+        // Show modal with loading spinner
+        $('#mergePreviewBody').html('<div class="text-center" style="padding:40px;"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
+        $('#mergeModal').modal('show');
+
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        $.post('/patients/merge-preview', {
+            _token: csrfToken,
+            patient_a: ids[0],
+            patient_b: ids[1]
+        }, function(resp) {
+            if (resp.status) {
+                _mergeData = resp.data;
+                renderMergePreview(_mergeData);
+            }
+        }).fail(function() {
+            $('#mergePreviewBody').html('<div class="alert alert-danger">' + LanguageManager.trans('patient.merge_failed') + '</div>');
+        });
+    }
+
+    function renderMergePreview(data) {
+        var primary = data.patient_a;
+        var secondary = data.patient_b;
+        var fields = data.compare_fields;
+
+        var html = '';
+
+        // Patient cards row
+        html += '<div class="row">';
+        html += '<div class="col-md-6">';
+        html += '<div class="panel panel-success"><div class="panel-heading"><strong>' + LanguageManager.trans('patient.merge_primary') + '</strong></div>';
+        html += '<div class="panel-body">';
+        html += '<p><strong>' + primary.full_name + '</strong> (' + primary.patient_no + ')</p>';
+        html += '<p><i class="fa fa-phone"></i> ' + (primary.phone_no || '-') + '</p>';
+        html += renderCountBadges(primary.counts);
+        html += '</div></div></div>';
+
+        html += '<div class="col-md-6">';
+        html += '<div class="panel panel-warning"><div class="panel-heading"><strong>' + LanguageManager.trans('patient.merge_secondary') + '</strong></div>';
+        html += '<div class="panel-body">';
+        html += '<p><strong>' + secondary.full_name + '</strong> (' + secondary.patient_no + ')</p>';
+        html += '<p><i class="fa fa-phone"></i> ' + (secondary.phone_no || '-') + '</p>';
+        html += renderCountBadges(secondary.counts);
+        html += '</div></div></div>';
+        html += '</div>';
+
+        // Field comparison
+        html += '<h5 style="border-bottom:1px solid #eee; padding-bottom:8px; margin-top:10px;">';
+        html += '<i class="fa fa-columns"></i> ' + LanguageManager.trans('patient.merge_field_compare') + '</h5>';
+
+        if (fields.length === 0) {
+            html += '<p class="text-muted text-center" style="padding:15px;">' + LanguageManager.trans('patient.merge_no_diff') + '</p>';
+        } else {
+            html += '<table class="table table-condensed table-striped" style="margin-bottom:10px;">';
+            html += '<thead><tr><th style="width:25%;">' + LanguageManager.trans('patient.merge_field_compare') + '</th>';
+            html += '<th style="width:37%;">' + LanguageManager.trans('patient.merge_primary') + '</th>';
+            html += '<th style="width:38%;">' + LanguageManager.trans('patient.merge_secondary') + '</th></tr></thead><tbody>';
+            for (var i = 0; i < fields.length; i++) {
+                var f = fields[i];
+                var nameA = 'merge_field_' + f.field + '_a';
+                var nameB = 'merge_field_' + f.field + '_b';
+                html += '<tr>';
+                html += '<td>' + f.label + '</td>';
+                html += '<td><label><input type="radio" name="merge_field_' + f.field + '" value="primary" checked> ' + escapeHtml(f.value_a || '-') + '</label></td>';
+                html += '<td><label><input type="radio" name="merge_field_' + f.field + '" value="secondary"> ' + escapeHtml(f.value_b || '-') + '</label></td>';
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+        }
+
+        // Migration warning
+        var totalRelated = secondary.counts.appointments + secondary.counts.invoices +
+            secondary.counts.cases + secondary.counts.images + secondary.counts.followups;
+        if (totalRelated > 0) {
+            html += '<div class="alert alert-warning" style="margin-bottom:0;">';
+            html += '<i class="fa fa-exclamation-triangle"></i> <strong>' + LanguageManager.trans('patient.merge_related_data') + ':</strong> ';
+            var parts = [];
+            if (secondary.counts.appointments > 0) parts.push(secondary.counts.appointments + ' ' + LanguageManager.trans('patient.merge_appointments'));
+            if (secondary.counts.invoices > 0) parts.push(secondary.counts.invoices + ' ' + LanguageManager.trans('patient.merge_invoices'));
+            if (secondary.counts.cases > 0) parts.push(secondary.counts.cases + ' ' + LanguageManager.trans('patient.merge_cases'));
+            if (secondary.counts.images > 0) parts.push(secondary.counts.images + ' ' + LanguageManager.trans('patient.merge_images'));
+            if (secondary.counts.followups > 0) parts.push(secondary.counts.followups + ' ' + LanguageManager.trans('patient.merge_followups'));
+            html += parts.join('、');
+            html += '<br><small>' + LanguageManager.trans('patient.merge_warning') + '</small>';
+            html += '</div>';
+        } else {
+            html += '<div class="alert alert-info" style="margin-bottom:0;">';
+            html += '<i class="fa fa-info-circle"></i> ' + LanguageManager.trans('patient.merge_warning');
+            html += '</div>';
+        }
+
+        $('#mergePreviewBody').html(html);
+    }
+
+    function renderCountBadges(counts) {
+        var html = '<div style="margin-top:5px;">';
+        html += '<span class="label label-default" style="margin-right:4px;">' + LanguageManager.trans('patient.merge_appointments') + ' ' + counts.appointments + '</span>';
+        html += '<span class="label label-default" style="margin-right:4px;">' + LanguageManager.trans('patient.merge_invoices') + ' ' + counts.invoices + '</span>';
+        html += '<span class="label label-default" style="margin-right:4px;">' + LanguageManager.trans('patient.merge_cases') + ' ' + counts.cases + '</span>';
+        html += '<span class="label label-default" style="margin-right:4px;">' + LanguageManager.trans('patient.merge_images') + ' ' + counts.images + '</span>';
+        html += '<span class="label label-default">' + LanguageManager.trans('patient.merge_followups') + ' ' + counts.followups + '</span>';
+        html += '</div>';
+        return html;
+    }
+
+    function swapMergePrimary() {
+        if (!_mergeData) return;
+        var tmp = _mergeData.patient_a;
+        _mergeData.patient_a = _mergeData.patient_b;
+        _mergeData.patient_b = tmp;
+        // Swap field values too
+        for (var i = 0; i < _mergeData.compare_fields.length; i++) {
+            var f = _mergeData.compare_fields[i];
+            var tmpVal = f.value_a;
+            f.value_a = f.value_b;
+            f.value_b = tmpVal;
+        }
+        renderMergePreview(_mergeData);
+    }
+
+    function submitMerge() {
+        if (!_mergeData) return;
+
+        var primaryId = _mergeData.patient_a.id;
+        var secondaryId = _mergeData.patient_b.id;
+
+        // Collect field overrides (where user chose secondary value)
+        var fieldOverrides = {};
+        for (var i = 0; i < _mergeData.compare_fields.length; i++) {
+            var f = _mergeData.compare_fields[i];
+            var chosen = $('input[name="merge_field_' + f.field + '"]:checked').val();
+            if (chosen === 'secondary') {
+                fieldOverrides[f.field] = f.value_b;
+            }
+        }
+
+        $('#btnConfirmMerge').prop('disabled', true);
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        $.post('/patients/merge', {
+            _token: csrfToken,
+            primary_id: primaryId,
+            secondary_id: secondaryId,
+            field_overrides: fieldOverrides
+        }, function(resp) {
+            $('#btnConfirmMerge').prop('disabled', false);
+            $('#mergeModal').modal('hide');
+            if (resp.status) {
+                toastr.success(resp.message);
+                dataTable.draw(false);
+            } else {
+                toastr.error(resp.message);
+            }
+        }).fail(function() {
+            $('#btnConfirmMerge').prop('disabled', false);
+            toastr.error(LanguageManager.trans('patient.merge_failed'));
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
 </script>
 @endsection

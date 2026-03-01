@@ -5,15 +5,19 @@ namespace App\Services;
 use App\Appointment;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
+use App\Imports\PatientImport;
 use App\InsuranceCompany;
 use App\MedicalCase;
+use App\OperationLog;
 use App\Patient;
 use App\PatientFollowup;
 use App\PatientImage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\DataTables;
 
 class PatientService
@@ -72,6 +76,9 @@ class PatientService
             ->leftJoin('patient_sources', 'patient_sources.id', 'patients.source_id')
             ->leftJoin('users', 'users.id', 'patients._who_added')
             ->whereNull('patients.deleted_at')
+            ->where(function ($q) {
+                $q->where('patients.status', 'active')->orWhereNull('patients.status');
+            })
             ->select(
                 'patients.*', 'patients.surname', 'patients.othername',
                 'insurance_companies.name', 'patient_sources.name as source_name',
@@ -139,6 +146,60 @@ class PatientService
                 $subquery->select('patient_id')
                     ->from('patient_tag_pivot')
                     ->where('tag_id', $filters['filter_sidebar_tag']);
+            });
+        }
+
+        // Age range filter (date_of_birth preferred, fallback to age field)
+        if (!empty($filters['filter_age_min'])) {
+            $ageMin = (int) $filters['filter_age_min'];
+            $maxDob = now()->subYears($ageMin)->format('Y-m-d');
+            $query->where(function ($q) use ($maxDob, $ageMin) {
+                $q->where(function ($q2) use ($maxDob) {
+                    $q2->whereNotNull('patients.date_of_birth')
+                        ->where('patients.date_of_birth', '<=', $maxDob);
+                })->orWhere(function ($q2) use ($ageMin) {
+                    $q2->whereNull('patients.date_of_birth')
+                        ->where('patients.age', '>=', $ageMin);
+                });
+            });
+        }
+        if (!empty($filters['filter_age_max'])) {
+            $ageMax = (int) $filters['filter_age_max'];
+            $minDob = now()->subYears($ageMax + 1)->format('Y-m-d');
+            $query->where(function ($q) use ($minDob, $ageMax) {
+                $q->where(function ($q2) use ($minDob) {
+                    $q2->whereNotNull('patients.date_of_birth')
+                        ->where('patients.date_of_birth', '>', $minDob);
+                })->orWhere(function ($q2) use ($ageMax) {
+                    $q2->whereNull('patients.date_of_birth')
+                        ->where('patients.age', '<=', $ageMax);
+                });
+            });
+        }
+
+        // Spending amount range filter (invoices.total_amount sum)
+        if (!empty($filters['filter_spend_min']) || !empty($filters['filter_spend_max'])) {
+            $query->whereIn('patients.id', function ($sub) use ($filters) {
+                $sub->select('patient_id')
+                    ->from('invoices')
+                    ->whereNull('invoices.deleted_at')
+                    ->groupBy('patient_id');
+                if (!empty($filters['filter_spend_min'])) {
+                    $sub->havingRaw('SUM(total_amount) >= ?', [(float) $filters['filter_spend_min']]);
+                }
+                if (!empty($filters['filter_spend_max'])) {
+                    $sub->havingRaw('SUM(total_amount) <= ?', [(float) $filters['filter_spend_max']]);
+                }
+            });
+        }
+
+        // Doctor filter (patients seen by this doctor)
+        if (!empty($filters['filter_doctor'])) {
+            $query->whereIn('patients.id', function ($sub) use ($filters) {
+                $sub->select('patient_id')
+                    ->from('appointments')
+                    ->whereNull('appointments.deleted_at')
+                    ->where('appointments.doctor_id', $filters['filter_doctor']);
             });
         }
 
@@ -212,7 +273,9 @@ class PatientService
      */
     public function getGroupSidebarData(): array
     {
-        $totalCount = Patient::count();
+        $totalCount = Patient::where(function ($q) {
+            $q->where('status', 'active')->orWhereNull('status');
+        })->count();
 
         // 从字典表读取分组选项
         $allGroups = \App\DictItem::ofType('patient_group')->active()->ordered()->get();
@@ -220,6 +283,9 @@ class PatientService
         $groupCounts = Patient::select('patient_group', DB::raw('count(*) as cnt'))
             ->whereNotNull('patient_group')
             ->where('patient_group', '!=', '')
+            ->where(function ($q) {
+                $q->where('status', 'active')->orWhereNull('status');
+            })
             ->groupBy('patient_group')
             ->pluck('cnt', 'patient_group')
             ->toArray();
@@ -489,6 +555,9 @@ class PatientService
     {
         return Datatables::of($data)
             ->addIndexColumn()
+            ->addColumn('checkbox', function ($row) {
+                return '<input type="checkbox" class="patient-checkbox" value="' . $row->id . '">';
+            })
             ->filter(function ($instance) {
             })
             ->addColumn('full_name', function ($row) {
@@ -560,7 +629,221 @@ class PatientService
                 </div>
                 ';
             })
-            ->rawColumns(['patient_no', 'medical_insurance', 'Medical_History', 'status', 'action'])
+            ->rawColumns(['checkbox', 'patient_no', 'medical_insurance', 'Medical_History', 'status', 'action'])
             ->make(true);
+    }
+
+    /**
+     * Batch update tags for multiple patients.
+     */
+    public function batchUpdateTags(array $patientIds, array $tagIds, string $mode): int
+    {
+        $patients = Patient::whereIn('id', $patientIds)->get();
+        foreach ($patients as $patient) {
+            if ($mode === 'replace') {
+                $patient->patientTags()->sync($tagIds);
+            } else {
+                $patient->patientTags()->syncWithoutDetaching($tagIds);
+            }
+        }
+        return $patients->count();
+    }
+
+    /**
+     * Batch update group for multiple patients.
+     */
+    public function batchUpdateGroup(array $patientIds, ?string $groupCode): int
+    {
+        return Patient::whereIn('id', $patientIds)->update(['patient_group' => $groupCode]);
+    }
+
+    /**
+     * Import patients from an uploaded Excel file.
+     */
+    public function importPatients(UploadedFile $file): array
+    {
+        $import = new PatientImport();
+        Excel::import($import, $file);
+
+        return $import->getResults();
+    }
+
+    // =========================================================================
+    // Patient Merge
+    // =========================================================================
+
+    /**
+     * Compare fields for merge preview.
+     */
+    private const MERGE_COMPARE_FIELDS = [
+        'surname', 'othername', 'gender', 'date_of_birth', 'age', 'phone_no',
+        'alternative_no', 'email', 'address', 'nin', 'profession', 'ethnicity',
+        'marital_status', 'education', 'blood_type', 'next_of_kin',
+        'next_of_kin_no', 'next_of_kin_address',
+    ];
+
+    /**
+     * Get merge preview data for two patients.
+     */
+    public function getMergePreview(int $idA, int $idB): array
+    {
+        $patientA = Patient::with(['patientTags', 'InsuranceCompany', 'source'])->findOrFail($idA);
+        $patientB = Patient::with(['patientTags', 'InsuranceCompany', 'source'])->findOrFail($idB);
+
+        $countsA = $this->getPatientRelatedCounts($idA);
+        $countsB = $this->getPatientRelatedCounts($idB);
+
+        // Build field comparison — only fields that differ
+        $compareFields = [];
+        foreach (self::MERGE_COMPARE_FIELDS as $field) {
+            $valA = $patientA->{$field};
+            $valB = $patientB->{$field};
+            if ($valA != $valB) {
+                $compareFields[] = [
+                    'field' => $field,
+                    'label' => __('patient.' . $field),
+                    'value_a' => $valA,
+                    'value_b' => $valB,
+                ];
+            }
+        }
+
+        return [
+            'patient_a' => [
+                'id' => $patientA->id,
+                'patient_no' => $patientA->patient_no,
+                'full_name' => NameHelper::join($patientA->surname, $patientA->othername),
+                'phone_no' => $patientA->phone_no,
+                'counts' => $countsA,
+            ],
+            'patient_b' => [
+                'id' => $patientB->id,
+                'patient_no' => $patientB->patient_no,
+                'full_name' => NameHelper::join($patientB->surname, $patientB->othername),
+                'phone_no' => $patientB->phone_no,
+                'counts' => $countsB,
+            ],
+            'compare_fields' => $compareFields,
+        ];
+    }
+
+    /**
+     * Get related data counts for a patient.
+     */
+    private function getPatientRelatedCounts(int $patientId): array
+    {
+        return [
+            'appointments' => Appointment::where('patient_id', $patientId)->count(),
+            'invoices' => DB::table('invoices')
+                ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
+                ->where('appointments.patient_id', $patientId)
+                ->whereNull('invoices.deleted_at')
+                ->whereNull('appointments.deleted_at')
+                ->count(),
+            'cases' => MedicalCase::where('patient_id', $patientId)->count(),
+            'images' => PatientImage::where('patient_id', $patientId)->count(),
+            'followups' => PatientFollowup::where('patient_id', $patientId)->count(),
+            'tags' => DB::table('patient_tag_pivot')->where('patient_id', $patientId)->count(),
+        ];
+    }
+
+    /**
+     * Merge two patients: migrate all related data from secondary to primary.
+     */
+    public function mergePatients(int $primaryId, int $secondaryId, array $fieldOverrides = []): bool
+    {
+        return DB::transaction(function () use ($primaryId, $secondaryId, $fieldOverrides) {
+            $primary = Patient::findOrFail($primaryId);
+            $secondary = Patient::findOrFail($secondaryId);
+
+            // 1. Field overrides — apply selected secondary field values to primary
+            if (!empty($fieldOverrides)) {
+                $allowedFields = array_flip(self::MERGE_COMPARE_FIELDS);
+                $overrideData = [];
+                foreach ($fieldOverrides as $field => $value) {
+                    if (isset($allowedFields[$field])) {
+                        $overrideData[$field] = $value;
+                    }
+                }
+                if (!empty($overrideData)) {
+                    Patient::where('id', $primaryId)->update($overrideData);
+                }
+            }
+
+            // 2. Migrate related tables — update patient_id to primary
+            $migrateTables = [
+                'appointments' => 'patient_id',
+                'medical_cases' => 'patient_id',
+                'patient_images' => 'patient_id',
+                'patient_followups' => 'patient_id',
+                'treatment_plans' => 'patient_id',
+                'quotations' => 'patient_id',
+                'refunds' => 'patient_id',
+                'lab_cases' => 'patient_id',
+                'sms_loggings' => 'patient_id',
+                'member_transactions' => 'patient_id',
+                'coupon_usages' => 'patient_id',
+            ];
+
+            foreach ($migrateTables as $table => $column) {
+                if (\Schema::hasTable($table)) {
+                    DB::table($table)->where($column, $secondaryId)->update([$column => $primaryId]);
+                }
+            }
+
+            // Invoices are linked via appointments, already migrated above
+
+            // 3. Tags — union: add secondary's unique tags to primary, then remove secondary pivot
+            $primaryTagIds = DB::table('patient_tag_pivot')
+                ->where('patient_id', $primaryId)
+                ->pluck('tag_id')
+                ->toArray();
+
+            $secondaryTags = DB::table('patient_tag_pivot')
+                ->where('patient_id', $secondaryId)
+                ->pluck('tag_id')
+                ->toArray();
+
+            $newTags = array_diff($secondaryTags, $primaryTagIds);
+            foreach ($newTags as $tagId) {
+                DB::table('patient_tag_pivot')->insert([
+                    'patient_id' => $primaryId,
+                    'tag_id' => $tagId,
+                ]);
+            }
+            DB::table('patient_tag_pivot')->where('patient_id', $secondaryId)->delete();
+
+            // 4. Shared holders — update both FK directions
+            if (\Schema::hasTable('member_shared_holders')) {
+                DB::table('member_shared_holders')
+                    ->where('primary_patient_id', $secondaryId)
+                    ->update(['primary_patient_id' => $primaryId]);
+                DB::table('member_shared_holders')
+                    ->where('shared_patient_id', $secondaryId)
+                    ->update(['shared_patient_id' => $primaryId]);
+            }
+
+            // 5. Patient analytics — UNIQUE constraint, delete secondary row
+            if (\Schema::hasTable('patient_analytics')) {
+                DB::table('patient_analytics')->where('patient_id', $secondaryId)->delete();
+            }
+
+            // 6. Mark secondary as merged
+            $secondary->status = 'merged';
+            $secondary->merged_to_id = $primaryId;
+            $secondary->save();
+
+            // 7. Operation log
+            OperationLog::log('merge', '患者管理', 'Patient', $primaryId, [
+                'secondary_id' => $secondaryId,
+                'secondary_name' => NameHelper::join($secondary->surname, $secondary->othername),
+            ], [
+                'primary_id' => $primaryId,
+                'primary_name' => NameHelper::join($primary->surname, $primary->othername),
+                'field_overrides' => $fieldOverrides,
+            ]);
+
+            return true;
+        });
     }
 }

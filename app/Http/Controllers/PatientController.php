@@ -10,6 +10,7 @@ use App\Services\DataMaskingService;
 use App\Services\PatientService;
 use Illuminate\Http\Request;
 use App\Exports\PatientExport;
+use App\Exports\PatientImportTemplate;
 use Maatwebsite\Excel\Facades\Excel;
 
 class PatientController extends Controller
@@ -20,9 +21,9 @@ class PatientController extends Controller
     {
         $this->patientService = $patientService;
 
-        $this->middleware('can:view-patients')->only(['index', 'show', 'filterPatients', 'patientMedicalHistory', 'exportPatients']);
-        $this->middleware('can:create-patients')->only(['create', 'store']);
-        $this->middleware('can:edit-patients')->only(['edit', 'update', 'updateQuickInfo']);
+        $this->middleware('can:view-patients')->only(['index', 'show', 'filterPatients', 'patientMedicalHistory', 'exportPatients', 'downloadImportTemplate']);
+        $this->middleware('can:create-patients')->only(['create', 'store', 'importPatients']);
+        $this->middleware('can:edit-patients')->only(['edit', 'update', 'updateQuickInfo', 'batchUpdateTags', 'batchUpdateGroup', 'mergePreview', 'mergePatients']);
         $this->middleware('can:delete-patients')->only(['destroy']);
         $this->middleware('can:export-patients')->only(['exportPatients']);
         $this->middleware('can:view-sensitive-data')->only(['revealPii']);
@@ -46,6 +47,9 @@ class PatientController extends Controller
                 'quick_search', 'search', 'start_date', 'end_date',
                 'insurance_company', 'filter_source', 'filter_tags',
                 'filter_group', 'filter_sidebar_tag',
+                'filter_age_min', 'filter_age_max',
+                'filter_spend_min', 'filter_spend_max',
+                'filter_doctor',
             ]));
 
             return $this->patientService->buildIndexDataTable($data);
@@ -245,6 +249,126 @@ class PatientController extends Controller
             return response()->json(['message' => __('messages.patient_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
+    }
+
+    /**
+     * Batch update tags for multiple patients.
+     */
+    public function batchUpdateTags(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_ids' => 'required|array|min:1',
+            'patient_ids.*' => 'integer|exists:patients,id',
+            'tag_ids' => 'nullable|array',
+            'tag_ids.*' => 'integer|exists:patient_tags,id',
+            'mode' => 'required|in:append,replace',
+        ]);
+        $count = $this->patientService->batchUpdateTags(
+            $validated['patient_ids'],
+            $validated['tag_ids'] ?? [],
+            $validated['mode']
+        );
+        return response()->json(['status' => 1, 'message' => __('patient.batch_tags_updated', ['count' => $count])]);
+    }
+
+    /**
+     * Batch update group for multiple patients.
+     */
+    public function batchUpdateGroup(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_ids' => 'required|array|min:1',
+            'patient_ids.*' => 'integer|exists:patients,id',
+            'group_code' => 'nullable|string',
+        ]);
+        $count = $this->patientService->batchUpdateGroup(
+            $validated['patient_ids'],
+            $validated['group_code'] ?? null
+        );
+        return response()->json(['status' => 1, 'message' => __('patient.batch_group_updated', ['count' => $count])]);
+    }
+
+    /**
+     * Merge preview: return comparison data for two patients.
+     */
+    public function mergePreview(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_a' => 'required|integer|exists:patients,id',
+            'patient_b' => 'required|integer|exists:patients,id|different:patient_a',
+        ]);
+
+        $preview = $this->patientService->getMergePreview($validated['patient_a'], $validated['patient_b']);
+
+        return response()->json(['status' => 1, 'data' => $preview]);
+    }
+
+    /**
+     * Execute patient merge.
+     */
+    public function mergePatients(Request $request)
+    {
+        $validated = $request->validate([
+            'primary_id' => 'required|integer|exists:patients,id',
+            'secondary_id' => 'required|integer|exists:patients,id|different:primary_id',
+            'field_overrides' => 'nullable|array',
+        ]);
+
+        try {
+            $this->patientService->mergePatients(
+                $validated['primary_id'],
+                $validated['secondary_id'],
+                $validated['field_overrides'] ?? []
+            );
+
+            return response()->json(['status' => 1, 'message' => __('patient.merge_success')]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 0, 'message' => __('patient.merge_failed')]);
+        }
+    }
+
+    /**
+     * Download patient import template.
+     */
+    public function downloadImportTemplate()
+    {
+        return Excel::download(new PatientImportTemplate(), __('patient.import_template_filename') . '.xlsx');
+    }
+
+    /**
+     * Import patients from uploaded Excel file.
+     */
+    public function importPatients(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:5120',
+        ], [
+            'file.required' => __('patient.import_file_required'),
+            'file.mimes' => __('patient.import_supported_formats'),
+            'file.max' => __('patient.import_file_too_large'),
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 0,
+                'message' => $validator->errors()->first(),
+            ]);
+        }
+
+        try {
+            $results = $this->patientService->importPatients($request->file('file'));
+
+            return response()->json([
+                'status' => 1,
+                'message' => __('patient.import_success_count', ['count' => $results['success']]),
+                'data' => $results,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 0,
+                'message' => __('messages.error_occurred') . ': ' . $e->getMessage(),
+            ]);
+        }
     }
 
     /**
