@@ -170,6 +170,23 @@
     white-space: nowrap;
 }
 
+/* Override DataTables sorting padding so th/td padding stays identical */
+.list-table.dataTable thead > tr > th.sorting,
+.list-table.dataTable thead > tr > th.sorting_asc,
+.list-table.dataTable thead > tr > th.sorting_desc,
+.list-table.dataTable thead > tr > th.sorting_asc_disabled,
+.list-table.dataTable thead > tr > th.sorting_desc_disabled {
+    padding-right: 12px;
+    background-image: none;
+}
+.list-table.dataTable thead .sorting::after,
+.list-table.dataTable thead .sorting_asc::after,
+.list-table.dataTable thead .sorting_desc::after,
+.list-table.dataTable thead .sorting_asc_disabled::after,
+.list-table.dataTable thead .sorting_desc_disabled::after {
+    display: none;
+}
+
 /* Table Body */
 .list-table tbody td {
     padding: 14px 12px;
@@ -200,10 +217,13 @@
     white-space: nowrap;
 }
 
-/* Checkbox Column */
-.list-table .col-checkbox {
+/* Checkbox Column — must override DataTables thead/tbody padding differences */
+.list-table th.col-checkbox,
+.list-table td.col-checkbox {
     width: 40px;
     text-align: center;
+    padding-left: 12px;
+    padding-right: 12px;
 }
 
 /* Monospace */

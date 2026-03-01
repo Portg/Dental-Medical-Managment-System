@@ -34,7 +34,7 @@
 @section('css')
     @include('layouts.page_loader')
     {{-- Unified list page styles --}}
-    <link rel="stylesheet" href="{{ asset('css/list-page.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/list-page.css') }}?v={{ filemtime(public_path('css/list-page.css')) }}">
     {{-- Unified form modal styles --}}
     <link rel="stylesheet" href="{{ asset('css/form-modal.css') }}">
 
