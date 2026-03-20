@@ -21,16 +21,19 @@ class UsersTableSeeder extends Seeder
         $adminRole = Role::where('slug', 'super-admin')->first();
         $mainBranch = Branch::where('name', '瑞贝口腔')->whereNull('deleted_at')  ->first();
 
-        // 创建一个管理员账号
-        User::create([
-            'surname' => 'Admin',
-            'othername' => 'User',
-            'email' => 'admin@example.com',
-            'phone_no' => '1234567890',
-            'password' => Hash::make('password'),
-            'is_doctor' => 'No',
-            'role_id' => $adminRole->id,
-            'branch_id' => $mainBranch->id
-        ]);
+        // 创建一个管理员账号（幂等：username 唯一，已存在则跳过）
+        User::firstOrCreate(
+            ['username' => 'admin'],
+            [
+                'surname'   => 'Admin',
+                'othername' => 'User',
+                'email'     => 'admin@example.com',
+                'phone_no'  => '1234567890',
+                'password'  => Hash::make('password'),
+                'is_doctor' => 'No',
+                'role_id'   => $adminRole->id,
+                'branch_id' => $mainBranch->id,
+            ]
+        );
     }
 }

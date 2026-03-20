@@ -64,6 +64,7 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'view-invoices',
                 'manage-medical-cases', 'manage-treatments',
                 'view-sensitive-data',
+                'view-own-doctor-report',
             ])->get();
 
             foreach ($doctorPermissions as $permission) {

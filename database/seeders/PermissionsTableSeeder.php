@@ -48,6 +48,7 @@ class PermissionsTableSeeder extends Seeder
 
             // 报表管理
             ['name' => '查看报表', 'slug' => 'view-reports', 'module' => '报表管理', 'description' => '查看各类统计报表'],
+            ['name' => '查看个人绩效报表', 'slug' => 'view-own-doctor-report', 'module' => '报表管理', 'description' => '医生查看自己的绩效和工作量数据'],
             ['name' => '导出报表', 'slug' => 'export-reports', 'module' => '报表管理', 'description' => '导出报表数据'],
 
             // 数据安全
