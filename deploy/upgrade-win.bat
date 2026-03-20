@@ -44,6 +44,7 @@ set "LARAGON_DIR=%INSTALL_DIR%\laragon"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 set "BACKUP_BASE=%INSTALL_DIR%\backups"
 set "ENV_PATCH=%UPGRADE_PKG_DIR%\env.patch"
+set "HELPER_DIR=%PROJECT_DIR%\deploy\batch-helpers"
 
 REM 自动查找 PHP / MySQL（兼容不同 Laragon 版本的目录命名）
 set "PHP_DIR="
@@ -663,11 +664,11 @@ echo.
 goto :done
 
 :merge_env_patch
-"!PHP!" -r "$envFile='%PROJECT_DIR%\.env';$patchFile='!ENV_PATCH!';if(!file_exists($envFile)||!file_exists($patchFile))exit(1);$env=file_get_contents($envFile);$patch=file_get_contents($patchFile);$added=0;foreach(explode(PHP_EOL,$patch) as $line){$line=trim($line);if($line===''||$line[0]==='#')continue;$parts=explode('=',$line,2);if(count($parts)<2)continue;$key=trim($parts[0]);if(!preg_match('/^'.preg_quote($key,'/').'=/m',$env)){$env.=PHP_EOL.$line;$added++;echo '          + '.$key.PHP_EOL;}}file_put_contents($envFile,$env);echo '        合并完成，新增 '.$added.' 个配置项'.PHP_EOL;"
+"!PHP!" "!HELPER_DIR!\merge_missing_env.php" "%PROJECT_DIR%\.env" "!ENV_PATCH!"
 exit /b %ERRORLEVEL%
 
 :merge_env_example
-"!PHP!" -r "$envFile='%PROJECT_DIR%\.env';$exampleFile='%PROJECT_DIR%\.env.example';if(!file_exists($envFile)||!file_exists($exampleFile))exit(0);$env=file_get_contents($envFile);$example=file_get_contents($exampleFile);$added=0;foreach(explode(PHP_EOL,$example) as $line){$line=trim($line);if($line===''||$line[0]==='#')continue;$parts=explode('=',$line,2);if(count($parts)<2)continue;$key=trim($parts[0]);if(!preg_match('/^'.preg_quote($key,'/').'=/m',$env)){$env.=PHP_EOL.$line;$added++;echo '          + '.$key.PHP_EOL;}}if($added>0)file_put_contents($envFile,$env);echo '        从 .env.example 新增 '.$added.' 项'.PHP_EOL;"
+"!PHP!" "!HELPER_DIR!\merge_missing_env.php" "%PROJECT_DIR%\.env" "%PROJECT_DIR%\.env.example"
 exit /b %ERRORLEVEL%
 
 :abort_no_rollback

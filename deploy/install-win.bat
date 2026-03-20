@@ -77,6 +77,7 @@ REM ── 推导目录结构 ────────────────�
 set "LARAGON_DIR=%INSTALL_DIR%\laragon"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 set "NGINX_CONF_DIR=%LARAGON_DIR%\etc\nginx\sites-enabled"
+set "HELPER_DIR=%PROJECT_DIR%\deploy\batch-helpers"
 
 echo.
 echo  +=========================================================+
@@ -1033,19 +1034,19 @@ echo.
 goto :done
 
 :write_env_from_template
-"!PHP_EXE!" -r "$tpl=file_get_contents('%ENV_TEMPLATE%');$replacements=['{{DB_HOST}}'=>'%DB_HOST%','{{DB_PORT}}'=>'%DB_PORT%','{{DB_DATABASE}}'=>'%DB_NAME%','{{DB_USERNAME}}'=>'%DB_USER%','{{DB_PASSWORD}}'=>'%DB_PASS%','{{APP_URL}}'=>'%APP_URL%','{{OCR_PYTHON_PATH}}'=>'%OCR_PYTHON_PATH%'];$env=str_replace(array_keys($replacements),array_values($replacements),$tpl);file_put_contents('%ENV_TARGET%',$env);"
+"!PHP_EXE!" "!HELPER_DIR!\install_render_env.php" "%ENV_TEMPLATE%" "%ENV_TARGET%" "%DB_HOST%" "%DB_PORT%" "%DB_NAME%" "%DB_USER%" "%DB_PASS%" "%APP_URL%" "%OCR_PYTHON_PATH%"
 exit /b %ERRORLEVEL%
 
 :write_env_from_example
-"!PHP_EXE!" -r "$env=file_get_contents('%ENV_TARGET%');$env=preg_replace('/^APP_ENV=.*/m','APP_ENV=production',$env);$env=preg_replace('/^APP_DEBUG=.*/m','APP_DEBUG=false',$env);$env=preg_replace('/^APP_URL=.*/m','APP_URL=%APP_URL%',$env);$env=preg_replace('/^DB_HOST=.*/m','DB_HOST=%DB_HOST%',$env);$env=preg_replace('/^DB_PORT=.*/m','DB_PORT=%DB_PORT%',$env);$env=preg_replace('/^DB_DATABASE=.*/m','DB_DATABASE=%DB_NAME%',$env);$env=preg_replace('/^DB_USERNAME=.*/m','DB_USERNAME=%DB_USER%',$env);$env=preg_replace('/^DB_PASSWORD=.*/m','DB_PASSWORD=%DB_PASS%',$env);file_put_contents('%ENV_TARGET%',$env);"
+"!PHP_EXE!" "!HELPER_DIR!\install_update_env.php" "%ENV_TARGET%" "%APP_URL%" "%DB_HOST%" "%DB_PORT%" "%DB_NAME%" "%DB_USER%" "%DB_PASS%"
 exit /b %ERRORLEVEL%
 
 :update_ocr_env_path
-"!PHP_EXE!" -r "$env=file_get_contents('%ENV_TARGET%');$env=preg_replace('/^OCR_PYTHON_PATH=.*/m','OCR_PYTHON_PATH=%OCR_VENV%\Scripts\python.exe',$env);file_put_contents('%ENV_TARGET%',$env);"
+"!PHP_EXE!" "!HELPER_DIR!\update_ocr_env_path.php" "%ENV_TARGET%" "%OCR_VENV%\Scripts\python.exe"
 exit /b %ERRORLEVEL%
 
 :write_nginx_conf
-"!PHP_EXE!" -r "$root='%NGINX_ROOT_SLASH%';$conf='server {'.PHP_EOL.'    listen 80;'.PHP_EOL.'    server_name localhost;'.PHP_EOL.'    root \"'.$root.'\";'.PHP_EOL.PHP_EOL.'    index index.php index.html;'.PHP_EOL.PHP_EOL.'    location / {'.PHP_EOL.'        try_files \$uri \$uri/ /index.php?\$query_string;'.PHP_EOL.'    }'.PHP_EOL.PHP_EOL.'    location ~ \.php\$ {'.PHP_EOL.'        fastcgi_pass 127.0.0.1:9000;'.PHP_EOL.'        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;'.PHP_EOL.'        include fastcgi_params;'.PHP_EOL.'    }'.PHP_EOL.PHP_EOL.'    location ~ /\.ht {'.PHP_EOL.'        deny all;'.PHP_EOL.'    }'.PHP_EOL.PHP_EOL.'    client_max_body_size 100M;'.PHP_EOL.'}'.PHP_EOL;file_put_contents('%NGINX_CONF_FILE%',$conf);"
+"!PHP_EXE!" "!HELPER_DIR!\write_nginx_conf.php" "%NGINX_CONF_FILE%" "%NGINX_ROOT_SLASH%"
 exit /b %ERRORLEVEL%
 
 REM ═══════════════════════════════════════════════════════════════════════

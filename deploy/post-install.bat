@@ -16,6 +16,7 @@ if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
 set "LARAGON_DIR=%INSTALL_DIR%\laragon"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 set "COMPOSER=%LARAGON_DIR%\bin\composer\composer.phar"
+set "HELPER_DIR=%PROJECT_DIR%\deploy\batch-helpers"
 
 REM 自动查找 PHP（兼容不同 Laragon 版本的目录命名）
 set "PHP_DIR="
@@ -245,7 +246,7 @@ echo.
 goto :done
 
 :update_env_file
-"!PHP!" -r "$f='!PHP_ENV_PATH!';if(!file_exists($f)){fwrite(STDERR,'[错误] .env 文件不存在: '.$f.PHP_EOL);exit(1);}$env=file_get_contents($f);$env=preg_replace('/^APP_URL=.*/m','APP_URL=http://localhost/dental',$env);$env=preg_replace('/^APP_NAME=.*/m','APP_NAME=牙科诊所管理系统',$env);$env=preg_replace('/^DB_DATABASE=.*/m','DB_DATABASE=pristine_dental',$env);$env=preg_replace('/^DB_USERNAME=.*/m','DB_USERNAME=root',$env);$env=preg_replace('/^DB_PASSWORD=.*/m','DB_PASSWORD=',$env);file_put_contents($f,$env);"
+"!PHP!" "!HELPER_DIR!\post_install_update_env.php" "%PROJECT_DIR%\.env"
 exit /b %ERRORLEVEL%
 
 :error
