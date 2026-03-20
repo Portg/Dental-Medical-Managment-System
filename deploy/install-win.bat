@@ -155,7 +155,7 @@ if exist "%PROJECT_DIR%\artisan" (
     if "%SILENT_MODE%"=="1" (
         echo         静默模式：将覆盖已有安装
     ) else (
-        set /p "OVERWRITE_CONFIRM=         是否覆盖已有安装？(Y/N): "
+        set /p "OVERWRITE_CONFIRM=         是否覆盖已有安装？^(Y/N^): "
         if /i "!OVERWRITE_CONFIRM!" neq "Y" (
             echo  安装已取消。
             goto :done
@@ -328,7 +328,7 @@ if not defined COMPOSER_CMD (
 if defined COMPOSER_CMD (
     echo        Composer ......... !COMPOSER_CMD!
 ) else (
-    echo  [错误] 未找到 Composer (检查: %LARAGON_DIR%\bin\composer\composer.phar)
+    echo  [错误] 未找到 Composer ^(检查: %LARAGON_DIR%\bin\composer\composer.phar^)
     goto :error
 )
 
@@ -442,7 +442,7 @@ if !ERRORLEVEL! equ 0 (
 set /a "WAIT_COUNT+=2"
 if !WAIT_COUNT! geq 60 (
     echo.
-    echo  [错误] MySQL 启动超时 (60秒)
+    echo  [错误] MySQL 启动超时 ^(60秒^)
     echo         建议: 手动运行 Laragon 面板启动 MySQL，然后重新执行此脚本
     goto :error
 )
@@ -526,20 +526,7 @@ if "%SKIP_OCR%"=="0" (
 
 if exist "%ENV_TEMPLATE%" (
     REM 使用 .env.deploy 模板替换占位符
-    "!PHP_EXE!" -r "
-        $tpl = file_get_contents('%ENV_TEMPLATE%');
-        $replacements = [
-            '{{DB_HOST}}'         => '%DB_HOST%',
-            '{{DB_PORT}}'         => '%DB_PORT%',
-            '{{DB_DATABASE}}'     => '%DB_NAME%',
-            '{{DB_USERNAME}}'     => '%DB_USER%',
-            '{{DB_PASSWORD}}'     => '%DB_PASS%',
-            '{{APP_URL}}'         => '%APP_URL%',
-            '{{OCR_PYTHON_PATH}}' => '%OCR_PYTHON_PATH%',
-        ];
-        $env = str_replace(array_keys($replacements), array_values($replacements), $tpl);
-        file_put_contents('%ENV_TARGET%', $env);
-    "
+    call :write_env_from_template
     if !ERRORLEVEL! neq 0 (
         echo  [错误] .env 模板替换失败
         goto :error
@@ -555,18 +542,11 @@ if exist "%ENV_TEMPLATE%" (
             goto :error
         )
     )
-    "!PHP_EXE!" -r "
-        $env = file_get_contents('%ENV_TARGET%');
-        $env = preg_replace('/^APP_ENV=.*/m',      'APP_ENV=production',    $env);
-        $env = preg_replace('/^APP_DEBUG=.*/m',     'APP_DEBUG=false',       $env);
-        $env = preg_replace('/^APP_URL=.*/m',       'APP_URL=%APP_URL%',     $env);
-        $env = preg_replace('/^DB_HOST=.*/m',       'DB_HOST=%DB_HOST%',     $env);
-        $env = preg_replace('/^DB_PORT=.*/m',       'DB_PORT=%DB_PORT%',     $env);
-        $env = preg_replace('/^DB_DATABASE=.*/m',   'DB_DATABASE=%DB_NAME%', $env);
-        $env = preg_replace('/^DB_USERNAME=.*/m',   'DB_USERNAME=%DB_USER%', $env);
-        $env = preg_replace('/^DB_PASSWORD=.*/m',   'DB_PASSWORD=%DB_PASS%', $env);
-        file_put_contents('%ENV_TARGET%', $env);
-    "
+    call :write_env_from_example
+    if !ERRORLEVEL! neq 0 (
+        echo  [错误] .env 生成失败
+        goto :error
+    )
     echo        已从 .env.example 生成 .env
 )
 echo.
@@ -588,7 +568,7 @@ if %ERRORLEVEL% equ 0 (
     "!PHP_EXE!" artisan key:generate --force --no-interaction
     if !ERRORLEVEL! neq 0 (
         echo  [错误] 生成 APP_KEY 失败
-        echo         请检查 PHP 扩展是否完整 (openssl, mbstring, etc.)
+        echo         请检查 PHP 扩展是否完整 ^(openssl, mbstring, etc.^)
         goto :error
     )
     echo        APP_KEY 已生成
@@ -784,7 +764,7 @@ if not exist "%OCR_REQUIREMENTS%" (
 
 echo        安装 OCR 依赖包...
 if exist "%OCR_WHEELS_DIR%" (
-    echo        模式: 离线安装 (从 %OCR_WHEELS_DIR%)
+    echo        模式: 离线安装 ^(从 %OCR_WHEELS_DIR%^)
     "%OCR_VENV%\Scripts\pip.exe" install --no-index --find-links="%OCR_WHEELS_DIR%" -r "%OCR_REQUIREMENTS%" -q 2>&1
     if !ERRORLEVEL! neq 0 (
         echo        [警告] 离线安装失败，尝试在线安装...
@@ -807,11 +787,10 @@ if %ERRORLEVEL% equ 0 (
 REM 更新 .env 中 OCR_PYTHON_PATH
 findstr /b "OCR_PYTHON_PATH=" "%ENV_TARGET%" >nul 2>&1
 if %ERRORLEVEL% equ 0 (
-    "!PHP_EXE!" -r "
-        $env = file_get_contents('%ENV_TARGET%');
-        $env = preg_replace('/^OCR_PYTHON_PATH=.*/m', 'OCR_PYTHON_PATH=%OCR_VENV%\Scripts\python.exe', $env);
-        file_put_contents('%ENV_TARGET%', $env);
-    "
+    call :update_ocr_env_path
+    if !ERRORLEVEL! neq 0 (
+        echo        [警告] OCR 路径写入失败
+    )
 ) else (
     echo.>> "%ENV_TARGET%"
     echo # OCR Service>> "%ENV_TARGET%"
@@ -850,33 +829,7 @@ set "NGINX_CONF_FILE=%NGINX_CONF_DIR%\auto.dental.conf"
 echo        生成 %NGINX_CONF_FILE%
 
 REM 使用 PHP 写入 Nginx 配置（避免 batch 转义问题）
-"!PHP_EXE!" -r "
-    $root = '%NGINX_ROOT_SLASH%';
-    $conf = 'server {' . PHP_EOL;
-    $conf .= '    listen 80;' . PHP_EOL;
-    $conf .= '    server_name localhost;' . PHP_EOL;
-    $conf .= '    root \"' . $root . '\";' . PHP_EOL;
-    $conf .= '' . PHP_EOL;
-    $conf .= '    index index.php index.html;' . PHP_EOL;
-    $conf .= '' . PHP_EOL;
-    $conf .= '    location / {' . PHP_EOL;
-    $conf .= '        try_files \$uri \$uri/ /index.php?\$query_string;' . PHP_EOL;
-    $conf .= '    }' . PHP_EOL;
-    $conf .= '' . PHP_EOL;
-    $conf .= '    location ~ \.php\$ {' . PHP_EOL;
-    $conf .= '        fastcgi_pass 127.0.0.1:9000;' . PHP_EOL;
-    $conf .= '        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;' . PHP_EOL;
-    $conf .= '        include fastcgi_params;' . PHP_EOL;
-    $conf .= '    }' . PHP_EOL;
-    $conf .= '' . PHP_EOL;
-    $conf .= '    location ~ /\.ht {' . PHP_EOL;
-    $conf .= '        deny all;' . PHP_EOL;
-    $conf .= '    }' . PHP_EOL;
-    $conf .= '' . PHP_EOL;
-    $conf .= '    client_max_body_size 100M;' . PHP_EOL;
-    $conf .= '}' . PHP_EOL;
-    file_put_contents('%NGINX_CONF_FILE%', $conf);
-"
+call :write_nginx_conf
 if %ERRORLEVEL% equ 0 (
     echo        Nginx 配置已生成
     echo        Root: %NGINX_ROOT_SLASH%
@@ -938,7 +891,7 @@ if defined NSSM_EXE (
         "!NSSM_EXE!" set "%SVC_NAME%" DisplayName "DentalClinic MySQL" >nul 2>&1
         "!NSSM_EXE!" set "%SVC_NAME%" Description "牙科诊所管理系统 - MySQL 数据库服务" >nul 2>&1
         "!NSSM_EXE!" set "%SVC_NAME%" Start SERVICE_AUTO_START >nul 2>&1
-        echo        服务 %SVC_NAME% 注册成功 (NSSM, 自动启动)
+        echo        服务 %SVC_NAME% 注册成功 ^(NSSM, 自动启动^)
     ) else (
         echo        [警告] NSSM 注册服务失败
     )
@@ -954,7 +907,7 @@ if exist "!MYSQL_INI!" (
 )
 if %ERRORLEVEL% equ 0 (
     sc description "%SVC_NAME%" "牙科诊所管理系统 - MySQL 数据库服务" >nul 2>&1
-    echo        服务 %SVC_NAME% 注册成功 (sc.exe, 自动启动)
+    echo        服务 %SVC_NAME% 注册成功 ^(sc.exe, 自动启动^)
 ) else (
     echo        [警告] 服务注册失败 — MySQL 需要手动启动
     echo        可稍后手动运行: sc create %SVC_NAME% binPath= "!MYSQLD_EXE!"
@@ -1078,6 +1031,22 @@ echo  数据库连接信息:
 echo    主机: %DB_HOST%:%DB_PORT%  数据库: %DB_NAME%  用户: %DB_USER%
 echo.
 goto :done
+
+:write_env_from_template
+"!PHP_EXE!" -r "$tpl=file_get_contents('%ENV_TEMPLATE%');$replacements=['{{DB_HOST}}'=>'%DB_HOST%','{{DB_PORT}}'=>'%DB_PORT%','{{DB_DATABASE}}'=>'%DB_NAME%','{{DB_USERNAME}}'=>'%DB_USER%','{{DB_PASSWORD}}'=>'%DB_PASS%','{{APP_URL}}'=>'%APP_URL%','{{OCR_PYTHON_PATH}}'=>'%OCR_PYTHON_PATH%'];$env=str_replace(array_keys($replacements),array_values($replacements),$tpl);file_put_contents('%ENV_TARGET%',$env);"
+exit /b %ERRORLEVEL%
+
+:write_env_from_example
+"!PHP_EXE!" -r "$env=file_get_contents('%ENV_TARGET%');$env=preg_replace('/^APP_ENV=.*/m','APP_ENV=production',$env);$env=preg_replace('/^APP_DEBUG=.*/m','APP_DEBUG=false',$env);$env=preg_replace('/^APP_URL=.*/m','APP_URL=%APP_URL%',$env);$env=preg_replace('/^DB_HOST=.*/m','DB_HOST=%DB_HOST%',$env);$env=preg_replace('/^DB_PORT=.*/m','DB_PORT=%DB_PORT%',$env);$env=preg_replace('/^DB_DATABASE=.*/m','DB_DATABASE=%DB_NAME%',$env);$env=preg_replace('/^DB_USERNAME=.*/m','DB_USERNAME=%DB_USER%',$env);$env=preg_replace('/^DB_PASSWORD=.*/m','DB_PASSWORD=%DB_PASS%',$env);file_put_contents('%ENV_TARGET%',$env);"
+exit /b %ERRORLEVEL%
+
+:update_ocr_env_path
+"!PHP_EXE!" -r "$env=file_get_contents('%ENV_TARGET%');$env=preg_replace('/^OCR_PYTHON_PATH=.*/m','OCR_PYTHON_PATH=%OCR_VENV%\Scripts\python.exe',$env);file_put_contents('%ENV_TARGET%',$env);"
+exit /b %ERRORLEVEL%
+
+:write_nginx_conf
+"!PHP_EXE!" -r "$root='%NGINX_ROOT_SLASH%';$conf='server {'.PHP_EOL.'    listen 80;'.PHP_EOL.'    server_name localhost;'.PHP_EOL.'    root \"'.$root.'\";'.PHP_EOL.PHP_EOL.'    index index.php index.html;'.PHP_EOL.PHP_EOL.'    location / {'.PHP_EOL.'        try_files \$uri \$uri/ /index.php?\$query_string;'.PHP_EOL.'    }'.PHP_EOL.PHP_EOL.'    location ~ \.php\$ {'.PHP_EOL.'        fastcgi_pass 127.0.0.1:9000;'.PHP_EOL.'        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;'.PHP_EOL.'        include fastcgi_params;'.PHP_EOL.'    }'.PHP_EOL.PHP_EOL.'    location ~ /\.ht {'.PHP_EOL.'        deny all;'.PHP_EOL.'    }'.PHP_EOL.PHP_EOL.'    client_max_body_size 100M;'.PHP_EOL.'}'.PHP_EOL;file_put_contents('%NGINX_CONF_FILE%',$conf);"
+exit /b %ERRORLEVEL%
 
 REM ═══════════════════════════════════════════════════════════════════════
 REM  错误处理

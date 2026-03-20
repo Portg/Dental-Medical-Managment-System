@@ -146,17 +146,11 @@ if not exist "%PROJECT_DIR%\.env" (
 REM 确保关键配置正确
 REM 将路径中的反斜杠替换为正斜杠，避免 PHP 单引号字符串中的路径解析歧义
 set "PHP_ENV_PATH=%PROJECT_DIR:\=/%/.env"
-"!PHP!" -r "
-    $f = '!PHP_ENV_PATH!';
-    if (!file_exists($f)) { fwrite(STDERR, '[错误] .env 文件不存在: ' . $f . PHP_EOL); exit(1); }
-    $env = file_get_contents($f);
-    $env = preg_replace('/^APP_URL=.*/m', 'APP_URL=http://localhost/dental', $env);
-    $env = preg_replace('/^APP_NAME=.*/m', 'APP_NAME=牙科诊所管理系统', $env);
-    $env = preg_replace('/^DB_DATABASE=.*/m', 'DB_DATABASE=pristine_dental', $env);
-    $env = preg_replace('/^DB_USERNAME=.*/m', 'DB_USERNAME=root', $env);
-    $env = preg_replace('/^DB_PASSWORD=.*/m', 'DB_PASSWORD=', $env);
-    file_put_contents($f, $env);
-"
+call :update_env_file
+if !ERRORLEVEL! neq 0 (
+    echo [错误] 更新 .env 失败
+    goto :error
+)
 echo        配置已更新
 echo.
 
@@ -249,6 +243,10 @@ echo  |                                              |
 echo  +=============================================+
 echo.
 goto :done
+
+:update_env_file
+"!PHP!" -r "$f='!PHP_ENV_PATH!';if(!file_exists($f)){fwrite(STDERR,'[错误] .env 文件不存在: '.$f.PHP_EOL);exit(1);}$env=file_get_contents($f);$env=preg_replace('/^APP_URL=.*/m','APP_URL=http://localhost/dental',$env);$env=preg_replace('/^APP_NAME=.*/m','APP_NAME=牙科诊所管理系统',$env);$env=preg_replace('/^DB_DATABASE=.*/m','DB_DATABASE=pristine_dental',$env);$env=preg_replace('/^DB_USERNAME=.*/m','DB_USERNAME=root',$env);$env=preg_replace('/^DB_PASSWORD=.*/m','DB_PASSWORD=',$env);file_put_contents($f,$env);"
+exit /b %ERRORLEVEL%
 
 :error
 echo.

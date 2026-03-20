@@ -221,7 +221,7 @@ if "!CURRENT_VERSION!"=="!NEW_VERSION!" set "IS_SAME=1"
 if "!IS_SAME!"=="1" (
     echo.
     echo  [警告] 当前已是 !CURRENT_VERSION! 版本，无需升级。
-    set /p "FORCE_UPGRADE=  是否强制重新安装? (y/N): "
+    set /p "FORCE_UPGRADE=  是否强制重新安装? ^(y/N^): "
     if /i not "!FORCE_UPGRADE!"=="y" (
         echo  操作已取消。
         goto :done
@@ -395,28 +395,7 @@ echo  +----------------------------------------------------------+
 if exist "!ENV_PATCH!" (
     echo        发现 env.patch，合并新配置项...
     REM 使用 PHP 安全地合并 — 只添加缺失的 key，不覆盖已有值
-    "!PHP!" -r "
-        $envFile = '%PROJECT_DIR%\.env';
-        $patchFile = '!ENV_PATCH!';
-        if (!file_exists($envFile) || !file_exists($patchFile)) exit(1);
-        $env = file_get_contents($envFile);
-        $patch = file_get_contents($patchFile);
-        $added = 0;
-        foreach (explode(PHP_EOL, $patch) as $line) {
-            $line = trim($line);
-            if (empty($line) || $line[0] === '#') continue;
-            $parts = explode('=', $line, 2);
-            if (count($parts) < 2) continue;
-            $key = trim($parts[0]);
-            if (!preg_match('/^' . preg_quote($key, '/') . '=/m', $env)) {
-                $env .= PHP_EOL . $line;
-                $added++;
-                echo '          + ' . $key . PHP_EOL;
-            }
-        }
-        file_put_contents($envFile, $env);
-        echo '        合并完成，新增 ' . $added . ' 个配置项' . PHP_EOL;
-    "
+    call :merge_env_patch
     if !ERRORLEVEL! neq 0 (
         echo  [错误] 环境变量合并失败
         goto :rollback
@@ -427,28 +406,11 @@ if exist "!ENV_PATCH!" (
     REM 兜底: 检查新版 .env.example 是否有新 key
     if exist "%PROJECT_DIR%\.env.example" (
         echo        检查 .env.example 中的新配置项...
-        "!PHP!" -r "
-            $envFile = '%PROJECT_DIR%\.env';
-            $exampleFile = '%PROJECT_DIR%\.env.example';
-            if (!file_exists($envFile) || !file_exists($exampleFile)) exit(0);
-            $env = file_get_contents($envFile);
-            $example = file_get_contents($exampleFile);
-            $added = 0;
-            foreach (explode(PHP_EOL, $example) as $line) {
-                $line = trim($line);
-                if (empty($line) || $line[0] === '#') continue;
-                $parts = explode('=', $line, 2);
-                if (count($parts) < 2) continue;
-                $key = trim($parts[0]);
-                if (!preg_match('/^' . preg_quote($key, '/') . '=/m', $env)) {
-                    $env .= PHP_EOL . $line;
-                    $added++;
-                    echo '          + ' . $key . PHP_EOL;
-                }
-            }
-            if ($added > 0) file_put_contents($envFile, $env);
-            echo '        从 .env.example 新增 ' . $added . ' 项' . PHP_EOL;
-        "
+        call :merge_env_example
+        if !ERRORLEVEL! neq 0 (
+            echo  [错误] .env.example 配置项检查失败
+            goto :rollback
+        )
     )
 )
 echo.
@@ -699,6 +661,14 @@ echo  |  请检查错误信息后重新尝试升级                           |
 echo  +=========================================================+
 echo.
 goto :done
+
+:merge_env_patch
+"!PHP!" -r "$envFile='%PROJECT_DIR%\.env';$patchFile='!ENV_PATCH!';if(!file_exists($envFile)||!file_exists($patchFile))exit(1);$env=file_get_contents($envFile);$patch=file_get_contents($patchFile);$added=0;foreach(explode(PHP_EOL,$patch) as $line){$line=trim($line);if($line===''||$line[0]==='#')continue;$parts=explode('=',$line,2);if(count($parts)<2)continue;$key=trim($parts[0]);if(!preg_match('/^'.preg_quote($key,'/').'=/m',$env)){$env.=PHP_EOL.$line;$added++;echo '          + '.$key.PHP_EOL;}}file_put_contents($envFile,$env);echo '        合并完成，新增 '.$added.' 个配置项'.PHP_EOL;"
+exit /b %ERRORLEVEL%
+
+:merge_env_example
+"!PHP!" -r "$envFile='%PROJECT_DIR%\.env';$exampleFile='%PROJECT_DIR%\.env.example';if(!file_exists($envFile)||!file_exists($exampleFile))exit(0);$env=file_get_contents($envFile);$example=file_get_contents($exampleFile);$added=0;foreach(explode(PHP_EOL,$example) as $line){$line=trim($line);if($line===''||$line[0]==='#')continue;$parts=explode('=',$line,2);if(count($parts)<2)continue;$key=trim($parts[0]);if(!preg_match('/^'.preg_quote($key,'/').'=/m',$env)){$env.=PHP_EOL.$line;$added++;echo '          + '.$key.PHP_EOL;}}if($added>0)file_put_contents($envFile,$env);echo '        从 .env.example 新增 '.$added.' 项'.PHP_EOL;"
+exit /b %ERRORLEVEL%
 
 :abort_no_rollback
 echo.
