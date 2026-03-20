@@ -61,12 +61,15 @@ Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recu
 ; OCR Python 离线包
 Source: "dist\ocr-wheels\*"; DestDir: "{app}\ocr-wheels"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\ocr-wheels'))
 
-; 部署脚本
-Source: "install-win.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "upgrade-win.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "start-win.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "stop-win.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "laragon-startup.bat"; DestDir: "{app}"; Flags: ignoreversion
+; 部署脚本（从 dist/ 取，已由 build.sh 转换为 GBK + CRLF，cmd.exe 可正确解析）
+; 注意：必须先运行 build.sh --target win 才能编译此安装包
+Source: "dist\install-win.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\install-win.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\upgrade-win.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\start-win.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\stop-win.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\laragon-startup.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\batch-helpers\*"; DestDir: "{app}\batch-helpers"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; 环境配置模板
 Source: ".env.deploy"; DestDir: "{app}"; Flags: ignoreversion
