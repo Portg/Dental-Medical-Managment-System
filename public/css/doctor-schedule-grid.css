@@ -1,0 +1,275 @@
+/* ===== Doctor Schedule Monthly Grid ===== */
+
+.schedule-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.schedule-toolbar .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.schedule-toolbar .month-nav .btn {
+    padding: 5px 10px;
+}
+
+.schedule-toolbar .month-label {
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* Shift buttons area */
+.shift-buttons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.shift-btn {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+}
+
+.shift-btn:hover {
+    opacity: 0.85;
+}
+
+.shift-btn.selected {
+    border-color: #333;
+    box-shadow: 0 0 0 1px #333;
+    transform: scale(1.05);
+}
+
+.shift-btn[draggable="true"] {
+    cursor: grab;
+}
+
+.shift-btn[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+/* Copy schedule toolbar */
+.copy-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.copy-toolbar label {
+    margin-bottom: 0;
+    font-weight: normal;
+    font-size: 13px;
+}
+
+.copy-toolbar input[type="date"] {
+    width: 150px;
+    height: 30px;
+    font-size: 13px;
+}
+
+/* Monthly grid table */
+.schedule-grid-wrapper {
+    overflow-x: auto;
+    margin-top: 10px;
+}
+
+.schedule-grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-width: 1200px;
+}
+
+.schedule-grid th,
+.schedule-grid td {
+    border: 1px solid #e0e0e0;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 12px;
+}
+
+/* Header: day numbers and weekday labels */
+.schedule-grid thead th {
+    padding: 4px 2px;
+    background: #fafafa;
+    font-weight: 500;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.schedule-grid thead th.weekend {
+    color: #F56C6C;
+}
+
+.schedule-grid thead th.today {
+    background: #e6f7ff;
+}
+
+.schedule-grid .weekday-row th {
+    padding: 2px;
+    font-size: 11px;
+    color: #999;
+    background: #fafafa;
+}
+
+/* Doctor name column */
+.schedule-grid .doctor-col {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    text-align: left;
+    padding: 6px 8px;
+    font-weight: 500;
+    background: #fafafa;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+
+.schedule-grid thead .doctor-col {
+    z-index: 3;
+}
+
+.schedule-grid .doctor-col .doctor-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    background: #ddd;
+    display: inline-block;
+    text-align: center;
+    line-height: 24px;
+    font-size: 11px;
+    color: #666;
+}
+
+/* Grid cells */
+.schedule-grid .day-cell {
+    padding: 3px 2px;
+    min-height: 36px;
+    height: 36px;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background-color 0.1s;
+}
+
+.schedule-grid .day-cell:hover {
+    background-color: #f0f7ff;
+}
+
+.schedule-grid .day-cell.drag-over {
+    background-color: #d6eaff;
+    outline: 2px dashed #409EFF;
+}
+
+/* Shift badges inside cells */
+.cell-shift {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 2px;
+    color: #fff;
+    font-size: 11px;
+    margin: 1px;
+    cursor: pointer;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.cell-shift:hover {
+    opacity: 0.8;
+}
+
+/* Right-click context menu */
+.schedule-context-menu {
+    position: fixed;
+    z-index: 9999;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 4px 0;
+    min-width: 120px;
+    display: none;
+}
+
+.schedule-context-menu .menu-item {
+    padding: 6px 16px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.schedule-context-menu .menu-item:hover {
+    background: #f5f5f5;
+}
+
+.schedule-context-menu .menu-item.danger {
+    color: #F56C6C;
+}
+
+/* Shift settings modal */
+.shift-settings-table {
+    width: 100%;
+}
+
+.shift-settings-table th {
+    font-weight: 500;
+    padding: 8px;
+    border-bottom: 2px solid #eee;
+}
+
+.shift-settings-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.shift-settings-table .color-preview {
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.shift-settings-table .btn-group .btn {
+    padding: 3px 8px;
+    font-size: 12px;
+}
+
+/* Action buttons in header */
+.schedule-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Responsive hint */
+.schedule-hint {
+    color: #999;
+    font-size: 12px;
+    margin-top: 8px;
+}
+.schedule-calendar { margin-top: 20px; }

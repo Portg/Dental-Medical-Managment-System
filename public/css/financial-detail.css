@@ -1,0 +1,46 @@
+/* Financial Detail Report */
+.report-tabs .nav-tabs {
+    border-bottom: 2px solid #1A237E;
+    margin-bottom: 16px;
+}
+
+.report-tabs .nav-tabs > li > a {
+    border-radius: 4px 4px 0 0;
+    color: #555;
+    font-size: 14px;
+    padding: 8px 18px;
+}
+
+.report-tabs .nav-tabs > li.active > a,
+.report-tabs .nav-tabs > li.active > a:hover,
+.report-tabs .nav-tabs > li.active > a:focus {
+    background-color: #1A237E;
+    color: #fff;
+    border-color: #1A237E;
+}
+
+.filter-row {
+    background: #fafafa;
+    padding: 12px 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #eee;
+}
+
+.amount-col {
+    font-weight: 600;
+    color: #1A237E;
+    text-align: right;
+}
+
+.refund-amount {
+    font-weight: 600;
+    color: #C62828;
+    text-align: right;
+}
+
+.expense-amount {
+    font-weight: 600;
+    color: #E65100;
+    text-align: right;
+}

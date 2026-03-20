@@ -916,3 +916,115 @@ function replaceToothPlaceholder(text, teethStr) {
     if (!text) return text;
     return text.replace(/__/g, teethStr);
 }
+
+// ==========================================================================
+// Save As Template
+// ==========================================================================
+
+function showSaveAsTemplateModal() {
+    // AG-021: Draft cases cannot be saved as template
+    if (typeof isDraftCase !== 'undefined' && isDraftCase) {
+        toastr.warning(MedicalRecordConfig.translations.templateDraftWarning);
+        return;
+    }
+
+    var chief = $('#chief_complaint').val() || '';
+    var exam  = $('#examination').val() || '';
+    var diag  = $('#diagnosis').val() || '';
+    var treat = $('#treatment').val() || '';
+    if (!chief && !exam && !diag && !treat) {
+        toastr.warning(MedicalRecordConfig.translations.templateEmptyWarning);
+        return;
+    }
+
+    var preview = '';
+    if (chief) preview += '<b>' + MedicalRecordConfig.translations.chiefComplaint + ':</b> ' + $('<span>').text(chief.substring(0, 100)).html() + (chief.length > 100 ? '...' : '') + '<br>';
+    if (exam)  preview += '<b>' + MedicalRecordConfig.translations.examination + ':</b> ' + $('<span>').text(exam.substring(0, 100)).html() + (exam.length > 100 ? '...' : '') + '<br>';
+    if (diag)  preview += '<b>' + MedicalRecordConfig.translations.diagnosis + ':</b> ' + $('<span>').text(diag.substring(0, 100)).html() + (diag.length > 100 ? '...' : '') + '<br>';
+    if (treat) preview += '<b>' + MedicalRecordConfig.translations.treatment + ':</b> ' + $('<span>').text(treat.substring(0, 100)).html() + (treat.length > 100 ? '...' : '') + '<br>';
+    $('#tpl_save_preview').html(preview);
+
+    $('#tpl_save_name').val('');
+    $('#tpl_save_code').val('');
+    $('#tpl_save_desc').val('');
+
+    $('#saveAsTemplateModal').modal('show');
+}
+
+function doSaveAsTemplate() {
+    var name = $('#tpl_save_name').val().trim();
+    if (!name) {
+        toastr.error(MedicalRecordConfig.translations.templateNameRequired);
+        return;
+    }
+
+    var content = JSON.stringify({
+        subjective: $('#chief_complaint').val() || '',
+        objective:  $('#examination').val() || '',
+        assessment: $('#diagnosis').val() || '',
+        plan:       $('#treatment').val() || ''
+    });
+
+    var data = {
+        _token: $('meta[name="csrf-token"]').attr('content'),
+        name: name,
+        category: 'personal',
+        type: 'progress_note',
+        content: content,
+        description: $('#tpl_save_desc').val() || ''
+    };
+
+    var code = $('#tpl_save_code').val().trim();
+    if (code) {
+        data.code = code;
+    }
+
+    $.ajax({
+        url: '/medical-templates',
+        type: 'POST',
+        data: data,
+        success: function(res) {
+            if (res.status) {
+                toastr.success(res.message);
+                $('#saveAsTemplateModal').modal('hide');
+            } else {
+                toastr.error(res.message);
+            }
+        },
+        error: function(xhr) {
+            if (xhr.status === 422) {
+                var errors = xhr.responseJSON.errors || {};
+                var msg = Object.values(errors).flat().join('<br>');
+                toastr.error(msg);
+            } else {
+                toastr.error(MedicalRecordConfig.translations.saveFailed);
+            }
+        }
+    });
+}
+
+// ==========================================================================
+// Fill from Appointment (补充病历)
+// ==========================================================================
+
+function fillFromAppointment(aptId, date, time, doctorId, doctorName) {
+    $('#appointment_id').val(aptId);
+    $('#case_date').val(date);
+
+    if (doctorId && $('#doctor_id').length) {
+        var $doctorSelect = $('#doctor_id');
+        if ($doctorSelect.find('option[value="' + doctorId + '"]').length === 0) {
+            var newOption = new Option(doctorName, doctorId, true, true);
+            $doctorSelect.append(newOption);
+        }
+        $doctorSelect.val(doctorId).trigger('change');
+    }
+
+    // Highlight selected appointment item
+    $('.pending-apt-item').removeClass('active-apt');
+    if (event && event.currentTarget) {
+        $(event.currentTarget).addClass('active-apt');
+    }
+
+    toastr.info(MedicalRecordConfig.translations.appointmentLinked);
+}

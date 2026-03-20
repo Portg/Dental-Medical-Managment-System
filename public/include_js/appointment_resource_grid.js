@@ -205,25 +205,58 @@
      */
     DoctorResourceGrid.prototype._bindGridEvents = function() {
         var self = this;
+        this._dragState = null;
 
-        // Cell click → open new appointment (rounded to 30-min for slot match)
-        this.container.on('click', '.drg-cell', function(e) {
+        // --- Drag-select on cells: mousedown → mousemove → mouseup ---
+        this.container.on('mousedown', '.drg-cell', function(e) {
+            // Ignore clicks on existing events or off-schedule cells
             if ($(e.target).closest('.drg-event').length) return;
             var $cell = $(this);
-
             if ($cell.hasClass('drg-off-schedule')) {
                 toastr.warning(LanguageManager.trans('appointment.off_schedule_warning'));
                 return;
             }
 
-            var doctorId = $cell.data('doctor');
-            var rawTime  = $cell.data('time');
-            var time     = self._roundTo30(rawTime);
+            e.preventDefault(); // prevent text selection
+            self._dragState = {
+                doctorId:    $cell.data('doctor'),
+                startSlot:   parseInt($cell.data('slot'), 10),
+                currentSlot: parseInt($cell.data('slot'), 10)
+            };
+            self._highlightRange(self._dragState.doctorId, self._dragState.startSlot, self._dragState.startSlot);
+        });
+
+        $(document).on('mousemove.drg', function(e) {
+            if (!self._dragState) return;
+            var $target = $(e.target).closest('.drg-cell');
+            if (!$target.length) return;
+            // Must stay in same doctor column
+            if ($target.data('doctor') !== self._dragState.doctorId) return;
+            var slot = parseInt($target.data('slot'), 10);
+            if (slot !== self._dragState.currentSlot) {
+                self._dragState.currentSlot = slot;
+                self._highlightRange(self._dragState.doctorId, self._dragState.startSlot, slot);
+            }
+        });
+
+        $(document).on('mouseup.drg', function() {
+            if (!self._dragState) return;
+            var ds = self._dragState;
+            self._dragState = null;
+            self._clearHighlight();
+
+            var minSlot = Math.min(ds.startSlot, ds.currentSlot);
+            var maxSlot = Math.max(ds.startSlot, ds.currentSlot);
+            var startTime = self._slotToTime(minSlot);
+            var duration  = (maxSlot - minSlot + 1) * SLOT_MINUTES;
+            var time      = self._roundTo30(startTime);
+
             if (typeof openAppointmentDrawer === 'function') {
                 openAppointmentDrawer({
-                    date: self._formatDate(self.currentDate),
-                    doctor_id: doctorId,
-                    time: time
+                    date:      self._formatDate(self.currentDate),
+                    doctor_id: ds.doctorId,
+                    time:      time,
+                    duration:  duration
                 });
             }
         });
@@ -241,6 +274,36 @@
                 window.showAppointmentPopover(fakeEvent, e);
             }
         });
+    };
+
+    /**
+     * Highlight cells in a doctor column between slotA and slotB (inclusive).
+     */
+    DoctorResourceGrid.prototype._highlightRange = function(doctorId, slotA, slotB) {
+        this._clearHighlight();
+        var minSlot = Math.min(slotA, slotB);
+        var maxSlot = Math.max(slotA, slotB);
+        for (var s = minSlot; s <= maxSlot; s++) {
+            this.container.find('td.drg-cell[data-doctor="' + doctorId + '"][data-slot="' + s + '"]')
+                .addClass('drg-drag-highlight');
+        }
+    };
+
+    /**
+     * Remove all drag highlight from cells.
+     */
+    DoctorResourceGrid.prototype._clearHighlight = function() {
+        this.container.find('.drg-drag-highlight').removeClass('drg-drag-highlight');
+    };
+
+    /**
+     * Convert a slot index back to HH:MM time string.
+     */
+    DoctorResourceGrid.prototype._slotToTime = function(slot) {
+        var totalMinutes = START_HOUR * 60 + slot * SLOT_MINUTES;
+        var h = Math.floor(totalMinutes / 60);
+        var m = totalMinutes % 60;
+        return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2);
     };
 
     DoctorResourceGrid.prototype._placeEvent = function(evt, colIdx) {

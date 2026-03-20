@@ -1,0 +1,63 @@
+/* Cash Summary Report */
+.summary-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.summary-table td.amount {
+    font-weight: 600;
+    color: #1A237E;
+    text-align: right;
+}
+
+.summary-table tfoot td {
+    font-weight: 700;
+    background-color: #f0f4ff;
+}
+
+.tab-pane .filter-row {
+    background: #fafafa;
+    padding: 12px 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #eee;
+}
+
+.export-bar {
+    text-align: right;
+    margin-bottom: 10px;
+}
+
+.stat-cards {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    flex: 1;
+    min-width: 150px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+}
+
+.stat-card.highlight {
+    border-color: #1A237E;
+    background: #f3f4ff;
+}
+
+.stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1A237E;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #757575;
+    margin-top: 4px;
+}

@@ -1,0 +1,319 @@
+/* ── Patient Billing (划价收费) ── */
+
+/* Sub-tab navigation */
+.billing-sub-tabs {
+    border-bottom: 2px solid #e7ecf1;
+    margin-bottom: 15px;
+}
+.billing-sub-tabs > li > a {
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+    padding: 8px 20px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+.billing-sub-tabs > li.active > a,
+.billing-sub-tabs > li.active > a:hover,
+.billing-sub-tabs > li.active > a:focus {
+    color: #3598dc;
+    border-bottom-color: #3598dc;
+    background: transparent;
+}
+
+/* ── Left panel: Category tree ── */
+.billing-category-panel {
+    background: #fafbfc;
+    border: 1px solid #e7ecf1;
+    border-radius: 4px;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+.billing-search-box {
+    padding: 10px;
+    border-bottom: 1px solid #e7ecf1;
+}
+.billing-search-box input {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+.billing-category-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 5px 0;
+}
+.billing-cat-group {
+    margin-bottom: 2px;
+}
+.billing-cat-header {
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    background: #f0f2f5;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.billing-cat-header:hover {
+    background: #e8eaed;
+}
+.billing-cat-header .cat-toggle {
+    font-size: 11px;
+    transition: transform 0.2s;
+}
+.billing-cat-header.collapsed .cat-toggle {
+    transform: rotate(-90deg);
+}
+.billing-cat-items {
+    padding: 0;
+    list-style: none;
+    margin: 0;
+}
+.billing-cat-items li {
+    padding: 5px 12px 5px 24px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f5f5f5;
+}
+.billing-cat-items li:hover {
+    background: #e8f4fd;
+}
+.billing-cat-items li .svc-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.billing-cat-items li .svc-price {
+    color: #e74c3c;
+    font-weight: 600;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+.billing-cat-items li.hidden-svc {
+    display: none;
+}
+
+/* ── Right panel: Billing table ── */
+.billing-items-panel {
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+}
+.billing-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #e7ecf1;
+    border-radius: 4px 4px 0 0;
+}
+.billing-table {
+    width: 100%;
+    margin-bottom: 0;
+    font-size: 13px;
+}
+.billing-table thead th {
+    background: #f5f7fa;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-bottom: 2px solid #e7ecf1;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.billing-table tbody td {
+    padding: 4px 6px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+}
+.billing-table .input-sm {
+    height: 28px;
+    padding: 2px 6px;
+    font-size: 13px;
+}
+.billing-table .input-price {
+    width: 80px;
+}
+.billing-table .input-qty {
+    width: 55px;
+}
+.billing-table .input-discount {
+    width: 60px;
+}
+.billing-table .btn-remove-row {
+    color: #e74c3c;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+}
+.billing-table .btn-remove-row:hover {
+    color: #c0392b;
+}
+.billing-table tbody tr:hover {
+    background: #fafbfc;
+}
+.billing-table .select-doctor {
+    width: 100px;
+    height: 28px;
+    padding: 2px 4px;
+    font-size: 12px;
+}
+
+/* ── Summary area ── */
+.billing-summary {
+    background: #f8f9fa;
+    border: 1px solid #e7ecf1;
+    border-top: none;
+    padding: 10px 15px;
+}
+.billing-summary .summary-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 25px;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.billing-summary .summary-label {
+    color: #666;
+}
+.billing-summary .summary-value {
+    font-weight: 600;
+    min-width: 80px;
+    text-align: right;
+}
+.billing-summary .summary-value.text-danger {
+    color: #e74c3c;
+}
+.billing-summary .summary-total {
+    font-size: 16px;
+    color: #e74c3c;
+    font-weight: 700;
+}
+.billing-summary .order-discount-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.billing-summary .order-discount-row input {
+    width: 60px;
+    height: 26px;
+    text-align: center;
+    font-size: 13px;
+}
+
+/* ── Discount approval warning ── */
+.discount-approval-warning {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    margin-top: 6px;
+    background: #fcf8e3;
+    border: 1px solid #faebcc;
+    border-radius: 3px;
+    color: #8a6d3b;
+    font-size: 13px;
+}
+.discount-approval-warning i {
+    color: #f0ad4e;
+}
+
+/* ── Payment area ── */
+.billing-payment {
+    background: #fff;
+    border: 1px solid #e7ecf1;
+    border-top: none;
+    padding: 10px 15px;
+    border-radius: 0 0 4px 4px;
+}
+.billing-payment .payment-rows {
+    margin-bottom: 8px;
+}
+.billing-payment .payment-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+.billing-payment .payment-row select,
+.billing-payment .payment-row input {
+    height: 30px;
+    font-size: 13px;
+}
+.billing-payment .payment-row .payment-method-select {
+    width: 130px;
+}
+.billing-payment .payment-row .payment-amount-input {
+    width: 120px;
+}
+.billing-payment .payment-row .payment-extra {
+    display: none;
+}
+.billing-payment .payment-row .payment-extra input {
+    width: 120px;
+}
+.billing-payment .btn-add-payment {
+    font-size: 12px;
+    padding: 3px 10px;
+}
+.billing-payment .billing-insurance-select,
+.billing-payment .billing-self-account-select {
+    width: 180px;
+}
+.billing-payment .select2-container {
+    min-width: 180px;
+}
+
+/* ── Action buttons ── */
+.billing-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.billing-actions .btn {
+    min-width: 100px;
+}
+.billing-actions .back-entry-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+.billing-actions .back-entry-area input[type="date"] {
+    height: 30px;
+    font-size: 13px;
+    width: 150px;
+}
+.billing-actions .back-entry-area label {
+    font-size: 13px;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+/* ── Empty state ── */
+.billing-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+.billing-empty-state i {
+    font-size: 48px;
+    margin-bottom: 10px;
+    display: block;
+}

@@ -1,0 +1,33 @@
+/**
+ * Member tab styles (shared by members/show and members/levels/index)
+ */
+.tabbable-line > .nav-tabs {
+    border-bottom: 2px solid #ebeef5;
+    margin-bottom: 0;
+}
+.tabbable-line > .nav-tabs > li > a {
+    color: #606266;
+    font-size: 14px;
+    padding: 10px 20px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s, border-color 0.2s;
+}
+.tabbable-line > .nav-tabs > li > a:hover {
+    color: #00838f;
+    background: transparent;
+    border: none;
+    border-bottom-color: #b2ebf2;
+}
+.tabbable-line > .nav-tabs > li.active > a,
+.tabbable-line > .nav-tabs > li.active > a:hover,
+.tabbable-line > .nav-tabs > li.active > a:focus {
+    color: #00838f;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #00838f;
+}
+.tab-pane {
+    padding: 20px 0;
+}

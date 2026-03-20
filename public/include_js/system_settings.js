@@ -6,7 +6,12 @@
     };
 
     window.saveSettings = function(group) {
-        var formId = group === 'clinic' ? '#clinicSettingsForm' : '#memberSettingsForm';
+        var formMap = {
+            'clinic':    '#clinicSettingsForm',
+            'schedule':  '#scheduleSettingsForm',
+            'member':    '#memberSettingsForm'
+        };
+        var formId = formMap[group] || '#clinicSettingsForm';
         var $form = $(formId);
         var data = $form.serialize();
 

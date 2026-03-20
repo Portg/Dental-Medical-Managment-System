@@ -561,6 +561,23 @@
 }
 
 /* ==========================================================================
+   Pending Appointments (补充病历)
+   ========================================================================== */
+.pending-apt-item {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+.pending-apt-item:hover {
+    background: #f0f7ff;
+}
+.pending-apt-item.active-apt {
+    background: #e8f4fd;
+    border-left: 3px solid #4472C4;
+    padding-left: 6px;
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 @media (max-width: 992px) {

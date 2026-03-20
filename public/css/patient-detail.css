@@ -1,0 +1,130 @@
+/* ── Patient Detail Three-Zone Layout ── */
+.patient-summary-bar {
+    background: #fff;
+    border: 1px solid #e7ecf1;
+    border-radius: 4px;
+    padding: 12px 20px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.patient-summary-bar .summary-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 8px;
+}
+.patient-summary-bar .summary-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-right: 6px;
+}
+.patient-summary-bar .summary-tag {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-right: 6px;
+    color: #fff;
+}
+.patient-summary-bar .summary-divider {
+    width: 1px;
+    height: 20px;
+    background: #ddd;
+    margin: 0 10px;
+}
+.patient-summary-bar .summary-item {
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+}
+.patient-summary-bar .summary-item strong {
+    color: #333;
+}
+.patient-summary-bar .summary-item .amount {
+    color: #e74c3c;
+    font-weight: 600;
+}
+.patient-summary-bar .summary-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+}
+
+/* Left Panel */
+.patient-left-panel {
+    background: #fff;
+    border: 1px solid #e7ecf1;
+    border-radius: 4px;
+    padding: 20px 15px;
+    position: sticky;
+    top: 10px;
+}
+.patient-left-panel .avatar-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.patient-left-panel .avatar-section img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e7ecf1;
+}
+.patient-left-panel .avatar-section .patient-name {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 8px;
+    color: #333;
+}
+.patient-left-panel .avatar-section .patient-group-badge {
+    display: inline-block;
+    margin-top: 4px;
+}
+.patient-left-panel .panel-section {
+    margin-bottom: 18px;
+}
+.patient-left-panel .panel-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.patient-left-panel .tag-checkbox,
+.patient-left-panel .group-radio {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+}
+.patient-left-panel .tag-checkbox input,
+.patient-left-panel .group-radio input {
+    margin-right: 6px;
+}
+.patient-left-panel .panel-actions {
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    gap: 6px;
+}
+.patient-left-panel .panel-actions .btn {
+    flex: 1;
+    font-size: 12px;
+}
+
+/* Right content area */
+.patient-right-content .portlet {
+    margin-bottom: 0;
+}
+.patient-right-content .nav-tabs > li > a {
+    padding: 8px 14px;
+    font-size: 13px;
+}

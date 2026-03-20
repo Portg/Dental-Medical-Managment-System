@@ -22,6 +22,7 @@
     width: 100%;
     min-width: 600px;
     table-layout: fixed;
+    user-select: none;
 }
 
 /* Sticky time column */
@@ -168,6 +169,12 @@
 }
 .drg-cell.drg-no-schedule-cell:hover {
     background: #fff9c4;
+}
+
+/* Drag-select highlight */
+.drg-cell.drg-drag-highlight {
+    background: rgba(68, 114, 196, 0.2) !important;
+    border-color: #4472C4;
 }
 
 /* Empty state */

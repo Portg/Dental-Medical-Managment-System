@@ -1,0 +1,26 @@
+/* 申领单页面样式 */
+
+.requisition-status-filter .btn-group {
+    margin-bottom: 10px;
+}
+
+.requisition-status-filter .btn.active {
+    font-weight: bold;
+}
+
+#items-table .item-qty {
+    width: 80px;
+    display: inline-block;
+}
+
+.approval-info-block {
+    border-left: 4px solid #26c281;
+    padding: 10px 15px;
+    background: #f5fff8;
+    margin-bottom: 15px;
+}
+
+.approval-info-block.rejected {
+    border-left-color: #e7505a;
+    background: #fff5f5;
+}

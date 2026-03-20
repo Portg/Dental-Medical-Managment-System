@@ -1,0 +1,32 @@
+/* ── Layout ── */
+.menu-mgmt-container { display: flex; gap: 20px; min-height: 500px; }
+.menu-tree-panel { flex: 0 0 380px; border: 1px solid #e7ecf1; border-radius: 4px; background: #fff; }
+.menu-edit-panel { flex: 1; border: 1px solid #e7ecf1; border-radius: 4px; background: #fff; }
+.panel-header { padding: 12px 15px; border-bottom: 1px solid #e7ecf1; display: flex; align-items: center; justify-content: space-between; }
+.panel-header h4 { margin: 0; font-size: 15px; font-weight: 600; }
+.panel-body { padding: 15px; }
+
+/* ── Tree ── */
+.menu-tree ul { list-style: none; padding-left: 0; margin: 0; }
+.menu-tree ul ul { padding-left: 20px; }
+.tree-node { padding: 6px 10px; cursor: pointer; border-radius: 3px; display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.tree-node:hover { background: #f5f7fa; }
+.tree-node.active { background: #e8f0fe; color: #1a73e8; }
+.tree-node .node-icon { width: 18px; text-align: center; color: #999; font-size: 13px; }
+.tree-node .node-label { flex: 1; font-size: 13px; }
+.tree-node .node-toggle { width: 16px; cursor: pointer; color: #bbb; font-size: 11px; }
+.tree-node .node-url { font-size: 10px; color: #bbb; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.tree-node.disabled { opacity: 0.5; }
+
+/* ── Form ── */
+.edit-form .form-group { margin-bottom: 12px; }
+.edit-form label { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.edit-form .hint { font-size: 11px; color: #999; margin-top: 2px; }
+.no-selection { text-align: center; color: #999; padding: 60px 20px; }
+.no-selection i { font-size: 48px; color: #ddd; display: block; margin-bottom: 15px; }
+.title-preview { padding: 8px 12px; background: #f8f9fa; border-radius: 3px; font-size: 13px; min-height: 34px; }
+
+/* ── Actions ── */
+.tree-actions { display: flex; gap: 8px; }
+.tree-actions .btn { padding: 3px 10px; font-size: 12px; }
+.form-actions { margin-top: 20px; padding-top: 15px; border-top: 1px solid #e7ecf1; display: flex; gap: 10px; }

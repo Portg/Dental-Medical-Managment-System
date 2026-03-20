@@ -1,0 +1,14 @@
+#maintenanceTabs > li > a { font-size: 14px; }
+#maintenanceTabs > li > a > i { margin-right: 4px; }
+.tab-content { min-height: 300px; }
+#logSubTabs { margin-bottom: 0; }
+/* Truncate long JSON values in audit table */
+#audit-logs-table td:nth-child(6),
+#audit-logs-table td:nth-child(7) {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    cursor: pointer;
+}

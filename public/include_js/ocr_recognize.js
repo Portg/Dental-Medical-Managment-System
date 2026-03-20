@@ -94,8 +94,8 @@
         var reader = new FileReader();
         reader.onload = function (e) {
             $('#preview-img-upload').attr('src', e.target.result);
-            $('.drop-zone-content').addClass('d-none');
-            $('#image-preview-upload').removeClass('d-none');
+            $('.drop-zone-content').hide();
+            $('#image-preview-upload').show();
         };
         reader.readAsDataURL(file);
 
@@ -106,8 +106,8 @@
         selectedFile = null;
         $('#image-input').val('');
         $('#preview-img-upload').attr('src', '');
-        $('#image-preview-upload').addClass('d-none');
-        $('.drop-zone-content').removeClass('d-none');
+        $('#image-preview-upload').hide();
+        $('.drop-zone-content').show();
         $('#btn-recognize').prop('disabled', true);
     }
 
@@ -156,8 +156,8 @@
 
     function showResults(data) {
         // Switch to results view
-        $('#upload-section').addClass('d-none');
-        $('#result-section').removeClass('d-none');
+        $('#upload-section').hide();
+        $('#result-section').show();
 
         // Init datepickers now that elements are visible
         initDatepickers();
@@ -202,7 +202,55 @@
         $('#field-diagnosis').val(caseData.diagnosis || '');
         $('#field-treatment').val(caseData.treatment || '');
         $('#field-medical_orders').val(caseData.medical_orders || '');
+
+        // Case date (extracted from "YYYY年MM月DD日")
+        if (caseData.case_date) {
+            $('#field-case_date').val(caseData.case_date);
+        }
+
+        // Extracted teeth (FDI)
+        var teeth = data.teeth || [];
+        renderTeethTags(teeth);
     }
+
+    // ==================== Teeth Tags ====================
+
+    var ocrTeeth = [];
+
+    function renderTeethTags(teeth) {
+        ocrTeeth = teeth.slice();
+        var $container = $('#ocr-teeth-tags');
+        var $list = $('#ocr-teeth-list');
+
+        if (teeth.length === 0) {
+            $container.hide();
+            $('#field-examination_teeth').val('[]');
+            return;
+        }
+
+        var html = teeth.map(function (t) {
+            var n = parseInt(t, 10);
+            var isDeciduous = n >= 51;
+            var bg = isDeciduous ? '#fffbe6' : '#e6f7ff';
+            var border = isDeciduous ? '#ffe58f' : '#91d5ff';
+            var color = isDeciduous ? '#d48806' : '#1890ff';
+            return '<span class="tooth-tag" style="display:inline-block;margin:2px;padding:3px 8px;background:'
+                + bg + ';border:1px solid ' + border + ';border-radius:3px;font-size:12px;color:' + color + ';">'
+                + t
+                + ' <span style="cursor:pointer;margin-left:4px;" onclick="removeOcrTooth(\'' + t + '\')">&times;</span>'
+                + '</span>';
+        }).join('');
+
+        $list.html(html);
+        $container.show();
+        $('#field-examination_teeth').val(JSON.stringify(ocrTeeth));
+    }
+
+    // Expose globally so inline onclick works
+    window.removeOcrTooth = function (tooth) {
+        ocrTeeth = ocrTeeth.filter(function (t) { return t !== tooth; });
+        renderTeethTags(ocrTeeth);
+    };
 
     function showConfidence(confidence) {
         var alert = $('#confidence-alert');
@@ -238,12 +286,12 @@
 
     function togglePatientMode(mode) {
         if (mode === 'existing') {
-            $('#new-patient-fields').addClass('d-none');
-            $('#existing-patient-box').removeClass('d-none');
+            $('#new-patient-fields').hide();
+            $('#existing-patient-box').show();
             $('#btn-create-text').text(LanguageManager.trans('ocr.create_case_only'));
         } else {
-            $('#new-patient-fields').removeClass('d-none');
-            $('#existing-patient-box').addClass('d-none');
+            $('#new-patient-fields').show();
+            $('#existing-patient-box').hide();
             $('#btn-create-text').text(LanguageManager.trans('ocr.create_patient_and_case'));
         }
     }
@@ -326,16 +374,14 @@
     // ==================== Utilities ====================
 
     function toggleRawText() {
-        var body = $('#raw-text-body');
+        $('#raw-text-body').toggle();
         var icon = $('#btn-toggle-raw i');
-
-        body.toggleClass('d-none');
         icon.toggleClass('fa-chevron-down fa-chevron-up');
     }
 
     function backToUpload() {
-        $('#result-section').addClass('d-none');
-        $('#upload-section').removeClass('d-none');
+        $('#result-section').hide();
+        $('#upload-section').show();
     }
 
 })();

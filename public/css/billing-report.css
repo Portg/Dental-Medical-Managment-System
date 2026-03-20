@@ -1,0 +1,4 @@
+.report-tabs { border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; }
+.report-tabs .nav-tabs { border-bottom: none; }
+.report-tabs .nav-tabs > li > a { color: #666; border: none; border-bottom: 3px solid transparent; padding: 10px 20px; font-weight: 500; }
+.report-tabs .nav-tabs > li.active > a { color: #1A237E; border-bottom-color: #1A237E; background: transparent; }

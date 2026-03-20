@@ -1,0 +1,63 @@
+/* ============================================================
+   盘点管理（Inventory Check）样式
+   ============================================================ */
+
+/* 差异列颜色 */
+.text-loss {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.text-surplus {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.text-no-diff {
+    color: #95a5a6;
+}
+
+/* 明细表格紧凑样式 */
+.check-items-table {
+    font-size: 13px;
+}
+
+.check-items-table th,
+.check-items-table td {
+    padding: 6px 8px;
+    vertical-align: middle;
+}
+
+.check-items-table .actual-qty-input {
+    display: inline-block;
+    width: 100px;
+}
+
+/* 基本信息表格 */
+.check-info-table td:first-child {
+    width: 120px;
+    background-color: #f9f9f9;
+}
+
+/* 偏差率列 */
+.deviation-cell {
+    text-align: center;
+}
+
+/* 差异列 */
+.diff-cell {
+    text-align: center;
+    font-weight: bold;
+}
+
+/* 操作按钮组 */
+.check-actions {
+    white-space: nowrap;
+}
+
+/* 创建提示区 */
+.check-create-hint {
+    color: #666;
+    font-size: 13px;
+    margin-top: 8px;
+}

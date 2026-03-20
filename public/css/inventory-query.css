@@ -1,0 +1,122 @@
+/* ============================================================
+   Inventory Query Page - Tab Styles
+   ============================================================ */
+
+.inv-query-tabs {
+    margin-bottom: 0;
+    border-bottom: 2px solid #ddd;
+}
+
+.inv-query-tabs > li > a {
+    border-radius: 4px 4px 0 0;
+    padding: 8px 16px;
+    color: #555;
+    font-weight: 500;
+}
+
+.inv-query-tabs > li > a:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.inv-query-tabs > li.active > a,
+.inv-query-tabs > li.active > a:hover,
+.inv-query-tabs > li.active > a:focus {
+    color: #337ab7;
+    border-color: #ddd #ddd #fff;
+    border-bottom-color: transparent;
+    font-weight: 600;
+}
+
+/* ============================================================
+   Tab Content
+   ============================================================ */
+
+.inv-query-tab-content {
+    border: 1px solid #ddd;
+    border-top: none;
+    padding: 16px;
+    border-radius: 0 0 4px 4px;
+}
+
+/* ============================================================
+   Filter Row
+   ============================================================ */
+
+.inv-query-filter-row {
+    background: #f9f9f9;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+
+.inv-query-filter-row .form-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.inv-query-filter-row .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 0;
+}
+
+.inv-query-filter-row .form-group label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+
+.inv-query-filter-row .form-control {
+    min-width: 140px;
+}
+
+/* ============================================================
+   Low Stock Row Highlight
+   ============================================================ */
+
+table.dt-table tbody tr.row-low-stock {
+    background-color: #fff3cd !important;
+}
+
+table.dt-table tbody tr.row-low-stock:hover {
+    background-color: #ffe69c !important;
+}
+
+/* ============================================================
+   Net Change Column
+   ============================================================ */
+
+.text-success {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.text-danger {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .inv-query-filter-row .form-inline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .inv-query-filter-row .form-group {
+        width: 100%;
+    }
+
+    .inv-query-filter-row .form-control {
+        width: 100%;
+    }
+}

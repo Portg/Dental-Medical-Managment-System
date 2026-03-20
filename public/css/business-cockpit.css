@@ -1,0 +1,24 @@
+.cockpit-cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 24px; }
+.cockpit-card { background: #fff; border-radius: 8px; padding: 18px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+.cockpit-card .card-value { font-size: 26px; font-weight: bold; color: #1A237E; }
+.cockpit-card .card-value.amount { font-family: monospace; }
+.cockpit-card .card-unit { font-size: 14px; font-weight: normal; margin-left: 2px; opacity: 0.7; }
+.cockpit-card .card-label { font-size: 13px; color: #666; margin-top: 4px; }
+.cockpit-card .card-change { font-size: 12px; margin-top: 4px; }
+.cockpit-card .card-change.up { color: #2E7D32; }
+.cockpit-card .card-change.down { color: #C62828; }
+.cockpit-card.highlight { background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
+.cockpit-card.highlight .card-value,
+.cockpit-card.highlight .card-label { color: #fff; }
+.cockpit-card.highlight .card-change.up { color: #A5D6A7; }
+.cockpit-card.highlight .card-change.down { color: #EF9A9A; }
+.cockpit-card.pending .card-value { color: #E65100; }
+.cockpit-card.receivable .card-value { color: #C62828; }
+.chart-box { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+.chart-box .box-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: #333; }
+.table-report th { background: #f5f6fa; font-weight: 600; font-size: 13px; }
+.table-report td { font-size: 13px; }
+.table-report .amount { font-family: monospace; }
+.pending-type { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; background: #FFF3E0; color: #E65100; }
+@media (max-width: 1200px) { .cockpit-cards { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px) { .cockpit-cards { grid-template-columns: repeat(2, 1fr); } }
