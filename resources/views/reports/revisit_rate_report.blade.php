@@ -1,28 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
-    .stat-card { background: #fff; border-radius: 8px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .stat-card .stat-value { font-size: 36px; font-weight: bold; color: #1A237E; }
-    .stat-card .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
-    .stat-card.highlight { background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
-    .stat-card.highlight .stat-value, .stat-card.highlight .stat-label { color: #fff; }
-    .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-    .doctor-rank { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
-    .doctor-rank:last-child { border-bottom: none; }
-    .doctor-rank .rank { width: 30px; height: 30px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; }
-    .doctor-rank .rank.top { background: #FFD700; color: #333; }
-    .doctor-rank .info { flex: 1; }
-    .doctor-rank .name { font-weight: 500; }
-    .doctor-rank .meta { font-size: 12px; color: #999; }
-    .doctor-rank .avg { font-weight: bold; color: #1A237E; }
-    .lost-patient { padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; }
-    .lost-patient:last-child { border-bottom: none; }
-    .lost-patient .days { background: #FFEBEE; color: #C62828; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: auto; }
-    @media (max-width: 991px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
-</style>
+<link rel="stylesheet" href="{{ asset('css/revisit-rate.css') }}">
 @endsection
 
 <div class="row">
@@ -135,52 +114,16 @@
 @endsection
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('.datepicker').datepicker({ language: '{{ app()->getLocale() }}', format: 'yyyy-mm-dd', autoclose: true });
-
-    // 月度趋势图
-    var trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: @json(array_column($monthlyTrend, 'month_label')),
-            datasets: [{
-                label: '{{ __("report.revisit_rate") }}',
-                data: @json(array_column($monthlyTrend, 'revisit_rate')),
-                borderColor: '#1A237E',
-                backgroundColor: 'rgba(26, 35, 126, 0.1)',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } }
-            },
-            plugins: { legend: { display: false } }
-        }
-    });
-
-    // 复诊间隔分布图
-    var intervalCtx = document.getElementById('intervalChart').getContext('2d');
-    new Chart(intervalCtx, {
-        type: 'bar',
-        data: {
-            labels: @json(array_column($intervalDistribution, 'label')),
-            datasets: [{
-                data: @json(array_column($intervalDistribution, 'count')),
-                backgroundColor: ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#FF5722', '#F44336']
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
-});
+LanguageManager.loadFromPHP(@json(__('report')), 'report');
+window.RevisitRateConfig = {
+    locale:         '{{ app()->getLocale() }}',
+    trendLabels:    @json(array_column($monthlyTrend, 'month_label')),
+    trendRates:     @json(array_column($monthlyTrend, 'revisit_rate')),
+    intervalLabels: @json(array_column($intervalDistribution, 'label')),
+    intervalCounts: @json(array_column($intervalDistribution, 'count'))
+};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="{{ asset('include_js/revisit_rate_report.js') }}?v={{ filemtime(public_path('include_js/revisit_rate_report.js')) }}"></script>
 @endsection

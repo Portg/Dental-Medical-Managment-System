@@ -103,6 +103,7 @@ return [
     'images' => 'Images',
     'invoices' => 'Invoices',
     'followups' => 'Follow-ups',
+    'lab_cases' => 'Lab Cases',
 
     // Section Titles
     'personal_info' => 'Personal Information',

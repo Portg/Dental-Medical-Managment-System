@@ -1,24 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .source-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-    .source-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .source-card .source-name { font-size: 14px; color: #666; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
-    .source-card .source-name .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .source-card .source-count { font-size: 28px; font-weight: bold; color: #1A237E; }
-    .source-card .source-meta { font-size: 12px; color: #999; margin-top: 5px; }
-    .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-    .progress-bar-wrapper { margin-bottom: 12px; }
-    .progress-bar-wrapper .label-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-    .progress-bar-wrapper .bar { height: 24px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
-    .progress-bar-wrapper .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 10px; color: #fff; font-size: 12px; }
-    .conversion-rate { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
-    .conversion-rate.high { background: #E8F5E9; color: #2E7D32; }
-    .conversion-rate.medium { background: #FFF3E0; color: #E65100; }
-    .conversion-rate.low { background: #FFEBEE; color: #C62828; }
-</style>
+<link rel="stylesheet" href="{{ asset('css/patient-source.css') }}">
 @endsection
 
 <div class="row">
@@ -156,36 +139,13 @@
 @endsection
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('.datepicker').datepicker({
-        format: 'yyyy-mm-dd',
-        autoclose: true
-    });
-
-    // 饼图
-    var ctx = document.getElementById('sourcePieChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: @json(array_column($sourceAnalysis, 'name')),
-            datasets: [{
-                data: @json(array_column($sourceAnalysis, 'patient_count')),
-                backgroundColor: @json(array_column($sourceAnalysis, 'color')),
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { boxWidth: 12, padding: 10 }
-                }
-            }
-        }
-    });
-});
+window.PatientSourceReportConfig = {
+    sourceNames:  @json(array_column($sourceAnalysis, 'name')),
+    sourceCounts: @json(array_column($sourceAnalysis, 'patient_count')),
+    sourceColors: @json(array_column($sourceAnalysis, 'color'))
+};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="{{ asset('include_js/patient_source_report.js') }}?v={{ filemtime(public_path('include_js/patient_source_report.js')) }}"></script>
 @endsection

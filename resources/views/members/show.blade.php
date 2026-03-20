@@ -2,36 +2,7 @@
 @section('content')
 @section('css')
     @include('layouts.page_loader')
-    <style>
-        .tabbable-line > .nav-tabs {
-            border-bottom: 2px solid #ebeef5;
-            margin-bottom: 0;
-        }
-        .tabbable-line > .nav-tabs > li > a {
-            color: #606266;
-            font-size: 14px;
-            padding: 10px 20px;
-            border: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-            transition: color 0.2s, border-color 0.2s;
-        }
-        .tabbable-line > .nav-tabs > li > a:hover {
-            color: #00838f;
-            background: transparent;
-            border: none;
-            border-bottom-color: #b2ebf2;
-        }
-        .tabbable-line > .nav-tabs > li.active > a,
-        .tabbable-line > .nav-tabs > li.active > a:hover,
-        .tabbable-line > .nav-tabs > li.active > a:focus {
-            color: #00838f;
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid #00838f;
-        }
-        .tab-pane { padding: 20px 0; }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/member-tabs.css') }}">
 @endsection
 <div class="row">
     <div class="col-md-12">
@@ -219,161 +190,21 @@
 @endsection
 @section('js')
     <script>
-        var memberId = {{ $patient->id }};
-        var levels = @json($levels);
-        var memberSettings = @json(\App\SystemSetting::getGroup('member'));
-
-        LanguageManager.loadAllFromPHP({
-            'members': @json(__('members')),
-            'messages': @json(__('messages'))
-        });
+    window.MemberShowConfig = {
+        memberId:      {{ $patient->id }},
+        levels:        @json($levels),
+        memberSettings:@json(\App\SystemSetting::getGroup('member'))
+    };
+    // Compatibility shims for members.js globals
+    var memberId      = window.MemberShowConfig.memberId;
+    var levels        = window.MemberShowConfig.levels;
+    var memberSettings= window.MemberShowConfig.memberSettings;
+    LanguageManager.loadAllFromPHP({
+        'members':  @json(__('members')),
+        'messages': @json(__('messages'))
+    });
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/members.js') }}"></script>
-    <script>
-        $(document).ready(function() {
-            loadTransactions();
-            loadSharedHolders();
-            loadAuditLogs();
-        });
-
-        function loadSharedHolders() {
-            $('#shared_holders_table').DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: '/members/' + memberId + '/shared-holders',
-                columns: [
-                    {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
-                    {data: 'patient_name', name: 'patient_name'},
-                    {data: 'relationship', name: 'relationship'},
-                    {data: 'removeBtn', name: 'removeBtn', orderable: false, searchable: false}
-                ],
-                language: LanguageManager.getDataTableLang(),
-                paging: false,
-                info: false
-            });
-        }
-
-        function loadAuditLogs() {
-            $('#audit_logs_table').DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: '/members/' + memberId + '/audit-logs',
-                columns: [
-                    {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
-                    {data: 'actionBadge', name: 'actionBadge'},
-                    {data: 'field_name', name: 'field_name'},
-                    {data: 'old_value', name: 'old_value'},
-                    {data: 'new_value', name: 'new_value'},
-                    {data: 'operator_name', name: 'operator_name'},
-                    {data: 'created_at', name: 'created_at'}
-                ],
-                order: [[6, 'desc']],
-                language: LanguageManager.getDataTableLang()
-            });
-        }
-
-        function showAddSharedHolder() {
-            swal({
-                title: LanguageManager.trans('members.add_shared_holder'),
-                text: LanguageManager.trans('members.shared_patient'),
-                type: 'input',
-                showCancelButton: true,
-                confirmButtonText: LanguageManager.trans('common.save'),
-                cancelButtonText: LanguageManager.trans('common.cancel'),
-                inputPlaceholder: LanguageManager.trans('members.shared_patient') + ' ID',
-                closeOnConfirm: false
-            }, function(inputValue) {
-                if (inputValue === false) return;
-                var patientId = parseInt(inputValue);
-                if (isNaN(patientId) || patientId <= 0) {
-                    swal.showInputError(LanguageManager.trans('members.shared_patient'));
-                    return false;
-                }
-                $.ajax({
-                    url: '/members/' + memberId + '/shared-holders',
-                    type: 'POST',
-                    data: {
-                        _token: $('meta[name="csrf-token"]').attr('content'),
-                        shared_patient_id: patientId,
-                        relationship: 'other'
-                    },
-                    success: function(response) {
-                        if (response.status) {
-                            swal({ title: LanguageManager.trans('messages.success'), text: response.message, type: 'success' });
-                            $('#shared_holders_table').DataTable().ajax.reload();
-                        } else {
-                            swal({ title: LanguageManager.trans('messages.error'), text: response.message, type: 'error' });
-                        }
-                    }
-                });
-            });
-        }
-
-        function removeSharedHolder(id) {
-            swal({
-                title: LanguageManager.trans('messages.confirm_delete'),
-                text: LanguageManager.trans('members.confirm_remove_shared'),
-                type: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: LanguageManager.trans('common.delete'),
-                cancelButtonText: LanguageManager.trans('common.cancel')
-            }, function(isConfirm) {
-                if (isConfirm) {
-                    $.ajax({
-                        url: '/members/shared-holders/' + id,
-                        type: 'DELETE',
-                        data: { _token: $('meta[name="csrf-token"]').attr('content') },
-                        success: function(response) {
-                            if (response.status) {
-                                swal({ title: LanguageManager.trans('messages.success'), text: response.message, type: 'success' });
-                                $('#shared_holders_table').DataTable().ajax.reload();
-                            } else {
-                                swal({ title: LanguageManager.trans('messages.error'), text: response.message, type: 'error' });
-                            }
-                        }
-                    });
-                }
-            });
-        }
-
-        function showSetPassword(patientId) {
-            swal({
-                title: LanguageManager.trans('members.set_password'),
-                text: LanguageManager.trans('members.new_password'),
-                type: 'input',
-                showCancelButton: true,
-                confirmButtonText: LanguageManager.trans('common.save'),
-                cancelButtonText: LanguageManager.trans('common.cancel'),
-                inputType: 'password',
-                closeOnConfirm: false
-            }, function(inputValue) {
-                if (inputValue === false) return;
-                if (!inputValue || inputValue.length < 4) {
-                    swal.showInputError(LanguageManager.trans('members.password_too_short'));
-                    return false;
-                }
-                $.ajax({
-                    url: '/members/' + patientId + '/password',
-                    type: 'POST',
-                    data: {
-                        _token: $('meta[name="csrf-token"]').attr('content'),
-                        password: inputValue,
-                        password_confirmation: inputValue
-                    },
-                    success: function(response) {
-                        if (response.status) {
-                            swal({ title: LanguageManager.trans('messages.success'), text: response.message, type: 'success' });
-                        } else {
-                            swal({ title: LanguageManager.trans('messages.error'), text: response.message, type: 'error' });
-                        }
-                    },
-                    error: function(xhr) {
-                        swal({ title: LanguageManager.trans('messages.error'), text: xhr.responseJSON ? xhr.responseJSON.message : 'Error', type: 'error' });
-                    }
-                });
-            });
-        }
-    </script>
+    <script src="{{ asset('include_js/member_show.js') }}?v={{ filemtime(public_path('include_js/member_show.js')) }}"></script>
 @endsection

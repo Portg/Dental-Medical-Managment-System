@@ -69,6 +69,29 @@ return [
     'edit' => '编辑',
     'delete' => '删除',
 
+    // 用户名
+    'username' => '用户名',
+    'enter_username' => '请输入用户名（姓名拼音简称）',
+    'username_hint' => '留空则自动生成姓名拼音简称',
+    'username_already_exists' => '用户名已存在',
+
+    // 状态
+    'status' => '状态',
+    'status_active' => '在职',
+    'status_resigned' => '已离职',
+    'current_status' => '当前状态',
+    'no_change' => '不变更',
+    'set_resigned' => '设为离职',
+    'set_active' => '恢复在职',
+    'new_password_for_reactivation' => '复职新密码',
+    'enter_new_password' => '请输入新密码',
+    'password_required_for_reactivation' => '复职必须设置新密码',
+    'user_resigned_successfully' => '员工已标记为离职',
+    'user_reactivated_successfully' => '员工已恢复在职',
+    'status_change_failed' => '状态变更失败',
+    'cannot_resign_yourself' => '您不能将自己设为离职状态',
+    'cannot_resign_last_super_admin' => '系统必须保留至少一名在职超级管理员，无法执行此操作',
+
     // 其他
     'yes' => '是',
     'no' => '否',

@@ -4,36 +4,7 @@
     @include('layouts.page_loader')
     <link rel="stylesheet" href="{{ asset('css/list-page.css') }}">
     <link rel="stylesheet" href="{{ asset('css/form-modal.css') }}">
-    <style>
-        .tabbable-line > .nav-tabs {
-            border-bottom: 2px solid #ebeef5;
-            margin-bottom: 0;
-        }
-        .tabbable-line > .nav-tabs > li > a {
-            color: #606266;
-            font-size: 14px;
-            padding: 10px 20px;
-            border: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-            transition: color 0.2s, border-color 0.2s;
-        }
-        .tabbable-line > .nav-tabs > li > a:hover {
-            color: #00838f;
-            background: transparent;
-            border: none;
-            border-bottom-color: #b2ebf2;
-        }
-        .tabbable-line > .nav-tabs > li.active > a,
-        .tabbable-line > .nav-tabs > li.active > a:hover,
-        .tabbable-line > .nav-tabs > li.active > a:focus {
-            color: #00838f;
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid #00838f;
-        }
-        .tab-pane { padding: 20px 0; }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/member-tabs.css') }}">
 @endsection
 
 @section('content')
@@ -260,68 +231,11 @@
 <script src="{{ asset('include_js/DatesHelper.js') }}" type="text/javascript"></script>
 <script src="{{ asset('include_js/DataTableManager.js') }}" type="text/javascript"></script>
 <script>
-    var dataTable = null;
-
-    LanguageManager.loadAllFromPHP({
-        'members': @json(__('members')),
-        'messages': @json(__('messages'))
-    });
-
-    function createRecord() {
-        addLevel();
-    }
-
-    function getTableSelector() {
-        return '#levels_table';
-    }
-
-    function setupEmptyStateHandler() {
-        // No-op: integrated into tab layout
-    }
-
-    /**
-     * Save settings from any tab form
-     */
-    function saveSettingsTab(formId) {
-        var formData = new FormData($('#' + formId)[0]);
-        formData.append('_method', 'PUT');
-
-        $.ajax({
-            url: '/member-settings',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.status) {
-                    swal({
-                        title: LanguageManager.trans('messages.success'),
-                        text: response.message,
-                        type: 'success'
-                    });
-                } else {
-                    swal({
-                        title: LanguageManager.trans('messages.error'),
-                        text: response.message,
-                        type: 'error'
-                    });
-                }
-            },
-            error: function(xhr) {
-                swal({
-                    title: LanguageManager.trans('messages.error'),
-                    text: xhr.responseJSON ? xhr.responseJSON.message : 'Error',
-                    type: 'error'
-                });
-            }
-        });
-    }
-
-    // Switch to tab via URL hash
-    if (window.location.hash) {
-        var tab = window.location.hash;
-        $('.nav-tabs a[href="' + tab + '"]').tab('show');
-    }
+LanguageManager.loadAllFromPHP({
+    'members':  @json(__('members')),
+    'messages': @json(__('messages'))
+});
 </script>
+<script src="{{ asset('include_js/member_levels_index.js') }}?v={{ filemtime(public_path('include_js/member_levels_index.js')) }}"></script>
 <script src="{{ asset('include_js/member_levels.js') }}"></script>
 @endsection

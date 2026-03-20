@@ -196,4 +196,24 @@ return [
     'refill_count' => 'Refill Count',
     'remaining_refills' => 'Remaining Refills',
 
+    // Prescription-Billing Integration
+    'save_and_settle' => 'Save & Settle',
+    'save_only' => 'Save Only',
+    'settle' => 'Settle',
+    'settled_successfully' => 'Prescription settled, invoice created',
+    'saved_and_settled' => 'Prescription saved and pending invoice created',
+    'already_settled' => 'This prescription is already settled',
+    'cannot_delete_has_invoice' => 'Cannot delete prescription with linked invoice. Please delete the invoice first',
+    'cannot_edit_settled' => 'Cannot edit a settled prescription',
+    'no_items' => 'Prescription must have at least one item',
+    'filled' => 'Settled',
+    'on_hold' => 'On Hold',
+    'discontinued' => 'Discontinued',
+    'select_prescription_service' => 'Select prescription service',
+    'unit_price' => 'Unit Price',
+    'amount' => 'Amount',
+    'total_amount' => 'Total Amount',
+    'history_prescriptions' => 'Prescription History',
+    'pending_prescriptions' => 'Pending Prescriptions',
+
 ];

@@ -139,7 +139,18 @@ return [
     // Overbooking
     'overbooking_conflict' => 'This doctor already has an appointment during the selected time slot',
 
+    // Status update
+    'status_updated' => 'Status updated',
+
+    // SMS option
+    'send_sms_on_create' => 'Send SMS notification after creating',
+
     // Advance booking limits
     'max_advance_days_exceeded' => 'Appointments can only be booked up to :days days in advance',
     'min_advance_hours_not_met' => 'Appointments must be booked at least :hours hours in advance',
+
+    // Schedule validation (AG-038, AG-042)
+    'no_schedule_for_booking'  => 'This doctor has no schedule for the selected date. Booking is not allowed.',
+    'time_outside_shift'       => 'The selected time is outside this doctor\'s scheduled working hours.',
+    'shift_max_patients_exceeded' => 'This time slot is fully booked. Please select another time.',
 ];

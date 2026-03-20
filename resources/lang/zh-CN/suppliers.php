@@ -115,6 +115,7 @@ return [
     'error_deleting_supplier' => '删除供应商时出错',
     'no_suppliers_found' => '未找到供应商',
     'supplier_has_transactions' => '无法删除有交易记录的供应商',
+    'supplier_has_stock_ins' => '该供应商有关联入库单，无法删除',
 
     // 搜索和筛选
     'search_suppliers' => '搜索供应商',
@@ -130,6 +131,11 @@ return [
     'total_purchases' => '总采购额',
     'outstanding_balance' => '未付余额',
     'last_transaction' => '最后交易',
+
+    // 证照
+    'business_license_no'      => '营业执照号',
+    'license_expiry_date'      => '证照有效期',
+    'enter_business_license_no' => '输入营业执照号',
 
     // 备注
     'notes' => '备注',

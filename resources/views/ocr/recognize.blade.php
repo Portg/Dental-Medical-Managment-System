@@ -18,9 +18,9 @@
                         <i class="fa fa-camera fa-3x text-muted"></i>
                         <p class="mt-3">{{ __('ocr.upload_hint') }}</p>
                         <p class="text-muted small">{{ __('ocr.supported_formats') }}</p>
-                        <input type="file" id="image-input" accept="image/jpeg,image/png,image/jpg,image/bmp" class="d-none">
+                        <input type="file" id="image-input" accept="image/jpeg,image/png,image/jpg,image/bmp" style="display:none">
                     </div>
-                    <div id="image-preview-upload" class="d-none">
+                    <div id="image-preview-upload" style="display:none">
                         <img id="preview-img-upload" src="" alt="preview">
                         <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="btn-clear-image">
                             <i class="fa fa-times"></i> {{ __('common.remove') }}
@@ -45,7 +45,7 @@
     </div>
 
     {{-- Phase 2: Results --}}
-    <div id="result-section" class="d-none">
+    <div id="result-section" style="display:none">
         <div class="row">
             {{-- Left: Image preview + raw text --}}
             <div class="col-md-5">
@@ -58,13 +58,13 @@
                     </div>
                 </div>
                 <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
                         <h5 class="card-title mb-0">{{ __('ocr.raw_text') }}</h5>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-toggle-raw">
                             <i class="fa fa-chevron-down"></i>
                         </button>
                     </div>
-                    <div class="card-body d-none" id="raw-text-body">
+                    <div class="card-body" id="raw-text-body" style="display:none">
                         <pre id="raw-text-content" class="raw-text-pre"></pre>
                     </div>
                 </div>
@@ -99,7 +99,7 @@
                             </div>
 
                             {{-- Existing patient search --}}
-                            <div id="existing-patient-box" class="form-group mb-3 d-none">
+                            <div id="existing-patient-box" class="form-group mb-3" style="display:none">
                                 <label>{{ __('patient.search') }}</label>
                                 <select id="patient-search" class="form-control" name="patient_id" style="width:100%"></select>
                             </div>

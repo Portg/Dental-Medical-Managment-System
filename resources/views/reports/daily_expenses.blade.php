@@ -21,29 +21,8 @@
      Page-specific JavaScript
      ======================================================================== --}}
 @section('page_js')
-<script type="text/javascript">
-    $(function () {
-        dataTable = $('#sample_1').DataTable({
-            language: LanguageManager.getDataTableLang(),
-            processing: true,
-            serverSide: true,
-            ajax: {
-                url: "{{ url('/todays-expenses/') }}",
-                data: function (d) {
-                    d.search = $('input[type="search"]').val();
-                }
-            },
-            dom: 'rtip',
-            columns: [
-                {data: 'DT_RowIndex', name: 'DT_RowIndex', 'visible': true},
-                {data: 'created_date', name: 'created_date'},
-                {data: 'name', name: 'name'},
-                {data: 'amount', name: 'amount'},
-                {data: 'added_by', name: 'added_by'},
-            ]
-        });
-
-        setupEmptyStateHandler();
-    });
+<script>
+window.DailyExpensesConfig = { ajaxUrl: '{{ url('/todays-expenses/') }}' };
 </script>
+<script src="{{ asset('include_js/daily_expenses_report.js') }}?v={{ filemtime(public_path('include_js/daily_expenses_report.js')) }}"></script>
 @endsection

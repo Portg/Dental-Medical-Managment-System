@@ -4,8 +4,8 @@ return [
     'page_title' => 'System Settings',
 
     // Tabs
-    'tab_clinic' => 'Clinic Settings',
-    'tab_member' => 'Member Settings',
+    'tab_clinic'  => 'Clinic Settings',
+    'tab_member'  => 'Member Settings',
 
     // Messages
     'saved' => 'Settings saved successfully',
@@ -37,6 +37,9 @@ return [
     'minutes' => 'minutes',
     'hours' => 'hours',
     'days' => 'days',
+
+    'clinic_require_schedule_for_booking'      => 'Require Schedule for Booking',
+    'clinic_require_schedule_for_booking_hint' => 'When enabled, appointments cannot be created for doctors without a schedule on that day. When disabled, clinic hours are used as fallback slots.',
 
     // ── Member settings ─────────────────────────────────────────
     'member_points_enabled' => 'Points System',

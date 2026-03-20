@@ -1,23 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .stat-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 25px; }
-    .stat-card { background: #fff; border-radius: 8px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .stat-card .stat-value { font-size: 32px; font-weight: bold; color: #1A237E; }
-    .stat-card .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
-    .stat-card.highlight { background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
-    .stat-card.highlight .stat-value, .stat-card.highlight .stat-label { color: #fff; }
-    .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-    .table-report th { background: #f5f6fa; font-weight: 600; }
-    .badge-rate { padding: 3px 10px; border-radius: 12px; font-size: 12px; }
-    .badge-rate.good { background: #E8F5E9; color: #2E7D32; }
-    .badge-rate.warn { background: #FFF3E0; color: #E65100; }
-    .badge-rate.bad { background: #FFEBEE; color: #C62828; }
-    .amount { font-family: monospace; }
-    @media (max-width: 991px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
-</style>
+<link rel="stylesheet" href="{{ asset('css/treatment-plan-completion.css') }}">
 @endsection
 
 <div class="row">
@@ -198,75 +182,14 @@
 @endsection
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('.datepicker').datepicker({ language: '{{ app()->getLocale() }}', format: 'yyyy-mm-dd', autoclose: true });
-
-    // 月度转化趋势
-    var trendData = @json($monthlyTrend);
-    new Chart(document.getElementById('monthlyTrendChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: trendData.map(function(d) { return d.month; }),
-            datasets: [{
-                label: '{{ __("report.total_quotations") }}',
-                data: trendData.map(function(d) { return d.total; }),
-                backgroundColor: 'rgba(26, 35, 126, 0.3)',
-                borderColor: '#1A237E',
-                borderWidth: 1,
-                yAxisID: 'y'
-            }, {
-                label: '{{ __("report.converted_count") }}',
-                data: trendData.map(function(d) { return d.converted; }),
-                backgroundColor: 'rgba(46, 125, 50, 0.3)',
-                borderColor: '#2E7D32',
-                borderWidth: 1,
-                yAxisID: 'y'
-            }, {
-                label: '{{ __("report.conversion_rate") }}',
-                data: trendData.map(function(d) { return d.rate; }),
-                type: 'line',
-                borderColor: '#E65100',
-                backgroundColor: 'transparent',
-                tension: 0.3,
-                yAxisID: 'y1'
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true, position: 'left', ticks: { stepSize: 1 } },
-                y1: { beginAtZero: true, position: 'right', max: 100, grid: { drawOnChartArea: false },
-                    ticks: { callback: function(v) { return v + '%'; } }
-                }
-            }
-        }
-    });
-
-    // 按医生转化率（水平条形图）
-    var doctorData = @json($byDoctor);
-    if (doctorData.length > 0) {
-        new Chart(document.getElementById('doctorConversionChart').getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: doctorData.map(function(d) { return d.doctor_name; }),
-                datasets: [{
-                    label: '{{ __("report.conversion_rate") }}',
-                    data: doctorData.map(function(d) { return d.conversion_rate; }),
-                    backgroundColor: doctorData.map(function(d) {
-                        return d.conversion_rate >= 60 ? '#2E7D32' : (d.conversion_rate >= 30 ? '#E65100' : '#C62828');
-                    })
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { x: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } }
-            }
-        });
-    }
-});
+LanguageManager.loadFromPHP(@json(__('report')), 'report');
+window.TreatmentPlanCompletionConfig = {
+    locale:       '{{ app()->getLocale() }}',
+    monthlyTrend: @json($monthlyTrend),
+    byDoctor:     @json($byDoctor)
+};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="{{ asset('include_js/treatment_plan_completion_report.js') }}?v={{ filemtime(public_path('include_js/treatment_plan_completion_report.js')) }}"></script>
 @endsection

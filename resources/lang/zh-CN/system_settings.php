@@ -4,8 +4,8 @@ return [
     'page_title' => '系统设置',
 
     // Tabs
-    'tab_clinic' => '诊所设置',
-    'tab_member' => '会员设置',
+    'tab_clinic'  => '诊所设置',
+    'tab_member'  => '会员设置',
 
     // Messages
     'saved' => '设置已保存',
@@ -37,6 +37,9 @@ return [
     'minutes' => '分钟',
     'hours' => '小时',
     'days' => '天',
+
+    'clinic_require_schedule_for_booking'      => '无排班时禁止预约',
+    'clinic_require_schedule_for_booking_hint' => '开启后，若医生当日无排班则不允许创建预约；关闭时使用诊所营业时间作为可选时段',
 
     // ── Member settings (labels for the unified page) ───────────
     'member_points_enabled' => '积分功能',

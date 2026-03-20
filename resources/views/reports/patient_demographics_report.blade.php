@@ -1,19 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
-    .stat-card { background: #fff; border-radius: 8px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .stat-card .stat-value { font-size: 36px; font-weight: bold; color: #1A237E; }
-    .stat-card .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
-    .stat-card.highlight { background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
-    .stat-card.highlight .stat-value, .stat-card.highlight .stat-label { color: #fff; }
-    .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-    .table-report th { background: #f5f6fa; font-weight: 600; }
-    .amount { font-family: monospace; }
-    @media (max-width: 991px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
-</style>
+<link rel="stylesheet" href="{{ asset('css/patient-demographics.css') }}">
 @endsection
 
 <div class="row">
@@ -125,79 +113,15 @@
 @endsection
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    var ageColors = ['#1A237E', '#283593', '#303F9F', '#3949AB', '#3F51B5', '#5C6BC0', '#7986CB', '#9FA8DA'];
-
-    // 年龄段分布
-    var ageData = @json($ageDistribution);
-    new Chart(document.getElementById('ageChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: ageData.map(function(d) { return d.label; }),
-            datasets: [{
-                data: ageData.map(function(d) { return d.count; }),
-                backgroundColor: ageColors.slice(0, ageData.length)
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
-
-    // 性别比
-    var genderData = @json($genderDistribution);
-    new Chart(document.getElementById('genderChart').getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: genderData.map(function(d) { return d.label; }),
-            datasets: [{
-                data: genderData.map(function(d) { return d.count; }),
-                backgroundColor: ['#1A237E', '#E91E63', '#9E9E9E']
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-    });
-
-    // 来源分布
-    var sourceData = @json($sourceDistribution);
-    var srcColors = ['#1A237E', '#3949AB', '#5C6BC0', '#7986CB', '#9FA8DA', '#C5CAE9', '#E8EAF6'];
-    new Chart(document.getElementById('sourceChart').getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: sourceData.map(function(d) { return d.source; }),
-            datasets: [{
-                data: sourceData.map(function(d) { return d.count; }),
-                backgroundColor: srcColors.slice(0, sourceData.length)
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-    });
-
-    // 新患月趋势
-    var trendData = @json($newPatientTrend);
-    new Chart(document.getElementById('newPatientTrendChart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: trendData.map(function(d) { return d.month; }),
-            datasets: [{
-                label: '{{ __("report.new_patients") }}',
-                data: trendData.map(function(d) { return d.count; }),
-                borderColor: '#1A237E',
-                backgroundColor: 'rgba(26, 35, 126, 0.1)',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
-});
+LanguageManager.loadFromPHP(@json(__('report')), 'report');
+window.PatientDemographicsConfig = {
+    ageDistribution:    @json($ageDistribution),
+    genderDistribution: @json($genderDistribution),
+    sourceDistribution: @json($sourceDistribution),
+    newPatientTrend:    @json($newPatientTrend)
+};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="{{ asset('include_js/patient_demographics_report.js') }}?v={{ filemtime(public_path('include_js/patient_demographics_report.js')) }}"></script>
 @endsection

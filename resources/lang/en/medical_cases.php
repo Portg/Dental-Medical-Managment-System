@@ -244,6 +244,7 @@ return [
     // Edit Permissions & Amendments
     'edit_within_24h' => 'Can edit within 24 hours after submission',
     'edit_requires_approval' => 'Record is locked. Modifications require a reason and approval.',
+    'invalid_status_transition' => 'Invalid status transition. This operation is not allowed from the current status.',
     'modification_reason' => 'Modification Reason',
     'record_locked' => 'Record Locked',
     'amendment_submitted' => 'Amendment request submitted, pending approval',
@@ -430,4 +431,18 @@ return [
     'tpl_periodontal_diag' => 'Chronic periodontitis (mild/moderate/severe)',
     'tpl_periodontal_treat' => 'Supragingival scaling, subgingival scaling (___ quadrant), root planing, periodontal irrigation and medication',
     'tpl_periodontal_orders' => '1. Tooth sensitivity may occur, this is normal\\n2. Use soft bristle toothbrush, learn proper brushing technique\\n3. Use dental floss/interdental brush\\n4. Return for follow-up, regular maintenance',
+
+    // Save as Template
+    'save_as_template' => 'Save as Template',
+    'template_shortcut_code' => 'Shortcut Code',
+    'template_code_hint' => 'Pinyin abbreviation, e.g. cleaning, extraction',
+    'template_code_optional_hint' => 'Optional, for quick template lookup; auto-generated if left empty',
+    'template_preview' => 'Content to be saved',
+    'template_empty_warning' => 'Current record is empty, cannot save as template',
+    'template_name_required' => 'Please enter a template name',
+    'template_draft_warning' => 'Cannot save draft record as template, please submit first',
+
+    // Pending Appointments
+    'pending_appointments' => 'Pending Records',
+    'appointment_linked' => 'Appointment linked, date and doctor auto-filled',
 ];

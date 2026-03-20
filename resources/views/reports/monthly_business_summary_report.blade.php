@@ -1,24 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .stat-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 25px; }
-    .stat-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .stat-card .stat-value { font-size: 28px; font-weight: bold; color: #1A237E; }
-    .stat-card .stat-label { font-size: 13px; color: #666; margin-top: 5px; }
-    .stat-card .stat-change { font-size: 12px; margin-top: 5px; }
-    .stat-card .stat-change.up { color: #2E7D32; }
-    .stat-card .stat-change.down { color: #C62828; }
-    .stat-card.highlight { background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
-    .stat-card.highlight .stat-value, .stat-card.highlight .stat-label { color: #fff; }
-    .stat-card.highlight .stat-change.up { color: #A5D6A7; }
-    .stat-card.highlight .stat-change.down { color: #EF9A9A; }
-    .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-    .table-report th { background: #f5f6fa; font-weight: 600; }
-    .amount { font-family: monospace; }
-    @media (max-width: 991px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
-</style>
+<link rel="stylesheet" href="{{ asset('css/monthly-business-summary.css') }}">
 @endsection
 
 <div class="row">
@@ -122,28 +105,12 @@
 @endsection
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    var revenueData = @json($revenueByDay);
-    new Chart(document.getElementById('dailyRevenueChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: revenueData.map(function(d) { return d.date.substring(5); }),
-            datasets: [{
-                label: '{{ __("report.revenue") }}',
-                data: revenueData.map(function(d) { return d.revenue; }),
-                backgroundColor: 'rgba(26, 35, 126, 0.6)',
-                borderColor: '#1A237E',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return '¥' + v.toLocaleString(); } } } }
-        }
-    });
-});
+LanguageManager.loadFromPHP(@json(__('report')), 'report');
+window.MonthlyBusinessSummaryConfig = {
+    revenueByDay: @json($revenueByDay)
+};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="{{ asset('include_js/monthly_business_summary_report.js') }}?v={{ filemtime(public_path('include_js/monthly_business_summary_report.js')) }}"></script>
 @endsection

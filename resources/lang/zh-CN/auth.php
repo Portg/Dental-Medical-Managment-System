@@ -36,6 +36,10 @@ return [
     // 邮箱验证
     'resend_verification_email' => '重新发送验证邮件',
 
+    // 登录
+    'username_or_email' => '用户名 / 邮箱',
+    'account_disabled' => '您的账号已被停用，请联系管理员。',
+
     // 用户验证
     'invalid_user' => '您不是有效用户',
 ];

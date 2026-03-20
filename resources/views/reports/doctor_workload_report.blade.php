@@ -1,22 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
-    .stat-card { background: #fff; border-radius: 8px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .stat-card .stat-value { font-size: 36px; font-weight: bold; color: #1A237E; }
-    .stat-card .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
-    .stat-card.highlight { background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
-    .stat-card.highlight .stat-value, .stat-card.highlight .stat-label { color: #fff; }
-    .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-    .table-report th { background: #f5f6fa; font-weight: 600; }
-    .badge-rate { padding: 3px 10px; border-radius: 12px; font-size: 12px; }
-    .badge-rate.good { background: #E8F5E9; color: #2E7D32; }
-    .badge-rate.warn { background: #FFF3E0; color: #E65100; }
-    .badge-rate.bad { background: #FFEBEE; color: #C62828; }
-    @media (max-width: 991px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
-</style>
+<link rel="stylesheet" href="{{ asset('css/doctor-workload.css') }}">
 @endsection
 
 <div class="row">
@@ -132,68 +117,14 @@
 @endsection
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('.datepicker').datepicker({ language: '{{ app()->getLocale() }}', format: 'yyyy-mm-dd', autoclose: true });
-
-    var trendData = @json($dailyTrend);
-    var colors = ['#1A237E', '#E91E63', '#4CAF50', '#FF9800', '#9C27B0', '#00BCD4', '#795548', '#607D8B'];
-
-    // 每日工作量趋势（按医生分线）
-    var datasets = [];
-    trendData.doctors.forEach(function(doctor, i) {
-        datasets.push({
-            label: doctor,
-            data: trendData.dates.map(function(date) {
-                return (trendData.data[date] && trendData.data[date][doctor]) || 0;
-            }),
-            borderColor: colors[i % colors.length],
-            backgroundColor: 'transparent',
-            tension: 0.3,
-            borderWidth: 2
-        });
-    });
-
-    new Chart(document.getElementById('dailyWorkloadChart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: trendData.dates.map(function(d) { return d.substring(5); }),
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-            plugins: { legend: { position: 'top' } }
-        }
-    });
-
-    // 医生预约量排名柱状图
-    var doctorData = @json($doctorStats);
-    new Chart(document.getElementById('doctorRankingChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: doctorData.map(function(d) { return d.doctor_name; }),
-            datasets: [{
-                label: '{{ __("report.completed") }}',
-                data: doctorData.map(function(d) { return d.completed; }),
-                backgroundColor: '#2E7D32'
-            }, {
-                label: '{{ __("report.cancelled") }}',
-                data: doctorData.map(function(d) { return d.cancelled; }),
-                backgroundColor: '#E65100'
-            }, {
-                label: '{{ __("report.no_show") }}',
-                data: doctorData.map(function(d) { return d.no_show; }),
-                backgroundColor: '#C62828'
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } },
-            plugins: { legend: { position: 'top' } }
-        }
-    });
-});
+LanguageManager.loadFromPHP(@json(__('report')), 'report');
+window.DoctorWorkloadConfig = {
+    locale:      '{{ app()->getLocale() }}',
+    dailyTrend:  @json($dailyTrend),
+    doctorStats: @json($doctorStats)
+};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="{{ asset('include_js/doctor_workload_report.js') }}?v={{ filemtime(public_path('include_js/doctor_workload_report.js')) }}"></script>
 @endsection

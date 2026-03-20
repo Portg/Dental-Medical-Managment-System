@@ -41,6 +41,26 @@ return [
     'appointment'          => 'Linked Appointment',
     'medical_case'         => 'Linked Case',
 
+    // ─── Lab Info Reference ────────────────────────────────────
+    'lab_info'             => 'Lab Info',
+    'lab_info_contact'     => 'Contact',
+    'lab_info_phone'       => 'Phone',
+    'lab_info_specialties' => 'Specialties',
+    'lab_info_turnaround'  => 'Avg. Turnaround Days',
+    'lab_info_hint'        => 'Shown after selecting a lab',
+    'basic_info'           => 'Basic Info',
+    'fees_info'            => 'Fees',
+
+    // ─── Items ─────────────────────────────────────────────────
+    'items'                => 'Items',
+    'item_group'           => 'Group :n',
+    'add_item_row'         => 'Add Item',
+    'remove_item_row'      => 'Remove',
+    'max_items_reached'    => 'Maximum 4 item groups',
+    'qty'                  => 'Qty',
+    'processing_days'      => 'Processing Days',
+    'processing_days_hint' => 'Auto-calculates expected return date',
+
     // ─── Prosthesis Types ───────────────────────────────────────
     'type_crown'           => 'Crown',
     'type_bridge'          => 'Bridge',
@@ -183,5 +203,7 @@ return [
     'are_you_sure'         => 'Are you sure?',
     'yes_delete_it'        => 'Yes, delete it!',
     'no_records'           => 'No records found',
+    'unknown_lab'          => 'Unknown Lab',
+    'unassigned_doctor'    => 'Unassigned',
 
 ];

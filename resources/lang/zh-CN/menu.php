@@ -29,7 +29,7 @@ return [
     'system_settings' => '系统管理',
 
     // New Report Items
-    'patient_source_report' => '患者来源分析',
+    'patient_source_report' => '患者分析报表',
     'revisit_rate_report' => '复诊率统计',
     'satisfaction_survey' => '满意度调查',
     'appointment_analytics_report' => '预约分析报表',
@@ -126,11 +126,12 @@ return [
     'daily_expenses_report' => '每日费用报表',
     'debtors_report' => '债务人报表',
     'doctor_performance_report' => '医生绩效报表',
+    'my_performance' => '我的绩效',
     'procedures_income_report' => '治疗项目收入报表',
     'patient_report' => '患者报表',
     'appointment_report' => '预约报表',
     'financial_report' => '财务报表',
-    'general_income_report' => '总收入报表',
+    'general_income_report' => '收费报表',
     'aged_receivable_report' => '应收账款账龄报表',
     'aged_payables_report' => '应付账款账龄报表',
     // SMS Manager Submenu
@@ -283,5 +284,24 @@ return [
 
     // OCR 识别
     'ocr_recognize' => '病历OCR识别',
+
+    // 新增报表菜单项 (报表改造)
+    'financial_calendar'      => '财务日历',
+    'cash_summary_report'     => '现金汇总',
+    'financial_detail_report' => '财务明细',
+    'lab_statistics_report'   => '技工单统计',
+    'unpaid_invoices_report'  => '未收款报表',
+
+    // 申领管理
+    'requisition_management' => '申领管理',
+
+    // 盘点管理（Phase 7）
+    'inventory_check_management' => '盘点管理',
+
+    // 菜单重组新增（Phase 8）
+    'financial_center' => '财务中心',
+    'warehouse_management' => '库房管理',
+    'hr_admin' => '人事行政',
+    'report_center' => '报表中心',
 
 ];

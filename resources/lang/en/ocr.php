@@ -3,7 +3,7 @@
 return [
     'page_title' => 'Medical Record OCR Recognition',
     'upload_hint' => 'Drag & drop or click to upload medical record image',
-    'supported_formats' => 'Supports JPG/PNG/BMP, max 10MB',
+    'supported_formats' => 'Supports JPG/PNG/BMP, max 5MB',
     'start_recognize' => 'Start Recognition',
     'recognizing' => 'Recognizing, please wait...',
     'patient_info' => 'Patient Information',
@@ -36,5 +36,5 @@ return [
     'medical_orders' => 'Medical Orders',
     'upload_required' => 'Please upload a medical record image',
     'invalid_image' => 'File must be an image',
-    'file_too_large' => 'File size cannot exceed 10MB',
+    'file_too_large' => 'File size cannot exceed 5MB',
 ];

@@ -22,9 +22,9 @@
             <div class="row">
                 <div class="col-xs-6">
                     <input
-                            class="form-control form-control-solid placeholder-no-fix form-group {{ $errors->has('email') ? ' is-invalid' : '' }}"
-                            type="text" autocomplete="off" placeholder="{{ __('auth.email_address') }}" name="email"
-                            value="{{ old('email') }}" required/>
+                            class="form-control form-control-solid placeholder-no-fix form-group {{ $errors->has('login') ? ' is-invalid' : '' }}"
+                            type="text" autocomplete="off" placeholder="{{ __('auth.username_or_email') }}" name="login"
+                            value="{{ old('login') }}" required/>
 
 
                 </div>

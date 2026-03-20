@@ -391,6 +391,8 @@ return [
     // Doctor Workload Report
     'doctor_workload' => 'Doctor Workload',
     'doctor_ranking' => 'Doctor Appointment Ranking',
+    'my_workload' => 'My Workload',
+    'doctor' => 'Doctor',
     'daily_workload_trend' => 'Daily Workload Trend',
     'total_appointments_col' => 'Total Appointments',
     'completed_col' => 'Completed',
@@ -407,4 +409,79 @@ return [
     'avg_invoice_amount' => 'Avg Invoice Amount',
     'monthly_quotation_trend' => 'Monthly Quotation Trend',
     'unconverted_list' => 'Unconverted Quotations',
+
+    // Merged Report Tabs
+    'doctor_report' => 'Doctor Report',
+    'performance_tab' => 'Billing Statistics',
+    'workload_tab' => 'Workload Statistics',
+    'patient_report' => 'Patient Report',
+    'source_tab' => 'Source Analysis',
+    'demographics_tab' => 'Demographics',
+    'billing_report' => 'Billing Report',
+    'payments_tab' => 'Payment Details',
+    'procedures_tab' => 'Procedure Income',
+    'select_date_range_hint' => 'Please select a date range to query',
+
+    // Financial Calendar
+    'financial_calendar' => 'Financial Calendar',
+    'refund_amount' => 'Refund',
+    'net_amount' => 'Net Income',
+    'income' => 'Income',
+
+    // Cash Summary Report
+    'cash_summary_report' => 'Cash Summary Report',
+    'by_payment_method' => 'By Payment Method',
+    'by_collector' => 'By Collector',
+    'by_date' => 'By Date',
+    'by_doctor' => 'By Doctor',
+    'group_count' => 'Groups',
+    'total_bills' => 'Total Bills',
+    'bill_count' => 'Bill Count',
+    'total_amount' => 'Total Amount',
+
+    // Lab Statistics Report
+    'lab_statistics_report' => 'Lab Case Statistics',
+    'total_lab_cases' => 'Total Lab Cases',
+    'rework_count' => 'Rework Count',
+    'avg_processing_days' => 'Avg Processing Days',
+    'total_lab_fee' => 'Total Lab Fee',
+    'by_status' => 'By Status',
+    'by_lab' => 'By Lab',
+    'monthly_trend' => 'Monthly Trend',
+    'lab_name' => 'Lab Name',
+    'avg_fee' => 'Avg Fee',
+    'total_fee' => 'Total Fee',
+    'total' => 'Total',
+
+    // Financial Detail Report
+    'financial_detail_report'  => 'Financial Detail',
+    'payment_detail'           => 'Payment Details',
+    'refund_detail'            => 'Refund Details',
+    'expense_detail'           => 'Expense Details',
+    'employee_billing_detail'  => 'Employee Billing',
+    'refund_date'              => 'Refund Date',
+    'cashier'                  => 'Cashier',
+    'operator'                 => 'Operator',
+    'description'              => 'Description',
+    'supplier'                 => 'Supplier',
+    'phone'                    => 'Phone',
+    'payment_status'           => 'Payment Status',
+    'status_unpaid'            => 'Unpaid',
+    'status_partial'           => 'Partial',
+    'status_overdue'           => 'Overdue',
+
+    // Cash Summary — 5th tab
+    'by_service_category'      => 'By Service Category',
+
+    // Unpaid Invoices Report
+    'unpaid_invoices_report'   => 'Unpaid Invoices',
+    'unpaid_invoice_count'     => 'Unpaid Invoice Count',
+
+    // Date range validation
+    'date_range_too_large'     => 'Date range cannot exceed 12 months',
+
+    // Appointment Analytics — patient source & tag filters
+    'all_sources'              => 'All Sources',
+    'filter_source'            => 'Patient Source',
+    'filter_tags'              => 'Patient Tags',
 ];

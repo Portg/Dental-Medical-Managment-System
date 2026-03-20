@@ -1,22 +1,7 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('content')
 @section('css')
-<style>
-    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
-    .stat-card { background: #fff; border-radius: 8px; padding: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .stat-card .stat-value { font-size: 36px; font-weight: bold; color: #1A237E; }
-    .stat-card .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
-    .stat-card.highlight { background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); }
-    .stat-card.highlight .stat-value, .stat-card.highlight .stat-label { color: #fff; }
-    .chart-container { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 15px; }
-    .table-report th { background: #f5f6fa; font-weight: 600; }
-    .badge-rate { padding: 3px 10px; border-radius: 12px; font-size: 12px; }
-    .badge-rate.good { background: #E8F5E9; color: #2E7D32; }
-    .badge-rate.warn { background: #FFF3E0; color: #E65100; }
-    .badge-rate.bad { background: #FFEBEE; color: #C62828; }
-    @media (max-width: 991px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
-</style>
+<link rel="stylesheet" href="{{ asset('css/appointment-analytics.css') }}">
 @endsection
 
 <div class="row">
@@ -28,13 +13,36 @@
                     <span class="caption-subject">{{ __('report.appointment_analytics') }}</span>
                 </div>
                 <div class="actions">
-                    <form class="form-inline" method="GET" style="display: inline-flex; gap: 10px;">
+                    <form class="form-inline" method="GET" style="display: inline-flex; gap: 10px; flex-wrap: wrap;">
                         <input type="text" name="start_date" class="form-control input-sm datepicker"
                                value="{{ $startDate->format('Y-m-d') }}" placeholder="{{ __('datetime.date_range.start_date') }}">
                         <span>{{ __('datetime.date_range.to') }}</span>
                         <input type="text" name="end_date" class="form-control input-sm datepicker"
                                value="{{ $endDate->format('Y-m-d') }}" placeholder="{{ __('datetime.date_range.end_date') }}">
-                        <button type="submit" class="btn btn-sm btn-primary"><i class="icon-magnifier"></i> {{ __('common.search') }}</button>
+
+                        {{-- Patient source filter --}}
+                        <select id="filter-source" name="source_id" class="form-control input-sm filter-select2">
+                            <option value="">{{ __('report.all_sources') }}</option>
+                            @foreach($sources as $src)
+                                <option value="{{ $src->id }}" {{ $selectedSourceId == $src->id ? 'selected' : '' }}>
+                                    {{ $src->name }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        {{-- Patient tag filter (multi-select) --}}
+                        <select id="filter-tags" name="tag_ids[]" class="form-control input-sm filter-select2" multiple>
+                            @foreach($patientTags as $tag)
+                                <option value="{{ $tag->id }}"
+                                    {{ in_array($tag->id, (array) $selectedTagIds) ? 'selected' : '' }}>
+                                    {{ $tag->name }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="icon-magnifier"></i> {{ __('common.search') }}
+                        </button>
                     </form>
                 </div>
             </div>
@@ -144,94 +152,17 @@
 @endsection
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('.datepicker').datepicker({ language: '{{ app()->getLocale() }}', format: 'yyyy-mm-dd', autoclose: true });
-
-    // 每日预约趋势
-    new Chart(document.getElementById('dailyTrendChart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: @json(array_column($dailyTrend, 'date')),
-            datasets: [{
-                label: '{{ __("report.appointments_count") }}',
-                data: @json(array_column($dailyTrend, 'count')),
-                borderColor: '#1A237E',
-                backgroundColor: 'rgba(26, 35, 126, 0.1)',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-            plugins: { legend: { display: false } }
-        }
-    });
-
-    // 就诊高峰时段
-    var peakHoursData = @json($peakHours);
-    var hourLabels = [];
-    var hourValues = [];
-    for (var h = 8; h <= 20; h++) {
-        hourLabels.push(h + '{{ __("report.hour_suffix") }}');
-        hourValues.push(peakHoursData[h] || 0);
-    }
-    new Chart(document.getElementById('peakHoursChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: hourLabels,
-            datasets: [{
-                data: hourValues,
-                backgroundColor: '#3949AB'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
-
-    // 预约来源分布
-    var sourceData = @json($sourceDistribution);
-    if (sourceData.length > 0) {
-        var sourceColors = ['#1A237E', '#3949AB', '#5C6BC0', '#7986CB', '#9FA8DA', '#C5CAE9', '#E8EAF6'];
-        new Chart(document.getElementById('sourceChart').getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: sourceData.map(function(d) { return d.source; }),
-                datasets: [{
-                    data: sourceData.map(function(d) { return d.count; }),
-                    backgroundColor: sourceColors.slice(0, sourceData.length)
-                }]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-        });
-    }
-
-    // 诊椅使用率
-    var chairData = @json($chairUtilization);
-    if (chairData.length > 0) {
-        new Chart(document.getElementById('chairChart').getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: chairData.map(function(d) { return d.chair; }),
-                datasets: [{
-                    label: '{{ __("report.appointments_count") }}',
-                    data: chairData.map(function(d) { return d.count; }),
-                    backgroundColor: '#3949AB'
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
-            }
-        });
-    }
-});
+LanguageManager.loadFromPHP(@json(__('report')), 'report');
+window.AppointmentAnalyticsConfig = {
+    locale:           '{{ app()->getLocale() }}',
+    dailyTrendDates:  @json(array_column($dailyTrend, 'date')),
+    dailyTrendCounts: @json(array_column($dailyTrend, 'count')),
+    peakHoursData:    @json($peakHours),
+    sourceData:       @json($sourceDistribution),
+    chairData:        @json($chairUtilization)
+};
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="{{ asset('include_js/appointment_analytics.js') }}?v={{ filemtime(public_path('include_js/appointment_analytics.js')) }}"></script>
 @endsection

@@ -60,46 +60,15 @@
 @endsection
 @section('js')
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-    <script type="text/javascript">
-        var table;
-
-        $(function () {
-            LanguageManager.loadAllFromPHP({
-                'inventory': @json(__('inventory')),
-                'common': @json(__('common')),
-                'datetime': @json(__('datetime'))
-            });
-
-            loadTable();
-        });
-
-        function loadTable() {
-            table = $('#expiry-table').DataTable({
-                processing: true,
-                serverSide: true,
-                language: LanguageManager.getDataTableLang(),
-                ajax: {
-                    url: "{{ url('/inventory-expiry-warnings') }}",
-                    data: function (d) {
-                        d.warning_days = $('#warning-days').val();
-                    }
-                },
-                columns: [
-                    {data: 'DT_RowIndex', name: 'DT_RowIndex'},
-                    {data: 'item_code', name: 'item_code'},
-                    {data: 'item_name', name: 'item_name'},
-                    {data: 'category_name', name: 'category_name'},
-                    {data: 'batch_no', name: 'batch_no'},
-                    {data: 'expiry_date', name: 'expiry_date'},
-                    {data: 'days_to_expiry', name: 'days_to_expiry'},
-                    {data: 'qty', name: 'qty'},
-                    {data: 'expiry_status', name: 'expiry_status', orderable: false, searchable: false}
-                ]
-            });
+    <script>
+    window.ExpiryWarningsConfig = {
+        ajaxUrl: '{{ url('/inventory-expiry-warnings') }}',
+        i18n: {
+            'inventory': @json(__('inventory')),
+            'common':    @json(__('common')),
+            'datetime':  @json(__('datetime'))
         }
-
-        function filterTable() {
-            table.ajax.reload();
-        }
+    };
     </script>
+    <script src="{{ asset('include_js/expiry_warnings.js') }}?v={{ filemtime(public_path('include_js/expiry_warnings.js')) }}" type="text/javascript"></script>
 @endsection

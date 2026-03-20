@@ -69,6 +69,29 @@ return [
     'edit' => 'Edit',
     'delete' => 'Delete',
 
+    // Username
+    'username' => 'Username',
+    'enter_username' => 'Enter username (name pinyin abbreviation)',
+    'username_hint' => 'Leave empty to auto-generate from name pinyin',
+    'username_already_exists' => 'Username already exists',
+
+    // Status
+    'status' => 'Status',
+    'status_active' => 'Active',
+    'status_resigned' => 'Resigned',
+    'current_status' => 'Current status',
+    'no_change' => 'No change',
+    'set_resigned' => 'Set as resigned',
+    'set_active' => 'Reactivate',
+    'new_password_for_reactivation' => 'New password for reactivation',
+    'enter_new_password' => 'Enter new password',
+    'password_required_for_reactivation' => 'New password is required for reactivation',
+    'user_resigned_successfully' => 'User has been set as resigned',
+    'user_reactivated_successfully' => 'User has been reactivated',
+    'status_change_failed' => 'Status change failed',
+    'cannot_resign_yourself' => 'You cannot set your own account to resigned status',
+    'cannot_resign_last_super_admin' => 'The system must retain at least one active super administrator. This operation cannot be performed.',
+
     // Other
     'yes' => 'Yes',
     'no' => 'No',

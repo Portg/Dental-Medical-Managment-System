@@ -3,7 +3,7 @@
 return [
     'page_title' => '病历 OCR 识别',
     'upload_hint' => '拖拽或点击上传病历图片',
-    'supported_formats' => '支持 JPG/PNG/BMP 格式，最大 10MB',
+    'supported_formats' => '支持 JPG/PNG/BMP 格式，最大 5MB',
     'start_recognize' => '开始识别',
     'recognizing' => '正在识别，请稍候...',
     'patient_info' => '患者信息',
@@ -36,5 +36,5 @@ return [
     'medical_orders' => '医嘱',
     'upload_required' => '请上传病历图片',
     'invalid_image' => '文件必须是图片格式',
-    'file_too_large' => '文件大小不能超过 10MB',
+    'file_too_large' => '文件大小不能超过 5MB',
 ];

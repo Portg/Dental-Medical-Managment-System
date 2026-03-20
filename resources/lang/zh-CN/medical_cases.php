@@ -244,6 +244,7 @@ return [
     // Edit Permissions & Amendments
     'edit_within_24h' => '提交后24小时内可修改',
     'edit_requires_approval' => '病历已锁定，修改需填写原因并提交审批',
+    'invalid_status_transition' => '状态流转不合法，请检查当前状态是否允许此操作',
     'modification_reason' => '修改原因',
     'record_locked' => '病历已锁定',
     'amendment_submitted' => '修改申请已提交，等待审批',
@@ -430,4 +431,18 @@ return [
     'tpl_periodontal_diag' => '慢性牙周炎（轻/中/重度）',
     'tpl_periodontal_treat' => '龈上洁治，龈下刮治（___象限），根面平整，牙周冲洗上药',
     'tpl_periodontal_orders' => '1. 可能出现牙齿敏感，属正常现象\\n2. 使用软毛牙刷，掌握正确刷牙方法\\n3. 配合使用牙线/牙缝刷\\n4. 按时复诊，定期维护',
+
+    // Save as Template (另存为模板)
+    'save_as_template' => '另存为模板',
+    'template_shortcut_code' => '快捷码',
+    'template_code_hint' => '输入拼音缩写，如 jieya、baya',
+    'template_code_optional_hint' => '选填，方便快速检索模板；留空则自动生成',
+    'template_preview' => '将保存以下内容',
+    'template_empty_warning' => '当前病历内容为空，无法保存为模板',
+    'template_name_required' => '请输入模板名称',
+    'template_draft_warning' => '草稿病历不能另存为模板，请先提交病历',
+
+    // Pending Appointments (补充病历)
+    'pending_appointments' => '待补充病历',
+    'appointment_linked' => '已关联预约，日期和医生已自动填入',
 ];

@@ -79,62 +79,9 @@
 </div>
 @endsection
 @section('js')
-    <script type="text/javascript">
-        $(document).ready(function () {
-            $(".fancybox").fancybox({
-                openEffect: "none",
-                closeEffect: "none"
-            });
-        });
-
-
-        function deleteRecord(id) {
-            swal({
-                    title: "{{ __('common.are_you_sure') }}",
-                    text: "{{ __('medical_cards.cannot_recover_card') }}",
-                    type: "warning",
-                    showCancelButton: true,
-                    confirmButtonClass: "btn-danger",
-                    confirmButtonText: "{{ __('common.yes_delete_it') }}",
-                    closeOnConfirm: false
-                },
-                function () {
-
-                    var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
-                   $.LoadingOverlay("show");
-                    $.ajax({
-                        type: 'delete',
-                        data: {
-                            _token: CSRF_TOKEN
-                        },
-                        url: "/medical-cards-items/" + id,
-                        success: function (data) {
-                            if (data.status) {
-                                alert_dialog(data.message, "success");
-                            } else {
-                                alert_dialog(data.message, "danger");
-                            }
-                           $.LoadingOverlay("hide");
-                        },
-                        error: function (request, status, error) {
-                           $.LoadingOverlay("hide");
-
-                        }
-                    });
-
-                });
-
-        }
-
-        function alert_dialog(message, status) {
-            swal("{{ __('medical_cards.alert') }}", message, status);
-
-            setTimeout(function () {
-                location.reload();
-            }, 1900);
-        }
-
-
+    <script>
+        LanguageManager.loadFromPHP(@json(__('medical_cards')), 'medical_cards');
     </script>
+    <script src="{{ asset('include_js/medical_cards_show.js') }}?v={{ filemtime(public_path('include_js/medical_cards_show.js')) }}" type="text/javascript"></script>
 @endsection
 

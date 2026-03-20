@@ -41,6 +41,26 @@ return [
     'appointment'          => '关联预约',
     'medical_case'         => '关联病例',
 
+    // ─── 外加工信息参照 ────────────────────────────────────────
+    'lab_info'             => '技工厂信息',
+    'lab_info_contact'     => '联系人',
+    'lab_info_phone'       => '电话',
+    'lab_info_specialties' => '擅长类型',
+    'lab_info_turnaround'  => '平均交付天数',
+    'lab_info_hint'        => '选择技工厂后自动显示',
+    'basic_info'           => '基本信息',
+    'fees_info'            => '费用信息',
+
+    // ─── 项目明细 ──────────────────────────────────────────────
+    'items'                => '项目明细',
+    'item_group'           => '第 :n 组',
+    'add_item_row'         => '添加项目',
+    'remove_item_row'      => '删除',
+    'max_items_reached'    => '最多添加 4 组项目',
+    'qty'                  => '数量',
+    'processing_days'      => '加工天数',
+    'processing_days_hint' => '自动计算预计返回日期',
+
     // ─── 义齿类型 ────────────────────────────────────────────────
     'type_crown'           => '冠',
     'type_bridge'          => '桥',
@@ -183,5 +203,7 @@ return [
     'are_you_sure'         => '您确定吗？',
     'yes_delete_it'        => '是的，删除！',
     'no_records'           => '暂无记录',
+    'unknown_lab'          => '未知技工所',
+    'unassigned_doctor'    => '未分配',
 
 ];

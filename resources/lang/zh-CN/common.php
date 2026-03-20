@@ -172,6 +172,7 @@ return [
     'patient' => '患者',
     'doctor' => '医生',
     'service' => '项目',
+    'branch' => '诊所/分院',
 
     // Messages
     'alert' => '警报！',
@@ -193,6 +194,7 @@ return [
     'loading' => '加载中...',
     'please_wait' => '请稍候...',
     'confirm_delete' => '您确定要删除吗？',
+    'delete_confirm' => '您确定要删除吗？',
     'confirm_action' => '您确定要执行此操作吗？',
     'cannot_be_undone' => '此操作无法撤销！',
     'are_you_sure' => '您确定吗？',

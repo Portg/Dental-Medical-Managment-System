@@ -252,49 +252,12 @@
 
 @section('js')
 <script>
-function callNextPatient() {
-    $('#chair-modal').modal('show');
-}
-
-function doCallNext() {
-    var chairId = $('#chair-id').val();
-
-    $.post("{{ url('doctor-queue/call-next') }}", {
-        _token: '{{ csrf_token() }}',
-        chair_id: chairId
-    }, function(response) {
-        if (response.status === 'success') {
-            $('#chair-modal').modal('hide');
-            toastr.success(response.message);
-            location.reload();
-        } else if (response.status === 'info') {
-            toastr.info(response.message);
-        } else {
-            toastr.error(response.message);
-        }
-    }).fail(function(xhr) {
-        toastr.error(xhr.responseJSON?.message || '{{ __("common.error") }}');
-    });
-}
-
-function completeTreatment(id) {
-    $.post("{{ url('waiting-queue') }}/" + id + "/complete", {
-        _token: '{{ csrf_token() }}'
-    }, function(response) {
-        if (response.status === 'success') {
-            toastr.success(response.message);
-            location.reload();
-        } else {
-            toastr.error(response.message);
-        }
-    }).fail(function(xhr) {
-        toastr.error(xhr.responseJSON?.message || '{{ __("common.error") }}');
-    });
-}
-
-// Auto refresh every 30 seconds
-setInterval(function() {
-    location.reload();
-}, 30000);
+window.DoctorQueueConfig = {
+    urls: {
+        callNext:          '{{ url('doctor-queue/call-next') }}',
+        waitingQueueBase:  '{{ url('waiting-queue') }}'
+    }
+};
 </script>
+<script src="{{ asset('include_js/doctor_queue.js') }}?v={{ filemtime(public_path('include_js/doctor_queue.js')) }}"></script>
 @endsection

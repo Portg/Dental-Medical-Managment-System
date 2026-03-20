@@ -53,43 +53,13 @@
 @include('payslips.create')
 @endsection
 @section('js')
-
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-    <script type="text/javascript">
-        $(function () {
-
-            let table = $('#sample_1').DataTable({
-                processing: true,
-                serverSide: true,
-                language: LanguageManager.getDataTableLang(),
-                ajax: {
-                    url: "{{ url('/individual-payslips/') }}",
-                    data: function (d) {
-                    }
-                },
-                dom: 'Bfrtip',
-                buttons: {
-                    buttons: [
-                        // {extend: 'pdfHtml5', className: 'pdfButton'},
-                        // {extend: 'excelHtml5', className: 'excelButton'},
-
-                    ]
-                },
-                columns: [
-                    {data: 'DT_RowIndex', name: 'DT_RowIndex'},
-                    {data: 'payslip_month', name: 'payslip_month'},
-                    {data: 'basic_salary', name: 'basic_salary'},
-                    {data: 'total_advances', name: 'total_advances'},
-                    {data: 'total_allowances', name: 'total_allowances'},
-                    {data: 'total_deductions', name: 'total_deductions'},
-                    {data: 'due_balance', name: 'due_balance'}
-                ]
-            });
-
-
-        });
-
+    <script>
+        window.IndividualPayslipsConfig = {
+            ajaxUrl: "{{ url('/individual-payslips/') }}"
+        };
     </script>
+    <script src="{{ asset('include_js/individual_payslips.js') }}?v={{ filemtime(public_path('include_js/individual_payslips.js')) }}" type="text/javascript"></script>
 @endsection
 
 

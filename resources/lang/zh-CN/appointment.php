@@ -292,7 +292,18 @@ return [
     // Overbooking
     'overbooking_conflict' => '该医生在所选时段已有预约，时间冲突，请选择其他时间',
 
+    // Status update
+    'status_updated' => '状态已更新',
+
+    // SMS option
+    'send_sms_on_create' => '创建后发送短信通知患者',
+
     // Advance booking limits
     'max_advance_days_exceeded' => '最多只能提前 :days 天预约',
     'min_advance_hours_not_met' => '至少需要提前 :hours 小时预约',
+
+    // 排班校验（AG-038, AG-042）
+    'no_schedule_for_booking'     => '该医生当日无排班，暂不接受预约',
+    'time_outside_shift'          => '所选时间不在该医生当日排班范围内',
+    'shift_max_patients_exceeded' => '该时段已达到最大接诊数，请选择其他时间',
 ];

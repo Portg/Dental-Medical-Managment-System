@@ -29,7 +29,7 @@ return [
     'system_settings' => 'System Settings',
 
     // New Report Items
-    'patient_source_report' => 'Patient Source Analysis',
+    'patient_source_report' => 'Patient Analytics',
     'revisit_rate_report' => 'Revisit Rate Report',
     'satisfaction_survey' => 'Satisfaction Survey',
     'appointment_analytics_report' => 'Appointment Analytics',
@@ -126,11 +126,12 @@ return [
     'daily_expenses_report' => 'Daily Expenses Report',
     'debtors_report' => 'Debtors Report',
     'doctor_performance_report' => 'Doctor Performance Report',
+    'my_performance' => 'My Performance',
     'procedures_income_report' => 'Procedures Income Report',
     'patient_report' => 'Patient Report',
     'appointment_report' => 'Appointment Report',
     'financial_report' => 'Financial Report',
-    'general_income_report' => 'General Income Report',
+    'general_income_report' => 'Billing Report',
     'aged_receivable_report' => 'Aged Receivable Report',
     'aged_payables_report' => 'Aged Payables Report',
 
@@ -283,5 +284,24 @@ return [
 
     // OCR Recognition
     'ocr_recognize' => 'Medical Record OCR',
+
+    // New Report Menu Items (Report Reform)
+    'financial_calendar'      => 'Financial Calendar',
+    'cash_summary_report'     => 'Cash Summary',
+    'financial_detail_report' => 'Financial Detail',
+    'lab_statistics_report'   => 'Lab Statistics',
+    'unpaid_invoices_report'  => 'Unpaid Invoices',
+
+    // Requisition Management
+    'requisition_management' => 'Requisitions',
+
+    // Inventory Check Management (Phase 7)
+    'inventory_check_management' => 'Inventory Checks',
+
+    // Menu Restructuring (Phase 8)
+    'financial_center' => 'Financial Center',
+    'warehouse_management' => 'Warehouse Management',
+    'hr_admin' => 'HR & Administration',
+    'report_center' => 'Report Center',
 
 ];

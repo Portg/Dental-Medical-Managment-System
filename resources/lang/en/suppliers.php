@@ -115,6 +115,7 @@ return [
     'error_deleting_supplier' => 'Error deleting supplier',
     'no_suppliers_found' => 'No suppliers found',
     'supplier_has_transactions' => 'Cannot delete supplier with existing transactions',
+    'supplier_has_stock_ins' => 'Cannot delete supplier with associated purchase orders',
 
     // Search & Filter
     'search_suppliers' => 'Search Suppliers',
@@ -130,6 +131,11 @@ return [
     'total_purchases' => 'Total Purchases',
     'outstanding_balance' => 'Outstanding Balance',
     'last_transaction' => 'Last Transaction',
+
+    // License / Certification
+    'business_license_no'       => 'Business License No.',
+    'license_expiry_date'       => 'License Expiry Date',
+    'enter_business_license_no' => 'Enter business license number',
 
     // Notes
     'notes' => 'Notes',

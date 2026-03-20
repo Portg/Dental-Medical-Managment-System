@@ -162,11 +162,12 @@
 
 @section('js')
 <script>
-$(document).ready(function() {
-    $('#resendBtn').on('click', function() {
-        // TODO: Implement resend functionality
-        toastr.info('{{ __("satisfaction.resend_not_implemented") }}');
+    LanguageManager.loadFromPHP(@json(__('satisfaction')), 'satisfaction');
+    $(document).ready(function () {
+        $('#resendBtn').on('click', function () {
+            // TODO: Implement resend functionality
+            toastr.info(LanguageManager.trans('satisfaction.resend_not_implemented'));
+        });
     });
-});
 </script>
 @endsection

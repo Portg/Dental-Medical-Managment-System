@@ -171,6 +171,7 @@ return [
     'patient' => 'Patient',
     'doctor' => 'Doctor',
     'service' => 'Service',
+    'branch' => 'Branch',
 
     // Messages
     'alert' => 'Alert!',
@@ -192,6 +193,7 @@ return [
     'loading' => 'Loading...',
     'please_wait' => 'Please wait...',
     'confirm_delete' => 'Are you sure you want to delete?',
+    'delete_confirm' => 'Are you sure you want to delete?',
     'confirm_action' => 'Are you sure you want to perform this action?',
     'cannot_be_undone' => 'This action cannot be undone!',
     'are_you_sure' => 'Are you sure?',

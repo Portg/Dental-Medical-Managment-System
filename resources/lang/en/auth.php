@@ -26,7 +26,7 @@ return [
     'remember_me' => 'Remember Me',
     'confirm_password' => 'Confirm Password',
 
-    'failed' => 'These credentials do not match our records.',
+    'failed' => 'The username/email or password is incorrect.',
     'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
 
     // 邮箱验证
@@ -35,6 +35,10 @@ return [
     'verify_email_not_received' => 'If you did not receive the email',
     'resend_verification_email' => 'Click here to request another',
     'email_verification_sent' => 'A fresh verification link has been sent to your email address.',
+
+    // Login
+    'username_or_email' => 'Username / Email',
+    'account_disabled' => 'Your account has been disabled. Please contact the administrator.',
 
     // User validation
     'invalid_user' => 'You are not a valid user',

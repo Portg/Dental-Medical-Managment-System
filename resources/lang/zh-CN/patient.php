@@ -264,6 +264,8 @@ return [
     'images' => '影像资料',
     'invoices' => '消费记录',
     'followups' => '随访记录',
+    'prescriptions' => '处方记录',
+    'lab_cases' => '技工单',
 
     // Section Titles
     'personal_info' => '个人信息',

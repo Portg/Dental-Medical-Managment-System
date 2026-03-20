@@ -196,4 +196,24 @@ return [
     'refill_count' => '续配次数',
     'remaining_refills' => '剩余续配次数',
 
+    // 处方-收费联动
+    'save_and_settle' => '保存并结算',
+    'save_only' => '仅保存',
+    'settle' => '结算',
+    'settled_successfully' => '处方已结算，账单已生成',
+    'saved_and_settled' => '处方已保存并生成待收款账单',
+    'already_settled' => '该处方已结算，无需重复操作',
+    'cannot_delete_has_invoice' => '该处方已关联账单，请先删除账单后再删除处方',
+    'cannot_edit_settled' => '已结算处方不可修改',
+    'no_items' => '处方项目不能为空',
+    'filled' => '已结算',
+    'on_hold' => '暂停',
+    'discontinued' => '已停止',
+    'select_prescription_service' => '选择处方项目',
+    'unit_price' => '单价',
+    'amount' => '金额',
+    'total_amount' => '处方总金额',
+    'history_prescriptions' => '历史处方',
+    'pending_prescriptions' => '未结算处方',
+
 ];

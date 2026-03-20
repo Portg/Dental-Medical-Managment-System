@@ -62,30 +62,20 @@
 
 @section('page_js')
 <script>
-    var levels = @json($levels);
-    var patients = @json($patients);
-    var memberSettings = @json(\App\SystemSetting::getGroup('member'));
-
-    LanguageManager.loadAllFromPHP({
-        'members': @json(__('members')),
-        'messages': @json(__('messages'))
-    });
-
-    function createRecord() {
-        addMember();
-    }
-
-    // Auto-open registration modal when patient_id is in URL (from patient detail page)
-    $(document).ready(function() {
-        var urlParams = new URLSearchParams(window.location.search);
-        var patientId = urlParams.get('patient_id');
-        if (patientId) {
-            setTimeout(function() {
-                addMember();
-                $('#patient_id').val(patientId).trigger('change');
-            }, 500);
-        }
-    });
+window.MembersIndexConfig = {
+    levels:        @json($levels),
+    patients:      @json($patients),
+    memberSettings:@json(\App\SystemSetting::getGroup('member'))
+};
+// Compatibility shims for members.js globals
+var levels        = window.MembersIndexConfig.levels;
+var patients      = window.MembersIndexConfig.patients;
+var memberSettings= window.MembersIndexConfig.memberSettings;
+LanguageManager.loadAllFromPHP({
+    'members':  @json(__('members')),
+    'messages': @json(__('messages'))
+});
 </script>
 <script src="{{ asset('include_js/members.js') }}"></script>
+<script src="{{ asset('include_js/members_index.js') }}?v={{ filemtime(public_path('include_js/members_index.js')) }}"></script>
 @endsection

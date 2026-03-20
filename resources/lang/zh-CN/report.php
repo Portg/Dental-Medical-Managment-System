@@ -405,6 +405,8 @@ return [
     // Doctor Workload Report
     'doctor_workload' => '医生工作量报表',
     'doctor_ranking' => '医生预约量排名',
+    'my_workload' => '我的工作量',
+    'doctor' => '医生',
     'daily_workload_trend' => '每日工作量趋势',
     'total_appointments_col' => '预约总量',
     'completed_col' => '已完成',
@@ -421,5 +423,80 @@ return [
     'avg_invoice_amount' => '平均实收金额',
     'monthly_quotation_trend' => '月度报价趋势',
     'unconverted_list' => '未转化报价单列表',
+
+    // Merged Report Tabs
+    'doctor_report' => '医生报表',
+    'performance_tab' => '收费统计',
+    'workload_tab' => '工作量统计',
+    'patient_report' => '患者报表',
+    'source_tab' => '来源分析',
+    'demographics_tab' => '人口统计',
+    'billing_report' => '收费报表',
+    'payments_tab' => '收款明细',
+    'procedures_tab' => '项目收入',
+    'select_date_range_hint' => '请选择日期范围后查询',
+
+    // Financial Calendar
+    'financial_calendar' => '财务日历',
+    'refund_amount' => '退款',
+    'net_amount' => '净收入',
+    'income' => '收入',
+
+    // Cash Summary Report
+    'cash_summary_report' => '现金汇总报表',
+    'by_payment_method' => '按支付方式',
+    'by_collector' => '按收款人',
+    'by_date' => '按日期',
+    'by_doctor' => '按医生',
+    'group_count' => '分组数',
+    'total_bills' => '总单数',
+    'bill_count' => '单据数',
+    'total_amount' => '总金额',
+
+    // Lab Statistics Report
+    'lab_statistics_report' => '技工单统计',
+    'total_lab_cases' => '技工单总数',
+    'rework_count' => '返工次数',
+    'avg_processing_days' => '平均加工天数',
+    'total_lab_fee' => '总技工费',
+    'by_status' => '按状态分布',
+    'by_lab' => '按技工所统计',
+    'monthly_trend' => '月度趋势',
+    'lab_name' => '技工所',
+    'avg_fee' => '平均费用',
+    'total_fee' => '总费用',
+    'total' => '总数',
+
+    // Financial Detail Report
+    'financial_detail_report'  => '财务明细',
+    'payment_detail'           => '收款明细',
+    'refund_detail'            => '退款明细',
+    'expense_detail'           => '支出明细',
+    'employee_billing_detail'  => '员工收费明细',
+    'refund_date'              => '退款日期',
+    'cashier'                  => '收款人',
+    'operator'                 => '操作人',
+    'description'              => '描述',
+    'supplier'                 => '供应商',
+    'phone'                    => '电话',
+    'payment_status'           => '收款状态',
+    'status_unpaid'            => '未收款',
+    'status_partial'           => '部分收款',
+    'status_overdue'           => '已逾期',
+
+    // Cash Summary — 5th tab
+    'by_service_category'      => '按收费大类',
+
+    // Unpaid Invoices Report
+    'unpaid_invoices_report'   => '未收款报表',
+    'unpaid_invoice_count'     => '未收款发票数',
+
+    // Date range validation
+    'date_range_too_large'     => '日期范围不能超过 12 个月',
+
+    // Appointment Analytics — patient source & tag filters
+    'all_sources'              => '全部来源',
+    'filter_source'            => '患者来源',
+    'filter_tags'              => '患者标签',
 
 ];

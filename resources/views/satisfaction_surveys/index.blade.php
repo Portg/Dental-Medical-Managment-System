@@ -206,87 +206,16 @@
 @section('js')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('.datepicker').datepicker({
-        format: 'yyyy-mm-dd',
-        autoclose: true
-    });
-
-    // 月度趋势图
-    var trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: {!! json_encode(array_column($monthlyTrend, 'month_label')) !!},
-            datasets: [{
-                label: '{{ __("satisfaction.avg_rating") }}',
-                data: {!! json_encode(array_column($monthlyTrend, 'avg_rating')) !!},
-                borderColor: '#1A237E',
-                backgroundColor: 'rgba(26, 35, 126, 0.1)',
-                fill: true,
-                tension: 0.3,
-                yAxisID: 'y'
-            }, {
-                label: 'NPS',
-                data: {!! json_encode(array_column($monthlyTrend, 'nps')) !!},
-                borderColor: '#4CAF50',
-                backgroundColor: 'transparent',
-                borderDash: [5, 5],
-                tension: 0.3,
-                yAxisID: 'y1'
-            }]
-        },
-        options: {
-            responsive: true,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                y: { beginAtZero: true, max: 5, position: 'left' },
-                y1: { beginAtZero: false, min: -100, max: 100, position: 'right', grid: { drawOnChartArea: false } }
-            },
-            plugins: { legend: { position: 'bottom' } }
-        }
-    });
-
-    // DataTable
-    $('#surveysDataTable').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: '{{ url("satisfaction-surveys/data") }}',
-            data: function(d) {
-                d.start_date = '{{ $startDate->format("Y-m-d") }}';
-                d.end_date = '{{ $endDate->format("Y-m-d") }}';
-            }
-        },
-        columns: [
-            { data: 'patient_name', name: 'patient_name' },
-            { data: 'doctor_name', name: 'doctor_name' },
-            { data: 'survey_date_formatted', name: 'survey_date' },
-            { data: 'ratings_display', name: 'overall_rating' },
-            { data: 'status_badge', name: 'status' },
-            { data: 'action', name: 'action', orderable: false, searchable: false }
-        ],
-        order: [[2, 'desc']],
-        language: LanguageManager.getDataTableLang()
-    });
-
-    // 批量发送
-    $('#sendBatchForm').on('submit', function(e) {
-        e.preventDefault();
-        $.ajax({
-            url: '{{ url("satisfaction-surveys/send-batch") }}',
-            method: 'POST',
-            data: $(this).serialize(),
-            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            success: function(res) {
-                $('#sendBatchModal').modal('hide');
-                toastr.success(res.message);
-            },
-            error: function(xhr) {
-                toastr.error(xhr.responseJSON?.message || '{{ __("common.error") }}');
-            }
-        });
-    });
-});
+    LanguageManager.loadFromPHP(@json(__('satisfaction')), 'satisfaction');
+    window.SatisfactionSurveysConfig = {
+        trendLabels: {!! json_encode(array_column($monthlyTrend, 'month_label')) !!},
+        trendRatings: {!! json_encode(array_column($monthlyTrend, 'avg_rating')) !!},
+        trendNps: {!! json_encode(array_column($monthlyTrend, 'nps')) !!},
+        dataUrl: "{{ url('satisfaction-surveys/data') }}",
+        sendBatchUrl: "{{ url('satisfaction-surveys/send-batch') }}",
+        startDate: "{{ $startDate->format('Y-m-d') }}",
+        endDate: "{{ $endDate->format('Y-m-d') }}"
+    };
 </script>
+<script src="{{ asset('include_js/satisfaction_surveys_index.js') }}?v={{ filemtime(public_path('include_js/satisfaction_surveys_index.js')) }}" type="text/javascript"></script>
 @endsection

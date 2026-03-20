@@ -41,32 +41,14 @@
 @endsection
 @section('js')
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-    <script type="text/javascript">
-        $(function () {
-            LanguageManager.loadAllFromPHP({
-                'inventory': @json(__('inventory')),
-                'common': @json(__('common'))
-            });
-
-            $('#warnings-table').DataTable({
-                processing: true,
-                serverSide: true,
-                language: LanguageManager.getDataTableLang(),
-                ajax: {
-                    url: "{{ url('/inventory-stock-warnings') }}",
-                    data: function (d) {}
-                },
-                columns: [
-                    {data: 'DT_RowIndex', name: 'DT_RowIndex'},
-                    {data: 'item_code', name: 'item_code'},
-                    {data: 'name', name: 'name'},
-                    {data: 'category_name', name: 'category_name'},
-                    {data: 'unit', name: 'unit'},
-                    {data: 'current_stock', name: 'current_stock'},
-                    {data: 'stock_warning_level', name: 'stock_warning_level'},
-                    {data: 'shortage', name: 'shortage'}
-                ]
-            });
-        });
+    <script>
+    window.StockWarningsConfig = {
+        ajaxUrl: '{{ url('/inventory-stock-warnings') }}',
+        i18n: {
+            'inventory': @json(__('inventory')),
+            'common':    @json(__('common'))
+        }
+    };
     </script>
+    <script src="{{ asset('include_js/stock_warnings.js') }}?v={{ filemtime(public_path('include_js/stock_warnings.js')) }}" type="text/javascript"></script>
 @endsection
