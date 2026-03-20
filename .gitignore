@@ -16,3 +16,8 @@ yarn-error.log
 .env.live.config
 /public/docs
 .scribe
+scripts/venv/
+__pycache__/
+deploy/.cache/
+deploy/dist/
+deploy/output/

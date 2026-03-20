@@ -112,6 +112,16 @@ php artisan test --filter=测试方法名
 2. 运行完整测试套件确认无回归：`php artisan test`
 3. 检查修改是否影响了其他文件（grep 引用关系）
 
+### Step 7: Anti-Goals 回归检查
+
+修复完成后，检查修复是否引入了新的 Anti-Goals 违反：
+- 金额相关修复 → 检查 AG-001~AG-006（折扣审批、退款、bcmath）
+- 状态相关修复 → 检查对应状态机（`ai-dev-template/ai-spec/domain/state-machines.yaml`）
+- 病历相关修复 → 检查 AG-007~AG-009（Amendment 合规）
+- 查询相关修复 → 检查 AG-019（软删除处理）
+
+如果涉及业务规则，查阅 `ai-dev-template/ai-spec/engine/rule-engine.md` 确认阈值正确。
+
 ### 修复模式输出格式
 
 ```
@@ -122,6 +132,15 @@ php artisan test --filter=测试方法名
 **根因：** [具体原因，指向文件:行号]
 
 **修复方案：** [改了什么，为什么这样改]
+
+**AI 推理链：**
+1. 我读取了 [文件/日志]
+2. 我注意到 [关键线索]
+3. 我排除了 [方案A]，因为 [原因]
+4. 确认根因是 [具体原因]
+
+**Anti-Goals 回归检查：**
+- [AG-xxx]: ✅ 未违反 / ⚠️ 需注意
 
 **测试验证：**
 - 新增测试：[测试文件:方法名] ✅ 通过

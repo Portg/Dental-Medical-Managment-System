@@ -65,6 +65,19 @@ app/（核心）← Modules/*（业务模块）
 2. 确认修改涉及哪些文件
 3. 检查是否有现有的 pattern 可以复用
 
+### Phase 1.5: 上下文切片加载
+
+根据任务类型，按 `ai-dev-template/CONTEXT-SLICE.md` 加载最小必要上下文：
+- 预约相关 → 切片 A
+- 收费相关 → 切片 B
+- 病历相关 → 切片 C
+- 技工单相关 → 切片 D
+- 患者相关 → 切片 E
+- 候诊相关 → 切片 F
+- API 开发 → 切片 J
+
+加载后检查 `ai-dev-template/ai-spec/domain/intent.md` 中涉及的 Anti-Goals。
+
 ### Phase 2: 实现（主要时间花在这里）
 
 1. **逐文件修改**，每个文件改完后：
@@ -78,6 +91,18 @@ app/（核心）← Modules/*（业务模块）
 3. 遇到跨模块需求时，优先考虑：
    - 通过 `app/Services/` 共享
    - 通过 Laravel Event/Listener 解耦
+4. **Anti-Goals 合规**：
+   - 金额计算使用 `bcmath`，不使用浮点运算（AG-005）
+   - 业务阈值引用 `rule-engine.md` 的 Rule Key，不硬编码（AG-020）
+   - 状态流转符合 `state-machines.yaml` 定义
+   - 患者敏感信息（NIN）不出现在日志中（AG-015）
+5. **复杂逻辑标注**：
+   ```php
+   // @AiGenerated
+   // reason: [原因]
+   // generatedAt: [日期]
+   // reviewBy: [季度]
+   ```
 
 ### Phase 3: 验证
 
@@ -85,6 +110,24 @@ app/（核心）← Modules/*（业务模块）
 2. 运行 `php -l` 对所有修改的 PHP 文件做语法检查
 3. 检查修改是否影响了其他文件（grep 引用）
 4. 确认 i18n：新增的用户可见文本是否使用了 `__()` 或 `trans()`
+
+### Phase 4: VIBE-CHECKLIST 自检
+
+完成实现后，对照 `ai-dev-template/VIBE-CHECKLIST.md` 六关门禁快速自检：
+
+1. **意图对齐** — 是否解决了核心问题？Anti-Goals 有无被违反？
+2. **上下文遗漏** — 状态机完整？命名一致？枚举用了 DictItem？
+3. **AI 幻觉** — 没有发明不存在的字段/关系/包？
+4. **医疗场景** — 金额 bcmath？状态流转在 Model 中？敏感信息脱敏？
+5. **代码质量** — 无 dd()/dump()？翻译用 __()?  Blade 无内联脚本？
+6. **重构信号** — 方法 < 30 行？嵌套 < 3 层？复杂逻辑标注 @AiGenerated？
+
+### Phase 5: SCRATCHPAD 记录（可选）
+
+对于复杂任务，在 `ai-dev-template/SCRATCHPAD.md` 顶部插入记录：
+- 本次完成了什么
+- 关键决策 + AI 推理链
+- 遗留问题
 
 ---
 

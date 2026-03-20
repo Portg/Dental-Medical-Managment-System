@@ -1,0 +1,331 @@
+# state-machines.yaml — 口腔医疗管理系统状态机定义
+
+# ============================================================
+# Appointment（预约）
+# ============================================================
+appointment:
+  states:
+    - waiting          # 等待中
+    - scheduled        # 已排期
+    - checked_in       # 已签到
+    - in_progress      # 就诊中
+    - treatment_complete    # 治疗完成
+    - treatment_incomplete  # 治疗未完成
+    - completed        # 已完成
+    - rescheduled      # 已改期
+    - cancelled        # 已取消
+    - no_show          # 爽约
+    - rejected         # 已拒绝
+
+  transitions:
+    - from: waiting          to: [scheduled, cancelled, rejected]
+    - from: scheduled        to: [checked_in, rescheduled, cancelled, no_show]
+    - from: checked_in       to: [in_progress, cancelled]
+    - from: in_progress      to: [treatment_complete, treatment_incomplete]
+    - from: treatment_complete   to: [completed]
+    - from: treatment_incomplete to: [completed, scheduled]  # 可安排下次
+
+  terminal_states: [completed, cancelled, no_show, rejected]
+
+  anti_goals:
+    - "AG-010: 同一时段同一椅位不允许重复预约"
+    - "AG-012: 已取消的预约不允许重新激活为 completed"
+
+# ============================================================
+# WaitingQueue（候诊队列）
+# ============================================================
+waiting_queue:
+  states:
+    - waiting       # 等待中
+    - called        # 已叫号
+    - in_treatment  # 治疗中
+    - completed     # 已完成
+    - cancelled     # 已取消
+    - no_show       # 未到
+
+  transitions:
+    - from: waiting      to: [called, cancelled, no_show]
+    - from: called       to: [in_treatment, cancelled, no_show]
+    - from: in_treatment to: [completed]
+
+  terminal_states: [completed, cancelled, no_show]
+
+  anti_goals:
+    - "AG-011: 不允许从 waiting 直接跳到 completed"
+
+  sync_rules:
+    - "called → Appointment.status = in_progress"
+    - "in_treatment → Appointment.status = in_progress"
+    - "completed → Appointment.status = treatment_complete"
+
+# ============================================================
+# Invoice Payment Status（账单付款状态）
+# ============================================================
+invoice_payment:
+  states:
+    - unpaid        # 未付款
+    - partial       # 部分付款
+    - paid          # 已付清
+    - refunded      # 已退款
+    - overdue       # 逾期
+    - written_off   # 核销
+
+  transitions:
+    - from: unpaid   to: [partial, paid, overdue, written_off]
+    - from: partial  to: [paid, overdue, written_off]
+    - from: paid     to: [refunded]
+    - from: overdue  to: [partial, paid, written_off]
+
+  terminal_states: [paid, refunded, written_off]
+
+  auto_rules:
+    - "paid_amount == 0 → unpaid"
+    - "0 < paid_amount < total_amount → partial"
+    - "paid_amount >= total_amount → paid"
+
+# ============================================================
+# Discount Approval（折扣审批）
+# ============================================================
+discount_approval:
+  states:
+    - none       # 无需审批
+    - pending    # 待审批
+    - approved   # 已批准
+    - rejected   # 已拒绝
+
+  transitions:
+    - from: none    to: [pending]           # 折扣 > 500 时自动触发
+    - from: pending to: [approved, rejected]
+
+  anti_goals:
+    - "AG-001: 折扣 > 500 元必须触发审批（BR-035）"
+
+# ============================================================
+# MedicalCase（病历）
+# ============================================================
+medical_case:
+  states:
+    - open       # 进行中
+    - closed     # 已关闭
+    - follow-up  # 需随访
+
+  transitions:
+    - from: open      to: [closed, follow-up]
+    - from: follow-up to: [open, closed]
+
+  compliance:
+    lock: "签名后 locked_at = now()，后续修改需 Amendment"
+    amendment: "locked 后修改必须走 MedicalCaseAmendment 审批"
+    version: "Amendment 审批通过后 version_number++"
+
+# ============================================================
+# MedicalCaseAmendment（病历修改申请）
+# ============================================================
+amendment:
+  states:
+    - pending   # 待审批
+    - approved  # 已批准（自动应用修改）
+    - rejected  # 已拒绝
+
+  transitions:
+    - from: pending to: [approved, rejected]
+
+  anti_goals:
+    - "AG-007: 锁定后不允许直接修改"
+    - "AG-008: 审批拒绝后不允许自动应用"
+    - "AG-009: version_number 不允许手动修改"
+
+# ============================================================
+# LabCase（技工单）
+# ============================================================
+lab_case:
+  states:
+    - pending        # 待送出
+    - sent           # 已送出
+    - in_production  # 制作中
+    - returned       # 已返回
+    - try_in         # 试戴
+    - completed      # 完成
+    - rework         # 返工
+
+  transitions:
+    - from: pending       to: [sent]
+    - from: sent          to: [in_production]
+    - from: in_production to: [returned]
+    - from: returned      to: [try_in]
+    - from: try_in        to: [completed, rework]
+    - from: rework        to: [sent]             # 返工后重新送出
+
+  terminal_states: [completed]
+
+  anti_goals:
+    - "AG-013: 不允许逆向流转（如 completed → sent）"
+    - "AG-014: 返工必须记录 rework_reason"
+
+# ============================================================
+# TreatmentPlan（治疗计划）
+# ============================================================
+treatment_plan:
+  states:
+    - Planned       # 已规划
+    - In Progress   # 进行中
+    - Completed     # 已完成
+    - Cancelled     # 已取消
+
+  approval_states:
+    - pending
+    - approved
+    - rejected
+    - revision_needed
+
+  transitions:
+    - from: Planned     to: [In Progress, Cancelled]
+    - from: In Progress to: [Completed, Cancelled]
+
+  terminal_states: [Completed, Cancelled]
+
+# ============================================================
+# Refund Approval（退款审批）
+# ============================================================
+refund_approval:
+  states:
+    - pending   # 待审批
+    - approved  # 已批准
+    - rejected  # 已拒绝
+
+  transitions:
+    - from: pending to: [approved, rejected]
+
+  anti_goals:
+    - "AG-002: 退款不允许超过已付金额"
+    - "AG-003: 退款 > 100 元须审批"
+
+# ============================================================
+# Prescription（处方）
+# ============================================================
+prescription:
+  states:
+    - pending        # 待处理（新建/未结算）
+    - filled         # 已结算（已生成 Invoice）
+    - completed      # 已完成
+    - discontinued   # 已停止
+    - on_hold        # 暂停
+
+  transitions:
+    - from: pending      to: [filled, discontinued, on_hold]  # filled 由保存并结算/结算触发
+    - from: filled       to: [completed, discontinued]
+    - from: on_hold      to: [pending, discontinued]
+
+  terminal_states: [completed, discontinued]
+
+  anti_goals:
+    - "AG-023: 已关联 Invoice 的处方不允许删除"
+    - "AG-024: 结算操作幂等，不允许重复创建 Invoice"
+    - "AG-025: 单价从 medical_services 后端获取，不信任前端"
+    - "AG-026: 处方项目数量最小为 1"
+
+  settlement_rules:
+    - "pending → filled: 调用 InvoiceService.createBillingInvoice() 生成账单"
+    - "filled 时 prescriptions.invoice_id 指向生成的 Invoice"
+    - "Invoice 删除时 invoice_id 自动置 null (FK onDelete set null)，处方回到可删除状态"
+
+# ============================================================
+# Diagnosis（诊断）
+# ============================================================
+diagnosis:
+  states:
+    - Active    # 活跃
+    - Resolved  # 已解决
+    - Chronic   # 慢性
+
+  transitions:
+    - from: Active  to: [Resolved, Chronic]
+    - from: Chronic to: [Resolved]
+
+# ============================================================
+# PatientFollowup（患者随访）
+# ============================================================
+patient_followup:
+  states:
+    - Pending      # 待执行
+    - Completed    # 已完成
+    - Cancelled    # 已取消
+    - No Response  # 未响应
+
+  transitions:
+    - from: Pending to: [Completed, Cancelled, No Response]
+
+  terminal_states: [Completed, Cancelled, No Response]
+
+# ============================================================
+# StockOut（出库单）— 扩展审批流程
+# ============================================================
+stock_out:
+  states:
+    - draft              # 草稿（可编辑）
+    - pending_approval   # 待审批（申领/报损/退货提交后）
+    - confirmed          # 已确认（库存已扣减，不可编辑）
+    - rejected           # 已驳回
+    - cancelled          # 已取消
+
+  transitions:
+    # 直接确认路径（诊疗出库、科室领用、其他）
+    - from: draft          to: [confirmed, cancelled]
+      condition: "out_type IN (treatment, department, other)"
+      action: "FIFO 扣减批次库存"
+    # 审批路径（申领、报损、退货）
+    - from: draft          to: [pending_approval, cancelled]
+      condition: "out_type IN (requisition, damage, supplier_return)"
+    - from: pending_approval to: [confirmed, rejected]
+      guard: "approved_by != _who_added (AG-053)"
+      action_on_confirmed: "FIFO 扣减批次库存"
+    - from: rejected       to: [draft]  # 驳回后可修改重新提交
+
+  terminal_states: [confirmed, cancelled]
+
+  anti_goals:
+    - "AG-048: 批次扣减使用悲观锁，防并发超扣"
+    - "AG-052: pending_approval 后不可编辑"
+    - "AG-053: 审批人 ≠ 操作人"
+    - "AG-056: 报损/退货数量 ≤ 当前库存"
+    - "AG-063: current_stock 不得为负数"
+    - "AG-064: confirmed/cancelled 不可编辑或删除"
+
+# ============================================================
+# StockIn（入库单）
+# ============================================================
+stock_in:
+  states:
+    - draft       # 草稿（可编辑）
+    - confirmed   # 已确认（批次已创建，库存已更新）
+    - cancelled   # 已取消
+
+  transitions:
+    - from: draft to: [confirmed, cancelled]
+      action_on_confirmed: "创建 InventoryBatch，更新 current_stock 和 average_cost（加权平均）"
+
+  terminal_states: [confirmed, cancelled]
+
+  anti_goals:
+    - "AG-064: confirmed/cancelled 不可编辑或删除"
+    - "AG-065: 金额计算使用 bcmath"
+
+# ============================================================
+# InventoryCheck（盘点单）
+# ============================================================
+inventory_check:
+  states:
+    - draft       # 草稿（录入中）
+    - confirmed   # 已确认（调整单已生成）
+
+  transitions:
+    - from: draft to: [confirmed]
+      guard: "deviation > 50% 需二次确认 (AG-060)"
+      action: "盘亏 → 生成 out_type=inventory_loss 出库单；盘盈 → 生成入库单"
+
+  terminal_states: [confirmed]
+
+  anti_goals:
+    - "AG-058: 同分类同天限一张未完成盘点单"
+    - "AG-059: system_qty 为创建时快照，不随后续变动"
+    - "AG-060: 偏差 > 50% 需额外审批确认"
