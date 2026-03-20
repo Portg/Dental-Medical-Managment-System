@@ -43,7 +43,7 @@ class DiagnosisController extends Controller
                     if ($row->status == 'Active') $class = 'warning';
                     elseif ($row->status == 'Resolved') $class = 'success';
                     elseif ($row->status == 'Chronic') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.diagnosis_status_' . strtolower($row->status)) . '</span>';
+                    return '<span class="label label-' . $class . '">' . (\App\DictItem::nameByCode('diagnosis_status', $row->status) ?? $row->status) . '</span>';
                 })
                 ->addColumn('severityBadge', function ($row) {
                     if (!$row->severity) return '-';
@@ -51,7 +51,7 @@ class DiagnosisController extends Controller
                     if ($row->severity == 'Mild') $class = 'success';
                     elseif ($row->severity == 'Moderate') $class = 'warning';
                     elseif ($row->severity == 'Severe') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.severity_' . strtolower($row->severity)) . '</span>';
+                    return '<span class="label label-' . $class . '">' . (\App\DictItem::nameByCode('diagnosis_severity', $row->severity) ?? $row->severity) . '</span>';
                 })
                 ->rawColumns(['editBtn', 'deleteBtn', 'statusBadge', 'severityBadge'])
                 ->make(true);
@@ -84,7 +84,7 @@ class DiagnosisController extends Controller
                     if ($row->status == 'Active') $class = 'warning';
                     elseif ($row->status == 'Resolved') $class = 'success';
                     elseif ($row->status == 'Chronic') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.diagnosis_status_' . strtolower($row->status)) . '</span>';
+                    return '<span class="label label-' . $class . '">' . (\App\DictItem::nameByCode('diagnosis_status', $row->status) ?? $row->status) . '</span>';
                 })
                 ->addColumn('severityBadge', function ($row) {
                     if (!$row->severity) return '-';
@@ -92,7 +92,7 @@ class DiagnosisController extends Controller
                     if ($row->severity == 'Mild') $class = 'success';
                     elseif ($row->severity == 'Moderate') $class = 'warning';
                     elseif ($row->severity == 'Severe') $class = 'danger';
-                    return '<span class="label label-' . $class . '">' . __('medical_cases.severity_' . strtolower($row->severity)) . '</span>';
+                    return '<span class="label label-' . $class . '">' . (\App\DictItem::nameByCode('diagnosis_severity', $row->severity) ?? $row->severity) . '</span>';
                 })
                 ->rawColumns(['editBtn', 'deleteBtn', 'statusBadge', 'severityBadge'])
                 ->make(true);

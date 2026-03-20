@@ -40,13 +40,10 @@ class ChairController extends Controller
                     return $row->surname ?? '-';
                 })
                 ->addColumn('statusLabel', function ($row) {
-                    $map = [
-                        'active' => ['text' => __('chairs.status_active'), 'class' => 'text-primary'],
-                        'maintenance' => ['text' => __('chairs.status_maintenance'), 'class' => 'text-warning'],
-                        'offline' => ['text' => __('chairs.status_offline'), 'class' => 'text-danger'],
-                    ];
-                    $info = $map[$row->status] ?? ['text' => $row->status, 'class' => ''];
-                    return '<span class="' . $info['class'] . '">' . $info['text'] . '</span>';
+                    $classes = ['active' => 'text-primary', 'maintenance' => 'text-warning', 'offline' => 'text-danger'];
+                    $class = $classes[$row->status] ?? '';
+                    $label = \App\DictItem::nameByCode('chair_status', $row->status) ?? $row->status;
+                    return '<span class="' . $class . '">' . $label . '</span>';
                 })
                 ->addColumn('action', function ($row) {
                     $btn = '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a> ';
@@ -66,7 +63,7 @@ class ChairController extends Controller
         Validator::make($request->all(), [
             'chair_code' => 'required|string|max:50|unique:chairs,chair_code,NULL,id,deleted_at,NULL',
             'chair_name' => 'required|string|max:100',
-            'status' => 'required|in:active,maintenance,offline',
+            'status' => 'required|in:' . \App\DictItem::listByType('chair_status')->pluck('code')->implode(','),
             'branch_id' => 'nullable|exists:branches,id',
         ])->validate();
 
@@ -86,7 +83,7 @@ class ChairController extends Controller
         Validator::make($request->all(), [
             'chair_code' => 'required|string|max:50|unique:chairs,chair_code,' . $id . ',id,deleted_at,NULL',
             'chair_name' => 'required|string|max:100',
-            'status' => 'required|in:active,maintenance,offline',
+            'status' => 'required|in:' . \App\DictItem::listByType('chair_status')->pluck('code')->implode(','),
             'branch_id' => 'nullable|exists:branches,id',
         ])->validate();
 

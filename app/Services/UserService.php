@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Http\Helper\NameHelper;
+use App\OperationLog;
 use App\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Overtrue\Pinyin\Pinyin;
 
 class UserService
 {
@@ -37,13 +39,14 @@ class UserService
     }
 
     /**
-     * Search doctors by keyword.
+     * Search doctors by keyword (AG-029: only active doctors).
      */
     public function searchDoctors(?string $keyword): array
     {
         $query = DB::table('users')
             ->whereNull('users.deleted_at')
-            ->where('users.is_doctor', true);
+            ->where('users.is_doctor', true)
+            ->where('users.status', User::STATUS_ACTIVE);
 
         if ($keyword) {
             $query->where(function ($q) use ($keyword) {
@@ -62,12 +65,13 @@ class UserService
     }
 
     /**
-     * Search employees by keyword.
+     * Search employees by keyword (only active).
      */
     public function searchEmployees(string $keyword): array
     {
         $data = DB::table('users')
             ->whereNull('users.deleted_at')
+            ->where('users.status', User::STATUS_ACTIVE)
             ->where(function ($q) use ($keyword) {
                 NameHelper::addNameSearch($q, $keyword);
             })
@@ -101,9 +105,12 @@ class UserService
      */
     public function createUser(array $nameParts, array $data): ?User
     {
+        $username = $data['username'] ?? $this->generateUsername($nameParts['surname'] . $nameParts['othername']);
+
         return User::create([
             'surname' => $nameParts['surname'],
             'othername' => $nameParts['othername'],
+            'username' => $username,
             'email' => $data['email'],
             'phone_no' => $data['phone_no'] ?? null,
             'alternative_no' => $data['alternative_no'] ?? null,
@@ -112,6 +119,7 @@ class UserService
             'branch_id' => $data['branch_id'] ?? null,
             'is_doctor' => $data['is_doctor'] ?? null,
             'password' => Hash::make($data['password']),
+            'status' => User::STATUS_ACTIVE,
         ]);
     }
 
@@ -134,7 +142,7 @@ class UserService
      */
     public function updateUser(int $id, array $nameParts, array $data): bool
     {
-        return (bool) User::where('id', $id)->update([
+        $updateData = [
             'surname' => $nameParts['surname'],
             'othername' => $nameParts['othername'],
             'email' => $data['email'],
@@ -144,7 +152,83 @@ class UserService
             'is_doctor' => $data['is_doctor'] ?? null,
             'branch_id' => $data['branch_id'] ?? null,
             'nin' => $data['nin'] ?? null,
-        ]);
+        ];
+
+        if (!empty($data['username'])) {
+            $updateData['username'] = $data['username'];
+        }
+
+        return (bool) User::where('id', $id)->update($updateData);
+    }
+
+    /**
+     * Change user status (AG-027/AG-031).
+     *
+     * @param string $newPassword Required when reactivating (AG-031)
+     */
+    public function changeUserStatus(int $id, string $status, ?string $newPassword = null): bool
+    {
+        $user = User::findOrFail($id);
+        $oldStatus = $user->status;
+
+        if ($status === User::STATUS_RESIGNED) {
+            $user->markAsResigned();
+            OperationLog::logUpdate('users', 'User', (string) $id,
+                ['status' => $oldStatus], ['status' => $status]);
+            return true;
+        }
+
+        if ($status === User::STATUS_ACTIVE && $oldStatus === User::STATUS_RESIGNED) {
+            // AG-031: 从离职恢复必须重置密码
+            if (empty($newPassword)) {
+                return false;
+            }
+            $user->update(['password' => Hash::make($newPassword)]);
+            $user->markAsActive();
+            OperationLog::logUpdate('users', 'User', (string) $id,
+                ['status' => $oldStatus], ['status' => $status]);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Generate unique username from name (AG-028).
+     * Chinese names: pinyin abbreviation (e.g. 关立亚 → gly)
+     * English names: lowercase letters only (e.g. Admin User → adminuser)
+     */
+    public function generateUsername(string $fullName): string
+    {
+        $fullName = trim($fullName);
+        $base = $this->nameToAbbr($fullName);
+
+        if (empty($base)) {
+            $base = 'user';
+        }
+
+        $username = $base;
+        $counter = 1;
+        while (User::withTrashed()->where('username', $username)->exists()) {
+            $username = $base . $counter;
+            $counter++;
+        }
+
+        return $username;
+    }
+
+    private function nameToAbbr(string $name): string
+    {
+        // 检测是否含中文字符
+        if (preg_match('/[\x{4e00}-\x{9fa5}]/u', $name)) {
+            $pinyin = new Pinyin();
+            // v6: abbr() 默认分隔符是空格，需要去掉
+            $abbr = $pinyin->abbr($name, '');
+            return strtolower(str_replace(' ', '', $abbr));
+        }
+
+        // 英文：直接用小写字母（去除非字母字符）
+        return strtolower(preg_replace('/[^a-zA-Z]/', '', $name));
     }
 
     /**

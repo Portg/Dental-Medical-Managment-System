@@ -22,6 +22,12 @@ class EventServiceProvider extends ServiceProvider
         \Spatie\Backup\Events\BackupZipWasCreated::class => [
             MailSuccessfulDatabaseBackup::class
         ],
+        \Spatie\Backup\Events\BackupWasSuccessful::class => [
+            \App\Listeners\UpdateBackupStatusOnSuccess::class,
+        ],
+        \Spatie\Backup\Events\BackupHasFailed::class => [
+            \App\Listeners\UpdateBackupStatusOnFailure::class,
+        ],
     ];
 
     /**

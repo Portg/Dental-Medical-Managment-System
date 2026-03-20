@@ -15,7 +15,7 @@ class DoctorPerformanceReportService
      */
     public function getDoctors(): Collection
     {
-        return User::where('is_doctor', true)->orderBy('id', 'DESC')->get();
+        return User::where('is_doctor', true)->whereNull('deleted_at')->where('status', User::STATUS_ACTIVE)->orderBy('id', 'DESC')->get();
     }
 
     /**

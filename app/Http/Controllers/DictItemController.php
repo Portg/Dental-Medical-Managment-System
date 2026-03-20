@@ -69,6 +69,8 @@ class DictItemController extends Controller
             'sort_order' => $maxSort + 1,
         ]);
 
+        DictItem::clearNameByCodeCache($request->type);
+
         return response()->json(['status' => 1, 'message' => __('common.created_successfully')]);
     }
 
@@ -81,6 +83,8 @@ class DictItemController extends Controller
 
         $item->update($request->only(['name', 'sort_order', 'is_active']));
 
+        DictItem::clearNameByCodeCache($item->type);
+
         return response()->json(['status' => 1, 'message' => __('common.updated_successfully')]);
     }
 
@@ -89,7 +93,11 @@ class DictItemController extends Controller
      */
     public function destroy($id)
     {
-        DictItem::findOrFail($id)->delete();
+        $item = DictItem::findOrFail($id);
+        $type = $item->type;
+        $item->delete();
+
+        DictItem::clearNameByCodeCache($type);
 
         return response()->json(['status' => 1, 'message' => __('common.deleted_successfully')]);
     }

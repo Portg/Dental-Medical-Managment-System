@@ -11,6 +11,8 @@ use App\Patient;
 use App\TreatmentPlan;
 use App\User;
 use App\VitalSign;
+use App\DictItem;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,67 +21,55 @@ use Yajra\DataTables\DataTables;
 class MedicalCaseService
 {
     /**
-     * Get all medical cases for DataTables.
+     * Get all medical cases for DataTables (query builder, server-side pagination).
+     * Filters are pushed to SQL — avoids loading all records into PHP memory.
      */
-    public function getAllCases(array $filters): Collection
+    public function getAllCases(array $filters): Builder
     {
-        $data = DB::table('medical_cases')
-            ->leftJoin('patients', 'patients.id', 'medical_cases.patient_id')
-            ->leftJoin('users as doctors', 'doctors.id', 'medical_cases.doctor_id')
-            ->leftJoin('users as added_by', 'added_by.id', 'medical_cases._who_added')
+        $locale = app()->getLocale();
+        $isCn   = $locale === 'zh-CN';
+
+        // 搜索词兼容 'search' 和 'search_term' 两个 key（历史遗留）
+        $search = $filters['search'] ?? $filters['search_term'] ?? null;
+
+        return DB::table('medical_cases')
+            ->leftJoin('patients', 'patients.id', '=', 'medical_cases.patient_id')
+            ->leftJoin('users as doctors', 'doctors.id', '=', 'medical_cases.doctor_id')
+            ->leftJoin('users as added_by', 'added_by.id', '=', 'medical_cases._who_added')
             ->whereNull('medical_cases.deleted_at')
-            ->orderBy('medical_cases.created_at', 'desc')
+            ->when($search, function ($q, $term) use ($isCn) {
+                $like = '%' . $term . '%';
+                $nameExpr = $isCn
+                    ? DB::raw("CONCAT(IFNULL(patients.surname,''), IFNULL(patients.othername,''))")
+                    : DB::raw("CONCAT(IFNULL(patients.surname,''), ' ', IFNULL(patients.othername,''))");
+                $q->where(function ($inner) use ($like, $nameExpr) {
+                    $inner->where('medical_cases.case_no', 'like', $like)
+                          ->orWhere('medical_cases.title', 'like', $like)
+                          ->orWhere($nameExpr, 'like', $like);
+                });
+            })
+            ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('medical_cases.status', $v))
+            ->when($filters['doctor_id'] ?? null, fn ($q, $v) => $q->where('medical_cases.doctor_id', $v))
+            ->when($filters['patient_id'] ?? null, fn ($q, $v) => $q->where('medical_cases.patient_id', $v))
+            ->when($filters['start_date'] ?? null, fn ($q, $v) => $q->where('medical_cases.case_date', '>=', $v))
+            ->when($filters['end_date'] ?? null, fn ($q, $v) => $q->where('medical_cases.case_date', '<=', $v))
             ->select(
                 'medical_cases.*',
-                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(patients.surname, patients.othername) as patient_name" : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
+                DB::raw($isCn
+                    ? "CONCAT(IFNULL(patients.surname,''), IFNULL(patients.othername,'')) as patient_name"
+                    : "CONCAT(IFNULL(patients.surname,''), ' ', IFNULL(patients.othername,'')) as patient_name"),
                 'patients.patient_no',
-                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(doctors.surname, doctors.othername) as doctor_name" : "CONCAT(doctors.surname, ' ', doctors.othername) as doctor_name"),
-                DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(added_by.surname, added_by.othername) as added_by_name" : "CONCAT(added_by.surname, ' ', added_by.othername) as added_by_name"),
-                DB::raw("(SELECT COUNT(*) FROM medical_case_amendments WHERE medical_case_amendments.medical_case_id = medical_cases.id AND medical_case_amendments.status = 'pending') as pending_amendments_count")
+                DB::raw($isCn
+                    ? "CONCAT(IFNULL(doctors.surname,''), IFNULL(doctors.othername,'')) as doctor_name"
+                    : "CONCAT(IFNULL(doctors.surname,''), ' ', IFNULL(doctors.othername,'')) as doctor_name"),
+                DB::raw($isCn
+                    ? "CONCAT(IFNULL(added_by.surname,''), IFNULL(added_by.othername,'')) as added_by_name"
+                    : "CONCAT(IFNULL(added_by.surname,''), ' ', IFNULL(added_by.othername,'')) as added_by_name"),
+                DB::raw("(SELECT COUNT(*) FROM medical_case_amendments
+                          WHERE medical_case_amendments.medical_case_id = medical_cases.id
+                          AND medical_case_amendments.status = 'pending') as pending_amendments_count")
             )
-            ->get();
-
-        // Apply filters
-        if (!empty($filters['search_term'])) {
-            $searchTerm = $filters['search_term'];
-            $data = $data->filter(function ($item) use ($searchTerm) {
-                return stripos($item->case_no, $searchTerm) !== false ||
-                       stripos($item->title, $searchTerm) !== false ||
-                       stripos($item->patient_name, $searchTerm) !== false;
-            });
-        }
-        if (!empty($filters['status'])) {
-            $status = $filters['status'];
-            $data = $data->filter(function ($item) use ($status) {
-                return $item->status == $status;
-            });
-        }
-        if (!empty($filters['doctor_id'])) {
-            $doctorId = $filters['doctor_id'];
-            $data = $data->filter(function ($item) use ($doctorId) {
-                return $item->doctor_id == $doctorId;
-            });
-        }
-        if (!empty($filters['patient_id'])) {
-            $patientId = $filters['patient_id'];
-            $data = $data->filter(function ($item) use ($patientId) {
-                return $item->patient_id == $patientId;
-            });
-        }
-        if (!empty($filters['start_date'])) {
-            $startDate = $filters['start_date'];
-            $data = $data->filter(function ($item) use ($startDate) {
-                return $item->case_date >= $startDate;
-            });
-        }
-        if (!empty($filters['end_date'])) {
-            $endDate = $filters['end_date'];
-            $data = $data->filter(function ($item) use ($endDate) {
-                return $item->case_date <= $endDate;
-            });
-        }
-
-        return $data;
+            ->orderBy('medical_cases.created_at', 'desc');
     }
 
     /**
@@ -143,8 +133,9 @@ class MedicalCaseService
     {
         $doctors = $this->getDoctors();
         $patients = Patient::whereNull('deleted_at')->orderBy('surname')->get();
+        $pendingAppointments = collect([]);
 
-        return compact('doctors', 'patients');
+        return compact('doctors', 'patients', 'pendingAppointments');
     }
 
     /**
@@ -163,7 +154,18 @@ class MedicalCaseService
 
         $hasExistingCase = MedicalCase::where('patient_id', $patientId)->exists();
 
-        return compact('patient', 'doctors', 'historyRecords', 'hasExistingCase');
+        // 查询已完成但未写病历的预约（补充病历候选）
+        $pendingAppointments = \App\Appointment::where('patient_id', $patientId)
+            ->whereNull('medical_case_id')
+            ->whereNull('deleted_at')
+            ->whereIn('status', [\App\Appointment::STATUS_COMPLETED, \App\Appointment::STATUS_TREATMENT_COMPLETE])
+            ->orderBy('start_date', 'desc')
+            ->limit(20)
+            ->select('id', 'start_date', 'start_time', 'doctor_id', 'visit_information')
+            ->with('doctor:id,surname,othername')
+            ->get();
+
+        return compact('patient', 'doctors', 'historyRecords', 'hasExistingCase', 'pendingAppointments');
     }
 
     /**
@@ -204,6 +206,11 @@ class MedicalCaseService
             $data['_who_added'] = Auth::user()->id;
         }
 
+        // appointment_id 不存入 medical_cases 表，仅用于后续关联
+        if (!empty($input['appointment_id'])) {
+            $data['appointment_id'] = (int) $input['appointment_id'];
+        }
+
         return $data;
     }
 
@@ -213,6 +220,10 @@ class MedicalCaseService
     public function createCase(array $data, bool $isDraft): ?MedicalCase
     {
         return DB::transaction(function () use ($data, $isDraft) {
+            // 提取 appointment_id（不存入 medical_cases 表）
+            $appointmentId = $data['appointment_id'] ?? null;
+            unset($data['appointment_id']);
+
             $data['is_draft'] = $isDraft;
             $data['version_number'] = 1;
             $case = MedicalCase::create($data);
@@ -223,6 +234,13 @@ class MedicalCaseService
 
             if ($case) {
                 OperationLog::logCreate('medical', 'MedicalCase', $case->id, $case->toArray());
+
+                // 关联预约
+                if ($appointmentId) {
+                    \App\Appointment::where('id', $appointmentId)
+                        ->whereNull('medical_case_id')
+                        ->update(['medical_case_id' => $case->id]);
+                }
             }
 
             return $case;
@@ -251,10 +269,21 @@ class MedicalCaseService
 
         $data['is_draft'] = $isDraft;
 
-        if ($closingStatus == MedicalCase::STATUS_CLOSED) {
-            $data['status'] = MedicalCase::STATUS_CLOSED;
-            $data['closed_date'] = now();
-            $data['closing_notes'] = $closingNotes;
+        // Validate state transition
+        if ($closingStatus && $closingStatus !== $case->status) {
+            $allowedTransitions = [
+                MedicalCase::STATUS_OPEN       => [MedicalCase::STATUS_CLOSED, MedicalCase::STATUS_FOLLOW_UP],
+                MedicalCase::STATUS_FOLLOW_UP  => [MedicalCase::STATUS_CLOSED, MedicalCase::STATUS_OPEN],
+                MedicalCase::STATUS_CLOSED     => [],
+            ];
+            if (!in_array($closingStatus, $allowedTransitions[$case->status] ?? [])) {
+                return ['status' => false, 'invalid_transition' => true];
+            }
+            $data['status'] = $closingStatus;
+            if ($closingStatus === MedicalCase::STATUS_CLOSED) {
+                $data['closed_date'] = now();
+                $data['closing_notes'] = $closingNotes;
+            }
         }
 
         $case->increment('version_number');
@@ -394,13 +423,14 @@ class MedicalCaseService
         return DataTables::of($data)
             ->addIndexColumn()
             ->addColumn('statusBadge', function ($row) {
-                $class = 'default';
-                if ($row->status == MedicalCase::STATUS_OPEN) $class = 'success';
-                elseif ($row->status == 'In Progress') $class = 'info'; // NOTE: no STATUS_IN_PROGRESS constant; value kept as-is
-                elseif ($row->status == MedicalCase::STATUS_CLOSED) $class = 'danger';
-                elseif ($row->status == MedicalCase::STATUS_FOLLOW_UP) $class = 'warning';
-                $statusKey = strtolower(str_replace([' ', '-'], '_', $row->status));
-                $html = '<span class="label label-' . $class . '">' . __('medical_cases.status_' . $statusKey) . '</span>';
+                $badgeMap = [
+                    MedicalCase::STATUS_OPEN => 'success',
+                    MedicalCase::STATUS_CLOSED => 'danger',
+                    MedicalCase::STATUS_FOLLOW_UP => 'warning',
+                ];
+                $class = $badgeMap[$row->status] ?? 'default';
+                $label = DictItem::nameByCode('medical_case_status', $row->status) ?? $row->status;
+                $html = '<span class="label label-' . $class . '">' . e($label) . '</span>';
                 if (!empty($row->pending_amendments_count)) {
                     $html .= ' <span class="label label-warning" title="' . __('medical_cases.amendment_pending') . '"><i class="fa fa-clock-o"></i> ' . $row->pending_amendments_count . '</span>';
                 }
@@ -433,11 +463,14 @@ class MedicalCaseService
                 return '<a href="' . url('medical-cases/' . $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
             })
             ->addColumn('statusBadge', function ($row) {
-                $class = 'default';
-                if ($row->status == MedicalCase::STATUS_OPEN) $class = 'success';
-                elseif ($row->status == MedicalCase::STATUS_CLOSED) $class = 'danger';
-                elseif ($row->status == MedicalCase::STATUS_FOLLOW_UP) $class = 'warning';
-                return '<span class="label label-' . $class . '">' . __('medical_cases.status_' . strtolower(str_replace('-', '_', $row->status))) . '</span>';
+                $badgeMap = [
+                    MedicalCase::STATUS_OPEN => 'success',
+                    MedicalCase::STATUS_CLOSED => 'danger',
+                    MedicalCase::STATUS_FOLLOW_UP => 'warning',
+                ];
+                $class = $badgeMap[$row->status] ?? 'default';
+                $label = DictItem::nameByCode('medical_case_status', $row->status) ?? $row->status;
+                return '<span class="label label-' . $class . '">' . e($label) . '</span>';
             })
             ->rawColumns(['viewBtn', 'statusBadge'])
             ->make(true);
@@ -448,6 +481,6 @@ class MedicalCaseService
      */
     private function getDoctors(): Collection
     {
-        return User::where('is_doctor', true)->whereNull('deleted_at')->orderBy('surname')->get();
+        return User::where('is_doctor', true)->whereNull('deleted_at')->where('status', User::STATUS_ACTIVE)->orderBy('surname')->get();
     }
 }

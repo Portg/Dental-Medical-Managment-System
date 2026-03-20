@@ -24,13 +24,17 @@ class SupplierController extends Controller
 
             return Datatables::of($data)
                 ->addIndexColumn()
-                ->filter(function ($instance) use ($request) {
-                })
                 ->addColumn('created_at', function ($row) {
                     return $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-';
                 })
+                ->addColumn('phone', function ($row) {
+                    return $row->phone ?: '-';
+                })
+                ->addColumn('contact_person', function ($row) {
+                    return $row->contact_person ?: '-';
+                })
                 ->addColumn('addedBy', function ($row) {
-                    return $row->AddedBy->othername;
+                    return $row->AddedBy->othername ?? '-';
                 })
                 ->addColumn('editBtn', function ($row) {
                     return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
@@ -57,14 +61,15 @@ class SupplierController extends Controller
     public function store(Request $request)
     {
         Validator::make($request->all(), [
-            'name' => 'required',
-        ], [
-            'name.required' => __('validation.custom.name.required'),
+            'name'  => 'required',
+            'email' => 'nullable|email',
         ])->validate();
 
-        $status = $this->supplierService->createSupplier($request->only(['name']));
+        $supplier = $this->supplierService->createSupplier(
+            $request->only(['name', 'contact_person', 'phone', 'email', 'address', 'notes', 'business_license_no', 'license_expiry_date'])
+        );
 
-        if ($status) {
+        if ($supplier) {
             return response()->json(['message' => __('common.supplier_added_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
@@ -83,12 +88,14 @@ class SupplierController extends Controller
     public function update(Request $request, $id)
     {
         Validator::make($request->all(), [
-            'name' => 'required',
-        ], [
-            'name.required' => __('validation.custom.name.required'),
+            'name'  => 'required',
+            'email' => 'nullable|email',
         ])->validate();
 
-        $status = $this->supplierService->updateSupplier((int) $id, $request->only(['name']));
+        $status = $this->supplierService->updateSupplier(
+            (int) $id,
+            $request->only(['name', 'contact_person', 'phone', 'email', 'address', 'notes', 'business_license_no', 'license_expiry_date'])
+        );
 
         if ($status) {
             return response()->json(['message' => __('common.supplier_updated_successfully'), 'status' => true]);
@@ -98,11 +105,7 @@ class SupplierController extends Controller
 
     public function destroy($id)
     {
-        $status = $this->supplierService->deleteSupplier((int) $id);
-
-        if ($status) {
-            return response()->json(['message' => __('common.supplier_deleted_successfully'), 'status' => true]);
-        }
-        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
+        $result = $this->supplierService->deleteSupplier((int) $id);
+        return response()->json($result);
     }
 }

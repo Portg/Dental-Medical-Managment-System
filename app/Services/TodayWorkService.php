@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Appointment;
+use App\DictItem;
 use App\Http\Helper\NameHelper;
 use App\WaitingQueue;
 use Illuminate\Support\Collection;
@@ -704,15 +705,16 @@ class TodayWorkService
         return [
             'items' => $rows->map(function ($row) {
                 return [
-                    'id'                 => $row->id,
-                    'patient_id'         => $row->patient_id,
-                    'patient_name'       => NameHelper::join($row->surname, $row->othername),
-                    'patient_phone'      => $row->phone_no ? substr($row->phone_no, 0, 3) . '****' . substr($row->phone_no, -4) : '',
-                    'total_amount'       => round((float) $row->total_amount, 2),
-                    'paid_amount'        => round((float) $row->paid_amount, 2),
-                    'outstanding_amount' => round((float) $row->outstanding_amount, 2),
-                    'invoice_no'         => $row->invoice_no ?? '',
-                    'payment_status'     => $row->payment_status,
+                    'id'                    => $row->id,
+                    'patient_id'            => $row->patient_id,
+                    'patient_name'          => NameHelper::join($row->surname, $row->othername),
+                    'patient_phone'         => $row->phone_no ? substr($row->phone_no, 0, 3) . '****' . substr($row->phone_no, -4) : '',
+                    'total_amount'          => round((float) $row->total_amount, 2),
+                    'paid_amount'           => round((float) $row->paid_amount, 2),
+                    'outstanding_amount'    => round((float) $row->outstanding_amount, 2),
+                    'invoice_no'            => $row->invoice_no ?? '',
+                    'payment_status'        => $row->payment_status,
+                    'payment_status_label'  => DictItem::nameByCode('invoice_payment_status', $row->payment_status) ?? $row->payment_status,
                 ];
             })->toArray(),
             'total_outstanding' => round($totalOutstanding, 2),
@@ -990,6 +992,7 @@ class TodayWorkService
         return DB::table('users')
             ->where('is_doctor', 1)
             ->whereNull('deleted_at')
+            ->where('status', 'active')
             ->select('id', 'surname', 'othername')
             ->orderBy('surname')
             ->get()

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\StockOutService;
+use App\StockOut;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -14,7 +16,10 @@ class StockOutController extends Controller
     public function __construct(StockOutService $service)
     {
         $this->service = $service;
-        $this->middleware('can:manage-inventory');
+        // 操作库存权限可以提交报损/退货审批
+        $this->middleware('can:operate-inventory|manage-inventory')->only(['submitApproval']);
+        // 管理库存权限才可审批通过/驳回
+        $this->middleware('can:manage-inventory')->except(['submitApproval']);
     }
 
     /**
@@ -44,12 +49,23 @@ class StockOutController extends Controller
                     return $row->items()->count();
                 })
                 ->addColumn('status_label', function ($row) {
-                    $badges = [
-                        'draft' => '<span class="badge badge-secondary">' . __('inventory.status_draft') . '</span>',
-                        'confirmed' => '<span class="badge badge-success">' . __('inventory.status_confirmed') . '</span>',
-                        'cancelled' => '<span class="badge badge-danger">' . __('inventory.status_cancelled') . '</span>',
+                    $classes = [
+                        'draft'            => 'badge-secondary',
+                        'confirmed'        => 'badge-success',
+                        'cancelled'        => 'badge-danger',
+                        'pending_approval' => 'badge-warning',
+                        'rejected'         => 'badge-danger',
                     ];
-                    return $badges[$row->status] ?? $row->status;
+                    $class = $classes[$row->status] ?? 'badge-default';
+                    $label = \App\DictItem::nameByCode('stock_out_status', $row->status) ?? $row->status;
+                    $html = '<span class="badge ' . $class . '">' . $label . '</span>';
+                    if ($row->invoice_id) {
+                        $html .= ' <span class="badge badge-info">' . __('inventory.auto_billing') . '</span>';
+                    }
+                    if ($row->stock_insufficient) {
+                        $html .= ' <span class="badge badge-warning">' . __('inventory.stock_insufficient_badge') . '</span>';
+                    }
+                    return $html;
                 })
                 ->addColumn('viewBtn', function ($row) {
                     return '<a href="' . route('stock-outs.show', $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
@@ -66,11 +82,33 @@ class StockOutController extends Controller
                     }
                     return '';
                 })
-                ->rawColumns(['status_label', 'viewBtn', 'editBtn', 'deleteBtn'])
+                ->addColumn('approvalBtn', function ($row) {
+                    $isApprovalType = in_array($row->out_type, [
+                        \App\StockOut::OUT_TYPE_DAMAGE,
+                        \App\StockOut::OUT_TYPE_SUPPLIER_RETURN,
+                    ]);
+                    if (!$isApprovalType) {
+                        return '';
+                    }
+                    $user = Auth::user();
+                    $html = '';
+                    if ($row->isDraft() && $user->can('operate-inventory')) {
+                        $html .= '<button onclick="submitDamageOrReturn(' . $row->id . ')" class="btn btn-warning btn-sm">'
+                              . __('inventory.submit_approval') . '</button>';
+                    } elseif ($row->isPendingApproval() && $user->can('manage-inventory')) {
+                        $html .= '<button onclick="approveDamageOrReturn(' . $row->id . ')" class="btn btn-success btn-sm">'
+                              . __('inventory.approve') . '</button> ';
+                        $html .= '<button onclick="rejectDamageOrReturn(' . $row->id . ')" class="btn btn-danger btn-sm">'
+                              . __('inventory.reject') . '</button>';
+                    }
+                    return $html;
+                })
+                ->rawColumns(['status_label', 'viewBtn', 'editBtn', 'deleteBtn', 'approvalBtn'])
                 ->make(true);
         }
 
-        return view('inventory.stock_outs.index');
+        $pendingCount = \App\StockOut::where('status', \App\StockOut::STATUS_PENDING_APPROVAL)->count();
+        return view('inventory.stock_outs.index', compact('pendingCount'));
     }
 
     /**
@@ -94,7 +132,7 @@ class StockOutController extends Controller
     {
         Validator::make($request->all(), [
             'stock_out_date' => 'required|date',
-            'out_type' => 'required|in:treatment,department,damage,other',
+            'out_type' => 'required|in:' . \App\DictItem::listByType('stock_out_type')->pluck('code')->implode(','),
         ], [
             'stock_out_date.required' => __('inventory.stock_out_date_required'),
             'out_type.required' => __('inventory.out_type_required'),
@@ -156,7 +194,7 @@ class StockOutController extends Controller
     {
         Validator::make($request->all(), [
             'stock_out_date' => 'required|date',
-            'out_type' => 'required|in:treatment,department,damage,other',
+            'out_type' => 'required|in:' . \App\DictItem::listByType('stock_out_type')->pluck('code')->implode(','),
         ])->validate();
 
         $result = $this->service->updateStockOut((int) $id, $request->only([
@@ -200,5 +238,43 @@ class StockOutController extends Controller
     {
         $result = $this->service->cancelStockOut((int) $id);
         return response()->json(['message' => $result['message'], 'status' => $result['status']]);
+    }
+
+    /**
+     * 提交报损/退货单进入审批（draft → pending_approval）。
+     * 权限：operate-inventory 或 manage-inventory（由构造函数中间件控制）
+     *
+     * AG-055: 报损/退货必须经过审批流程
+     */
+    public function submitApproval(int $id): \Illuminate\Http\JsonResponse
+    {
+        $result = $this->service->submitDamageOrReturn($id, Auth::id());
+        return response()->json(['status' => $result['status'], 'message' => $result['message']]);
+    }
+
+    /**
+     * 审批通过报损/退货。
+     * AG-053: approverId 从 Auth::id() 取，后端校验 != _who_added
+     * 权限：manage-inventory（由构造函数中间件控制）
+     */
+    public function approveStockOut(int $id): \Illuminate\Http\JsonResponse
+    {
+        $result = $this->service->approveDamageOrReturn($id, Auth::id());
+        return response()->json(['status' => $result['status'], 'message' => $result['message']]);
+    }
+
+    /**
+     * 驳回报损/退货。
+     * AG-053: approverId 从 Auth::id() 取
+     * 权限：manage-inventory（由构造函数中间件控制）
+     */
+    public function rejectStockOut(Request $request, int $id): \Illuminate\Http\JsonResponse
+    {
+        $result = $this->service->rejectDamageOrReturn(
+            $id,
+            Auth::id(),
+            $request->input('rejection_reason')
+        );
+        return response()->json(['status' => $result['status'], 'message' => $result['message']]);
     }
 }

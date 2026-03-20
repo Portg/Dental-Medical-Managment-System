@@ -8,7 +8,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Supplier extends Model
 {
     use SoftDeletes;
-    protected $fillable = ['name', '_who_added'];
+    protected $fillable = [
+        'name',
+        'contact_person',
+        'phone',
+        'email',
+        'address',
+        'notes',
+        'business_license_no',
+        'license_expiry_date',
+        '_who_added',
+    ];
 
     public function addedBy()
     {

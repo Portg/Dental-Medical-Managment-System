@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\MedicalTemplate;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -39,9 +40,15 @@ class MedicalTemplateService
             $content = json_encode($content);
         }
 
-        return MedicalTemplate::create([
+        $code = $data['code'] ?? null;
+        $autoCode = empty($code) && ($data['category'] ?? '') === 'personal';
+        if ($autoCode) {
+            $code = $this->generatePersonalCode($userId);
+        }
+
+        $attrs = [
             'name' => $data['name'],
-            'code' => $data['code'],
+            'code' => $code,
             'category' => $data['category'],
             'type' => $data['type'],
             'content' => $content,
@@ -50,7 +57,36 @@ class MedicalTemplateService
             'is_active' => $data['is_active'] ?? true,
             'created_by' => $userId,
             '_who_added' => $userId,
-        ]);
+        ];
+
+        try {
+            return MedicalTemplate::create($attrs);
+        } catch (QueryException $e) {
+            // Retry once with next code on duplicate key (race condition)
+            if ($autoCode && $e->errorInfo[1] == 1062) {
+                $attrs['code'] = $this->generatePersonalCode($userId);
+                return MedicalTemplate::create($attrs);
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Generate auto-incremented code (tpl_1, tpl_2, ...) for personal templates.
+     */
+    private function generatePersonalCode(int $userId): string
+    {
+        $maxCode = DB::table('medical_templates')
+            ->where('created_by', $userId)
+            ->where('category', 'personal')
+            ->where('code', 'LIKE', 'tpl_%')
+            ->whereNull('deleted_at')
+            ->selectRaw("MAX(CAST(SUBSTRING(code, 5) AS UNSIGNED)) as max_num")
+            ->value('max_num');
+
+        $next = ($maxCode ?? 0) + 1;
+
+        return 'tpl_' . $next;
     }
 
     /**

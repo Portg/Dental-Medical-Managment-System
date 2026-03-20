@@ -110,7 +110,8 @@ class TreatmentPlanCompletionReportService
             ->join('quotations as q', 'qi.quotation_id', '=', 'q.id')
             ->join('medical_services as ms', 'qi.medical_service_id', '=', 'ms.id')
             ->leftJoin('invoice_items as ii', function ($join) {
-                $join->on('qi.medical_service_id', '=', 'ii.medical_service_id');
+                $join->on('qi.medical_service_id', '=', 'ii.medical_service_id')
+                     ->whereNull('ii.deleted_at');
             })
             ->leftJoin('invoices as inv', function ($join) {
                 $join->on('ii.invoice_id', '=', 'inv.id')

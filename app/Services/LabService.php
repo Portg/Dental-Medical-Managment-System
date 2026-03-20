@@ -28,7 +28,7 @@ class LabService
     {
         return Lab::where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'specialties', 'avg_turnaround_days']);
+            ->get(['id', 'name', 'contact', 'phone', 'specialties', 'avg_turnaround_days']);
     }
 
     /**

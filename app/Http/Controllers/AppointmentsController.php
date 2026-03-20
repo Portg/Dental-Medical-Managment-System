@@ -22,7 +22,7 @@ class AppointmentsController extends Controller
     {
         $this->appointmentService = $appointmentService;
 
-        $this->middleware('can:view-appointments')->only(['index', 'show', 'calendarEvents', 'exportAppointmentReport', 'getChairs', 'getDoctorTimeSlots']);
+        $this->middleware('can:view-appointments')->only(['index', 'show', 'calendarEvents', 'exportAppointmentReport', 'getChairs', 'getDoctorTimeSlots', 'doctors', 'doctorInfo', 'sendReminder']);
         $this->middleware('can:create-appointments')->only(['create', 'store']);
         $this->middleware('can:edit-appointments')->only(['edit', 'update', 'sendReschedule']);
         $this->middleware('can:delete-appointments')->only(['destroy']);
@@ -102,16 +102,27 @@ class AppointmentsController extends Controller
             ]);
         }
 
-        $appointment = $this->appointmentService->createAppointment($request->only([
+        $scheduleResult = $this->appointmentService->validateScheduleForBooking(
+            (int) $request->doctor_id, $request->appointment_date, $request->appointment_time
+        );
+        if ($scheduleResult['error']) {
+            return response()->json(['message' => $scheduleResult['error'], 'status' => false]);
+        }
+
+        $data = $request->only([
             'visit_information', 'appointment_date', 'appointment_time',
             'patient_id', 'doctor_id', 'notes', 'chair_id', 'service_id',
-            'appointment_type', 'duration_minutes',
-        ]));
+            'appointment_type', 'duration_minutes', 'send_sms',
+        ]);
+        $data['shift_id'] = $scheduleResult['shift_id'];
+
+        $appointment = $this->appointmentService->createAppointment($data);
 
         if ($appointment) {
             return response()->json(['message' => __('messages.appointment_created_successfully'), 'status' => true]);
         }
-        return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
+        // null specifically means shift capacity was reached (atomic lockForUpdate guard)
+        return response()->json(['message' => __('appointment.shift_max_patients_exceeded'), 'status' => false]);
     }
 
     /**
@@ -262,6 +273,7 @@ class AppointmentsController extends Controller
 
         $doctors = DB::table('users')
             ->where('is_doctor', 1)
+            ->where('status', 'active')
             ->whereNull('deleted_at')
             ->select('id', 'surname', 'othername')
             ->orderBy('surname')

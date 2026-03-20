@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\LabCase;
+use App\LabCaseItem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,9 @@ class LabCaseService
                     : "CONCAT(patients.surname, ' ', patients.othername) as patient_name"),
                 'patients.patient_no',
                 'users.othername as doctor_name',
-                'labs.name as lab_name'
+                'labs.name as lab_name',
+                DB::raw("(SELECT GROUP_CONCAT(lci.prosthesis_type ORDER BY lci.sort_order SEPARATOR ',')
+                          FROM lab_case_items lci WHERE lci.lab_case_id = lab_cases.id) as item_types")
             );
 
         if (!empty($filters['status'])) {
@@ -79,22 +82,46 @@ class LabCaseService
     }
 
     /**
-     * Create a lab case.
+     * Create a lab case with items.
      */
-    public function createLabCase(array $data): LabCase
+    public function createLabCase(array $data, array $items = []): LabCase
     {
-        $data['lab_case_no'] = LabCase::generateCaseNo();
-        $data['_who_added'] = Auth::id();
+        return DB::transaction(function () use ($data, $items) {
+            $data['lab_case_no'] = LabCase::generateCaseNo();
+            $data['_who_added'] = Auth::id();
 
-        return LabCase::create($data);
+            $labCase = LabCase::create($data);
+
+            foreach ($items as $index => $item) {
+                $item['lab_case_id'] = $labCase->id;
+                $item['sort_order'] = $index;
+                LabCaseItem::create($item);
+            }
+
+            return $labCase;
+        });
     }
 
     /**
-     * Update a lab case.
+     * Update a lab case with items.
      */
-    public function updateLabCase(int $id, array $data): bool
+    public function updateLabCase(int $id, array $data, ?array $items = null): bool
     {
-        return (bool) LabCase::where('id', $id)->update($data);
+        return DB::transaction(function () use ($id, $data, $items) {
+            $updated = (bool) LabCase::where('id', $id)->update($data);
+
+            if ($items !== null) {
+                // Delete old items and recreate
+                LabCaseItem::where('lab_case_id', $id)->delete();
+                foreach ($items as $index => $item) {
+                    $item['lab_case_id'] = $id;
+                    $item['sort_order'] = $index;
+                    LabCaseItem::create($item);
+                }
+            }
+
+            return $updated;
+        });
     }
 
     /**
@@ -139,7 +166,7 @@ class LabCaseService
      */
     public function getLabCase(int $id): ?LabCase
     {
-        return LabCase::with(['patient', 'doctor', 'lab', 'appointment'])->find($id);
+        return LabCase::with(['patient', 'doctor', 'lab', 'appointment', 'items'])->find($id);
     }
 
     /**
@@ -147,7 +174,7 @@ class LabCaseService
      */
     public function getPatientCases(int $patientId): Collection
     {
-        return LabCase::with(['lab', 'doctor'])
+        return LabCase::with(['lab', 'doctor', 'items'])
             ->where('patient_id', $patientId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -200,7 +227,7 @@ class LabCaseService
      */
     public function getPrintData(int $id): ?LabCase
     {
-        return LabCase::with(['patient', 'doctor', 'lab', 'appointment', 'addedBy'])->find($id);
+        return LabCase::with(['patient', 'doctor', 'lab', 'appointment', 'addedBy', 'items'])->find($id);
     }
 
     // ─── DataTable formatting ────────────────────────────────────
@@ -225,7 +252,14 @@ class LabCaseService
                 return $row->lab_name ?? '-';
             })
             ->addColumn('prosthesis_type_label', function ($row) {
-                return __('lab_cases.type_' . $row->prosthesis_type);
+                if (empty($row->item_types)) {
+                    return '-';
+                }
+                $types = explode(',', $row->item_types);
+                $labels = array_map(function ($t) {
+                    return \App\DictItem::nameByCode('lab_case_prosthesis_type', trim($t)) ?? trim($t);
+                }, $types);
+                return implode(', ', $labels);
             })
             ->addColumn('status_label', function ($row) {
                 $badges = [
@@ -280,6 +314,18 @@ class LabCaseService
             ->addColumn('lab_case_no', function ($row) {
                 return '<a href="' . url('lab-cases/' . $row->id) . '">' . e($row->lab_case_no) . '</a>';
             })
+            ->addColumn('lab_name', function ($row) {
+                return $row->lab->name ?? '-';
+            })
+            ->addColumn('items_summary', function ($row) {
+                if ($row->items->isEmpty()) {
+                    return '-';
+                }
+                $labels = $row->items->map(function ($item) {
+                    return \App\DictItem::nameByCode('lab_case_prosthesis_type', $item->prosthesis_type) ?? $item->prosthesis_type;
+                });
+                return $labels->implode(', ');
+            })
             ->addColumn('status_label', function ($row) {
                 $badges = [
                     LabCase::STATUS_PENDING       => 'default',
@@ -292,6 +338,9 @@ class LabCaseService
                 ];
                 $badge = $badges[$row->status] ?? 'default';
                 return '<span class="label label-' . $badge . '">' . __('lab_cases.status_' . $row->status) . '</span>';
+            })
+            ->addColumn('expected_return_date', function ($row) {
+                return $row->expected_return_date ? $row->expected_return_date->format('Y-m-d') : '-';
             })
             ->rawColumns(['lab_case_no', 'status_label'])
             ->make(true);

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Schema;
 use App\Services\MenuService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
+use Illuminate\Database\Events\MigrationsEnded;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
         Notification::extend('smsNotify', function ($app) {
             return new SmsNotifyChannel();
         });
+
+        // Scribe (API 文档) 仅在开发环境加载，已在 composer.json dont-discover 中禁用自动发现
+        if ($this->app->environment('local') && class_exists(\Knuckles\Scribe\ScribeServiceProvider::class)) {
+            $this->app->register(\Knuckles\Scribe\ScribeServiceProvider::class);
+        }
     }
 
 
@@ -40,6 +47,11 @@ class AppServiceProvider extends ServiceProvider
         // 或者只共享到特定视图
         View::composer('*', function ($view) {
             $view->with('availableLocales', config('app.available_locales'));
+        });
+
+        // Migration 完成后自动清除菜单缓存
+        Event::listen(MigrationsEnded::class, function () {
+            app(MenuService::class)->clearAllCache();
         });
 
         // 动态菜单数据注入

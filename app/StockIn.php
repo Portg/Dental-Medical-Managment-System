@@ -123,12 +123,11 @@ class StockIn extends Model
      */
     public function getStatusLabelAttribute()
     {
-        $statuses = [
-            self::STATUS_DRAFT => __('inventory.status_draft'),
-            self::STATUS_CONFIRMED => __('inventory.status_confirmed'),
-            self::STATUS_CANCELLED => __('inventory.status_cancelled'),
-        ];
+        return \App\DictItem::nameByCode('stock_in_status', $this->status) ?? $this->status;
+    }
 
-        return $statuses[$this->status] ?? $this->status;
+    public static function statusOptions(): array
+    {
+        return \App\DictItem::listByType('stock_in_status')->pluck('name', 'code')->all();
     }
 }

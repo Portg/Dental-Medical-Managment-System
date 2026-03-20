@@ -77,11 +77,23 @@ class AppointmentController extends ApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $appointment = $this->appointmentService->createAppointment($request->only([
+        $scheduleResult = $this->appointmentService->validateScheduleForBooking(
+            (int) $request->input('doctor_id'),
+            $request->input('appointment_date'),
+            $request->input('appointment_time')
+        );
+        if ($scheduleResult['error']) {
+            return $this->error($scheduleResult['error'], 422);
+        }
+
+        $data = $request->only([
             'visit_information', 'appointment_date', 'appointment_time',
             'patient_id', 'doctor_id', 'notes', 'chair_id', 'service_id',
             'appointment_type', 'duration_minutes',
-        ]));
+        ]);
+        $data['shift_id'] = $scheduleResult['shift_id'];
+
+        $appointment = $this->appointmentService->createAppointment($data);
 
         if (!$appointment) {
             return $this->error('Failed to create appointment', 500);

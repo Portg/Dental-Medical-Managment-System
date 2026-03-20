@@ -22,7 +22,8 @@ class Prescription extends Model implements AuditableContract
         'prescription_no', 'drug', 'qty', 'directions',
         'status', 'prescription_date', 'expiry_date',
         'refills_allowed', 'refills_used', 'doctor_signature', 'notes',
-        'appointment_id', 'medical_case_id', 'patient_id', 'doctor_id', '_who_added'
+        'appointment_id', 'medical_case_id', 'patient_id', 'doctor_id',
+        'invoice_id', '_who_added'
     ];
 
     protected $casts = [
@@ -55,9 +56,32 @@ class Prescription extends Model implements AuditableContract
         return $this->belongsTo('App\User', '_who_added');
     }
 
+    public function invoice()
+    {
+        return $this->belongsTo('App\Invoice', 'invoice_id');
+    }
+
     public function items()
     {
         return $this->hasMany('App\PrescriptionItem', 'prescription_id');
+    }
+
+    /**
+     * AG-023: 已关联 Invoice 的处方不允许删除
+     */
+    public function getIsDeletableAttribute(): bool
+    {
+        return is_null($this->invoice_id);
+    }
+
+    /**
+     * 处方总金额 = 所有 items 的 unit_price × quantity 之和
+     */
+    public function getTotalAmountAttribute(): string
+    {
+        return $this->items->reduce(function ($carry, $item) {
+            return bcadd($carry, $item->amount, 2);
+        }, '0.00');
     }
 
     /**
@@ -123,7 +147,8 @@ class Prescription extends Model implements AuditableContract
     public static function generatePrescriptionNo()
     {
         $prefix = 'RX' . date('Ymd');
-        $latest = self::where('prescription_no', 'like', $prefix . '%')
+        $latest = self::withTrashed()
+            ->where('prescription_no', 'like', $prefix . '%')
             ->orderBy('prescription_no', 'desc')
             ->first();
 

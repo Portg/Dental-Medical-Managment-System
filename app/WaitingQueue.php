@@ -124,15 +124,7 @@ class WaitingQueue extends Model
      */
     public function getStatusTextAttribute()
     {
-        $statusMap = [
-            self::STATUS_WAITING => __('waiting_queue.status.waiting'),
-            self::STATUS_CALLED => __('waiting_queue.status.called'),
-            self::STATUS_IN_TREATMENT => __('waiting_queue.status.in_treatment'),
-            self::STATUS_COMPLETED => __('waiting_queue.status.completed'),
-            self::STATUS_CANCELLED => __('waiting_queue.status.cancelled'),
-            self::STATUS_NO_SHOW => __('waiting_queue.status.no_show'),
-        ];
-        return $statusMap[$this->status] ?? $this->status;
+        return \App\DictItem::nameByCode('waiting_queue_status', $this->status) ?? $this->status;
     }
 
     // ========== Scopes ==========

@@ -41,12 +41,10 @@ class StockInController extends Controller
                     return $row->items()->count();
                 })
                 ->addColumn('status_label', function ($row) {
-                    $badges = [
-                        'draft' => '<span class="badge badge-secondary">' . __('inventory.status_draft') . '</span>',
-                        'confirmed' => '<span class="badge badge-success">' . __('inventory.status_confirmed') . '</span>',
-                        'cancelled' => '<span class="badge badge-danger">' . __('inventory.status_cancelled') . '</span>',
-                    ];
-                    return $badges[$row->status] ?? $row->status;
+                    $classes = ['draft' => 'badge-secondary', 'confirmed' => 'badge-success', 'cancelled' => 'badge-danger'];
+                    $class = $classes[$row->status] ?? 'badge-default';
+                    $label = \App\DictItem::nameByCode('stock_in_status', $row->status) ?? $row->status;
+                    return '<span class="badge ' . $class . '">' . $label . '</span>';
                 })
                 ->addColumn('viewBtn', function ($row) {
                     return '<a href="' . route('stock-ins.show', $row->id) . '" class="btn btn-info btn-sm">' . __('common.view') . '</a>';

@@ -26,6 +26,10 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
 
+        $schedule->command('queue:work database --queue=backups,default --stop-when-empty --max-time=300')
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
         $schedule->command('backup:clean')->daily()->at('17:00');
         $schedule->command('backup:run')->daily()->at('18:00');
         $schedule->command('queue:restart')->hourly();

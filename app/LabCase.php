@@ -12,15 +12,14 @@ class LabCase extends Model
 
     protected $fillable = [
         'lab_case_no', 'patient_id', 'doctor_id', 'appointment_id',
-        'medical_case_id', 'lab_id', 'prosthesis_type', 'material',
-        'color_shade', 'teeth_positions', 'special_requirements',
+        'medical_case_id', 'lab_id', 'processing_days',
+        'special_requirements',
         'status', 'sent_date', 'expected_return_date', 'actual_return_date',
         'lab_fee', 'patient_charge', 'quality_rating',
         'rework_count', 'rework_reason', 'notes', '_who_added',
     ];
 
     protected $casts = [
-        'teeth_positions'      => 'array',
         'lab_fee'              => 'decimal:2',
         'patient_charge'       => 'decimal:2',
         'sent_date'            => 'date',
@@ -36,42 +35,35 @@ class LabCase extends Model
     const STATUS_COMPLETED = 'completed';
     const STATUS_REWORK = 'rework';
 
-    public const STATUSES = [
-        self::STATUS_PENDING       => '待送出',
-        self::STATUS_SENT          => '已送出',
-        self::STATUS_IN_PRODUCTION => '制作中',
-        self::STATUS_RETURNED      => '已返回',
-        self::STATUS_TRY_IN        => '试戴',
-        self::STATUS_COMPLETED     => '完成',
-        self::STATUS_REWORK        => '返工',
-    ];
+    /**
+     * 从字典表取状态列表 ['code' => 'name', ...]
+     */
+    public static function statusOptions(): array
+    {
+        return \App\DictItem::listByType('lab_case_status')
+            ->pluck('name', 'code')
+            ->all();
+    }
 
-    public const PROSTHESIS_TYPES = [
-        'crown'            => '冠',
-        'bridge'           => '桥',
-        'removable'        => '活动义齿',
-        'implant'          => '种植体',
-        'veneer'           => '贴面',
-        'inlay_onlay'      => '嵌体/高嵌体',
-        'denture'          => '全口义齿',
-        'orthodontic'      => '正畸器',
-        'night_guard'      => '夜磨牙垫',
-        'surgical_guide'   => '种植导板',
-        'other'            => '其他',
-    ];
+    /**
+     * 从字典表取修复体类型列表
+     */
+    public static function prosthesisTypeOptions(): array
+    {
+        return \App\DictItem::listByType('lab_case_prosthesis_type')
+            ->pluck('name', 'code')
+            ->all();
+    }
 
-    public const MATERIALS = [
-        'zirconia'         => '氧化锆',
-        'pfm'              => '金属烤瓷',
-        'all_ceramic'      => '全瓷',
-        'emax'             => 'E.max 铸瓷',
-        'composite'        => '树脂',
-        'metal'            => '金属',
-        'acrylic'          => '丙烯酸',
-        'titanium'         => '钛合金',
-        'peek'             => 'PEEK',
-        'other'            => '其他',
-    ];
+    /**
+     * 从字典表取材料列表
+     */
+    public static function materialOptions(): array
+    {
+        return \App\DictItem::listByType('lab_case_material')
+            ->pluck('name', 'code')
+            ->all();
+    }
 
     /**
      * Generate a unique lab case number.
@@ -144,5 +136,10 @@ class LabCase extends Model
     public function addedBy()
     {
         return $this->belongsTo('App\User', '_who_added');
+    }
+
+    public function items()
+    {
+        return $this->hasMany(LabCaseItem::class, 'lab_case_id')->orderBy('sort_order');
     }
 }

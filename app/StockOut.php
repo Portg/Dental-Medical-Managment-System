@@ -12,6 +12,13 @@ class StockOut extends Model
     const STATUS_DRAFT = 'draft';
     const STATUS_CONFIRMED = 'confirmed';
     const STATUS_CANCELLED = 'cancelled';
+    const STATUS_PENDING_APPROVAL = 'pending_approval';
+    const STATUS_REJECTED = 'rejected';
+
+    const OUT_TYPE_REQUISITION = 'requisition';
+    const OUT_TYPE_SUPPLIER_RETURN = 'supplier_return';
+    const OUT_TYPE_INVENTORY_LOSS = 'inventory_loss';
+    const OUT_TYPE_DAMAGE = 'damage';
 
     protected $fillable = [
         'stock_out_no',
@@ -19,17 +26,25 @@ class StockOut extends Model
         'stock_out_date',
         'patient_id',
         'appointment_id',
+        'invoice_id',
         'department',
+        'recipient',
+        'supplier_id',
+        'approved_by',
+        'approved_at',
         'total_amount',
         'status',
+        'stock_insufficient',
         'notes',
         'branch_id',
         '_who_added',
     ];
 
     protected $casts = [
-        'stock_out_date' => 'date',
-        'total_amount' => 'decimal:2',
+        'stock_out_date'    => 'date',
+        'approved_at'       => 'datetime',
+        'total_amount'      => 'decimal:2',
+        'stock_insufficient' => 'boolean',
     ];
 
     /**
@@ -73,6 +88,14 @@ class StockOut extends Model
     }
 
     /**
+     * Get the user who approved this stock out.
+     */
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
      * Check if stock out is draft.
      */
     public function isDraft()
@@ -94,6 +117,46 @@ class StockOut extends Model
     public function isCancelled()
     {
         return $this->status === self::STATUS_CANCELLED;
+    }
+
+    /**
+     * Check if stock out is pending approval.
+     */
+    public function isPendingApproval()
+    {
+        return $this->status === self::STATUS_PENDING_APPROVAL;
+    }
+
+    /**
+     * Check if stock out is rejected.
+     */
+    public function isRejected()
+    {
+        return $this->status === self::STATUS_REJECTED;
+    }
+
+    /**
+     * AG-052: Only draft records can be edited.
+     */
+    public function canEdit()
+    {
+        return $this->isDraft();
+    }
+
+    /**
+     * Only draft records can be submitted for approval.
+     */
+    public function canSubmit()
+    {
+        return $this->isDraft();
+    }
+
+    /**
+     * Only pending_approval records can be approved or rejected.
+     */
+    public function canApprove()
+    {
+        return $this->isPendingApproval();
     }
 
     /**
@@ -126,14 +189,7 @@ class StockOut extends Model
      */
     public function getOutTypeLabelAttribute()
     {
-        $types = [
-            'treatment' => __('inventory.out_type_treatment'),
-            'department' => __('inventory.out_type_department'),
-            'damage' => __('inventory.out_type_damage'),
-            'other' => __('inventory.out_type_other'),
-        ];
-
-        return $types[$this->out_type] ?? $this->out_type;
+        return \App\DictItem::nameByCode('stock_out_type', $this->out_type) ?? $this->out_type;
     }
 
     /**
@@ -141,12 +197,16 @@ class StockOut extends Model
      */
     public function getStatusLabelAttribute()
     {
-        $statuses = [
-            self::STATUS_DRAFT => __('inventory.status_draft'),
-            self::STATUS_CONFIRMED => __('inventory.status_confirmed'),
-            self::STATUS_CANCELLED => __('inventory.status_cancelled'),
-        ];
+        return \App\DictItem::nameByCode('stock_out_status', $this->status) ?? $this->status;
+    }
 
-        return $statuses[$this->status] ?? $this->status;
+    public static function outTypeOptions(): array
+    {
+        return \App\DictItem::listByType('stock_out_type')->pluck('name', 'code')->all();
+    }
+
+    public static function statusOptions(): array
+    {
+        return \App\DictItem::listByType('stock_out_status')->pluck('name', 'code')->all();
     }
 }

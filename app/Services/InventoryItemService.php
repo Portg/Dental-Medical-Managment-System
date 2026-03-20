@@ -192,6 +192,9 @@ class InventoryItemService
                 }
                 return '<span class="badge badge-success">' . __('inventory.in_stock') . '</span>';
             })
+            ->setRowClass(function ($row) {
+                return $row->isLowStock() ? 'danger' : '';
+            })
             ->addColumn('status', function ($row) {
                 if ($row->is_active) {
                     return '<span class="badge badge-success">' . __('common.active') . '</span>';

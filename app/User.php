@@ -18,9 +18,12 @@ class User extends Authenticatable
      *
      * @var array
      */
+    const STATUS_ACTIVE = 'active';
+    const STATUS_RESIGNED = 'resigned';
+
     protected $fillable = [
-        'surname', 'othername', 'email', 'phone_no', 'alternative_phone_no', 'photo', 'nin', 'role_id',
-        'branch_id', 'is_doctor', 'password',
+        'surname', 'othername', 'username', 'email', 'phone_no', 'alternative_phone_no', 'photo', 'nin', 'role_id',
+        'branch_id', 'is_doctor', 'password', 'status',
     ];
 
 
@@ -78,5 +81,38 @@ class User extends Authenticatable
             return collect([]);
         }
         return $this->UserRole->permissions;
+    }
+
+    /**
+     * Scope: only active users.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * Check if user account is active.
+     */
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Mark user as resigned (AG-027: clear all tokens).
+     */
+    public function markAsResigned(): void
+    {
+        $this->update(['status' => self::STATUS_RESIGNED]);
+        $this->tokens()->delete();
+    }
+
+    /**
+     * Reactivate user (AG-031: must reset password externally).
+     */
+    public function markAsActive(): void
+    {
+        $this->update(['status' => self::STATUS_ACTIVE]);
     }
 }

@@ -66,7 +66,7 @@ class RefundController extends Controller
             'invoice_id' => 'required|exists:invoices,id',
             'refund_amount' => 'required|numeric|min:0.01',
             'refund_reason' => 'required|string|max:500',
-            'refund_method' => 'required|in:cash,wechat,alipay,card,stored_value',
+            'refund_method' => 'required|in:' . \App\DictItem::listByType('refund_method')->pluck('code')->implode(','),
         ], [
             'invoice_id.required' => __('invoices.invoice_required'),
             'refund_amount.required' => __('invoices.refund_amount_required'),

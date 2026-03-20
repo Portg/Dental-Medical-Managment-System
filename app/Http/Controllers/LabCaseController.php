@@ -49,15 +49,19 @@ class LabCaseController extends Controller
             'patient_id'           => 'required|exists:patients,id',
             'doctor_id'            => 'required|exists:users,id',
             'lab_id'               => 'required|exists:labs,id',
-            'prosthesis_type'      => 'required|string|max:100',
-            'material'             => 'nullable|string|max:100',
-            'color_shade'          => 'nullable|string|max:50',
-            'teeth_positions'      => 'nullable|string|max:255',
+            'processing_days'      => 'nullable|integer|min:1|max:365',
             'special_requirements' => 'nullable|string|max:2000',
-            'expected_return_date' => 'nullable|date|after_or_equal:today',
+            'sent_date'            => 'nullable|date',
+            'expected_return_date' => 'nullable|date',
             'lab_fee'              => 'nullable|numeric|min:0',
             'patient_charge'       => 'nullable|numeric|min:0',
             'notes'                => 'nullable|string|max:2000',
+            'items'                => 'required|array|min:1|max:4',
+            'items.*.prosthesis_type' => 'required|string|max:100',
+            'items.*.material'        => 'nullable|string|max:100',
+            'items.*.color_shade'     => 'nullable|string|max:50',
+            'items.*.teeth_positions' => 'nullable|string|max:255',
+            'items.*.qty'             => 'nullable|integer|min:1|max:99',
         ]);
 
         if ($validator->fails()) {
@@ -65,17 +69,27 @@ class LabCaseController extends Controller
         }
 
         $data = $request->only([
-            'patient_id', 'doctor_id', 'lab_id', 'prosthesis_type',
-            'material', 'color_shade', 'special_requirements',
+            'patient_id', 'doctor_id', 'lab_id', 'processing_days',
+            'special_requirements', 'sent_date',
             'expected_return_date', 'lab_fee', 'patient_charge', 'notes',
         ]);
 
-        // Convert comma-separated teeth_positions to array
-        if (!empty($request->teeth_positions)) {
-            $data['teeth_positions'] = array_map('trim', explode(',', $request->teeth_positions));
+        // Build items array
+        $items = [];
+        foreach ($request->input('items', []) as $item) {
+            $row = [
+                'prosthesis_type' => $item['prosthesis_type'],
+                'material'        => $item['material'] ?? null,
+                'color_shade'     => $item['color_shade'] ?? null,
+                'qty'             => $item['qty'] ?? 1,
+            ];
+            if (!empty($item['teeth_positions'])) {
+                $row['teeth_positions'] = array_map('trim', explode(',', $item['teeth_positions']));
+            }
+            $items[] = $row;
         }
 
-        $this->labCaseService->createLabCase($data);
+        $this->labCaseService->createLabCase($data, $items);
 
         return response()->json(['message' => __('lab_cases.case_created'), 'status' => true]);
     }
@@ -83,16 +97,19 @@ class LabCaseController extends Controller
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'prosthesis_type'      => 'nullable|string|max:100',
-            'material'             => 'nullable|string|max:100',
-            'color_shade'          => 'nullable|string|max:50',
-            'teeth_positions'      => 'nullable|string|max:255',
+            'processing_days'      => 'nullable|integer|min:1|max:365',
             'special_requirements' => 'nullable|string|max:2000',
             'expected_return_date' => 'nullable|date',
             'lab_fee'              => 'nullable|numeric|min:0',
             'patient_charge'       => 'nullable|numeric|min:0',
             'quality_rating'       => 'nullable|integer|min:1|max:5',
             'notes'                => 'nullable|string|max:2000',
+            'items'                => 'nullable|array|min:1|max:4',
+            'items.*.prosthesis_type' => 'required_with:items|string|max:100',
+            'items.*.material'        => 'nullable|string|max:100',
+            'items.*.color_shade'     => 'nullable|string|max:50',
+            'items.*.teeth_positions' => 'nullable|string|max:255',
+            'items.*.qty'             => 'nullable|integer|min:1|max:99',
         ]);
 
         if ($validator->fails()) {
@@ -100,16 +117,29 @@ class LabCaseController extends Controller
         }
 
         $data = $request->only([
-            'prosthesis_type', 'material', 'color_shade',
-            'special_requirements', 'expected_return_date', 'lab_fee',
-            'patient_charge', 'quality_rating', 'notes',
+            'processing_days', 'special_requirements', 'expected_return_date',
+            'lab_fee', 'patient_charge', 'quality_rating', 'notes',
         ]);
 
-        if (!empty($request->teeth_positions)) {
-            $data['teeth_positions'] = array_map('trim', explode(',', $request->teeth_positions));
+        // Build items array if provided
+        $items = null;
+        if ($request->has('items')) {
+            $items = [];
+            foreach ($request->input('items', []) as $item) {
+                $row = [
+                    'prosthesis_type' => $item['prosthesis_type'],
+                    'material'        => $item['material'] ?? null,
+                    'color_shade'     => $item['color_shade'] ?? null,
+                    'qty'             => $item['qty'] ?? 1,
+                ];
+                if (!empty($item['teeth_positions'])) {
+                    $row['teeth_positions'] = array_map('trim', explode(',', $item['teeth_positions']));
+                }
+                $items[] = $row;
+            }
         }
 
-        $result = $this->labCaseService->updateLabCase((int) $id, $data);
+        $result = $this->labCaseService->updateLabCase((int) $id, $data, $items);
 
         if (!$result) {
             return response()->json(['message' => __('lab_cases.error_updating_case'), 'status' => false]);
@@ -134,7 +164,7 @@ class LabCaseController extends Controller
      */
     public function updateStatus(Request $request, $id)
     {
-        $validStatuses = implode(',', array_keys(LabCase::STATUSES));
+        $validStatuses = \App\DictItem::listByType('lab_case_status')->pluck('code')->implode(',');
 
         $validator = Validator::make($request->all(), [
             'status'        => "required|in:{$validStatuses}",

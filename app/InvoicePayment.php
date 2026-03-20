@@ -9,7 +9,7 @@ class InvoicePayment extends Model
 {
     use SoftDeletes;
     protected $fillable = ['amount', 'payment_method', 'account_name', 'cheque_no', 'bank_name',
-        'payment_date', 'invoice_id', 'insurance_company_id', 'self_account_id', 'branch_id', '_who_added'];
+        'transaction_ref', 'payment_date', 'invoice_id', 'insurance_company_id', 'self_account_id', 'branch_id', '_who_added'];
 
     public function addedBy()
     {

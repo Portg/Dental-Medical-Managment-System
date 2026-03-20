@@ -135,6 +135,7 @@ class RoleService
             'view-appointments', 'edit-appointments',
             'view-invoices',
             'manage-medical-cases', 'manage-treatments',
+            'view-own-doctor-report',
         ],
         'nurse' => [
             'view-patients', 'edit-patients',

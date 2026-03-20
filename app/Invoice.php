@@ -23,7 +23,9 @@ class Invoice extends Model
         'discount_approval_status', 'discount_approved_by',
         'discount_approved_at', 'discount_approval_reason',
         // 欠费挂账
-        'is_credit', 'credit_approved_by', 'credit_approved_at'
+        'is_credit', 'credit_approved_by', 'credit_approved_at',
+        // 划价模式
+        'billing_mode',
     ];
 
     protected $casts = [
@@ -71,13 +73,14 @@ class Invoice extends Model
         parent::boot();
 
         static::saving(function ($model) {
-            // Auto-calculate outstanding amount
-            $model->outstanding_amount = max(0, $model->total_amount - $model->paid_amount);
+            // Auto-calculate outstanding amount (AG-005: bcmath for monetary precision)
+            $outstanding = bcsub((string)$model->total_amount, (string)$model->paid_amount, 2);
+            $model->outstanding_amount = bccomp($outstanding, '0', 2) >= 0 ? $outstanding : '0';
 
             // Auto-update payment status
-            if ($model->paid_amount <= 0) {
+            if (bccomp((string)$model->paid_amount, '0', 2) <= 0) {
                 $model->payment_status = self::PAYMENT_UNPAID;
-            } elseif ($model->paid_amount >= $model->total_amount) {
+            } elseif (bccomp((string)$model->paid_amount, (string)$model->total_amount, 2) >= 0) {
                 $model->payment_status = self::PAYMENT_PAID;
             } else {
                 $model->payment_status = self::PAYMENT_PARTIAL;
@@ -169,7 +172,12 @@ class Invoice extends Model
     public function calculateTotals()
     {
         $this->subtotal = $this->items()->sum('amount');
-        $this->total_amount = $this->subtotal - $this->discount_amount + $this->tax_amount;
+        // AG-005: bcmath for monetary precision
+        $this->total_amount = bcsub(
+            bcadd((string)$this->subtotal, (string)$this->tax_amount, 2),
+            (string)$this->discount_amount,
+            2
+        );
         $this->save();
         return $this;
     }
@@ -179,7 +187,8 @@ class Invoice extends Model
      */
     public function recordPayment($amount)
     {
-        $this->paid_amount = ($this->paid_amount ?? 0) + $amount;
+        // AG-005: bcmath for monetary precision
+        $this->paid_amount = bcadd((string)($this->paid_amount ?? '0'), (string)$amount, 2);
         $this->save();
         return $this;
     }
@@ -249,40 +258,50 @@ class Invoice extends Model
             'total_amount' => $subtotal,
         ];
 
+        // AG-005: All discount calculations use bcmath for monetary precision
+        $runningTotal = (string) $subtotal;
+
         // 1. 会员折扣 (优先级1)
         if ($patient && $patient->memberLevel && $patient->memberLevel->discount_rate > 0) {
-            $rate = $patient->memberLevel->discount_rate;
+            $rate = (string) $patient->memberLevel->discount_rate;
             $discounts['member_discount_rate'] = $rate;
-            $discounts['member_discount_amount'] = round($runningTotal * ($rate / 100), 2);
-            $runningTotal -= $discounts['member_discount_amount'];
+            $memberDiscAmt = bcmul($runningTotal, bcdiv($rate, '100', 10), 2);
+            $discounts['member_discount_amount'] = $memberDiscAmt;
+            $runningTotal = bcsub($runningTotal, $memberDiscAmt, 2);
         }
 
         // 2. 项目折扣 (优先级2) - 已在项目级别计算
-        $itemDiscountTotal = $this->items()->sum('discount_amount');
+        $itemDiscountTotal = (string) $this->items()->sum('discount_amount');
         $discounts['item_discount_amount'] = $itemDiscountTotal;
-        $runningTotal -= $itemDiscountTotal;
+        $runningTotal = bcsub($runningTotal, $itemDiscountTotal, 2);
 
         // 3. 整单折扣 (优先级3)
         if ($orderDiscountRate > 0) {
             $discounts['order_discount_rate'] = $orderDiscountRate;
-            $discounts['order_discount_amount'] = round($runningTotal * ($orderDiscountRate / 100), 2);
+            $orderDiscAmt = bcmul($runningTotal, bcdiv((string)$orderDiscountRate, '100', 10), 2);
+            $discounts['order_discount_amount'] = $orderDiscAmt;
         } elseif ($orderDiscountFixed > 0) {
-            $discounts['order_discount_amount'] = min($orderDiscountFixed, $runningTotal);
+            $discAmt = bccomp((string)$orderDiscountFixed, $runningTotal, 2) <= 0
+                ? (string)$orderDiscountFixed
+                : $runningTotal;
+            $discounts['order_discount_amount'] = $discAmt;
         }
-        $runningTotal -= $discounts['order_discount_amount'];
+        $runningTotal = bcsub($runningTotal, (string)$discounts['order_discount_amount'], 2);
 
         // 4. 优惠券 (优先级4)
         if ($coupon && $coupon->isValid($runningTotal, $patient ? $patient->id : null)['valid']) {
-            $discounts['coupon_discount_amount'] = $coupon->calculateDiscount($runningTotal);
-            $runningTotal -= $discounts['coupon_discount_amount'];
+            $couponDiscAmt = (string) $coupon->calculateDiscount($runningTotal);
+            $discounts['coupon_discount_amount'] = $couponDiscAmt;
+            $runningTotal = bcsub($runningTotal, $couponDiscAmt, 2);
         }
 
-        $discounts['total_discount'] = $discounts['member_discount_amount']
-            + $discounts['item_discount_amount']
-            + $discounts['order_discount_amount']
-            + $discounts['coupon_discount_amount'];
+        $discounts['total_discount'] = bcadd(
+            bcadd((string)$discounts['member_discount_amount'], (string)$discounts['item_discount_amount'], 2),
+            bcadd((string)$discounts['order_discount_amount'], (string)$discounts['coupon_discount_amount'], 2),
+            2
+        );
 
-        $discounts['total_amount'] = max(0, $runningTotal);
+        $discounts['total_amount'] = bccomp($runningTotal, '0', 2) >= 0 ? $runningTotal : '0';
 
         return $discounts;
     }

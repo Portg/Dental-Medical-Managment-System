@@ -317,11 +317,14 @@ class PatientService
 
         $followupsCount = PatientFollowup::where('patient_id', $id)->count();
 
+        $labCasesCount = \App\LabCase::where('patient_id', $id)->count();
+
+        $prescriptionsCount = \App\Prescription::where('patient_id', $id)->count();
+
         $invoicesCount = DB::table('invoices')
             ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->where('appointments.patient_id', $id)
+            ->where(DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'), $id)
             ->whereNull('invoices.deleted_at')
-            ->whereNull('appointments.deleted_at')
             ->count();
 
         // 首诊信息 (first visit)
@@ -339,9 +342,8 @@ class PatientService
         // 消费总额 (total spending)
         $totalSpending = DB::table('invoices')
             ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->where('appointments.patient_id', $id)
+            ->where(DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'), $id)
             ->whereNull('invoices.deleted_at')
-            ->whereNull('appointments.deleted_at')
             ->sum('invoices.total_amount');
 
         // 所有标签（用于左侧面板复选框）
@@ -350,10 +352,12 @@ class PatientService
         // 所有分组（用于左侧面板单选）
         $allGroups = \App\DictItem::ofType('patient_group')->active()->ordered()->get();
 
+        $doctors = \App\User::where('is_doctor', true)->whereNull('deleted_at')->where('status', \App\User::STATUS_ACTIVE)->orderBy('surname')->get(['id', 'surname', 'othername']);
+
         return compact(
             'patient', 'appointmentsCount', 'medicalCasesCount',
-            'imagesCount', 'followupsCount', 'invoicesCount',
-            'firstVisit', 'latestVisit', 'totalSpending', 'allTags', 'allGroups'
+            'imagesCount', 'followupsCount', 'labCasesCount', 'prescriptionsCount', 'invoicesCount',
+            'firstVisit', 'latestVisit', 'totalSpending', 'allTags', 'allGroups', 'doctors'
         );
     }
 

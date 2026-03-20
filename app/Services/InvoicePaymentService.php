@@ -8,6 +8,7 @@ use App\MemberTransaction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\SystemSetting;
 use App\Services\MemberService;
 
@@ -112,10 +113,15 @@ class InvoicePaymentService
             return ['status' => false, 'message' => __('invoices.discount_approval_required')];
         }
 
-        $totalPayment = collect($payments)->sum('amount');
-        $outstanding = $invoice->outstanding_amount;
+        // AG-065: bcmath for all monetary accumulation
+        $totalPayment = array_reduce(
+            $payments,
+            fn ($carry, $p) => bcadd($carry, (string) ($p['amount'] ?? 0), 2),
+            '0'
+        );
+        $outstanding = (string) $invoice->outstanding_amount;
 
-        if ($totalPayment > $outstanding) {
+        if (bccomp($totalPayment, $outstanding, 2) > 0) {
             return ['status' => false, 'message' => __('invoices.payment_exceeds_outstanding')];
         }
 
@@ -143,7 +149,7 @@ class InvoicePaymentService
                         throw new \Exception(__('invoices.insufficient_stored_balance'));
                     }
 
-                    $payingPatient->member_balance = $storedBalance - $amount;
+                    $payingPatient->member_balance = bcsub((string) $storedBalance, (string) $amount, 2);
                     $payingPatient->save();
 
                     if (class_exists('\App\MemberTransaction')) {
@@ -176,13 +182,13 @@ class InvoicePaymentService
                 ]);
             }
 
-            // Update invoice paid amount
-            $invoice->paid_amount = ($invoice->paid_amount ?? 0) + $totalPayment;
+            // Update invoice paid amount (AG-065: bcmath)
+            $invoice->paid_amount = bcadd((string) ($invoice->paid_amount ?? 0), $totalPayment, 2);
             $invoice->save();
 
             // Update total consumption
             if ($patient) {
-                $patient->total_consumption = ($patient->total_consumption ?? 0) + $totalPayment;
+                $patient->total_consumption = bcadd((string) ($patient->total_consumption ?? 0), $totalPayment, 2);
                 $patient->save();
             }
 
@@ -230,7 +236,8 @@ class InvoicePaymentService
 
             DB::commit();
 
-            $change = max(0, $totalPayment - $outstanding);
+            $diff   = bcsub($totalPayment, $outstanding, 2);
+            $change = bccomp($diff, '0', 2) > 0 ? $diff : '0';
 
             return [
                 'status' => true,
@@ -241,7 +248,8 @@ class InvoicePaymentService
             ];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['status' => false, 'message' => $e->getMessage()];
+            Log::error('processMixedPayment failed', ['invoice_id' => $invoiceId, 'error' => $e->getMessage()]);
+            return ['status' => false, 'message' => __('messages.error_occurred')];
         }
     }
 

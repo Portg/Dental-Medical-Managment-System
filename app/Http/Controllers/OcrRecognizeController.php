@@ -31,7 +31,7 @@ class OcrRecognizeController extends Controller
      */
     public function index()
     {
-        $doctors = User::where('is_doctor', true)->whereNull('deleted_at')->orderBy('surname')->get();
+        $doctors = User::where('is_doctor', true)->whereNull('deleted_at')->where('status', User::STATUS_ACTIVE)->orderBy('surname')->get();
 
         return view('ocr.recognize', compact('doctors'));
     }
@@ -42,7 +42,7 @@ class OcrRecognizeController extends Controller
     public function recognize(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'image' => 'required|image|mimes:jpeg,png,jpg,bmp|max:10240',
+            'image' => 'required|image|mimes:jpeg,png,jpg,bmp|max:5120',
         ], [
             'image.required' => __('ocr.upload_required'),
             'image.image'    => __('ocr.invalid_image'),
@@ -82,6 +82,7 @@ class OcrRecognizeController extends Controller
                 'data'    => [
                     'patient'    => $parsed['patient'],
                     'case'       => $parsed['case'],
+                    'teeth'      => $parsed['teeth'] ?? [],
                     'raw_text'   => $ocrResult['raw_text'],
                     'confidence' => $ocrResult['confidence'],
                 ],
@@ -166,6 +167,7 @@ class OcrRecognizeController extends Controller
                 'chief_complaint'            => $request->input('chief_complaint'),
                 'history_of_present_illness' => $request->input('history_of_present_illness'),
                 'examination'                => $request->input('examination'),
+                'examination_teeth'          => $request->input('examination_teeth'),
                 'auxiliary_examination'       => $request->input('auxiliary_examination'),
                 'diagnosis'                  => $request->input('diagnosis'),
                 'treatment'                  => $request->input('treatment'),

@@ -9,22 +9,22 @@ class Appointment extends Model
 {
     use SoftDeletes;
 
-    const STATUS_WAITING = 'Waiting';
-    const STATUS_TREATMENT_COMPLETE = 'Treatment Complete';
-    const STATUS_TREATMENT_INCOMPLETE = 'Treatment Incomplete';
-    const STATUS_RESCHEDULED = 'Rescheduled';
-    const STATUS_CANCELLED = 'Cancelled';
+    const STATUS_WAITING = 'waiting';
+    const STATUS_TREATMENT_COMPLETE = 'treatment complete';
+    const STATUS_TREATMENT_INCOMPLETE = 'treatment incomplete';
+    const STATUS_RESCHEDULED = 'rescheduled';
+    const STATUS_CANCELLED = 'cancelled';
     const STATUS_NO_SHOW = 'no_show';
     const STATUS_CHECKED_IN = 'checked_in';
     const STATUS_IN_PROGRESS = 'in_progress';
     const STATUS_COMPLETED = 'completed';
     const STATUS_SCHEDULED = 'scheduled';
-    const STATUS_REJECTED = 'Rejected';
+    const STATUS_REJECTED = 'rejected';
 
     const VISIT_WALK_IN = 'walk_in';
     const VISIT_APPOINTMENT = 'appointment';
-    const VISIT_SINGLE_TREATMENT = 'Single Treatment';
-    const VISIT_REVIEW_TREATMENT = 'Review Treatment';
+    const VISIT_SINGLE_TREATMENT = 'single treatment';
+    const VISIT_REVIEW_TREATMENT = 'review treatment';
 
     protected $fillable = [
         'appointment_no', 'start_date', 'end_date', 'start_time',
@@ -33,7 +33,7 @@ class Appointment extends Model
         'cancelled_reason', 'cancelled_by', 'no_show_count',
         'reminder_sent', 'reminder_sent_at', 'confirmed_by_patient', 'confirmed_at',
         'doctor_id', 'patient_id', 'branch_id', 'chair_id', 'service_id',
-        'medical_case_id', 'sort_by', '_who_added'
+        'medical_case_id', 'shift_id', 'sort_by', '_who_added'
     ];
 
     protected $casts = [
@@ -104,6 +104,11 @@ class Appointment extends Model
     public function stockOuts()
     {
         return $this->hasMany('App\StockOut', 'appointment_id');
+    }
+
+    public function shift()
+    {
+        return $this->belongsTo('App\Shift', 'shift_id');
     }
 
     /**

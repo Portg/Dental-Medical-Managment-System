@@ -34,6 +34,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('roles/templates/{slug}/permissions', 'RoleController@templatePermissions');
     Route::get('search-role', 'RoleController@filterRoles');
     Route::resource('users', 'UsersController');
+    Route::post('users/{id}/change-status', 'UsersController@changeStatus')->name('users.change-status');
     //current user profile
     Route::get('/profile', 'ProfileController@index');
     Route::post('update-bio', 'ProfileController@update_Bio');
@@ -113,6 +114,11 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::resource('invoices', 'InvoiceController');
     Route::get('patient-invoices/{patient_id}', 'InvoiceController@patientInvoices');
+
+    // Billing (划价收费)
+    Route::get('billing/service-categories/{patientId}', 'InvoiceController@getServiceCategories');
+    Route::post('billing/create', 'InvoiceController@createBilling');
+    Route::get('patient-receipts/{patient_id}', 'InvoiceController@patientReceipts');
     Route::get('export-invoices-report', 'InvoiceController@exportReport');
     Route::get('invoices-preview/{id}', 'InvoiceController@previewInvoice');
     Route::get('invoice-amount/{id}', 'InvoiceController@invoiceAmount');
@@ -175,8 +181,11 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::get('prescriptions', 'PrescriptionController@listAll');
     Route::get('prescriptions/appointment/{id}', 'PrescriptionController@index');
+    Route::get('prescriptions/patient/{patient_id}', 'PrescriptionController@patientPrescriptions');
+    Route::get('prescriptions/services', 'PrescriptionController@prescriptionServices');
+    Route::get('prescriptions/pending/{patient_id}', 'PrescriptionController@pendingPrescriptions');
+    Route::post('prescriptions/{id}/settle', 'PrescriptionController@settle');
     Route::resource('prescriptions', 'PrescriptionController')->except(['index']);
-    //filter existing drugs
     Route::get('filter-drugs', 'PrescriptionController@filterDrugs')->name('filter-drugs');
     Route::get('print-prescription/{id}', 'PrescriptionController@printPrescription');
     //expenses
@@ -198,17 +207,48 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('purchase-balance/{id}', 'ExpensePaymentController@supplier_balance');
     Route::resource('expense-payments', 'ExpensePaymentController');
 
-    //reports
-    Route::get('invoice-payments-report', 'InvoicingReportsController@invoicePaymentReport');
-    Route::get('export-invoice-payments-report', 'InvoicingReportsController@exportInvoicePayments');
+    // ============================================================
+    // Reports - Merged Controllers
+    // ============================================================
 
-    Route::get('doctor-performance-report', 'DoctorPerformanceReport@index');
-    Route::get('download-performance-report', 'DoctorPerformanceReport@downloadPerformanceReport');
+    // Doctor Report (收费统计 + 工作量统计)
+    Route::get('doctor-report', 'DoctorReportController@index');
+    Route::get('download-doctor-performance', 'DoctorReportController@downloadPerformanceReport');
 
-    Route::get('procedure-income-report', 'ProceduresReportController@index');
-    Route::get('export-procedure-sales-report', 'ProceduresReportController@downloadProcedureSalesReport');
+    // Patient Report (来源分析 + 人口统计)
+    Route::get('patient-report', 'PatientReportController@index');
 
-    //end reports
+    // Billing Report (收款明细 + 项目收入)
+    Route::get('billing-report', 'BillingReportController@index');
+    Route::get('export-billing-payments', 'BillingReportController@exportPayments');
+    Route::get('export-billing-procedures', 'BillingReportController@exportProcedures');
+
+    // Financial Calendar (财务日历)
+    Route::get('financial-calendar', 'FinancialCalendarController@index');
+    Route::get('financial-calendar-data', 'FinancialCalendarController@getData');
+
+    // Cash Summary Report (现金汇总)
+    Route::get('cash-summary-report', 'CashSummaryReportController@index');
+    Route::get('export-cash-summary', 'CashSummaryReportController@export');
+
+    // Lab Statistics Report (技工单统计)
+    Route::get('lab-statistics-report', 'LabCaseStatisticsReportController@index');
+
+    // Financial Detail Report (财务明细)
+    Route::get('financial-detail-report', 'FinancialDetailReportController@index');
+
+    // ============================================================
+    // 301 Redirects for Old Report URLs (AG-046)
+    // ============================================================
+    Route::get('doctor-performance-report', fn() => redirect('doctor-report?tab=performance', 301));
+    Route::get('download-performance-report', fn() => redirect('download-doctor-performance', 301));
+    Route::get('invoice-payments-report', fn() => redirect('billing-report?tab=payments', 301));
+    Route::get('export-invoice-payments-report', fn() => redirect('export-billing-payments', 301));
+    Route::get('procedure-income-report', fn() => redirect('billing-report?tab=procedures', 301));
+    Route::get('export-procedure-sales-report', fn() => redirect('export-billing-procedures', 301));
+    Route::get('patient-source-report', fn() => redirect('patient-report?tab=source', 301));
+    Route::get('patient-demographics-report', fn() => redirect('patient-report?tab=demographics', 301));
+    Route::get('doctor-workload-report', fn() => redirect('doctor-report?tab=workload', 301));
 
 
     Route::resource('dental-charting', 'DentalChartController');
@@ -269,6 +309,7 @@ Route::group(['middleware' => ['auth']], function () {
     // System Maintenance
     Route::get('system-maintenance', 'SystemMaintenanceController@index');
     Route::post('system-maintenance/backup/run', 'SystemMaintenanceController@triggerBackup');
+    Route::get('system-maintenance/backup/status', 'SystemMaintenanceController@backupStatus');
     Route::get('system-maintenance/backup/download/{file}', 'SystemMaintenanceController@downloadBackup');
     Route::delete('system-maintenance/backup/{file}', 'SystemMaintenanceController@deleteBackup');
     Route::post('system-maintenance/retention/run', 'SystemMaintenanceController@triggerRetention');
@@ -287,6 +328,9 @@ Route::group(['middleware' => ['auth']], function () {
     //debtors report
     Route::get('/debtors', 'DebtorsReportController@index');
     Route::get('/debtors-export', 'DebtorsReportController@exportReport');
+
+    // Unpaid Invoices Report
+    Route::get('/unpaid-invoices', 'UnpaidInvoicesReportController@index');
 
     // Medical Cases System
     Route::resource('medical-cases', 'MedicalCaseController');
@@ -388,6 +432,16 @@ Route::group(['middleware' => ['auth']], function () {
     // Inventory Management System
     // ============================================================
 
+    // Inventory Dashboard
+    Route::get('inventory-dashboard', 'InventoryDashboardController@index');
+
+    // Inventory Query (read-only, 4-tab)
+    Route::get('inventory-query', 'InventoryQueryController@index');
+    Route::get('inventory-query/stock-summary', 'InventoryQueryController@stockSummary');
+    Route::get('inventory-query/batch-detail', 'InventoryQueryController@batchDetail');
+    Route::get('inventory-query/movement-summary', 'InventoryQueryController@movementSummary');
+    Route::get('inventory-query/movement-detail', 'InventoryQueryController@movementDetail');
+
     // Inventory Categories
     Route::resource('inventory-categories', 'InventoryCategoryController');
     Route::get('inventory-categories-list', 'InventoryCategoryController@list');
@@ -408,7 +462,39 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('stock-outs', 'StockOutController');
     Route::post('stock-outs/{id}/confirm', 'StockOutController@confirm');
     Route::post('stock-outs/{id}/cancel', 'StockOutController@cancel');
+    // 报损/退货审批流程（Phase 6）
+    Route::post('stock-outs/{id}/submit-approval', 'StockOutController@submitApproval')->name('stock-outs.submit-approval');
+    Route::post('stock-outs/{id}/approve', 'StockOutController@approveStockOut')->name('stock-outs.approve');
+    Route::post('stock-outs/{id}/reject', 'StockOutController@rejectStockOut')->name('stock-outs.reject');
     Route::resource('stock-out-items', 'StockOutItemController');
+
+    // Requisition Management (申领单管理) - 必须在 resource 前声明具名路由
+    Route::get('requisitions', 'RequisitionController@index')->name('requisitions.index');
+    Route::get('requisitions/create', 'RequisitionController@create')->name('requisitions.create');
+    Route::post('requisitions', 'RequisitionController@store')->name('requisitions.store');
+    Route::get('requisitions/{id}', 'RequisitionController@show')->name('requisitions.show');
+    Route::get('requisitions/{id}/edit', 'RequisitionController@edit')->name('requisitions.edit');
+    Route::put('requisitions/{id}', 'RequisitionController@update')->name('requisitions.update');
+    Route::delete('requisitions/{id}', 'RequisitionController@destroy')->name('requisitions.destroy');
+    Route::post('requisitions/{id}/submit', 'RequisitionController@submit')->name('requisitions.submit');
+    Route::post('requisitions/{id}/approve', 'RequisitionController@approve')->name('requisitions.approve');
+    Route::post('requisitions/{id}/reject', 'RequisitionController@reject')->name('requisitions.reject');
+    Route::post('requisitions/{id}/clone', 'RequisitionController@clone')->name('requisitions.clone');
+
+    // Inventory Check Management（盘点管理，Week 4 Phase 7）
+    Route::get('inventory-checks', 'InventoryCheckController@index')->name('inventory-checks.index');
+    Route::get('inventory-checks/datatable', 'InventoryCheckController@datatableData')->name('inventory-checks.datatable');
+    Route::get('inventory-checks/create', 'InventoryCheckController@create')->name('inventory-checks.create');
+    Route::post('inventory-checks', 'InventoryCheckController@store')->name('inventory-checks.store');
+    Route::get('inventory-checks/{id}', 'InventoryCheckController@show')->name('inventory-checks.show');
+    Route::post('inventory-checks/{id}/update-qty', 'InventoryCheckController@updateQty')->name('inventory-checks.update-qty');
+    Route::post('inventory-checks/{id}/confirm', 'InventoryCheckController@confirm')->name('inventory-checks.confirm');
+    Route::delete('inventory-checks/{id}', 'InventoryCheckController@destroy')->name('inventory-checks.destroy');
+
+    // Inventory Bulk Import（物品批量导入，Week 4 Phase 8）
+    Route::get('inventory-import', 'InventoryImportController@index')->name('inventory-import.index');
+    Route::get('inventory-import/template', 'InventoryImportController@downloadTemplate')->name('inventory-import.template');
+    Route::post('inventory-import', 'InventoryImportController@import')->name('inventory-import.import');
 
     // Service Consumables Configuration
     Route::resource('service-consumables', 'ServiceConsumableController');
@@ -459,9 +545,6 @@ Route::group(['middleware' => ['auth']], function () {
     // Reports - Patient Analytics
     // ============================================================
 
-    // Patient Source Analysis Report
-    Route::get('patient-source-report', 'PatientSourceReportController@index');
-
     // Revisit Rate Statistics Report
     Route::get('revisit-rate-report', 'RevisitRateReportController@index');
 
@@ -476,12 +559,6 @@ Route::group(['middleware' => ['auth']], function () {
 
     // Monthly Business Summary Report
     Route::get('monthly-business-summary-report', 'MonthlyBusinessSummaryReportController@index');
-
-    // Patient Demographics Report
-    Route::get('patient-demographics-report', 'PatientDemographicsReportController@index');
-
-    // Doctor Workload Report
-    Route::get('doctor-workload-report', 'DoctorWorkloadReportController@index');
 
     // Quotation Conversion Report
     Route::get('quotation-conversion-report', 'QuotationConversionReportController@index');
@@ -499,11 +576,25 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('satisfaction-surveys/send-batch', 'SatisfactionSurveyController@sendBatch');
 
     // ============================================================
-    // Doctor Schedule Management
+    // Shift Management (班次管理)
     // ============================================================
 
-    Route::get('doctor-schedules/calendar', 'DoctorScheduleController@calendar');
-    Route::resource('doctor-schedules', 'DoctorScheduleController');
+    Route::get('shifts', 'ShiftController@index');
+    Route::post('shifts', 'ShiftController@store');
+    Route::put('shifts/{id}', 'ShiftController@update');
+    Route::delete('shifts/{id}', 'ShiftController@destroy');
+    Route::post('shifts/reorder', 'ShiftController@reorder');
+
+    // ============================================================
+    // Doctor Schedule Management (医生排班 - 月度网格)
+    // ============================================================
+
+    Route::get('doctor-schedules', 'DoctorScheduleController@index');
+    Route::get('doctor-schedules/grid-data', 'DoctorScheduleController@gridData');
+    Route::post('doctor-schedules/assign', 'DoctorScheduleController@assign');
+    Route::post('doctor-schedules/remove', 'DoctorScheduleController@remove');
+    Route::post('doctor-schedules/copy-week', 'DoctorScheduleController@copyWeek');
+    Route::post('doctor-schedules/copy-month', 'DoctorScheduleController@copyMonth');
 
     // ============================================================
     // Commission Rules Management

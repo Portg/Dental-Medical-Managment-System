@@ -97,7 +97,7 @@ class MedicalCaseController extends Controller
             'examination', 'examination_teeth', 'auxiliary_examination', 'related_images',
             'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
             'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
-            'visit_type', 'doctor_id',
+            'visit_type', 'doctor_id', 'appointment_id',
         ]));
         $case = $this->medicalCaseService->createCase($data, $isDraft);
 
@@ -190,9 +190,11 @@ class MedicalCaseController extends Controller
     {
         $isDraft = $request->input('is_draft', '1') === '1';
 
+        $allowedStatuses = implode(',', [\App\MedicalCase::STATUS_OPEN, \App\MedicalCase::STATUS_CLOSED, \App\MedicalCase::STATUS_FOLLOW_UP]);
         $rules = [
             'patient_id' => 'required|exists:patients,id',
-            'case_date' => 'required|date',
+            'case_date'  => 'required|date',
+            'status'     => 'nullable|in:' . $allowedStatuses,
         ];
 
         if (!$isDraft) {
@@ -233,6 +235,13 @@ class MedicalCaseController extends Controller
                 'message' => __('medical_cases.edit_requires_approval'),
                 'status' => false,
                 'require_reason' => true
+            ]);
+        }
+
+        if (!empty($result['invalid_transition'])) {
+            return response()->json([
+                'message' => __('medical_cases.invalid_status_transition'),
+                'status' => false,
             ]);
         }
 

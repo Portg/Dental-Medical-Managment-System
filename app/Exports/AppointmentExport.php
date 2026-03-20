@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\DictItem;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -17,19 +18,6 @@ class AppointmentExport implements FromArray, WithHeadings, ShouldAutoSize
 
     public function array(): array
     {
-        $statusMap = [
-            'Pending' => __('appointment.pending'),
-            'Confirmed' => __('appointment.confirmed'),
-            'Scheduled' => __('appointment.scheduled'),
-            'Arrived' => __('appointment.arrived'),
-            'In Progress' => __('appointment.in_progress'),
-            'Completed' => __('appointment.completed'),
-            'Cancelled' => __('appointment.cancelled'),
-            'No Show' => __('appointment.no_show'),
-            'Rescheduled' => __('appointment.rescheduled'),
-            'Waiting' => __('appointment.waiting'),
-        ];
-
         $rows = [];
         foreach ($this->data as $row) {
             $fullName = trim(($row->surname ?? '') . ($row->othername ?? ''));
@@ -37,8 +25,8 @@ class AppointmentExport implements FromArray, WithHeadings, ShouldAutoSize
                 $fullName,
                 $row->start_date,
                 $row->start_time,
-                $row->visit_information,
-                $statusMap[$row->status] ?? $row->status,
+                DictItem::nameByCode('appointment_visit_information', $row->visit_information) ?? $row->visit_information,
+                DictItem::nameByCode('appointment_status', $row->status) ?? $row->status,
             ];
         }
         return $rows;

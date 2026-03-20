@@ -9,6 +9,7 @@ use App\Refund;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\DataTables;
 
 class RefundService
@@ -93,13 +94,14 @@ class RefundService
     public function getRefundableAmount(int $invoiceId): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
-        $maxRefundable = $invoice->paid_amount - ($invoice->total_refunded ?? 0);
+        // AG-005: bcmath for monetary precision
+        $maxRefundable = bcsub((string)$invoice->paid_amount, (string)($invoice->total_refunded ?? 0), 2);
 
         return [
             'invoice_no' => $invoice->invoice_no,
             'paid_amount' => $invoice->paid_amount,
             'refunded_amount' => $invoice->total_refunded ?? 0,
-            'max_refundable' => max(0, $maxRefundable),
+            'max_refundable' => bccomp($maxRefundable, '0', 2) >= 0 ? $maxRefundable : '0',
         ];
     }
 
@@ -113,33 +115,37 @@ class RefundService
      */
     public function createRefund(array $data): array
     {
-        $invoice = Invoice::findOrFail($data['invoice_id']);
-
-        // BR-040: Check existing refund
-        $existingRefund = Refund::where('invoice_id', $data['invoice_id'])
-            ->whereIn('approval_status', [Refund::APPROVAL_PENDING, Refund::APPROVAL_APPROVED])
-            ->first();
-        if ($existingRefund) {
-            return ['message' => __('invoices.refund_already_exists'), 'status' => false];
-        }
-
-        // Check refund amount
-        $maxRefundable = $invoice->paid_amount - ($invoice->total_refunded ?? 0);
-        if ($data['refund_amount'] > $maxRefundable) {
-            return [
-                'message' => __('invoices.refund_exceeds_paid', ['max' => number_format($maxRefundable, 2)]),
-                'status' => false,
-            ];
-        }
-
         DB::beginTransaction();
         try {
+            // 锁住 invoice 行，防止并发超额退款（TOCTOU）
+            $invoice = Invoice::lockForUpdate()->findOrFail($data['invoice_id']);
+
+            // BR-040: 锁内检查重复退款，防止并发绕过
+            $existingRefund = Refund::where('invoice_id', $data['invoice_id'])
+                ->whereIn('approval_status', [Refund::APPROVAL_PENDING, Refund::APPROVAL_APPROVED])
+                ->lockForUpdate()
+                ->first();
+            if ($existingRefund) {
+                DB::rollBack();
+                return ['message' => __('invoices.refund_already_exists'), 'status' => false];
+            }
+
+            // 锁内检查退款金额，确保读到最新的 paid_amount（AG-005: bcmath）
+            $maxRefundable = bcsub((string)$invoice->paid_amount, (string)($invoice->total_refunded ?? 0), 2);
+            if (bccomp((string)$data['refund_amount'], $maxRefundable, 2) > 0) {
+                DB::rollBack();
+                return [
+                    'message' => __('invoices.refund_exceeds_paid', ['max' => number_format($maxRefundable, 2)]),
+                    'status' => false,
+                ];
+            }
+
             // BR-037, BR-038: Determine approval status
             $approvalStatus = Refund::APPROVAL_PENDING;
             $approvedBy = null;
             $approvedAt = null;
 
-            if ($data['refund_amount'] <= self::REFUND_APPROVAL_THRESHOLD) {
+            if (bccomp((string)$data['refund_amount'], (string)self::REFUND_APPROVAL_THRESHOLD, 2) <= 0) {
                 $approvalStatus = Refund::APPROVAL_APPROVED;
                 $approvedBy = Auth::id();
                 $approvedAt = now();
@@ -178,7 +184,8 @@ class RefundService
             ];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['message' => __('messages.error_occurred') . ': ' . $e->getMessage(), 'status' => false];
+            Log::error('processRefund failed', ['error' => $e->getMessage()]);
+            return ['message' => __('messages.error_occurred'), 'status' => false];
         }
     }
 
@@ -189,27 +196,31 @@ class RefundService
      */
     public function approveRefund(int $id, int $approverId): array
     {
-        $refund = Refund::findOrFail($id);
-
-        if ($refund->approval_status !== Refund::APPROVAL_PENDING) {
-            return ['message' => __('invoices.refund_not_pending'), 'status' => false];
-        }
-
         DB::beginTransaction();
         try {
+            // 锁住 refund 行，防止并发重复审批
+            $refund = Refund::lockForUpdate()->findOrFail($id);
+
+            if ($refund->approval_status !== Refund::APPROVAL_PENDING) {
+                DB::rollBack();
+                return ['message' => __('invoices.refund_not_pending'), 'status' => false];
+            }
+
             $refund->approval_status = Refund::APPROVAL_APPROVED;
             $refund->approved_by = $approverId;
             $refund->approved_at = now();
             $refund->save();
 
-            $invoice = Invoice::findOrFail($refund->invoice_id);
+            // 锁住 invoice 行，防止并发修改 paid_amount
+            $invoice = Invoice::lockForUpdate()->findOrFail($refund->invoice_id);
             $this->executeRefund($refund, $invoice);
 
             DB::commit();
             return ['message' => __('invoices.refund_approved_successfully'), 'status' => true];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['message' => __('messages.error_occurred') . ': ' . $e->getMessage(), 'status' => false];
+            Log::error('approveRefund failed', ['error' => $e->getMessage()]);
+            return ['message' => __('messages.error_occurred'), 'status' => false];
         }
     }
 
@@ -281,17 +292,12 @@ class RefundService
             })
             ->addColumn('status', function ($row) {
                 $statusClasses = [
-                    Refund::APPROVAL_PENDING => 'label-warning',
+                    Refund::APPROVAL_PENDING  => 'label-warning',
                     Refund::APPROVAL_APPROVED => 'label-success',
                     Refund::APPROVAL_REJECTED => 'label-danger',
                 ];
-                $statusLabels = [
-                    Refund::APPROVAL_PENDING => __('invoices.refund_pending'),
-                    Refund::APPROVAL_APPROVED => __('invoices.refund_approved'),
-                    Refund::APPROVAL_REJECTED => __('invoices.refund_rejected'),
-                ];
                 $class = $statusClasses[$row->approval_status] ?? 'label-default';
-                $label = $statusLabels[$row->approval_status] ?? $row->approval_status;
+                $label = \App\DictItem::nameByCode('refund_approval_status', $row->approval_status) ?? $row->approval_status;
                 return '<span class="label ' . $class . '">' . $label . '</span>';
             })
             ->addColumn('action', function ($row) {
@@ -366,14 +372,17 @@ class RefundService
      */
     private function executeRefund(Refund $refund, Invoice $invoice): void
     {
-        $invoice->paid_amount = max(0, $invoice->paid_amount - $refund->refund_amount);
+        // AG-005: bcmath for monetary precision
+        $newPaidAmount = bcsub((string)$invoice->paid_amount, (string)$refund->refund_amount, 2);
+        $invoice->paid_amount = bccomp($newPaidAmount, '0', 2) >= 0 ? $newPaidAmount : '0';
         $invoice->save();
 
         // BR-041: stored_value refund goes back to patient balance
         if ($refund->refund_method === 'stored_value') {
-            $patient = Patient::find($refund->patient_id);
+            $patient = Patient::lockForUpdate()->find($refund->patient_id);
             if ($patient) {
-                $patient->member_balance = ($patient->member_balance ?? 0) + $refund->refund_amount;
+                $originalBalance = (string)($patient->member_balance ?? '0');
+                $patient->member_balance = bcadd($originalBalance, (string)$refund->refund_amount, 2);
                 $patient->save();
 
                 if (class_exists('\App\MemberTransaction')) {
@@ -382,7 +391,7 @@ class RefundService
                         'transaction_type' => 'Refund',
                         'patient_id' => $patient->id,
                         'amount' => $refund->refund_amount,
-                        'balance_before' => $patient->member_balance - $refund->refund_amount,
+                        'balance_before' => $originalBalance,
                         'balance_after' => $patient->member_balance,
                         'description' => __('invoices.refund_to_stored_value', ['refund_no' => $refund->refund_no]),
                         '_who_added' => Auth::id(),

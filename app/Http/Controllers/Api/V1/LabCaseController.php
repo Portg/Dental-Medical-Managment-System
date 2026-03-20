@@ -124,7 +124,7 @@ class LabCaseController extends ApiController
      */
     public function updateStatus(Request $request, int $id): JsonResponse
     {
-        $validStatuses = implode(',', array_keys(LabCase::STATUSES));
+        $validStatuses = \App\DictItem::listByType('lab_case_status')->pluck('code')->implode(',');
 
         $validator = Validator::make($request->all(), [
             'status'        => "required|in:{$validStatuses}",
@@ -186,9 +186,9 @@ class LabCaseController extends ApiController
     public function options(): JsonResponse
     {
         return $this->success([
-            'prosthesis_types' => LabCase::PROSTHESIS_TYPES,
-            'materials'        => LabCase::MATERIALS,
-            'statuses'         => LabCase::STATUSES,
+            'prosthesis_types' => \App\DictItem::listByType('lab_case_prosthesis_type')->pluck('name', 'code'),
+            'materials'        => \App\DictItem::listByType('lab_case_material')->pluck('name', 'code'),
+            'statuses'         => \App\DictItem::listByType('lab_case_status')->pluck('name', 'code'),
         ]);
     }
 }

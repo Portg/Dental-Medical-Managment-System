@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\AccessLog;
+use App\Jobs\RunBackupJob;
 use App\OperationLog;
 use App\Services\SystemMaintenanceService;
 use App\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Yajra\DataTables\DataTables;
 
 class SystemMaintenanceController extends Controller
@@ -26,35 +28,43 @@ class SystemMaintenanceController extends Controller
         $backups         = $this->service->getBackupList();
         $retentionConfig = $this->service->getRetentionConfig();
         $users           = User::select('id', 'surname', 'othername')->orderBy('surname')->get();
+        $backupStatus    = Cache::get('backup_status');
 
-        return view('system_maintenance.index', compact('backups', 'retentionConfig', 'users'));
+        return view('system_maintenance.index', compact('backups', 'retentionConfig', 'users', 'backupStatus'));
     }
 
     public function triggerBackup(): JsonResponse
     {
-        try {
-            $exitCode = Artisan::call('backup:run', ['--only-db' => true]);
-            $output = Artisan::output();
-
-            if ($exitCode !== 0) {
-                return response()->json([
-                    'message' => __('system_maintenance.backup_failed'),
-                    'status'  => 0,
-                    'output'  => $output,
-                ]);
-            }
-
+        $status = Cache::get('backup_status');
+        if ($status && in_array($status['status'], ['queued', 'running'])) {
             return response()->json([
-                'message' => __('system_maintenance.backup_started_successfully'),
-                'status'  => 1,
-                'output'  => $output,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => __('system_maintenance.backup_failed') . ': ' . $e->getMessage(),
+                'message' => __('system_maintenance.backup_already_running'),
                 'status'  => 0,
             ]);
         }
+
+        Cache::put('backup_status', [
+            'status'       => 'queued',
+            'started_at'   => now()->toIso8601String(),
+            'completed_at' => null,
+            'file'         => null,
+            'error'        => null,
+        ], now()->addHours(24));
+
+        RunBackupJob::dispatch();
+
+        return response()->json([
+            'message' => __('system_maintenance.backup_queued'),
+            'status'  => 1,
+        ]);
+    }
+
+    public function backupStatus(): JsonResponse
+    {
+        return response()->json([
+            'status' => 1,
+            'data'   => Cache::get('backup_status'),
+        ]);
     }
 
     public function downloadBackup(string $file)

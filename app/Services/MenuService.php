@@ -33,6 +33,34 @@ class MenuService
     }
 
     /**
+     * 获取用户登录后的落地页 URL（取其可见菜单树中第一个有 URL 的节点）。
+     */
+    public function getFirstUrlForUser(User $user): string
+    {
+        $tree = $this->getMenuTreeForUser($user);
+        return $this->findFirstUrl($tree) ?? 'today-work';
+    }
+
+    /**
+     * 递归取菜单树中第一个有效 URL。
+     */
+    private function findFirstUrl(Collection $items): ?string
+    {
+        foreach ($items as $item) {
+            if (!empty($item->effective_url)) {
+                return $item->effective_url;
+            }
+            if ($item->children->isNotEmpty()) {
+                $url = $this->findFirstUrl($item->children);
+                if ($url !== null) {
+                    return $url;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * 清除菜单缓存。
      */
     public function clearAllCache(): void

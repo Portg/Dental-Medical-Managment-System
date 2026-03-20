@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Appointment;
 use App\AppointmentHistory;
 use App\Chair;
+use App\DictItem;
 use App\DoctorSchedule;
+use App\Shift;
 use App\Http\Helper\FunctionsHelper;
 use App\Http\Helper\NameHelper;
 use App\Jobs\SendAppointmentSms;
@@ -146,6 +148,7 @@ class AppointmentService
                 'patient_phone' => $value->p_phone ?? '',
                 'patient_gender' => $value->p_gender ?? '',
                 'status' => $this->translateStatus($value->status ?? ''),
+                'status_code' => $value->status ?? '',
                 'service_name' => $value->service_name ?? '',
                 'start_time' => date_format($startDt, 'H:i'),
                 'end_time' => date_format($endDt, 'H:i'),
@@ -175,9 +178,7 @@ class AppointmentService
 
     private function translateStatus(string $status): string
     {
-        $key = 'appointment.' . strtolower(str_replace(' ', '_', $status));
-        $translated = __($key);
-        return $translated !== $key ? $translated : $status;
+        return DictItem::nameByCode('appointment_status', $status) ?? $status;
     }
 
     /**
@@ -255,42 +256,125 @@ class AppointmentService
         return null;
     }
 
+    // ─── Schedule validation ─────────────────────────────────────
+
+    /**
+     * Validate doctor schedule for a booking request.
+     * Returns ['shift_id' => ?int, 'error' => ?string].
+     *
+     * - If a matching on-duty shift is found: shift_id = shift.id, error = null
+     * - If no schedule + require_schedule_for_booking=ON: error message returned
+     * - If no schedule + require_schedule_for_booking=OFF: shift_id = null, error = null (fallback OK)
+     * - If schedule exists but time is outside all on-duty shifts: error message returned
+     *
+     * @AiGenerated
+     * reason: AG-038/AG-042 — schedule validation must run on every booking path (Web + API)
+     * generatedAt: 2026-03-16
+     * reviewBy: Q2-2026
+     */
+    public function validateScheduleForBooking(int $doctorId, string $date, string $time): array
+    {
+        $timeSec = strtotime(date('H:i:s', strtotime($time)));
+
+        $schedules = DoctorSchedule::with('shift')
+            ->where('doctor_id', $doctorId)
+            ->where('schedule_date', $date)
+            ->whereNull('deleted_at')
+            ->get();
+
+        // Find the on-duty shift that covers this time slot
+        foreach ($schedules as $schedule) {
+            $shift = $schedule->shift;
+            if (!$shift || !$shift->isOnDuty()) {
+                continue;
+            }
+            $shiftStart = strtotime($shift->start_time);
+            $shiftEnd   = strtotime($shift->end_time);
+            if ($timeSec >= $shiftStart && $timeSec < $shiftEnd) {
+                return ['shift_id' => $shift->id, 'error' => null];
+            }
+        }
+
+        // Has schedule records but time falls outside all on-duty shifts
+        if ($schedules->isNotEmpty()) {
+            $hasOnDuty = $schedules->contains(fn ($s) => $s->shift && $s->shift->isOnDuty());
+            if ($hasOnDuty) {
+                return ['shift_id' => null, 'error' => __('appointment.time_outside_shift')];
+            }
+            // All shifts are rest — treat as "no schedule"
+        }
+
+        // No schedule (or only rest shifts) — check fallback setting
+        $requireSchedule = (bool) SystemSetting::get('clinic.require_schedule_for_booking', false);
+        if ($requireSchedule) {
+            return ['shift_id' => null, 'error' => __('appointment.no_schedule_for_booking')];
+        }
+
+        return ['shift_id' => null, 'error' => null];
+    }
+
     // ─── CUD operations ──────────────────────────────────────────
 
     /**
      * Create a new appointment.
+     * Expects $data to include 'shift_id' (resolved by validateScheduleForBooking).
+     * Performs atomic max_patients check inside a DB transaction (AG-037, AG-042).
      */
     public function createAppointment(array $data): ?Appointment
     {
-        $time24 = date("H:i:s", strtotime($data['appointment_time']));
-
+        $time24  = date("H:i:s", strtotime($data['appointment_time']));
         $appTime = ($data['visit_information'] == Appointment::VISIT_WALK_IN)
             ? (new DateTime('now'))->format("h:i A")
             : $data['appointment_time'];
+        $shiftId = $data['shift_id'] ?? null;
 
-        $appointment = Appointment::create([
-            'appointment_no' => Appointment::AppointmentNo(),
-            'patient_id' => $data['patient_id'],
-            'doctor_id' => $data['doctor_id'],
-            'start_date' => $data['appointment_date'],
-            'end_date' => $data['appointment_date'],
-            'start_time' => $appTime,
-            'visit_information' => $data['visit_information'],
-            'notes' => $data['notes'] ?? null,
-            'branch_id' => Auth::user()->branch_id,
-            'sort_by' => $data['appointment_date'] . " " . $time24,
-            'chair_id' => $data['chair_id'] ?? null,
-            'service_id' => $data['service_id'] ?? null,
-            'appointment_type' => $data['appointment_type'] ?? 'revisit',
-            'duration_minutes' => $data['duration_minutes'] ?? (int) SystemSetting::get('clinic.default_duration', 30),
-            '_who_added' => Auth::user()->id,
-        ]);
+        return DB::transaction(function () use ($data, $time24, $appTime, $shiftId) {
+            // Atomic max_patients check — AG-037, AG-042
+            if ($shiftId) {
+                $shift = Shift::where('id', $shiftId)->lockForUpdate()->first();
+                if ($shift && $shift->max_patients > 0) {
+                    $booked = DB::table('appointments')
+                        ->where('doctor_id', $data['doctor_id'])
+                        ->whereDate('start_date', $data['appointment_date'])
+                        ->whereNull('deleted_at')
+                        ->whereNotIn('status', [Appointment::STATUS_CANCELLED, Appointment::STATUS_NO_SHOW])
+                        ->where('sort_by', '>=', $data['appointment_date'] . ' ' . $shift->start_time)
+                        ->where('sort_by', '<',  $data['appointment_date'] . ' ' . $shift->end_time)
+                        ->lockForUpdate()
+                        ->count();
 
-        if ($appointment) {
-            $this->createAppointmentHistory($appointment->id, "Created");
-        }
+                    if ($booked >= $shift->max_patients) {
+                        return null; // Shift is full (atomic guard)
+                    }
+                }
+            }
 
-        return $appointment;
+            $appointment = Appointment::create([
+                'appointment_no'   => Appointment::AppointmentNo(),
+                'patient_id'       => $data['patient_id'],
+                'doctor_id'        => $data['doctor_id'],
+                'start_date'       => $data['appointment_date'],
+                'end_date'         => $data['appointment_date'],
+                'start_time'       => $appTime,
+                'visit_information'=> $data['visit_information'],
+                'notes'            => $data['notes'] ?? null,
+                'branch_id'        => Auth::user()->branch_id,
+                'sort_by'          => $data['appointment_date'] . " " . $time24,
+                'chair_id'         => $data['chair_id'] ?? null,
+                'service_id'       => $data['service_id'] ?? null,
+                'appointment_type' => $data['appointment_type'] ?? 'revisit',
+                'duration_minutes' => $data['duration_minutes'] ?? (int) SystemSetting::get('clinic.default_duration', 30),
+                'shift_id'         => $shiftId,
+                '_who_added'       => Auth::user()->id,
+            ]);
+
+            if ($appointment) {
+                $sendSms = ($data['send_sms'] ?? '1') === '1';
+                $this->createAppointmentHistory($appointment->id, "Created", $sendSms);
+            }
+
+            return $appointment;
+        });
     }
 
     /**
@@ -349,7 +433,7 @@ class AppointmentService
     /**
      * Create appointment history and send notifications if needed.
      */
-    public function createAppointmentHistory(int $appointmentId, string $status): void
+    public function createAppointmentHistory(int $appointmentId, string $status, bool $sendSms = true): void
     {
         $message = '';
         $record = DB::table('appointments')
@@ -368,8 +452,8 @@ class AppointmentService
                 'time' => $record->start_time,
             ]);
 
-            $patient = Patient::where('id', $record->patient_id)->first();
-            if ($record->phone_no != null) {
+            if ($sendSms && $record->phone_no != null) {
+                $patient = Patient::where('id', $record->patient_id)->first();
                 dispatch(new SendAppointmentSms($record->phone_no, $message, "Appointment"));
 
                 $convertedTime = date("H:i:s", strtotime($record->start_time));
@@ -418,37 +502,78 @@ class AppointmentService
 
     /**
      * Get doctor time slots for a specific date.
+     * Integrates with Shift-based scheduling.
+     * Fallback behavior controlled by schedule.require_schedule_for_booking setting.
      */
     public function getDoctorTimeSlots(int $doctorId, string $date): array
     {
-        $schedule = DoctorSchedule::where('doctor_id', $doctorId)
+        // Fetch all schedules for this doctor+date (may have multiple shifts)
+        $schedules = DoctorSchedule::with('shift')
+            ->where('doctor_id', $doctorId)
             ->where('schedule_date', $date)
-            ->first();
+            ->whereNull('deleted_at')
+            ->get();
+
+        // Filter to on-duty shifts only
+        $onDutySchedules = $schedules->filter(function ($s) {
+            return $s->shift && $s->shift->isOnDuty();
+        });
 
         $slotInterval = (int) SystemSetting::get('clinic.slot_interval', 30);
         $intervalSec = $slotInterval * 60;
-
+        $hasSchedule = $schedules->isNotEmpty();
         $slots = [];
-        if ($schedule) {
-            $startTime = strtotime($schedule->start_time);
-            $endTime = strtotime($schedule->end_time);
+        $maxPatientsMap = []; // time => max_patients for AG-037
 
-            for ($time = $startTime; $time < $endTime; $time += $intervalSec) {
-                $timeStr = date('H:i', $time);
-                $period = $time < strtotime('12:00') ? 'morning' : 'afternoon';
-                $slots[] = ['time' => $timeStr, 'period' => $period, 'is_rest' => false];
+        if ($onDutySchedules->isNotEmpty()) {
+            // Generate slots from each on-duty shift's time range
+            foreach ($onDutySchedules as $schedule) {
+                $shift = $schedule->shift;
+                $startTime = strtotime($shift->start_time);
+                $endTime = strtotime($shift->end_time);
+                $maxPatients = $shift->max_patients;
+
+                for ($time = $startTime; $time < $endTime; $time += $intervalSec) {
+                    $timeStr = date('H:i', $time);
+                    if (!isset($maxPatientsMap[$timeStr])) {
+                        $period = $time < strtotime('12:00') ? 'morning' : 'afternoon';
+                        $slots[] = ['time' => $timeStr, 'period' => $period, 'is_rest' => false];
+                        $maxPatientsMap[$timeStr] = $maxPatients;
+                    }
+                }
             }
-        } else {
+
+            // Sort slots by time
+            usort($slots, function ($a, $b) {
+                return strcmp($a['time'], $b['time']);
+            });
+        } elseif (!$hasSchedule) {
+            // No schedule at all — check fallback setting
+            $requireSchedule = (bool) SystemSetting::get('clinic.require_schedule_for_booking', false);
+
+            if ($requireSchedule) {
+                // Strict mode: no schedule = no slots
+                return [
+                    'slots' => [],
+                    'booked' => [],
+                    'has_schedule' => false,
+                    'max_patients_map' => [],
+                ];
+            }
+
+            // Fallback: use system default times
             $defaultStart = SystemSetting::get('clinic.start_time', '08:30');
             $defaultEnd   = SystemSetting::get('clinic.end_time', '18:30');
             $start = strtotime($defaultStart);
             $end   = strtotime($defaultEnd);
+
             for ($time = $start; $time < $end; $time += $intervalSec) {
                 $timeStr = date('H:i', $time);
                 $period  = $time < strtotime('12:00') ? 'morning' : 'afternoon';
                 $slots[] = ['time' => $timeStr, 'period' => $period, 'is_rest' => false];
             }
         }
+        // else: has schedule but all are rest shifts → no slots
 
         // Existing bookings
         $existingAppointments = DB::table('appointments')
@@ -461,17 +586,21 @@ class AppointmentService
             ->get();
 
         $booked = [];
+        $bookedCount = []; // time => count for max_patients check
         foreach ($existingAppointments as $appt) {
             $timeKey = date('H:i', strtotime($appt->start_time));
             $booked[$timeKey] = [
                 'patient_name' => NameHelper::join($appt->p_surname, $appt->p_othername),
             ];
+            $bookedCount[$timeKey] = ($bookedCount[$timeKey] ?? 0) + 1;
         }
 
         return [
             'slots' => $slots,
             'booked' => $booked,
-            'has_schedule' => $schedule !== null,
+            'booked_count' => $bookedCount,
+            'has_schedule' => $hasSchedule,
+            'max_patients_map' => $maxPatientsMap,
         ];
     }
 
@@ -490,9 +619,7 @@ class AppointmentService
                 return $row->sort_by ? \Carbon\Carbon::parse($row->sort_by)->format('Y-m-d H:i') : '-';
             })
             ->editColumn('status', function ($row) {
-                $key = 'appointment.' . strtolower(str_replace(' ', '_', $row->status));
-                $translated = __($key);
-                return $translated !== $key ? $translated : $row->status;
+                return DictItem::nameByCode('appointment_status', $row->status) ?? $row->status;
             })
             ->addColumn('patient', function ($row) {
                 return NameHelper::join($row->surname, $row->othername);
@@ -506,7 +633,8 @@ class AppointmentService
                     $action = '<br> <a href="#"  onclick="ReactivateAppointment(' .
                         $row->id . ')"  class="text-primary">Re-activate Appointment</a>';
                 }
-                return e($row->visit_information) . $action;
+                $label = DictItem::nameByCode('appointment_visit_information', $row->visit_information) ?? $row->visit_information;
+                return e($label) . $action;
             })
             ->addColumn('invoice_status', function ($row) {
                 if ($row->has_invoice_status === 'pending') {

@@ -1,5 +1,11 @@
 <?php
 
+// Scribe 是 dev-only 依赖，生产环境（composer install --no-dev）不会安装
+// 此处安全降级为空数组，避免 class not found 错误
+if (!class_exists(\Knuckles\Scribe\Config\AuthIn::class)) {
+    return [];
+}
+
 use Knuckles\Scribe\Config\AuthIn;
 use Knuckles\Scribe\Config\Defaults;
 use Knuckles\Scribe\Extracting\Strategies;

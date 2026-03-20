@@ -84,7 +84,7 @@ class PatientFollowupController extends Controller
     {
         Validator::make($request->all(), [
             'patient_id' => 'required|exists:patients,id',
-            'followup_type' => 'required|in:Phone,SMS,Email,Visit,Other',
+            'followup_type' => 'required|in:' . \App\DictItem::listByType('patient_followup_type')->pluck('code')->implode(','),
             'scheduled_date' => 'required|date',
             'purpose' => 'required|string|max:255',
         ], [
@@ -134,10 +134,10 @@ class PatientFollowupController extends Controller
     public function update(Request $request, $id)
     {
         Validator::make($request->all(), [
-            'followup_type' => 'required|in:Phone,SMS,Email,Visit,Other',
+            'followup_type' => 'required|in:' . \App\DictItem::listByType('patient_followup_type')->pluck('code')->implode(','),
             'scheduled_date' => 'required|date',
             'purpose' => 'required|string|max:255',
-            'status' => 'required|in:Pending,Completed,Cancelled,No Response',
+            'status' => 'required|in:' . \App\DictItem::listByType('patient_followup_status')->pluck('code')->implode(','),
         ], [
             'followup_type.required' => __('validation.custom.followup_type.required'),
             'scheduled_date.required' => __('validation.custom.scheduled_date.required'),

@@ -156,11 +156,33 @@ class RevisitRateReportService
     }
 
     /**
-     * Count revisits by interval range (placeholder implementation).
+     * Count patients who visited in the period and whose interval since their
+     * immediately preceding visit falls within [$minDays, $maxDays].
      */
     private function countRevisitsByInterval(int $minDays, int $maxDays, Carbon $startDate, Carbon $endDate): int
     {
-        return 0; // Placeholder - needs actual implementation
+        $statuses = [
+            Appointment::STATUS_COMPLETED,
+            Appointment::STATUS_CHECKED_IN,
+            Appointment::STATUS_IN_PROGRESS,
+        ];
+
+        // Subquery: most recent visit per patient strictly before the period
+        $prevVisit = DB::table('appointments')
+            ->selectRaw('patient_id, MAX(start_date) as last_before')
+            ->whereIn('status', $statuses)
+            ->whereNull('deleted_at')
+            ->where('start_date', '<', $startDate->toDateString())
+            ->groupBy('patient_id');
+
+        return (int) DB::table('appointments as a')
+            ->joinSub($prevVisit, 'prev', 'prev.patient_id', '=', 'a.patient_id')
+            ->whereBetween('a.start_date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->whereIn('a.status', $statuses)
+            ->whereNull('a.deleted_at')
+            ->whereRaw('DATEDIFF(a.start_date, prev.last_before) BETWEEN ? AND ?', [$minDays, $maxDays])
+            ->distinct('a.patient_id')
+            ->count('a.patient_id');
     }
 
     /**

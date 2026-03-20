@@ -18,9 +18,9 @@ class MedicalCase extends Model implements AuditableContract
         return ['medical-record'];
     }
 
-    const STATUS_OPEN = 'Open';
-    const STATUS_CLOSED = 'Closed';
-    const STATUS_FOLLOW_UP = 'Follow-up';
+    const STATUS_OPEN = 'open';
+    const STATUS_CLOSED = 'closed';
+    const STATUS_FOLLOW_UP = 'follow-up';
 
     protected $fillable = [
         'case_no', 'title', 'chief_complaint', 'history_of_present_illness',

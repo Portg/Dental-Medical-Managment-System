@@ -45,15 +45,12 @@ class InventoryCategory extends Model
      */
     public function getTypeLabelAttribute()
     {
-        $types = [
-            'drug' => __('inventory.type_drug'),
-            'consumable' => __('inventory.type_consumable'),
-            'instrument' => __('inventory.type_instrument'),
-            'dental_material' => __('inventory.type_dental_material'),
-            'office' => __('inventory.type_office'),
-        ];
+        return \App\DictItem::nameByCode('inventory_category_type', $this->type) ?? $this->type;
+    }
 
-        return $types[$this->type] ?? $this->type;
+    public static function typeOptions(): array
+    {
+        return \App\DictItem::listByType('inventory_category_type')->pluck('name', 'code')->all();
     }
 
     /**

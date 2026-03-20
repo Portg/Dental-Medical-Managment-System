@@ -80,7 +80,7 @@ class InventoryCategoryController extends Controller
         Validator::make($request->all(), [
             'name' => 'required|max:255',
             'code' => 'required|unique:inventory_categories,code|max:50',
-            'type' => 'required|in:drug,consumable,instrument,dental_material,office',
+            'type' => 'required|in:' . \App\DictItem::listByType('inventory_category_type')->pluck('code')->implode(','),
         ], [
             'name.required' => __('inventory.category_name_required'),
             'code.required' => __('inventory.category_code_required'),
@@ -121,7 +121,7 @@ class InventoryCategoryController extends Controller
         Validator::make($request->all(), [
             'name' => 'required|max:255',
             'code' => 'required|unique:inventory_categories,code,' . $id . '|max:50',
-            'type' => 'required|in:drug,consumable,instrument,dental_material,office',
+            'type' => 'required|in:' . \App\DictItem::listByType('inventory_category_type')->pluck('code')->implode(','),
         ], [
             'name.required' => __('inventory.category_name_required'),
             'code.required' => __('inventory.category_code_required'),

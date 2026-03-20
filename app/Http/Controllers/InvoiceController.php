@@ -19,8 +19,8 @@ class InvoiceController extends Controller
     {
         $this->invoiceService = $invoiceService;
 
-        $this->middleware('can:view-invoices')->only(['index', 'show', 'previewInvoice', 'invoiceShareDetails', 'sendInvoice', 'invoiceAmount', 'patientInvoices', 'printReceipt', 'exportReport', 'invoiceProceduresToJson', 'searchInvoices']);
-        $this->middleware('can:create-invoices')->only(['create', 'store']);
+        $this->middleware('can:view-invoices')->only(['index', 'show', 'previewInvoice', 'invoiceShareDetails', 'sendInvoice', 'invoiceAmount', 'patientInvoices', 'printReceipt', 'exportReport', 'invoiceProceduresToJson', 'searchInvoices', 'getServiceCategories', 'patientReceipts']);
+        $this->middleware('can:create-invoices')->only(['create', 'store', 'createBilling']);
         $this->middleware('can:edit-invoices')->only(['edit', 'update', 'pendingDiscountApprovals', 'approveDiscount', 'rejectDiscount', 'setCredit']);
         $this->middleware('can:delete-invoices')->only(['destroy']);
     }
@@ -128,6 +128,19 @@ class InvoiceController extends Controller
      */
     public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'appointment_id'               => 'required|integer|exists:appointments,id',
+            'addmore'                       => 'required|array|min:1',
+            'addmore.*.medical_service_id' => 'required|integer|exists:medical_services,id',
+            'addmore.*.qty'                => 'required|numeric|min:0.01',
+            'addmore.*.price'              => 'required|numeric|min:0',
+            'addmore.*.doctor_id'          => 'required|integer|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'status' => false]);
+        }
+
         $result = $this->invoiceService->createInvoice((int) $request->appointment_id, $request->addmore);
         return response()->json($result);
     }
@@ -225,5 +238,58 @@ class InvoiceController extends Controller
         return response()->json(
             $this->invoiceService->searchInvoices($request->get('q', ''))
         );
+    }
+
+    /**
+     * 获取诊疗项目分类树 (划价左侧面板)
+     */
+    public function getServiceCategories($patientId)
+    {
+        return response()->json([
+            'status' => true,
+            'data'   => $this->invoiceService->getServiceCategoryTree(),
+        ]);
+    }
+
+    /**
+     * 创建划价账单
+     */
+    public function createBilling(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'patient_id'               => 'required|integer|exists:patients,id',
+            'items'                    => 'required|array|min:1',
+            'items.*.medical_service_id' => 'required|integer',
+            'items.*.qty'              => 'required|integer|min:1',
+            'items.*.price'            => 'required|numeric|min:0',
+            'billing_mode'             => 'in:direct,front_desk',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'status' => false]);
+        }
+
+        $result = $this->invoiceService->createBillingInvoice(
+            (int) $request->patient_id,
+            $request->items,
+            $request->payments ?? [],
+            (float) ($request->order_discount_rate ?? 100),
+            $request->payment_date,
+            $request->billing_mode ?? 'direct'
+        );
+
+        return response()->json($result);
+    }
+
+    /**
+     * 患者收费单列表 (收费单 Tab)
+     */
+    public function patientReceipts(Request $request, $patient_id)
+    {
+        if ($request->ajax()) {
+            $data = $this->invoiceService->getPatientReceipts((int) $patient_id);
+
+            return $this->invoiceService->buildPatientReceiptsDataTable($data);
+        }
     }
 }

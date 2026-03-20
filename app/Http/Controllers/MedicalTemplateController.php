@@ -17,6 +17,8 @@ class MedicalTemplateController extends Controller
     {
         $this->medicalTemplateService = $medicalTemplateService;
         $this->middleware('can:manage-medical-services');
+        // Allow doctors (manage-medical-cases) to create personal templates and search
+        $this->middleware('can:manage-medical-cases')->only(['store', 'search', 'incrementUsage']);
     }
 
     /**
@@ -81,15 +83,28 @@ class MedicalTemplateController extends Controller
      */
     public function store(Request $request)
     {
-        Validator::make($request->all(), [
+        $rules = [
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:medical_templates,code',
             'category' => 'required|in:system,department,personal',
             'type' => 'required|in:progress_note,diagnosis,treatment_plan,chief_complaint',
             'content' => 'required',
-        ])->validate();
+        ];
 
-        $template = $this->medicalTemplateService->createTemplate($request->only(['name', 'code', 'category', 'type', 'content']), Auth::user()->id);
+        // Code is optional for personal templates (auto-generated if empty)
+        if ($request->filled('code')) {
+            $rules['code'] = 'string|max:50|unique:medical_templates,code,NULL,id,deleted_at,NULL';
+        }
+
+        Validator::make($request->all(), $rules)->validate();
+
+        $data = $request->only(['name', 'code', 'category', 'type', 'content', 'description']);
+
+        // AG-022: Non-admin users can only create personal templates
+        if (!Auth::user()->can('manage-medical-services')) {
+            $data['category'] = 'personal';
+        }
+
+        $template = $this->medicalTemplateService->createTemplate($data, Auth::user()->id);
 
         if ($template) {
             return response()->json([
@@ -131,7 +146,7 @@ class MedicalTemplateController extends Controller
     {
         Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:medical_templates,code,' . $id,
+            'code' => 'required|string|max:50|unique:medical_templates,code,' . $id . ',id,deleted_at,NULL',
             'category' => 'required|in:system,department,personal',
             'type' => 'required|in:progress_note,diagnosis,treatment_plan,chief_complaint',
             'content' => 'required',
