@@ -91,6 +91,9 @@ docker compose exec app php artisan config:clear
 docker compose exec app php artisan cache:clear
 docker compose exec app php artisan view:clear
 
+REM OCR environment (runs on host)
+call :setup_ocr
+
 echo.
 echo [OK]    Docker setup complete!
 echo.
@@ -150,6 +153,9 @@ if %errorlevel%==0 (
     echo [WARN]  npm not found, skipping frontend build
 )
 
+REM OCR environment
+call :setup_ocr
+
 echo.
 echo [OK]    Native setup complete!
 echo.
@@ -158,4 +164,54 @@ echo   Application:  http://localhost:8000
 echo   Press Ctrl+C to stop.
 echo.
 php artisan serve
+goto :eof
+
+:: ── OCR Environment Setup ────────────────────────────────────
+:setup_ocr
+set "OCR_VENV=%PROJECT_DIR%scripts\venv"
+set "OCR_PY="
+
+REM Find Python 3
+where py >nul 2>&1
+if %errorlevel%==0 (
+    set "OCR_PY=py -3"
+    goto :ocr_found_python
+)
+for %%p in (python3 python) do (
+    where %%p >nul 2>&1
+    if !errorlevel!==0 (
+        %%p --version 2>nul | findstr /r "3\.[0-9]" >nul
+        if !errorlevel!==0 (
+            set "OCR_PY=%%p"
+            goto :ocr_found_python
+        ) else (
+            REM Not Python 3
+        )
+    )
+)
+echo [WARN]  Python 3 not found, skipping OCR setup (OCR feature will be unavailable)
+goto :eof
+
+:ocr_found_python
+echo [INFO]  Setting up OCR environment ...
+
+if not exist "%OCR_VENV%" (
+    %OCR_PY% -m venv "%OCR_VENV%"
+)
+
+"%OCR_VENV%\Scripts\pip.exe" install --upgrade pip -q
+"%OCR_VENV%\Scripts\pip.exe" install -r "%PROJECT_DIR%scripts\requirements.txt" -q
+
+REM Add OCR config to .env if missing
+findstr /b "OCR_PYTHON_PATH=" .env >nul 2>&1
+if %errorlevel% neq 0 (
+    echo.>> .env
+    echo # OCR Service>> .env
+    echo OCR_PYTHON_PATH=%OCR_VENV%\Scripts\python.exe>> .env
+    echo OCR_TIMEOUT=120>> .env
+    echo OCR_SERVER_URL=http://127.0.0.1:5000>> .env
+)
+
+echo [OK]    OCR environment ready
+echo          Start OCR server: %OCR_VENV%\Scripts\python.exe %PROJECT_DIR%scripts\ocr_server.py
 goto :eof

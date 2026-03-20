@@ -46,7 +46,46 @@ setup_env() {
     fi
 }
 
-# ── Step 2a: Docker Mode ──────────────────────────────────────
+# ── Step 2: OCR Environment (optional) ────────────────────────
+setup_ocr() {
+    # Find Python 3
+    local PY=""
+    for ver in python3.11 python3.10 python3.12 python3.9 python3; do
+        if command -v "$ver" &>/dev/null; then
+            PY="$ver"
+            break
+        fi
+    done
+
+    if [[ -z "$PY" ]]; then
+        warn "Python 3 not found — skipping OCR setup (OCR feature will be unavailable)"
+        return
+    fi
+
+    info "Setting up OCR environment (Python: $PY) ..."
+    local VENV_DIR="$PROJECT_DIR/scripts/venv"
+
+    if [ ! -d "$VENV_DIR" ]; then
+        "$PY" -m venv "$VENV_DIR"
+    fi
+
+    "$VENV_DIR/bin/pip" install --upgrade pip -q
+    "$VENV_DIR/bin/pip" install -r "$PROJECT_DIR/scripts/requirements.txt" -q
+
+    # Set OCR config in .env if not already present
+    if ! grep -q "^OCR_PYTHON_PATH=" .env 2>/dev/null; then
+        echo "" >> .env
+        echo "# OCR Service" >> .env
+        echo "OCR_PYTHON_PATH=$VENV_DIR/bin/python3" >> .env
+        echo "OCR_TIMEOUT=120" >> .env
+        echo "OCR_SERVER_URL=http://127.0.0.1:5000" >> .env
+    fi
+
+    ok "OCR environment ready"
+    echo -e "    Start OCR server: ${CYAN}nohup $VENV_DIR/bin/python3 $PROJECT_DIR/scripts/ocr_server.py &${NC}"
+}
+
+# ── Step 3a: Docker Mode ──────────────────────────────────────
 run_docker() {
     # Check Docker
     if ! command -v docker &>/dev/null; then
@@ -62,7 +101,7 @@ run_docker() {
     info "Waiting for MySQL to be ready ..."
     local retries=30
     while [ $retries -gt 0 ]; do
-        if docker compose exec mysql mysqladmin ping -h localhost -psecret --silent 2>/dev/null; then
+        if docker compose exec -e MYSQL_PWD=secret mysql mysqladmin ping -h localhost --silent 2>/dev/null; then
             break
         fi
         retries=$((retries - 1))
@@ -91,6 +130,9 @@ run_docker() {
     docker compose exec app php artisan config:clear
     docker compose exec app php artisan cache:clear
     docker compose exec app php artisan view:clear
+
+    # OCR environment (runs on host, not in container)
+    setup_ocr
 
     ok "Docker setup complete!"
     echo ""
@@ -161,6 +203,9 @@ run_native() {
     else
         warn "npm not found — skipping frontend build (existing assets in public/ will still work)"
     fi
+
+    # OCR environment (optional)
+    setup_ocr
 
     ok "Native setup complete!"
     echo ""

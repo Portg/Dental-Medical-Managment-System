@@ -1,0 +1,74 @@
+<?php
+// ═══════════════════════════════════════════════════════════════
+//  yakpro-po 混淆配置 — 牙科诊所管理系统
+//
+//  yakpro-po 是免费的 PHP 混淆工具：
+//    https://github.com/nicoco007/yakpro-po
+//
+//  用法（由 build.sh 自动调用）：
+//    yakpro-po app/ -o dist/app/ --config-file deploy/yakpro-po.cnf
+// ═══════════════════════════════════════════════════════════════
+
+// ── 基础配置 ────────────────────────────────────────────────────
+
+// 混淆变量名
+$conf->obfuscate_variable_name        = true;
+
+// 混淆函数名（关闭 — Laravel 大量使用反射和魔术方法调用）
+$conf->obfuscate_function_name        = false;
+
+// 混淆类名（关闭 — Laravel 服务容器、IoC 和 Eloquent 依赖类名解析）
+$conf->obfuscate_class_name           = false;
+
+// 混淆接口名（关闭）
+$conf->obfuscate_interface_name       = false;
+
+// 混淆 trait 名（关闭）
+$conf->obfuscate_trait_name           = false;
+
+// 混淆类常量名（关闭 — Blade 模板和配置引用常量名）
+$conf->obfuscate_class_constant_name  = false;
+
+// 混淆属性名（关闭 — Eloquent 模型属性映射数据库字段）
+$conf->obfuscate_property_name        = false;
+
+// 混淆方法名（关闭 — Laravel 约定方法名如 boot/register/handle 等）
+$conf->obfuscate_method_name          = false;
+
+// 混淆命名空间（关闭 — autoload PSR-4 映射和服务提供者依赖命名空间）
+$conf->obfuscate_namespace_name       = false;
+
+// 混淆 label 名
+$conf->obfuscate_label_name           = true;
+
+// ── 代码变换 ────────────────────────────────────────────────────
+
+// 去除注释
+$conf->strip_comment                  = true;
+
+// 去除缩进
+$conf->strip_indentation              = true;
+
+// 随机打乱语句顺序（关闭 — 可能破坏依赖顺序的代码）
+$conf->shuffle_stmts                  = false;
+
+// 混淆字符串字面量
+$conf->obfuscate_string_literal       = true;
+
+// ── 排除列表 ────────────────────────────────────────────────────
+
+// 不混淆的变量名（框架和超全局）
+$conf->obfuscate_variable_name_ignore = [
+    // PHP 超全局
+    '$this', '$_SERVER', '$_GET', '$_POST', '$_FILES',
+    '$_COOKIE', '$_SESSION', '$_REQUEST', '$_ENV', '$GLOBALS',
+    // Laravel 常用
+    '$app', '$request', '$response', '$query', '$builder',
+    '$model', '$table', '$validator', '$rules', '$data',
+    '$user', '$patient', '$appointment', '$invoice',
+];
+
+// 不处理的目录（相对于源根目录 app/）
+$conf->t_ignore = [
+    'Console/Commands',   // Artisan 命令签名依赖字符串
+];
