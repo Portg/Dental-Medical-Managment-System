@@ -83,6 +83,7 @@ usage() {
   MYSQL_DOWNLOAD_URL           MySQL Windows zip 下载地址
   NGINX_DOWNLOAD_URL           Nginx Windows zip 下载地址
   COMPOSER_DOWNLOAD_URL        Composer phar 下载地址
+  PYTHON_DOWNLOAD_URL          Python Windows x64 安装器下载地址（OCR 用）
 
 示例:
   ./deploy/build.sh --target win --assemble-runtime       # ★ 自动下载组装运行环境，真·一键构建
@@ -1019,6 +1020,32 @@ if [[ -f "$OCR_REQUIREMENTS" ]]; then
     chmod +x "$OCR_SCRIPTS_DIR"/*.sh 2>/dev/null || true
     info "复制 OCR 服务脚本"
 
+    if [[ "$TARGET" == "win" ]] && [[ "$SKIP_OCR" == false ]]; then
+        PYTHON_INSTALLER_URL="${PYTHON_DOWNLOAD_URL:-https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe}"
+        PYTHON_INSTALLER_CACHE="$PROJECT_ROOT/deploy/.cache/python-installer.exe"
+        PYTHON_INSTALLER_DIST="$DIST_DIR/python-installer.exe"
+
+        mkdir -p "$(dirname "$PYTHON_INSTALLER_CACHE")"
+        if [[ -f "$PYTHON_INSTALLER_CACHE" ]] && [[ -s "$PYTHON_INSTALLER_CACHE" ]]; then
+            cp "$PYTHON_INSTALLER_CACHE" "$PYTHON_INSTALLER_DIST"
+            info "复制缓存的 Python 安装器"
+        else
+            warn "正在下载 Windows Python 安装器（供 OCR 静默安装使用）..."
+            if command -v curl &>/dev/null; then
+                curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$PYTHON_INSTALLER_DIST" "$PYTHON_INSTALLER_URL" || rm -f "$PYTHON_INSTALLER_DIST"
+            elif command -v wget &>/dev/null; then
+                wget -q --show-progress --tries=3 -O "$PYTHON_INSTALLER_DIST" "$PYTHON_INSTALLER_URL" || rm -f "$PYTHON_INSTALLER_DIST"
+            fi
+
+            if [[ -f "$PYTHON_INSTALLER_DIST" ]] && [[ -s "$PYTHON_INSTALLER_DIST" ]]; then
+                cp "$PYTHON_INSTALLER_DIST" "$PYTHON_INSTALLER_CACHE"
+                info "Python 安装器已打包"
+            else
+                warn "Python 安装器下载失败，目标机若无 Python 则 OCR 安装会失败"
+            fi
+        fi
+    fi
+
     # OCR wheels 打包（默认打包，--skip-ocr 跳过）
     if [[ "$SKIP_OCR" == true ]]; then
         info "跳过 OCR wheels 打包（--skip-ocr）"
@@ -1134,7 +1161,7 @@ echo  =======================================================
 echo    Dental Clinic Management System - Offline Installer
 echo  =======================================================
 echo.
-echo  This package already includes PHP, MySQL and Nginx.
+echo  This package already includes PHP, MySQL, Nginx and OCR runtime.
 echo.
 
 set "INSTALL_DIR=C:\DentalClinic"
@@ -1174,6 +1201,13 @@ if "%PARTIAL_INSTALL%"=="1" (
     )
 
     echo  [0/4] Cleaning previous installation files...
+    echo         Stopping running services...
+    taskkill /f /im mysqld.exe   >nul 2>&1
+    taskkill /f /im nginx.exe    >nul 2>&1
+    taskkill /f /im php.exe      >nul 2>&1
+    taskkill /f /im php-cgi.exe  >nul 2>&1
+    taskkill /f /im python.exe   >nul 2>&1
+    timeout /t 2 /nobreak >nul 2>&1
     if exist "%INSTALL_DIR%\laragon" rmdir /S /Q "%INSTALL_DIR%\laragon" >nul 2>&1
     if exist "%INSTALL_DIR%\ocr-wheels" rmdir /S /Q "%INSTALL_DIR%\ocr-wheels" >nul 2>&1
     for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
@@ -1225,6 +1259,9 @@ echo         App files copied.
 
 if exist "%~dp0ocr-wheels" (
     xcopy "%~dp0ocr-wheels" "%INSTALL_DIR%\ocr-wheels\" /E /I /H /Y /Q >nul 2>&1
+)
+if exist "%~dp0python-installer.exe" (
+    copy "%~dp0python-installer.exe" "%INSTALL_DIR%\python-installer.exe" /Y >nul 2>&1
 )
 
 for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
