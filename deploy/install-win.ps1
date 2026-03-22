@@ -24,6 +24,64 @@ function Test-CommandExists {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+function Find-PythonRuntime {
+    $result = @{
+        Exe     = $null
+        Args    = @()
+        Display = $null
+    }
+
+    if (Test-CommandExists "py") {
+        $versionOutput = (& py -3 --version 2>&1 | Out-String).Trim()
+        if ($LASTEXITCODE -eq 0 -and $versionOutput -match '^Python\s+3\.') {
+            $result.Exe = "py"
+            $result.Args = @("-3")
+            $result.Display = "py -3"
+            return $result
+        }
+    }
+
+    foreach ($candidate in @("python3", "python")) {
+        if (-not (Test-CommandExists $candidate)) {
+            continue
+        }
+
+        $versionOutput = (& $candidate --version 2>&1 | Out-String).Trim()
+        if ($LASTEXITCODE -eq 0 -and $versionOutput -match '^Python\s+3\.') {
+            $result.Exe = $candidate
+            $result.Args = @()
+            $result.Display = $candidate
+            return $result
+        }
+    }
+
+    return $result
+}
+
+function Install-BundledPython {
+    param([string]$InstallerPath)
+
+    if (-not (Test-Path $InstallerPath)) {
+        return $false
+    }
+
+    Write-Host ("        Installing bundled Python from {0}" -f $InstallerPath)
+    $installArgs = @(
+        '/quiet',
+        'InstallAllUsers=1',
+        'PrependPath=1',
+        'Include_pip=1',
+        'Include_launcher=1',
+        'SimpleInstall=1',
+        'Shortcuts=0',
+        'CompileAll=0',
+        'Include_test=0'
+    )
+
+    $proc = Start-Process -FilePath $InstallerPath -ArgumentList $installArgs -Wait -PassThru
+    return ($proc.ExitCode -eq 0)
+}
+
 function Get-FirstDirectoryMatch {
     param(
         [string]$BasePath,
@@ -88,6 +146,41 @@ function Get-PhpVersionInfo {
     }
 }
 
+function Ensure-PhpIniForBundledRuntime {
+    param(
+        [string]$PhpDir
+    )
+
+    $phpIni = Join-Path $PhpDir "php.ini"
+    $phpIniProduction = Join-Path $PhpDir "php.ini-production"
+    if (-not (Test-Path $phpIni) -and (Test-Path $phpIniProduction)) {
+        Copy-Item -Path $phpIniProduction -Destination $phpIni -Force
+    }
+    if (-not (Test-Path $phpIni)) {
+        return
+    }
+
+    $extensionDir = (Join-Path $PhpDir "ext").Replace('\', '/')
+    $lines = @(Get-Content -Path $phpIni -ErrorAction SilentlyContinue)
+    $updated = New-Object System.Collections.Generic.List[string]
+    $extensionDirSet = $false
+
+    foreach ($line in $lines) {
+        if ($line -match '^\s*;?\s*extension_dir\s*=') {
+            $updated.Add('extension_dir = "' + $extensionDir + '"')
+            $extensionDirSet = $true
+        } else {
+            $updated.Add($line)
+        }
+    }
+
+    if (-not $extensionDirSet) {
+        $updated.Add('extension_dir = "' + $extensionDir + '"')
+    }
+
+    [System.IO.File]::WriteAllLines($phpIni, $updated, [System.Text.UTF8Encoding]::new($false))
+}
+
 function Wait-MySqlReady {
     param(
         [string]$MySqlExe,
@@ -106,6 +199,63 @@ function Wait-MySqlReady {
     }
 
     return $false
+}
+
+function Test-HttpEndpoint {
+    param(
+        [string]$Url,
+        [int]$TimeoutMs = 2000
+    )
+
+    try {
+        $request = [System.Net.WebRequest]::Create($Url)
+        $request.Timeout = $TimeoutMs
+        $response = $request.GetResponse()
+        $response.Close()
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Wait-HttpReady {
+    param(
+        [string]$Url,
+        [int]$TimeoutSeconds = 60
+    )
+
+    $waited = 0
+    while ($waited -lt $TimeoutSeconds) {
+        if (Test-HttpEndpoint -Url $Url -TimeoutMs 3000) {
+            return $true
+        }
+
+        Start-Sleep -Seconds 2
+        $waited += 2
+    }
+
+    return $false
+}
+
+function Get-LastLogLines {
+    param(
+        [string[]]$Paths,
+        [int]$Tail = 20
+    )
+
+    $blocks = New-Object System.Collections.Generic.List[string]
+    foreach ($path in $Paths) {
+        if (-not (Test-Path $path)) {
+            continue
+        }
+
+        $content = (Get-Content -Path $path -ErrorAction SilentlyContinue | Select-Object -Last $Tail) -join [Environment]::NewLine
+        if ($content) {
+            $blocks.Add(("--- {0} ---{1}{2}" -f $path, [Environment]::NewLine, $content))
+        }
+    }
+
+    return ($blocks -join ([Environment]::NewLine + [Environment]::NewLine))
 }
 
 function Ensure-Admin {
@@ -215,6 +365,12 @@ try {
             }
         }
         Write-Host "        Existing installation will be overwritten"
+        # 清理 MySQL data 目录，确保覆盖安装时重新初始化数据库
+        $oldMysqlData = Join-Path $LARAGON_DIR "data\mysql"
+        if (Test-Path $oldMysqlData) {
+            Remove-Item -Path $oldMysqlData -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Host "        Old MySQL data cleared"
+        }
     } elseif ($partialInstall) {
         Write-Host "        Partial installation residue detected; continuing"
     } else {
@@ -233,6 +389,7 @@ try {
         $phpDir = $phpBase
     }
     if (-not $phpDir) { Fail-Step "PHP not found under $phpBase" }
+    Ensure-PhpIniForBundledRuntime -PhpDir $phpDir
     $PHP_EXE = Join-Path $phpDir "php.exe"
     $env:PHPRC = $phpDir
     $env:PHP_INI_SCAN_DIR = ""
@@ -271,19 +428,33 @@ try {
     if ($SKIP_OCR) {
         Write-Host "        Python .................. skipped (--no-ocr)"
     } else {
-        if (Test-CommandExists "py") {
-            $PYTHON_EXE = "py"
-            $PYTHON_ARGS = @("-3")
-        } elseif (Test-CommandExists "python3") {
-            $PYTHON_EXE = "python3"
-        } elseif (Test-CommandExists "python") {
-            $PYTHON_EXE = "python"
+        $pythonRuntime = Find-PythonRuntime
+        if (-not $pythonRuntime.Exe) {
+            $bundledPythonInstaller = $null
+            foreach ($candidate in @(
+                (Join-Path $INSTALL_DIR 'python-installer.exe'),
+                (Join-Path $INSTALL_DIR 'python\python-installer.exe')
+            )) {
+                if (Test-Path $candidate) {
+                    $bundledPythonInstaller = $candidate
+                    break
+                }
+            }
+
+            if ($bundledPythonInstaller) {
+                if (-not (Install-BundledPython -InstallerPath $bundledPythonInstaller)) {
+                    Fail-Step "Bundled Python installation failed. OCR cannot be initialized."
+                }
+                $pythonRuntime = Find-PythonRuntime
+            }
         }
 
-        if ($PYTHON_EXE) {
-            Write-Host ("        Python .................. {0} {1}" -f $PYTHON_EXE, ($PYTHON_ARGS -join ' '))
+        if ($pythonRuntime.Exe) {
+            $PYTHON_EXE = $pythonRuntime.Exe
+            $PYTHON_ARGS = $pythonRuntime.Args
+            Write-Host ("        Python .................. {0}" -f $pythonRuntime.Display)
         } else {
-            Write-Host "        Python .................. not found; OCR will be unavailable"
+            Fail-Step "Python 3 runtime is required for OCR, but no Python installation was found and no bundled installer is available. Rebuild the package with OCR dependencies or use --no-ocr."
         }
     }
 
@@ -522,48 +693,107 @@ try {
     Write-Section "Configure OCR environment"
     if ($SKIP_OCR) {
         Write-Host "        OCR ..................... skipped (--no-ocr)"
-    } elseif (-not $PYTHON_EXE) {
-        Write-Host "        OCR ..................... skipped (Python not found)"
     } else {
         $OCR_VENV = Join-Path $PROJECT_DIR "scripts\venv"
         $OCR_REQUIREMENTS = Join-Path $PROJECT_DIR "scripts\requirements.txt"
         $OCR_WHEELS_DIR = Join-Path $INSTALL_DIR "ocr-wheels"
         if (-not (Test-Path $OCR_WHEELS_DIR)) { $OCR_WHEELS_DIR = Join-Path $PROJECT_DIR "ocr-wheels" }
         if (-not (Test-Path $OCR_WHEELS_DIR)) { $OCR_WHEELS_DIR = Join-Path $PROJECT_DIR "scripts\wheels" }
+        $OCR_SCRIPT = Join-Path $PROJECT_DIR "scripts\ocr_server.py"
+        $OCR_HEALTH_URL = "http://127.0.0.1:5000/health"
+        $OCR_LOG_DIR = Join-Path $PROJECT_DIR "storage\logs"
+        $OCR_INSTALL_LOG = Join-Path $OCR_LOG_DIR "ocr-install.log"
+        $OCR_VERIFY_LOG = Join-Path $OCR_LOG_DIR "ocr-verify.log"
+        $OCR_SERVER_OUT_LOG = Join-Path $OCR_LOG_DIR "ocr-server.out.log"
+        $OCR_SERVER_ERR_LOG = Join-Path $OCR_LOG_DIR "ocr-server.err.log"
+        if (-not (Test-Path $OCR_LOG_DIR)) {
+            New-Item -ItemType Directory -Path $OCR_LOG_DIR -Force | Out-Null
+        }
 
         $ocrReady = $true
         if (-not (Test-Path (Join-Path $OCR_VENV "Scripts\python.exe"))) {
             & $PYTHON_EXE @PYTHON_ARGS -m venv $OCR_VENV
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "        OCR venv creation ....... warning"
-                $ocrReady = $false
+                Fail-Step "OCR virtual environment creation failed."
             }
         }
 
         if ($ocrReady -and (Test-Path $OCR_REQUIREMENTS)) {
             $pipExe = Join-Path $OCR_VENV "Scripts\pip.exe"
             if (Test-Path $OCR_WHEELS_DIR) {
-                & $pipExe install --no-index --find-links=$OCR_WHEELS_DIR -r $OCR_REQUIREMENTS -q > $null 2>&1
+                & $pipExe install --no-index --find-links=$OCR_WHEELS_DIR -r $OCR_REQUIREMENTS -q *> $OCR_INSTALL_LOG
                 if ($LASTEXITCODE -ne 0) {
-                    & $pipExe install --upgrade pip -q > $null 2>&1
-                    & $pipExe install -r $OCR_REQUIREMENTS -q > $null 2>&1
+                    & $pipExe install --upgrade pip -q *> $OCR_INSTALL_LOG
+                    & $pipExe install -r $OCR_REQUIREMENTS -q *> $OCR_INSTALL_LOG
                 }
             } else {
-                & $pipExe install --upgrade pip -q > $null 2>&1
-                & $pipExe install -r $OCR_REQUIREMENTS -q > $null 2>&1
+                & $pipExe install --upgrade pip -q *> $OCR_INSTALL_LOG
+                & $pipExe install -r $OCR_REQUIREMENTS -q *> $OCR_INSTALL_LOG
             }
+
+            if ($LASTEXITCODE -ne 0) {
+                $ocrInstallLog = Get-LastLogLines -Paths @($OCR_INSTALL_LOG)
+                if ($ocrInstallLog) {
+                    Fail-Step ("OCR dependency installation failed." + [Environment]::NewLine + $ocrInstallLog)
+                }
+                Fail-Step "OCR dependency installation failed."
+            }
+        } else {
+            Fail-Step "OCR requirements.txt is missing."
         }
+
+        $ocrPythonExe = Join-Path $OCR_VENV "Scripts\python.exe"
+        & $ocrPythonExe -c "import paddleocr, flask, PIL; print('OCR_IMPORTS_OK')" *> $OCR_VERIFY_LOG
+        if ($LASTEXITCODE -ne 0) {
+            $ocrVerifyLog = Get-LastLogLines -Paths @($OCR_VERIFY_LOG)
+            if ($ocrVerifyLog) {
+                Fail-Step ("OCR dependency verification failed." + [Environment]::NewLine + $ocrVerifyLog)
+            }
+            Fail-Step "OCR dependency verification failed."
+        }
+
         if (Test-Path $ENV_TARGET) {
             if (Select-String -Path $ENV_TARGET -Pattern '^OCR_PYTHON_PATH=' -Quiet -ErrorAction SilentlyContinue) {
-                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'update_ocr_env_path.php'), $ENV_TARGET, (Join-Path $OCR_VENV 'Scripts\python.exe'))
+                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'update_ocr_env_path.php'), $ENV_TARGET, $ocrPythonExe)
             } else {
                 Add-Content -Path $ENV_TARGET -Value ""
                 Add-Content -Path $ENV_TARGET -Value "# OCR Service"
-                Add-Content -Path $ENV_TARGET -Value ("OCR_PYTHON_PATH=" + (Join-Path $OCR_VENV 'Scripts\python.exe'))
+                Add-Content -Path $ENV_TARGET -Value ("OCR_PYTHON_PATH=" + $ocrPythonExe)
                 Add-Content -Path $ENV_TARGET -Value "OCR_TIMEOUT=300"
                 Add-Content -Path $ENV_TARGET -Value "OCR_SERVER_URL=http://127.0.0.1:5000"
             }
         }
+
+        if (-not (Test-Path $OCR_SCRIPT)) {
+            Fail-Step "OCR server script is missing."
+        }
+
+        if (-not (Test-HttpEndpoint -Url $OCR_HEALTH_URL -TimeoutMs 3000)) {
+            if (Test-Path $OCR_SERVER_OUT_LOG) { Remove-Item $OCR_SERVER_OUT_LOG -Force -ErrorAction SilentlyContinue }
+            if (Test-Path $OCR_SERVER_ERR_LOG) { Remove-Item $OCR_SERVER_ERR_LOG -Force -ErrorAction SilentlyContinue }
+
+            $ocrProc = Start-Process `
+                -FilePath $ocrPythonExe `
+                -ArgumentList @($OCR_SCRIPT, '--host', '127.0.0.1', '--port', '5000') `
+                -WorkingDirectory $PROJECT_DIR `
+                -RedirectStandardOutput $OCR_SERVER_OUT_LOG `
+                -RedirectStandardError $OCR_SERVER_ERR_LOG `
+                -WindowStyle Hidden `
+                -PassThru
+
+            if (-not (Wait-HttpReady -Url $OCR_HEALTH_URL -TimeoutSeconds 120)) {
+                if ($ocrProc -and -not $ocrProc.HasExited) {
+                    Stop-Process -Id $ocrProc.Id -Force -ErrorAction SilentlyContinue
+                }
+
+                $ocrServerLog = Get-LastLogLines -Paths @($OCR_SERVER_OUT_LOG, $OCR_SERVER_ERR_LOG)
+                if ($ocrServerLog) {
+                    Fail-Step ("OCR server health check failed." + [Environment]::NewLine + $ocrServerLog)
+                }
+                Fail-Step "OCR server health check failed."
+            }
+        }
+
         Write-Host "        OCR setup ............... OK"
     }
 
