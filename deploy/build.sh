@@ -951,7 +951,7 @@ done
 case "$TARGET" in
     win)
         # Windows 脚本放到 zip 根目录
-        for script in install-win.bat upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat; do
+        for script in install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat; do
             if [[ -f "$PROJECT_ROOT/deploy/$script" ]]; then
                 cp "$PROJECT_ROOT/deploy/$script" "$DIST_DIR/"
                 info "复制 $script"
@@ -959,6 +959,13 @@ case "$TARGET" in
                 warn "脚本不存在，跳过: $script"
             fi
         done
+        if [[ -d "$PROJECT_ROOT/deploy/batch-helpers" ]]; then
+            mkdir -p "$DIST_DIR/batch-helpers"
+            cp -R "$PROJECT_ROOT/deploy/batch-helpers/." "$DIST_DIR/batch-helpers/"
+            info "复制 batch-helpers/"
+        else
+            warn "目录不存在，跳过: deploy/batch-helpers"
+        fi
         # 创建 setup.bat 快捷入口
         cat > "$DIST_DIR/setup.bat" <<'SHORTCUT_BAT'
 @echo off
@@ -1169,9 +1176,10 @@ if "%PARTIAL_INSTALL%"=="1" (
     echo  [0/4] Cleaning previous installation files...
     if exist "%INSTALL_DIR%\laragon" rmdir /S /Q "%INSTALL_DIR%\laragon" >nul 2>&1
     if exist "%INSTALL_DIR%\ocr-wheels" rmdir /S /Q "%INSTALL_DIR%\ocr-wheels" >nul 2>&1
-    for %%F in (install-win.bat upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
+    for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
         if exist "%INSTALL_DIR%\%%F" del /F /Q "%INSTALL_DIR%\%%F" >nul 2>&1
     )
+    if exist "%INSTALL_DIR%\batch-helpers" rmdir /S /Q "%INSTALL_DIR%\batch-helpers" >nul 2>&1
 
     if exist "%INSTALL_DIR%\laragon" (
         echo  [ERROR] Failed to clean previous laragon directory.
@@ -1219,9 +1227,10 @@ if exist "%~dp0ocr-wheels" (
     xcopy "%~dp0ocr-wheels" "%INSTALL_DIR%\ocr-wheels\" /E /I /H /Y /Q >nul 2>&1
 )
 
-for %%F in (install-win.bat upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
+for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
     if exist "%~dp0%%F" copy "%~dp0%%F" "%INSTALL_DIR%\" /Y >nul 2>&1
 )
+if exist "%~dp0batch-helpers" xcopy "%~dp0batch-helpers" "%INSTALL_DIR%\batch-helpers\" /E /I /H /Y /Q >nul 2>&1
 
 echo  [3/4] Normalizing batch file encoding...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
@@ -1320,6 +1329,26 @@ except UnicodeDecodeError:
         bat_count=$((bat_count + 1))
     done < <(find "$DIST_DIR" -name '*.bat' -print0)
     info "已转换 ${bat_count} 个 .bat 文件（编码: GBK, 行尾: CRLF）"
+
+    step "转换 PowerShell 脚本编码 (UTF-8 with BOM)"
+    ps1_count=0
+    while IFS= read -r -d '' ps1_file; do
+        if command -v python3 &>/dev/null; then
+            python3 -c '
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+# Use utf-8-sig so an existing BOM is consumed instead of duplicated.
+text = p.read_text(encoding="utf-8-sig")
+text = text.replace("\r\n", "\n").replace("\n", "\r\n")
+p.write_text(text, encoding="utf-8-sig")
+' "$ps1_file"
+        else
+            warn "未找到 python3，跳过 PowerShell BOM 编码转换: $(basename "$ps1_file")"
+            continue
+        fi
+        ps1_count=$((ps1_count + 1))
+    done < <(find "$DIST_DIR" -name '*.ps1' -print0)
+    info "已转换 ${ps1_count} 个 .ps1 文件（编码: UTF-8 with BOM, 行尾: CRLF）"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════
