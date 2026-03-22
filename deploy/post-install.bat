@@ -16,7 +16,7 @@ if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
 set "LARAGON_DIR=%INSTALL_DIR%\laragon"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 set "COMPOSER=%LARAGON_DIR%\bin\composer\composer.phar"
-set "HELPER_DIR=%PROJECT_DIR%\deploy\batch-helpers"
+set "HELPER_DIR=%INSTALL_DIR%\batch-helpers"
 
 REM 自动查找 PHP（兼容不同 Laragon 版本的目录命名）
 set "PHP_DIR="

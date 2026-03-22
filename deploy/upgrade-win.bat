@@ -44,7 +44,7 @@ set "LARAGON_DIR=%INSTALL_DIR%\laragon"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 set "BACKUP_BASE=%INSTALL_DIR%\backups"
 set "ENV_PATCH=%UPGRADE_PKG_DIR%\env.patch"
-set "HELPER_DIR=%PROJECT_DIR%\deploy\batch-helpers"
+set "HELPER_DIR=%UPGRADE_PKG_DIR%\batch-helpers"
 
 REM 自动查找 PHP / MySQL（兼容不同 Laragon 版本的目录命名）
 set "PHP_DIR="
