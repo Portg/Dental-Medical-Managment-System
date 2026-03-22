@@ -1,5 +1,13 @@
 $ErrorActionPreference = "Stop"
 
+# 统一控制台编码为 UTF-8，避免中文乱码
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+    $OutputEncoding           = [System.Text.Encoding]::UTF8
+    & "$env:SystemRoot\System32\chcp.com" 65001 | Out-Null
+} catch {}
+
 function Write-Section {
     param([string]$Message)
     Write-Host ""
