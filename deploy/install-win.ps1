@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 # 统一控制台编码为 UTF-8，避免中文乱码
 try {
