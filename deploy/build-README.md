@@ -22,12 +22,12 @@
 └───────────────────┘                   └──────────────────────────────┘
 ```
 
-### 三种交付形态
+### 交付形态（当前有效）
 
 | 形态 | 命令 | 适用场景 |
 |------|------|----------|
-| **全量安装包 (含运行环境)** | `build.sh --target win --assemble-runtime` | 首次部署 Windows，目标机无需联网 |
-| **全量安装包 (不含运行环境)** | `build.sh --target linux` | 首次部署 Linux/macOS（安装时联网装系统包） |
+| **Windows 全量安装包（Laragon 安装器模式）** | `build.sh --target win --laragon-url <laragon-wamp.exe直链>` | 首次部署 Windows；包内带 `laragon-wamp.exe`，目标机离线安装 |
+| **Linux/macOS 全量安装包** | `build.sh --target linux` | 首次部署 Linux/macOS（安装时联网装系统包） |
 | **升级包** | `build.sh --target win --upgrade` | 已有系统的版本升级 |
 
 ---
@@ -43,34 +43,27 @@
 | Composer | 是 | PHP 包管理 |
 | zip | 是 | 打包归档 |
 | rsync | 是 | 文件同步 |
-| curl 或 wget | `--download-laragon` 时需要 | 下载 Laragon Portable |
+| curl 或 wget | `--laragon-url` 时需要 | 下载 `laragon-wamp.exe` |
 | yakpro-po | 可选 | PHP 源码混淆（`composer global require nicoco007/yakpro-po`） |
 | pip3 | 可选 | 下载 OCR Python 离线包 |
 
 ### 1.2 构建命令
 
 ```bash
-# ★ 推荐：自动下载 PHP/MySQL/Nginx/Composer 并组装 Windows 一键安装包
-./deploy/build.sh --target win --assemble-runtime
+# Windows（推荐）：下载 laragon-wamp.exe 并打进安装包
+./deploy/build.sh --target win --laragon-url https://github.com/leokhoa/laragon/releases/download/8.6.1/laragon-wamp.exe
 
-# 自定义组件版本（通过环境变量覆盖默认下载地址）
-export PHP_DOWNLOAD_URL="https://windows.php.net/downloads/releases/php-8.3.15-nts-Win32-vs16-x64.zip"
-./deploy/build.sh --target win --assemble-runtime
-
-# 手动指定本地已有的完整 Laragon 目录（含 PHP/MySQL/Nginx）
-./deploy/build.sh --target win --bundle-laragon ~/Downloads/laragon-full
-
-# Linux / macOS 安装包（不需要 Laragon，安装时用 apt/yum/brew 装系统包）
+# Linux / macOS 安装包
 ./deploy/build.sh --target linux
 
-# 升级包（仅代码+迁移，不含运行时依赖和 schema.sql）
+# 升级包（仅代码+迁移，不含 schema.sql、storage/、scripts/）
 ./deploy/build.sh --target win --upgrade
 
 # 跳过 OCR 和混淆（开发/测试用，构建更快）
 ./deploy/build.sh --target linux --skip-obfuscate --skip-ocr
 
 # 指定版本号（覆盖 VERSION 文件）
-./deploy/build.sh --target win --version 2.0.0
+./deploy/build.sh --target win --version 2.0.0 --laragon-url https://github.com/leokhoa/laragon/releases/download/8.6.1/laragon-wamp.exe
 ```
 
 构建产物输出到 `deploy/output/` 目录。
@@ -84,20 +77,27 @@ export PHP_DOWNLOAD_URL="https://windows.php.net/downloads/releases/php-8.3.15-n
 | `--skip-obfuscate` | 跳过 PHP 代码混淆 |
 | `--skip-ocr` | 跳过 OCR Python wheels 下载 |
 | `--version <X.Y.Z>` | 覆盖 VERSION 文件中的版本号 |
-| `--assemble-runtime` | ★ 自动下载 PHP/MySQL/Nginx/Composer 组装运行环境 |
-| `--bundle-laragon <path>` | 将本地已有的完整 Laragon 目录打入安装包 |
-| `--download-laragon` | 兼容旧参数，等同于 `--assemble-runtime` |
-| `--laragon-url <url>` | 指定 Laragon core zip 地址（可选） |
+| `--laragon-url <url>` | Windows：指定 `laragon-wamp.exe` 下载地址并打入安装包 |
 
-环境变量（均可选，脚本自动从官网解析最新版本）:
+环境变量（均可选）:
 
-| 环境变量 | 说明 | 自动解析来源 |
-|----------|------|-------------|
-| `PHP_DOWNLOAD_URL` | PHP Windows zip 直链 | windows.php.net 索引页，取最新 8.2.x NTS x64 |
-| `MYSQL_DOWNLOAD_URL` | MySQL Windows zip 直链 | dev.mysql.com HEAD 探测，取最新 8.0.x / 8.4.x |
-| `NGINX_DOWNLOAD_URL` | Nginx Windows zip 直链 | nginx.org 下载页，取最新偶数版（稳定版） |
-| `COMPOSER_DOWNLOAD_URL` | Composer phar 直链 | 默认 latest-stable |
-| `LARAGON_DOWNLOAD_URL` | Laragon core zip（面板程序，可选） | GitHub 8.6.1 |
+| 环境变量 | 说明 |
+|----------|------|
+| `PYTHON_DOWNLOAD_URL` | Windows OCR 用 Python 安装器下载地址（默认官方 3.11.x） |
+
+### 1.3.1 Windows 推荐：Laragon 安装器方式
+
+统一使用 `laragon-wamp.exe`：
+
+```bash
+./deploy/build.sh --target win --laragon-url https://github.com/leokhoa/laragon/releases/download/8.6.1/laragon-wamp.exe
+```
+
+说明：
+- 构建时下载并缓存到 `deploy/.cache/laragon-wamp.exe`
+- 打包时原样复制到安装包根目录
+- 目标 Windows 机安装阶段会静默安装 Laragon 到 `{安装目录}\laragon`
+- 适合“标准化交付 + 低环境差异”的部署场景
 
 ### 1.4 构建流程详解
 
@@ -118,63 +118,36 @@ build.sh 执行步骤:
       │
   [7] 下载 OCR Python wheels（可选，--skip-ocr 跳过，按 --target 平台区分）
       │
-  [8] 打包 Laragon Portable（仅 --bundle-laragon / --download-laragon）
+  [8] 复制 `laragon-wamp.exe` 到安装包（仅 Windows 且提供 `--laragon-url`）
       │
   [9] 生成升级包元数据（仅 --upgrade：env.patch + UPGRADE.md）
       │
   [10] zip 压缩 → deploy/output/dental-clinic-X.Y.Z-{target}.zip
 ```
 
-### 1.5 运行环境自动组装与缓存
+### 1.5 Laragon 安装器缓存
 
-使用 `--assemble-runtime` 时，脚本**分别下载**各组件并组装为完整运行环境：
+当使用 `--target win --laragon-url <.../laragon-wamp.exe>` 时：
 
 ```
 deploy/.cache/
-├── laragon-core.zip        ← Laragon 面板程序
-├── php.zip                 ← PHP Windows x64
-├── mysql.zip               ← MySQL Windows x64
-├── nginx.zip               ← Nginx Windows x64
-├── laragon-core/           ← 解压缓存
-├── php-extracted/
-├── mysql-extracted/
-├── nginx-extracted/
-└── laragon/                ← ★ 最终组装结果
-    ├── laragon.exe
-    └── bin/
-        ├── php/php-8.2.x-.../php.exe
-        ├── mysql/mysql-8.0.x-.../bin/mysqld.exe
-        ├── nginx/nginx-1.x.x/nginx.exe
-        └── composer/composer.phar
+└── laragon-wamp.exe        ← 构建缓存（下次可复用）
 ```
 
 **缓存机制**：
-- 首次构建自动下载，后续构建复用缓存（秒级完成）
-- 需要更新组件版本时，删除对应缓存文件后重新构建即可
-- `rm -rf deploy/.cache/` 可完全清除缓存
-
-**自定义组件版本**（通过环境变量覆盖默认地址）：
-
-```bash
-# 升级 PHP 版本
-export PHP_DOWNLOAD_URL="https://windows.php.net/downloads/releases/php-8.3.15-nts-Win32-vs16-x64.zip"
-rm -rf deploy/.cache/php* deploy/.cache/laragon/bin/php
-./deploy/build.sh --target win --assemble-runtime
-```
-
-**为什么不用 Laragon Full？**
-
-Laragon Full（含 PHP/MySQL/Nginx 的一体包）没有稳定的直链下载地址，且版本更新不及时。
-`--assemble-runtime` 直接从各组件的官方源下载，版本可控、地址稳定。
+- 首次构建会下载 `laragon-wamp.exe`
+- 后续构建若缓存存在会直接复用
+- 需要强制更新时删除 `deploy/.cache/laragon-wamp.exe` 后重建
 
 ### 1.6 产物结构
 
-**全量安装包 (含 Laragon)**
+**Windows 全量安装包（Laragon 安装器模式）**
 
 ```
 dental-clinic-1.0.0-win/
-├── 一键安装.bat              ← 用户双击此文件
+├── setup.bat                 ← 用户双击此文件（推荐入口）
 ├── install-win.bat           ← 实际安装逻辑 (18 步)
+├── install-win.ps1           ← Windows 安装主逻辑
 ├── upgrade-win.bat           ← 升级脚本
 ├── start-win.bat             ← 启动服务
 ├── stop-win.bat              ← 停止服务
@@ -182,7 +155,8 @@ dental-clinic-1.0.0-win/
 ├── check.sh / backup-restore.sh / export-data.sh  ← 运维工具
 ├── .env.deploy               ← 环境变量模板
 ├── VERSION                   ← 版本号
-├── laragon/                  ← Laragon Portable (PHP+MySQL+Nginx+Composer)
+├── laragon-wamp.exe          ← Laragon 安装器（由 --laragon-url 提供）
+├── python-installer.exe      ← OCR 用 Python 安装器（可选）
 ├── ocr-wheels/               ← OCR Python 离线包 (可选)
 │
 ├── app/                      ← 项目代码（可能已混淆）
@@ -229,7 +203,31 @@ dental-clinic-1.0.0-win-upgrade/
 5. 浏览器自动打开 http://localhost/dental
 ```
 
-包含 Laragon 的安装包**无需联网、无需预装任何软件**。
+#### 推荐标准流程（Laragon 安装器 + 还原基础数据 + 替换部署包）
+
+```
+开发机：
+1) ./deploy/build.sh --target win --laragon-url <laragon-wamp.exe 直链>
+2) 交付 deploy/output/dental-clinic-X.Y.Z-win.zip
+
+目标 Windows 机：
+1) 解压安装包
+2) 双击 setup.bat（会调用 install-win.bat / install-win.ps1）
+3) 覆盖安装同一路径（如 C:\DentalClinic）以替换部署包
+4) 安装流程会重建数据库结构并执行 db:seed（初始化基础数据）
+```
+
+说明：
+- “替换部署包”建议采用**同目录覆盖安装**，避免路径漂移带来的服务与计划任务异常。
+- 需要“还原基础数据”时，执行覆盖安装即可；安装程序会按标准初始化数据库并填充基础种子数据。
+- 若只想升级且保留历史业务数据，请使用 `upgrade-win.bat`，不要走覆盖安装。
+
+包含 Laragon 的安装包默认会同时打包 OCR 所需的 Python 安装器与 wheels，目标机**无需联网、无需预装任何软件**即可完成核心功能安装。
+
+说明：
+- 默认安装会把 `PHP / MySQL / Nginx / Composer / Python(OCR)` 一并处理。
+- 只有显式使用 `--no-ocr` 时，安装器才允许跳过 OCR 依赖。
+- 如果 OCR 依赖安装或健康检查失败，安装会直接中断，不再以“安装完成但功能不可用”的状态结束。
 
 #### install-win.bat 内部流程（18 步）
 
@@ -570,7 +568,7 @@ deploy/
 
 ```
 C:\DentalClinic\
-├── laragon/                       ← Laragon Portable
+├── laragon/                       ← 由 laragon-wamp.exe 安装得到
 │   ├── bin/
 │   │   ├── php/php-8.x/           ← PHP
 │   │   ├── mysql/mysql-8.x/       ← MySQL

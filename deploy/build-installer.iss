@@ -4,8 +4,7 @@
 ;  使用方法：
 ;  1. 安装 Inno Setup 6 (https://jrsoftware.org/isinfo.php)
 ;  2. 先运行 build.sh --target win 生成构建产物到 deploy/dist/
-;  3. 准备好 laragon-portable/ 目录（见 build-README.md）
-;  4. 用 Inno Setup Compiler 打开此文件，点击 Compile
+;  3. 用 Inno Setup Compiler 打开此文件，点击 Compile
 ;  5. 生成的 .exe 在 deploy/output/ 目录
 ; ═══════════════════════════════════════════════════════════════
 
@@ -52,14 +51,13 @@ chinesesimplified.CreateDesktopShortcut=创建桌面快捷方式
 Name: "desktopicon"; Description: "{cm:CreateDesktopShortcut}"; GroupDescription: "快捷方式:"; Flags: checked
 
 [Files]
-; Laragon Portable（含 PHP、MySQL、Redis、Nginx、Composer）
-Source: "laragon-portable\*"; DestDir: "{app}\laragon"; Flags: ignoreversion recursesubdirs createallsubdirs
-
 ; 项目代码（由 build.sh --target win 构建）
 Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels"
 
 ; OCR Python 离线包
 Source: "dist\ocr-wheels\*"; DestDir: "{app}\ocr-wheels"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\ocr-wheels'))
+Source: "dist\python-installer.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "dist\laragon-wamp.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; 部署脚本（从 dist/ 取，已由 build.sh 转换为 GBK + CRLF，cmd.exe 可正确解析）
 ; 注意：必须先运行 build.sh --target win 才能编译此安装包
