@@ -69,6 +69,8 @@ $conf->obfuscate_variable_name_ignore = [
 ];
 
 // 不处理的目录（相对于源根目录 app/）
+// 注意：t_ignore 仅支持目录名，不支持单文件路径
 $conf->t_ignore = [
     'Console/Commands',   // Artisan 命令签名依赖字符串
+    'Http',               // Kernel.php 和 Middleware 中 use X as Y 别名被混淆后类找不到
 ];
