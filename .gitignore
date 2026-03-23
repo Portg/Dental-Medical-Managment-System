@@ -21,3 +21,4 @@ __pycache__/
 deploy/.cache/
 deploy/dist/
 deploy/output/
+.worktrees/
