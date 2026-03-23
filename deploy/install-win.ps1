@@ -82,6 +82,68 @@ function Install-BundledPython {
     return ($proc.ExitCode -eq 0)
 }
 
+function Install-LaragonRuntime {
+    param(
+        [string]$InstallerPath,
+        [string]$TargetDir
+    )
+
+    if (-not (Test-Path $InstallerPath)) {
+        return $false
+    }
+
+    $laragonTarget = Join-Path $TargetDir "laragon"
+    Write-Host ("        Installing Laragon from {0}" -f $InstallerPath)
+    $args = @(
+        '/SP-',
+        '/VERYSILENT',
+        '/SUPPRESSMSGBOXES',
+        '/NORESTART',
+        ('/DIR=' + $laragonTarget)
+    )
+
+    $proc = Start-Process -FilePath $InstallerPath -ArgumentList $args -Wait -PassThru
+    if ($proc.ExitCode -ne 0) {
+        return $false
+    }
+
+    return (Test-Path (Join-Path $laragonTarget 'bin'))
+}
+
+function Set-IniValue {
+    param(
+        [string]$Path,
+        [string]$Key,
+        [string]$Value
+    )
+
+    $lines = @()
+    if (Test-Path $Path) {
+        $lines = @(Get-Content -Path $Path -ErrorAction SilentlyContinue)
+    }
+
+    $updated = New-Object System.Collections.Generic.List[string]
+    $pattern = '^\s*' + [Regex]::Escape($Key) + '\s*='
+    $replaced = $false
+
+    foreach ($line in $lines) {
+        if ($line -match $pattern) {
+            if (-not $replaced) {
+                $updated.Add($Key + '=' + $Value)
+                $replaced = $true
+            }
+        } else {
+            $updated.Add($line)
+        }
+    }
+
+    if (-not $replaced) {
+        $updated.Add($Key + '=' + $Value)
+    }
+
+    [System.IO.File]::WriteAllLines($Path, $updated, [System.Text.UTF8Encoding]::new($false))
+}
+
 function Get-FirstDirectoryMatch {
     param(
         [string]$BasePath,
@@ -258,6 +320,36 @@ function Get-LastLogLines {
     return ($blocks -join ([Environment]::NewLine + [Environment]::NewLine))
 }
 
+function Get-PortOccupancyDetails {
+    param([int]$Port)
+
+    $details = New-Object System.Collections.Generic.List[string]
+
+    try {
+        $netstatLines = & netstat -ano -p tcp 2>$null | Select-String (":{0}\s" -f $Port)
+        foreach ($match in $netstatLines) {
+            $line = ($match.ToString() -replace '\s+', ' ').Trim()
+            if (-not $line) {
+                continue
+            }
+
+            $details.Add($line)
+            $parts = $line -split ' '
+            $pid = $parts[-1]
+            if ($pid -match '^\d+$') {
+                try {
+                    $proc = Get-Process -Id ([int]$pid) -ErrorAction SilentlyContinue
+                    if ($proc) {
+                        $details.Add(("PID {0}: {1}" -f $pid, $proc.ProcessName))
+                    }
+                } catch {}
+            }
+        }
+    } catch {}
+
+    return ($details | Select-Object -Unique) -join [Environment]::NewLine
+}
+
 function Ensure-Admin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
@@ -330,6 +422,7 @@ $LARAGON_DIR = Join-Path $INSTALL_DIR "laragon"
 $PROJECT_DIR = Join-Path $LARAGON_DIR "www\dental"
 $NGINX_CONF_DIR = Join-Path $LARAGON_DIR "etc\nginx\sites-enabled"
 $HELPER_DIR = Join-Path $INSTALL_DIR "batch-helpers"
+$LARAGON_INSTALLER = Join-Path $INSTALL_DIR "laragon-wamp.exe"
 
 Write-Host ""
 Write-Host "+=========================================================+"
@@ -380,7 +473,14 @@ try {
     $script:Step++
     Write-Section "Detect Laragon runtime"
     if (-not (Test-Path (Join-Path $LARAGON_DIR "bin"))) {
-        Fail-Step "Laragon directory not found: $LARAGON_DIR\bin"
+        if (Test-Path $LARAGON_INSTALLER) {
+            if (-not (Install-LaragonRuntime -InstallerPath $LARAGON_INSTALLER -TargetDir $INSTALL_DIR)) {
+                Fail-Step "Laragon installation failed. Please verify laragon-wamp.exe can be installed silently on the target machine."
+            }
+            Write-Host ("        Laragon installed ....... {0}" -f $LARAGON_DIR)
+        } else {
+            Fail-Step "Laragon directory not found: $LARAGON_DIR\bin"
+        }
     }
 
     $phpBase = Join-Path $LARAGON_DIR "bin\php"
@@ -491,6 +591,9 @@ try {
     & $MYSQL_EXE @rootConnArgs -e "SELECT 1" > $null 2>&1
     if ($LASTEXITCODE -ne 0) {
         if (-not (Test-Path $MYSQLD_EXE)) { Fail-Step "mysqld.exe not found." }
+        $MYSQL_CONSOLE_LOG = Join-Path $LARAGON_DIR "data\mysql-console.log"
+        $MYSQL_STDERR_LOG  = Join-Path $LARAGON_DIR "data\mysql-stderr.log"
+        $MYSQL_DATA_ROOT = Join-Path $LARAGON_DIR "data"
 
         # 检测并终止占用目标端口的残留 mysqld 进程（覆盖安装时常见）
         $portInUse = $false
@@ -508,26 +611,35 @@ try {
             try {
                 $stillInUse = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners() |
                     Where-Object { $_.Port -eq [int]$DB_PORT }
-                if ($stillInUse) { Fail-Step ("Port {0} is still occupied after stopping mysqld. Please stop the conflicting service manually and retry." -f $DB_PORT) }
+                if ($stillInUse) {
+                    $portDetails = Get-PortOccupancyDetails -Port ([int]$DB_PORT)
+                    if ($portDetails) {
+                        Fail-Step (("Port {0} is still occupied after stopping mysqld. Please stop the conflicting service manually and retry." -f $DB_PORT) + [Environment]::NewLine + $portDetails)
+                    }
+                    Fail-Step ("Port {0} is still occupied after stopping mysqld. Please stop the conflicting service manually and retry." -f $DB_PORT)
+                }
             } catch {}
             Write-Host "        Previous mysqld stopped"
         }
 
         $mysqlIni = Join-Path $LARAGON_DIR "etc\mysql\my.ini"
+        if (-not (Test-Path $MYSQL_DATA_ROOT)) {
+            New-Item -ItemType Directory -Path $MYSQL_DATA_ROOT -Force | Out-Null
+        }
         if (-not (Test-Path $MYSQL_DATA_DIR)) {
             New-Item -ItemType Directory -Path $MYSQL_DATA_DIR -Force | Out-Null
         }
+
+        $mysqlBaseDirNormalized = $mysqlDir.Replace('\', '/')
+        $mysqlDataDirNormalized = $MYSQL_DATA_DIR.Replace('\', '/')
+        $mysqlErrorLogNormalized = $MYSQL_ERROR_LOG.Replace('\', '/')
+        $dbPortString = [string]$DB_PORT
+
         if (Test-Path $mysqlIni) {
-            $mysqlIniLines = @(Get-Content $mysqlIni -ErrorAction SilentlyContinue)
-            if (-not ($mysqlIniLines | Select-String '^\s*basedir\s*=' -Quiet)) {
-                Add-Content -Path $mysqlIni -Value ("basedir=" + $mysqlDir.Replace('\', '/'))
-            }
-            if (-not ($mysqlIniLines | Select-String '^\s*datadir\s*=' -Quiet)) {
-                Add-Content -Path $mysqlIni -Value ("datadir=" + $MYSQL_DATA_DIR.Replace('\', '/'))
-            }
-            if (-not ($mysqlIniLines | Select-String '^\s*log-error\s*=' -Quiet)) {
-                Add-Content -Path $mysqlIni -Value ("log-error=" + $MYSQL_ERROR_LOG.Replace('\', '/'))
-            }
+            Set-IniValue -Path $mysqlIni -Key 'basedir' -Value $mysqlBaseDirNormalized
+            Set-IniValue -Path $mysqlIni -Key 'datadir' -Value $mysqlDataDirNormalized
+            Set-IniValue -Path $mysqlIni -Key 'log-error' -Value $mysqlErrorLogNormalized
+            Set-IniValue -Path $mysqlIni -Key 'port' -Value $dbPortString
         }
 
         $dataFiles = @(Get-ChildItem -Path $MYSQL_DATA_DIR -Force -ErrorAction SilentlyContinue)
@@ -535,10 +647,7 @@ try {
             Write-Host "        Initializing MySQL data directory..."
             & $MYSQLD_EXE "--defaults-file=$mysqlIni" "--basedir=$mysqlDir" "--datadir=$MYSQL_DATA_DIR" --initialize-insecure > $null 2>&1
             if ($LASTEXITCODE -ne 0) {
-                $initLog = $null
-                if (Test-Path $MYSQL_ERROR_LOG) {
-                    $initLog = (Get-Content $MYSQL_ERROR_LOG | Select-Object -Last 20) -join [Environment]::NewLine
-                }
+                $initLog = Get-LastLogLines -Paths @($MYSQL_ERROR_LOG, $MYSQL_CONSOLE_LOG)
                 if ($initLog) {
                     Fail-Step ("MySQL data directory initialization failed." + [Environment]::NewLine + $initLog)
                 }
@@ -553,11 +662,35 @@ try {
         $mysqlArgs += "--basedir=$mysqlDir"
         $mysqlArgs += "--datadir=$MYSQL_DATA_DIR"
         $mysqlArgs += "--console"
-        Start-Process -FilePath $MYSQLD_EXE -ArgumentList $mysqlArgs -WindowStyle Hidden | Out-Null
+        if (Test-Path $MYSQL_CONSOLE_LOG) {
+            Remove-Item $MYSQL_CONSOLE_LOG -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $MYSQL_STDERR_LOG) {
+            Remove-Item $MYSQL_STDERR_LOG -Force -ErrorAction SilentlyContinue
+        }
+        $mysqldProc = Start-Process -FilePath $MYSQLD_EXE -ArgumentList $mysqlArgs -RedirectStandardOutput $MYSQL_CONSOLE_LOG -RedirectStandardError $MYSQL_STDERR_LOG -WindowStyle Hidden -PassThru
         if (-not (Wait-MySqlReady -MySqlExe $MYSQL_EXE -Args $rootConnArgs -TimeoutSeconds 60)) {
-            $startupLog = $null
-            if (Test-Path $MYSQL_ERROR_LOG) {
-                $startupLog = (Get-Content $MYSQL_ERROR_LOG | Select-Object -Last 20) -join [Environment]::NewLine
+            $startupLog = Get-LastLogLines -Paths @($MYSQL_ERROR_LOG, $MYSQL_CONSOLE_LOG, $MYSQL_STDERR_LOG)
+            $portDetails = Get-PortOccupancyDetails -Port ([int]$DB_PORT)
+            if ($mysqldProc) {
+                try {
+                    $mysqldProc.Refresh()
+                } catch {}
+            }
+
+            if ($mysqldProc -and $mysqldProc.HasExited) {
+                $processMessage = "MySQL process exited immediately."
+                try {
+                    $processMessage += (" ExitCode=" + $mysqldProc.ExitCode)
+                } catch {}
+                if ($startupLog) {
+                    Fail-Step ($processMessage + [Environment]::NewLine + $startupLog)
+                }
+                Fail-Step $processMessage
+            }
+
+            if ($portDetails) {
+                $startupLog = ($startupLog, $portDetails | Where-Object { $_ }) -join [Environment]::NewLine
             }
             if ($startupLog) {
                 Fail-Step ("MySQL startup timed out." + [Environment]::NewLine + $startupLog)
