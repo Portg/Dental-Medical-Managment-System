@@ -515,24 +515,41 @@ class InvoiceService
     public function getServiceCategoryTree(): array
     {
         return Cache::remember('billing_service_category_tree', 360 * 60, function () {
-            $services = MedicalService::where('is_active', true)
-                ->whereNull('deleted_at')
-                ->orderBy('category')
-                ->orderBy('name')
-                ->get(['id', 'name', 'unit', 'price', 'category']);
+            $noCategory = __('invoices.select_category');
+
+            $services = DB::table('medical_services')
+                ->leftJoin('service_categories', 'service_categories.id', '=', 'medical_services.category_id')
+                ->where('medical_services.is_active', true)
+                ->whereNull('medical_services.deleted_at')
+                ->orderByRaw('COALESCE(service_categories.sort_order, 9999)')
+                ->orderBy('service_categories.name')
+                ->orderBy('medical_services.sort_order')
+                ->orderBy('medical_services.name')
+                ->select([
+                    'medical_services.id',
+                    'medical_services.name',
+                    'medical_services.unit',
+                    'medical_services.price',
+                    'medical_services.is_discountable',
+                    'medical_services.is_favorite',
+                    DB::raw("COALESCE(service_categories.name, '$noCategory') as category_label"),
+                ])
+                ->get();
 
             $tree = [];
             foreach ($services as $svc) {
-                $cat = $svc->category ?: __('invoices.select_category');
+                $cat = $svc->category_label;
                 if (!isset($tree[$cat])) {
                     $tree[$cat] = [];
                 }
                 $tree[$cat][] = [
-                    'id'       => $svc->id,
-                    'name'     => $svc->name,
-                    'unit'     => $svc->unit ?: '次',
-                    'price'    => (string) $svc->price,
-                    'category' => $cat,
+                    'id'              => $svc->id,
+                    'name'            => $svc->name,
+                    'unit'            => $svc->unit ?: '次',
+                    'price'           => (string) $svc->price,
+                    'category'        => $cat,
+                    'is_discountable' => (bool) $svc->is_discountable,
+                    'is_favorite'     => (bool) $svc->is_favorite,
                 ];
             }
 
