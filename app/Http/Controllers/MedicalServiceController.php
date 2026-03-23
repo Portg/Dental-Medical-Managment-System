@@ -27,12 +27,18 @@ class MedicalServiceController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->medicalServiceService->getServiceList($request->search);
+            $data = $this->medicalServiceService->getServiceList(
+                $request->search,
+                $request->category_id ? (int) $request->category_id : null
+            );
 
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('price', function ($row) {
                     return number_format($row->price);
+                })
+                ->addColumn('category_name', function ($row) {
+                    return $row->category_name ?? '';
                 })
                 ->addColumn('addedBy', function ($row) {
                     return $row->surname;
@@ -94,11 +100,21 @@ class MedicalServiceController extends Controller
     public function store(Request $request)
     {
         Validator::make($request->all(), [
-            'name' => 'required',
-            'price' => 'required'
+            'name'            => 'required|string|max:255',
+            'price'           => 'required|numeric|min:0',
+            'unit'            => 'nullable|string|max:20',
+            'description'     => 'nullable|string|max:500',
+            'category_id'     => 'nullable|integer|exists:service_categories,id',
+            'is_active'       => 'boolean',
+            'is_discountable' => 'boolean',
+            'is_favorite'     => 'boolean',
+            'sort_order'      => 'integer|min:0',
         ])->validate();
 
-        $status = $this->medicalServiceService->createService($request->only(['name', 'price']));
+        $status = $this->medicalServiceService->createService($request->only([
+            'name', 'price', 'unit', 'description', 'category_id',
+            'is_active', 'is_discountable', 'is_favorite', 'sort_order',
+        ]));
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_added_successfully'), 'status' => true]);
         }
@@ -137,11 +153,21 @@ class MedicalServiceController extends Controller
     public function update(Request $request, $id)
     {
         Validator::make($request->all(), [
-            'name' => 'required',
-            'price' => 'required'
+            'name'            => 'required|string|max:255',
+            'price'           => 'required|numeric|min:0',
+            'unit'            => 'nullable|string|max:20',
+            'description'     => 'nullable|string|max:500',
+            'category_id'     => 'nullable|integer|exists:service_categories,id',
+            'is_active'       => 'boolean',
+            'is_discountable' => 'boolean',
+            'is_favorite'     => 'boolean',
+            'sort_order'      => 'integer|min:0',
         ])->validate();
 
-        $status = $this->medicalServiceService->updateService((int) $id, $request->only(['name', 'price']));
+        $status = $this->medicalServiceService->updateService((int) $id, $request->only([
+            'name', 'price', 'unit', 'description', 'category_id',
+            'is_active', 'is_discountable', 'is_favorite', 'sort_order',
+        ]));
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_updated_successfully'), 'status' => true]);
         }
@@ -161,5 +187,22 @@ class MedicalServiceController extends Controller
             return response()->json(['message' => __('clinical_services.clinical_services_deleted_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
+    }
+
+    /**
+     * 批量改价接口。
+     */
+    public function batchUpdatePrice(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $v = Validator::make($request->all(), [
+            'mode'        => 'required|in:percent,fixed',
+            'value'       => 'required|numeric',
+            'category_id' => 'nullable|integer|exists:service_categories,id',
+        ]);
+        if ($v->fails()) {
+            return response()->json(['status' => 0, 'message' => $v->errors()->first()]);
+        }
+        $count = $this->medicalServiceService->batchUpdatePrice($request->only(['mode', 'value', 'category_id']));
+        return response()->json(['status' => 1, 'message' => "已更新 {$count} 条记录"]);
     }
 }
