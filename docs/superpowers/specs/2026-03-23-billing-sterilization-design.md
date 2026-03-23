@@ -279,7 +279,7 @@ CSS 文件：`public/css/sterilization.css`
 | title_key | `menu.clinic_affairs` |
 | icon | `icon-layers` |
 | sort_order | 35（插在诊疗中心=30 和运营中心=40 之间） |
-| 可见角色 | SuperAdmin, Admin, Nurse |
+| 可见角色 | SuperAdmin, Admin, Nurse, Doctor |
 
 ### 新增二级菜单：「消毒管理」
 
@@ -288,8 +288,8 @@ CSS 文件：`public/css/sterilization.css`
 | parent | 诊所事务 |
 | title_key | `menu.sterilization_management` |
 | url | `sterilization` |
-| permission | `manage-sterilization`（新增权限） |
-| 可见角色 | SuperAdmin, Admin, Nurse |
+| permission | `view-sterilization`（查看权限，医生持有） |
+| 可见角色 | SuperAdmin, Admin, Nurse, Doctor |
 
 ### i18n 新增键
 
@@ -319,9 +319,19 @@ CSS 文件：`public/css/sterilization.css`
 
 ## 八、权限设计
 
+### 消毒管理权限（拆分为两级）
+
+| 权限 slug | 说明 | 默认角色 | 可操作内容 |
+|-----------|------|---------|-----------|
+| `view-sterilization` | 查看灭菌记录 + 登记使用 | SuperAdmin, Admin, Nurse, **Doctor** | 查看记录列表、查看器械包、登记使用（关联到自己的预约） |
+| `manage-sterilization` | 管理灭菌记录与器械包 | SuperAdmin, Admin, Nurse | 新增/编辑/删除灭菌记录、管理器械包台账、导出打印 |
+
+> **医生权限说明**：医生持有 `view-sterilization`，可在消毒管理页查看有效批次并点击「登记使用」将器械包关联到自己的诊疗预约；但不能新增灭菌记录、不能编辑/删除已有记录、不能管理器械包台账。前端通过 `@can('manage-sterilization')` 控制按钮显示。
+
+### 收费项目权限
+
 | 权限 slug | 说明 | 默认角色 |
 |-----------|------|---------|
-| `manage-sterilization` | 消毒管理（增删改查） | SuperAdmin, Admin, Nurse |
 | `manage-service-categories` | 收费大类管理 | SuperAdmin, Admin |
 | `manage-service-packages` | 收费套餐管理 | SuperAdmin, Admin |
 | `import-medical-services` | 批量导入收费项目 | SuperAdmin, Admin |
