@@ -37,7 +37,7 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['daily','slack'],
+            'channels' => array_filter(['daily', env('LOG_SLACK_WEBHOOK_URL') ? 'slack' : null]),
             'ignore_exceptions' => false,
         ],
 
