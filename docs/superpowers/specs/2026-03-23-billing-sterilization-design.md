@@ -324,9 +324,9 @@ CSS 文件：`public/css/sterilization.css`
 | 权限 slug | 说明 | 默认角色 | 可操作内容 |
 |-----------|------|---------|-----------|
 | `view-sterilization` | 查看灭菌记录 + 登记使用 | SuperAdmin, Admin, Nurse, **Doctor** | 查看记录列表、查看器械包、登记使用（关联到自己的预约） |
-| `manage-sterilization` | 管理灭菌记录与器械包 | SuperAdmin, Admin, Nurse | 新增/编辑/删除灭菌记录、管理器械包台账、导出打印 |
+| `manage-sterilization` | 管理灭菌记录与器械包 | SuperAdmin, Admin, Nurse, **Doctor** | 新增/编辑/删除灭菌记录、管理器械包台账、导出打印 |
 
-> **医生权限说明**：医生持有 `view-sterilization`，可在消毒管理页查看有效批次并点击「登记使用」将器械包关联到自己的诊疗预约；但不能新增灭菌记录、不能编辑/删除已有记录、不能管理器械包台账。前端通过 `@can('manage-sterilization')` 控制按钮显示。
+> **医生权限说明**：医生同时持有 `view-sterilization` 和 `manage-sterilization`，兼顾小诊所无专职护士的场景，医生可独立完成灭菌登记和器械包维护全流程。有护士的诊所中，护士负责维护灭菌记录，医生负责登记使用，职责自然分工。前端通过 `@can('manage-sterilization')` 控制新增/编辑/删除按钮显示。
 
 ### 收费项目权限
 
