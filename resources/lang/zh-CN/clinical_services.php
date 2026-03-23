@@ -13,4 +13,40 @@ return [
     'clinical_services_updated_successfully' => '项目更新成功',
     'clinical_services_deleted_successfully' => '项目删除成功',
     'delete_confirm_message' => '您将无法恢复此项目！',
+
+    // 大类管理
+    'service_categories'            => '收费大类',
+    'category_name'                 => '大类名称',
+    'category_sort_order'           => '排序',
+    'category_is_active'            => '启用',
+    'category_created_successfully' => '大类创建成功',
+    'category_updated_successfully' => '大类更新成功',
+    'category_deleted_successfully' => '大类删除成功',
+    'category_name_duplicate'       => '大类名称已存在',
+
+    // 套餐管理
+    'service_packages'              => '收费套餐',
+    'package_name'                  => '套餐名称',
+    'package_total_price'           => '套餐总价',
+    'package_description'           => '套餐说明',
+    'package_items'                 => '套餐明细',
+    'package_item_qty'              => '数量',
+    'package_item_price'            => '套餐内单价',
+    'package_created_successfully'  => '套餐创建成功',
+    'package_updated_successfully'  => '套餐更新成功',
+    'package_deleted_successfully'  => '套餐删除成功',
+
+    // 批量改价
+    'batch_update_price'            => '批量改价',
+    'batch_mode_percent'            => '按百分比调整',
+    'batch_mode_fixed'              => '按固定金额调整',
+    'batch_value'                   => '调整值',
+    'batch_scope_all'               => '全部项目',
+    'batch_scope_category'          => '仅当前大类',
+
+    // 项目字段标签
+    'is_discountable'               => '允许打折',
+    'is_favorite'                   => '常用项目',
+    'unit'                          => '单位',
+    'description'                   => '说明',
 ];

@@ -13,4 +13,40 @@ return [
     'clinical_services_updated_successfully' => 'Service has been updated successfully',
     'clinical_services_deleted_successfully' => 'Service has been deleted successfully',
     'delete_confirm_message' => 'Your will not be able to recover this Procedures!',
+
+    // Categories
+    'service_categories'            => 'Service Categories',
+    'category_name'                 => 'Category Name',
+    'category_sort_order'           => 'Sort Order',
+    'category_is_active'            => 'Active',
+    'category_created_successfully' => 'Category created successfully',
+    'category_updated_successfully' => 'Category updated successfully',
+    'category_deleted_successfully' => 'Category deleted successfully',
+    'category_name_duplicate'       => 'Category name already exists',
+
+    // Packages
+    'service_packages'              => 'Service Packages',
+    'package_name'                  => 'Package Name',
+    'package_total_price'           => 'Total Price',
+    'package_description'           => 'Description',
+    'package_items'                 => 'Package Items',
+    'package_item_qty'              => 'Qty',
+    'package_item_price'            => 'Package Price',
+    'package_created_successfully'  => 'Package created successfully',
+    'package_updated_successfully'  => 'Package updated successfully',
+    'package_deleted_successfully'  => 'Package deleted successfully',
+
+    // Batch Price Update
+    'batch_update_price'            => 'Batch Price Update',
+    'batch_mode_percent'            => 'By Percentage',
+    'batch_mode_fixed'              => 'By Fixed Amount',
+    'batch_value'                   => 'Adjustment Value',
+    'batch_scope_all'               => 'All Items',
+    'batch_scope_category'          => 'Current Category Only',
+
+    // Field Labels
+    'is_discountable'               => 'Discountable',
+    'is_favorite'                   => 'Favorite',
+    'unit'                          => 'Unit',
+    'description'                   => 'Description',
 ];
