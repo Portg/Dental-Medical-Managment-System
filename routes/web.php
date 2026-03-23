@@ -648,4 +648,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('ocr-recognize', 'OcrRecognizeController@index');
     Route::post('ocr-recognize/recognize', 'OcrRecognizeController@recognize');
     Route::post('ocr-recognize/create', 'OcrRecognizeController@createFromOcr');
+
+    // Service Categories (admin)
+    Route::get('admin/service-categories', 'ServiceCategoryController@index')->name('admin.service-categories.index');
+    Route::post('admin/service-categories/reorder', 'ServiceCategoryController@reorder')->name('admin.service-categories.reorder');
+    Route::post('admin/service-categories', 'ServiceCategoryController@store')->name('admin.service-categories.store');
+    Route::put('admin/service-categories/{id}', 'ServiceCategoryController@update')->name('admin.service-categories.update');
+    Route::delete('admin/service-categories/{id}', 'ServiceCategoryController@destroy')->name('admin.service-categories.destroy');
 });
