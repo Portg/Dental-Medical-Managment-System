@@ -99,6 +99,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('medical-cards-items', 'MedicalCardItemController');
     Route::get('individual-medical-cards/{id}', 'MedicalCardController@individualMedicalCards');
 
+    Route::post('clinic-services/batch-update-price', 'MedicalServiceController@batchUpdatePrice')
+        ->name('clinic-services.batch-update-price');
     Route::resource('clinic-services', 'MedicalServiceController');
 
     Route::get('search-medical-service', 'MedicalServiceController@filterServices');
