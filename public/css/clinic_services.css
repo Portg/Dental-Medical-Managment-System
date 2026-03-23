@@ -1,0 +1,46 @@
+/* public/css/clinic_services.css */
+
+#category-tree-panel .list-group-item {
+    cursor: pointer;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+#category-tree-panel .list-group-item.active {
+    background-color: #3699ff;
+    border-color: #3699ff;
+    color: #fff;
+}
+
+#category-tree-panel .list-group-item.active i {
+    color: #fff !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+#packages-datatable .badge {
+    font-size: 12px;
+}
+
+/* Make the category panel scrollable if many categories */
+#category-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+/* Category list action icons */
+#category-list .list-group-item .pull-right {
+    display: none;
+}
+
+#category-list .list-group-item:hover .pull-right,
+#category-list .list-group-item.active .pull-right {
+    display: inline;
+}
+
+/* Package items table */
+#package-items-body td {
+    vertical-align: middle;
+}
