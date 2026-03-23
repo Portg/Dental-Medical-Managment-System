@@ -95,4 +95,34 @@ class ServiceCategoryTest extends TestCase
         $this->assertDatabaseHas('service_categories', ['id' => $b->id, 'sort_order' => 1]);
         $this->assertDatabaseHas('service_categories', ['id' => $a->id, 'sort_order' => 2]);
     }
+
+    /** @test */
+    public function it_can_update_a_service_category(): void
+    {
+        $category = ServiceCategory::create(['name' => '正畸', 'sort_order' => 1, 'is_active' => true]);
+
+        $this->actingAs($this->admin)
+            ->putJson("/admin/service-categories/{$category->id}", [
+                'name'       => '正畸修改',
+                'sort_order' => 2,
+                'is_active'  => true,
+            ])
+            ->assertOk()
+            ->assertJson(['status' => 1]);
+
+        $this->assertEquals('正畸修改', ServiceCategory::find($category->id)->name);
+    }
+
+    /** @test */
+    public function it_can_delete_a_service_category(): void
+    {
+        $category = ServiceCategory::create(['name' => '种植', 'sort_order' => 1, 'is_active' => true]);
+
+        $this->actingAs($this->admin)
+            ->deleteJson("/admin/service-categories/{$category->id}")
+            ->assertOk()
+            ->assertJson(['status' => 1]);
+
+        $this->assertSoftDeleted('service_categories', ['id' => $category->id]);
+    }
 }
