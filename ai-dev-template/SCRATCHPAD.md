@@ -47,6 +47,68 @@
 ```
 
 ---
+## [2026-03-23] Session: 收费项目管理升级 + 消毒登记功能 — 设计文档
+
+任务类型：设计 / Brainstorming  关联切片：收费项目、消毒管理
+
+### 本次完成了什么
+- 通过 Visual Companion（brainstorming skill）完成两个功能的完整设计对话
+- 修复 `public/.htaccess` 缺失导致 Apache POST /login 404 的 bug
+- 修复 `config/logging.php` slack 通道无条件加载问题
+- 修复 `deploy/yakpro-po.cnf` 混淆排除 Http 目录
+- 重构 `deploy/build.sh / build-installer.iss / build-README.md`：换用 laragon-wamp.exe 安装器流程
+- 增强 `deploy/install-win.ps1`：Laragon 安装、ini 编辑器、端口诊断
+- 写入设计文档：`docs/superpowers/specs/2026-03-23-billing-sterilization-design.md`
+- 经过 spec 审查循环修复 P0×3 / P1×5 / P2×2 共 10 个问题
+- 5 个分类 git commit 推送到远程
+
+### 关键决策
+
+| 决策内容 | 选择方案 | 原因摘要 |
+|----------|---------|---------|
+| 收费项目分类存储 | 新增 `service_categories` 表 + `category_id` FK | 旧 varchar `category` 字段无法支持大类排序/隐藏/拖拽，需规范化 |
+| 器械明细存储 | 新增 `sterilization_kit_instruments` 子表 | JSON 不支持独立增删改排序，用户明确要求不用 JSON |
+| 消毒导航位置 | 新增一级菜单「诊所事务」(sort_order=35) | 竞品用"事务"命名；为未来患者召回、诊室日志预留扩展位；语义独立于临床和财务 |
+| 冗余字段填充 | Service 层自动填充，前端不传入 | 避免前端传入导致数据不一致；历史记录在软删除后仍完整 |
+| 批次号并发安全 | `SELECT FOR UPDATE` 行锁 | 简单可靠；诊所并发量低，无需引入 Redis |
+| 消毒管理权限 | 拆分 view + manage 两级，Doctor 两级均持有 | 兼顾有护士（职责分工）和无护士（医生全流程）两种诊所场景 |
+| status 状态机 | 实时判断过期（不靠定时任务），使用后更新，软删除回滚 | 定时任务有延迟窗口，实时判断更准确；软删除支持撤销误录 |
+
+### AI 推理链（关键决策）
+
+决策：消毒导航位置
+1. 读取了 MenuItemsSeeder，发现现有 6 个一级菜单：今日工作/患者中心/诊疗中心/运营中心/数据中心/系统管理
+2. 注意到竞品（口腔云）用"事务→消毒"的路径，用户原始需求也引用了"事务"
+3. 考虑了：A) 挂在诊疗中心下（临床语义合适但臃肿）；B) 新增「诊所事务」；C) 挂在运营中心（财务语义不对）
+4. 方案A 问题：诊疗中心已有4个子组，再加略显拥挤，且无法为未来「患者召回」等功能预留落点
+5. 选择方案B，sort_order=35 插在诊疗和运营之间，名称用「诊所事务」比「事务管理」更具体
+
+决策：is_favorite 语义
+1. 读取了 medical_services 现有字段，发现已有 `category` varchar
+2. 注意到用户需求"常用项目"没有明确说是个人还是全局
+3. 考虑了：全局布尔字段 vs 个人收藏关联表（user_id+service_id）
+4. 个人收藏方案需要新增关联表，增加复杂度；诊所场景下"常用"通常是诊所级别的运营决策
+5. 选择全局布尔字段，Anti-Goals 明确标注不做个人收藏
+
+### 放弃的方案
+
+| 方案描述 | 放弃原因 |
+|----------|---------|
+| 消毒使用记录不加 deleted_at | 医疗合规场景需要支持撤销误录，物理删除会断追溯链 |
+| 批次号用 Redis INCR | 诊所系统无 Redis 依赖，DB 行锁已足够 |
+| `manage-sterilization` 不含 Doctor | 无专职护士时医生需要承担全流程，权限设计要适配小诊所场景 |
+| `service-categories` 路由不加前缀 | 会与 `billing/service-categories/{patientId}` 产生命名冲突 |
+
+### 遗留问题（下次会话继续）
+- [ ] 调用 `writing-plans` 生成两个功能的详细实现计划（用户确认 spec 后进行）
+- [ ] 实现迁移文件（含旧 category 字段数据回填逻辑）
+- [ ] `InvoiceService::getServiceCategoryTree()` 改为基于 `category_id` join 查询
+- [ ] `billing/service-categories/{patientId}` 路由与新 `admin/service-categories` 联调
+
+### Spec 变更建议
+- 文件：`docs/superpowers/specs/2026-03-23-billing-sterilization-design.md`  内容：已完成，包含数据模型/路由/视图/导航/权限/实现顺序
+
+---
 ## [2026-03-16] Session: Blade Tier3 全量清理 + AG 修复 + 功能增强
 
 ### 完成内容
