@@ -40,6 +40,7 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'view-chairs', 'create-chairs', 'edit-chairs', 'delete-chairs',
                 'view-reports', 'export-reports', 'export-patients', 'view-sensitive-data',
                 'manage-medical-cases', 'manage-treatments', 'manage-medical-services',
+                'manage-service-categories', 'manage-service-packages', 'import-medical-services',
                 'manage-quotations', 'manage-refunds', 'manage-doctor-claims', 'manage-expenses',
                 'manage-accounting', 'manage-inventory', 'manage-labs',
                 'manage-payroll', 'manage-leave', 'manage-employees', 'manage-holidays',

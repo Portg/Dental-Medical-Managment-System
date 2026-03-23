@@ -59,6 +59,9 @@ class PermissionsTableSeeder extends Seeder
             ['name' => '管理病例', 'slug' => 'manage-medical-cases', 'module' => '医疗管理', 'description' => '管理病例记录'],
             ['name' => '管理治疗', 'slug' => 'manage-treatments', 'module' => '医疗管理', 'description' => '管理治疗方案与处方'],
             ['name' => '管理医疗服务', 'slug' => 'manage-medical-services', 'module' => '医疗管理', 'description' => '管理医疗服务项目与模板'],
+            ['name' => '管理收费大类',  'slug' => 'manage-service-categories', 'module' => '医疗管理', 'description' => '管理收费项目大类分类'],
+            ['name' => '管理收费套餐',  'slug' => 'manage-service-packages',   'module' => '医疗管理', 'description' => '管理收费套餐与明细'],
+            ['name' => '导入收费项目',  'slug' => 'import-medical-services',   'module' => '医疗管理', 'description' => '批量 Excel 导入收费项目'],
 
             // 财务管理
             ['name' => '管理报价单', 'slug' => 'manage-quotations', 'module' => '财务管理', 'description' => '管理报价单'],
