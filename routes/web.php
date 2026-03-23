@@ -655,4 +655,10 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('admin/service-categories', 'ServiceCategoryController@store')->name('admin.service-categories.store');
     Route::put('admin/service-categories/{id}', 'ServiceCategoryController@update')->name('admin.service-categories.update');
     Route::delete('admin/service-categories/{id}', 'ServiceCategoryController@destroy')->name('admin.service-categories.destroy');
+
+    // Service Packages (admin)
+    Route::get('admin/service-packages', 'ServicePackageController@index')->name('admin.service-packages.index');
+    Route::post('admin/service-packages', 'ServicePackageController@store')->name('admin.service-packages.store');
+    Route::put('admin/service-packages/{id}', 'ServicePackageController@update')->name('admin.service-packages.update');
+    Route::delete('admin/service-packages/{id}', 'ServicePackageController@destroy')->name('admin.service-packages.destroy');
 });
