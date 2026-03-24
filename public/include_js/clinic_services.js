@@ -30,38 +30,38 @@ function loadCategories() {
         $list.find('li[data-id!="0"]').remove();
 
         $.each(res.data, function (i, cat) {
-            var $li = $('<li class="list-group-item" style="cursor:pointer;"></li>');
+            var $li = $('<li></li>');
             $li.attr('data-id', cat.id);
             $li.attr('data-name', cat.name);
             $li.attr('data-sort-order', cat.sort_order || 0);
             $li.attr('data-is-active', cat.is_active ? 1 : 0);
 
-            var nameSpan = $('<span></span>').text(cat.name);
-            $li.append(nameSpan);
+            var $a = $('<a href="#"></a>').text(cat.name);
 
-            // Action icons (only visible if user has permission — rendered from server)
-            var $actions = $('<span class="pull-right"></span>');
-            $actions.append(
-                $('<a href="#" class="text-primary" style="margin-right:4px;" title="编辑"><i class="fa fa-pencil"></i></a>')
+            // Inline edit/delete icons (visible on hover via CSS)
+            var $icons = $('<span class="cat-pill-actions"></span>');
+            $icons.append(
+                $('<i class="fa fa-pencil" title="编辑"></i>')
                     .on('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
                         editCategory(cat.id, cat.name, cat.sort_order || 0, cat.is_active ? 1 : 0);
                     })
             );
-            $actions.append(
-                $('<a href="#" class="text-danger" title="删除"><i class="fa fa-trash"></i></a>')
+            $icons.append(
+                $('<i class="fa fa-trash" title="删除"></i>')
                     .on('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
                         deleteCategory(cat.id);
                     })
             );
-            $li.append($actions);
+            $a.append($icons);
+            $li.append($a);
             $list.append($li);
         });
 
-        // Click handler on category items
+        // Click handler — select category on pill click
         $list.off('click', 'li').on('click', 'li', function () {
             $list.find('li').removeClass('active');
             $(this).addClass('active');
