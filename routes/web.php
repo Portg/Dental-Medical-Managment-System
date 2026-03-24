@@ -105,7 +105,6 @@ Route::group(['middleware' => ['auth']], function () {
         ->name('clinic-services.export');
     Route::resource('clinic-services', 'MedicalServiceController');
 
-    Route::get('search-medical-service', 'MedicalServiceController@filterServices');
     Route::get('services-array', 'MedicalServiceController@servicesArray');
 
     // Discount Approval (PRD 4.1.2 BR-035) — must be before resource route
