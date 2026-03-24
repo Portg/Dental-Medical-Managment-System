@@ -515,46 +515,50 @@ class InvoiceService
     public function getServiceCategoryTree(): array
     {
         return Cache::remember('billing_service_category_tree', 360 * 60, function () {
-            $noCategory = __('invoices.select_category');
-
-            $services = DB::table('medical_services')
-                ->leftJoin('service_categories', 'service_categories.id', '=', 'medical_services.category_id')
-                ->where('medical_services.is_active', true)
-                ->whereNull('medical_services.deleted_at')
-                ->orderByRaw('COALESCE(service_categories.sort_order, 9999)')
-                ->orderBy('service_categories.name')
-                ->orderBy('medical_services.sort_order')
-                ->orderBy('medical_services.name')
-                ->select([
-                    'medical_services.id',
-                    'medical_services.name',
-                    'medical_services.unit',
-                    'medical_services.price',
-                    'medical_services.is_discountable',
-                    'medical_services.is_favorite',
-                    'service_categories.name as category_name',
-                ])
-                ->get();
-
-            $tree = [];
-            foreach ($services as $svc) {
-                $cat = $svc->category_name ?? $noCategory;
-                if (!isset($tree[$cat])) {
-                    $tree[$cat] = [];
-                }
-                $tree[$cat][] = [
-                    'id'              => $svc->id,
-                    'name'            => $svc->name,
-                    'unit'            => $svc->unit ?: '次',
-                    'price'           => (string) $svc->price,
-                    'category'        => $cat,
-                    'is_discountable' => (bool) $svc->is_discountable,
-                    'is_favorite'     => (bool) $svc->is_favorite,
-                ];
-            }
-
-            return $tree;
+            $rows = $this->fetchActiveServiceRows();
+            return $this->buildCategoryTree($rows);
         });
+    }
+
+    private function fetchActiveServiceRows(): \Illuminate\Support\Collection
+    {
+        return DB::table('medical_services')
+            ->leftJoin('service_categories', 'service_categories.id', '=', 'medical_services.category_id')
+            ->where('medical_services.is_active', true)
+            ->whereNull('medical_services.deleted_at')
+            ->orderByRaw('COALESCE(service_categories.sort_order, 9999)')
+            ->orderBy('service_categories.name')
+            ->orderBy('medical_services.sort_order')
+            ->orderBy('medical_services.name')
+            ->select([
+                'medical_services.id',
+                'medical_services.name',
+                'medical_services.unit',
+                'medical_services.price',
+                'medical_services.is_discountable',
+                'medical_services.is_favorite',
+                'service_categories.name as category_name',
+            ])
+            ->get();
+    }
+
+    private function buildCategoryTree(\Illuminate\Support\Collection $rows): array
+    {
+        $noCategory = __('invoices.select_category');
+        $tree = [];
+        foreach ($rows as $svc) {
+            $cat = $svc->category_name ?? $noCategory;
+            $tree[$cat][] = [
+                'id'              => $svc->id,
+                'name'            => $svc->name,
+                'unit'            => $svc->unit ?: '次',
+                'price'           => (string) $svc->price,
+                'category'        => $cat,
+                'is_discountable' => (bool) $svc->is_discountable,
+                'is_favorite'     => (bool) $svc->is_favorite,
+            ];
+        }
+        return $tree;
     }
 
     /**

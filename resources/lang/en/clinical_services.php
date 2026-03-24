@@ -59,6 +59,9 @@ return [
     'import_template_hint'          => 'Fill in the template format: name (required), price, unit, category columns',
     'select_file'                   => 'Select File',
     'start_import'                  => 'Start Import',
+    'import_success'                => 'Successfully imported :count records',
+    'import_failed_rows'            => 'Import failed: :rows',
+    'batch_update_success'          => 'Updated :count records',
 
     // Batch Price Update
     'batch_price_scope_hint'        => 'Will batch update prices of matching service items',

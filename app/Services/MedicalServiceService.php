@@ -148,6 +148,7 @@ class MedicalServiceService
         }
         $services = $query->get(['id', 'price']);
         $count = 0;
+        // @AiGenerated: bcmath precision chain — percent: price × (100+value)/100; fixed: price+value; floor at 0.00
         DB::transaction(function () use ($services, $data, &$count) {
             foreach ($services as $svc) {
                 $newPrice = $data['mode'] === 'percent'

@@ -59,6 +59,9 @@ return [
     'import_template_hint'          => '请按模板格式填写，name（必填）、price、unit、category 列',
     'select_file'                   => '选择文件',
     'start_import'                  => '开始导入',
+    'import_success'                => '成功导入 :count 条记录',
+    'import_failed_rows'            => '导入失败：:rows',
+    'batch_update_success'          => '已更新 :count 条记录',
 
     // 批量改价
     'batch_price_scope_hint'        => '将批量调整符合条件的收费项目价格',

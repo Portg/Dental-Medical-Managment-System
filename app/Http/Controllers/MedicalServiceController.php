@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\MedicalServiceService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -219,15 +220,16 @@ class MedicalServiceController extends Controller
 
             return response()->json([
                 'status'  => 1,
-                'message' => "成功导入 {$importer->importedCount} 条记录",
+                'message' => __('clinical_services.import_success', ['count' => $importer->importedCount]),
             ]);
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = collect($e->failures())->map(function ($f) {
                 return "第 {$f->row()} 行：" . implode('，', $f->errors());
             })->join('；');
-            return response()->json(['status' => 0, 'message' => "导入失败：{$failures}"]);
+            return response()->json(['status' => 0, 'message' => __('clinical_services.import_failed_rows', ['rows' => $failures])]);
         } catch (\Exception $e) {
-            return response()->json(['status' => 0, 'message' => '导入失败：' . $e->getMessage()]);
+            Log::error('Medical service import failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['status' => 0, 'message' => __('messages.error_occurred')]);
         }
     }
 
@@ -245,6 +247,6 @@ class MedicalServiceController extends Controller
             return response()->json(['status' => 0, 'message' => $v->errors()->first()]);
         }
         $count = $this->medicalServiceService->batchUpdatePrice($request->only(['mode', 'value', 'category_id']));
-        return response()->json(['status' => 1, 'message' => "已更新 {$count} 条记录"]);
+        return response()->json(['status' => 1, 'message' => __('clinical_services.batch_update_success', ['count' => $count])]);
     }
 }
