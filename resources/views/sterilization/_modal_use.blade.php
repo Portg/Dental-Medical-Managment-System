@@ -1,9 +1,9 @@
-<div class="modal fade" id="useModal" tabindex="-1">
+<div class="modal fade modal-form sterilization-modal" id="useModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{{ __('sterilization.log_use') }}</h5>
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">{{ __('sterilization.log_use') }}</h4>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="use-record-id">
@@ -33,7 +33,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('common.cancel') }}</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.cancel') }}</button>
                 <button type="button" class="btn btn-success" id="btn-confirm-use">确认登记</button>
             </div>
         </div>

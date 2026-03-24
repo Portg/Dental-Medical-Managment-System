@@ -2,6 +2,7 @@
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('css/list-page.css') }}?v={{ filemtime(public_path('css/list-page.css')) }}">
+<link rel="stylesheet" href="{{ asset('css/form-modal.css') }}?v={{ filemtime(public_path('css/form-modal.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/sterilization.css') }}">
 @endsection
 
