@@ -14,7 +14,7 @@ class MedicalServiceController extends Controller
     public function __construct(MedicalServiceService $medicalServiceService)
     {
         $this->medicalServiceService = $medicalServiceService;
-        $this->middleware('can:manage-medical-services');
+        $this->middleware('can:manage-medical-services')->except(['import']);
     }
 
     /**
@@ -213,13 +213,22 @@ class MedicalServiceController extends Controller
             return response()->json(['status' => 0, 'message' => $v->errors()->first()]);
         }
 
-        $importer = new \App\Imports\MedicalServicesImport();
-        \Maatwebsite\Excel\Facades\Excel::import($importer, $request->file('file'));
+        try {
+            $importer = new \App\Imports\MedicalServicesImport();
+            \Maatwebsite\Excel\Facades\Excel::import($importer, $request->file('file'));
 
-        return response()->json([
-            'status'  => 1,
-            'message' => "成功导入 {$importer->importedCount} 条记录",
-        ]);
+            return response()->json([
+                'status'  => 1,
+                'message' => "成功导入 {$importer->importedCount} 条记录",
+            ]);
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = collect($e->failures())->map(function ($f) {
+                return "第 {$f->row()} 行：" . implode('，', $f->errors());
+            })->join('；');
+            return response()->json(['status' => 0, 'message' => "导入失败：{$failures}"]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 0, 'message' => '导入失败：' . $e->getMessage()]);
+        }
     }
 
     /**
