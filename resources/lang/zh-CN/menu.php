@@ -304,4 +304,8 @@ return [
     'hr_admin' => '人事行政',
     'report_center' => '报表中心',
 
+    // 诊所事务（消毒管理模块）
+    'clinic_affairs'           => '诊所事务',
+    'sterilization_management' => '消毒管理',
+
 ];

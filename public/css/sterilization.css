@@ -1,0 +1,18 @@
+/* sterilization.css */
+
+/* 状态徽章颜色补充 */
+.badge-warning   { color: #856404; background-color: #fff3cd; }
+.badge-danger    { color: #721c24; background-color: #f8d7da; }
+.badge-success   { color: #155724; background-color: #d4edda; }
+.badge-secondary { color: #6c757d; background-color: #e9ecef; }
+
+/* 使用登记弹框：批次信息展示 */
+#use-record-info {
+    font-size: 13px;
+}
+
+/* 器械明细表格紧凑 */
+#instruments-table td {
+    vertical-align: middle;
+    padding: 4px 6px;
+}

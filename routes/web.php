@@ -668,4 +668,14 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('admin/service-packages', 'ServicePackageController@store')->name('admin.service-packages.store');
     Route::put('admin/service-packages/{id}', 'ServicePackageController@update')->name('admin.service-packages.update');
     Route::delete('admin/service-packages/{id}', 'ServicePackageController@destroy')->name('admin.service-packages.destroy');
+
+    // ── 消毒管理 ──────────────────────────────────────────────────────────
+    Route::get('sterilization/export', 'SterilizationController@export')->name('sterilization.export');
+    Route::get('sterilization/{id}/edit', 'SterilizationController@edit')->name('sterilization.edit');
+    Route::post('sterilization/{id}/use', 'SterilizationController@use')->name('sterilization.use');
+    Route::delete('sterilization-usages/{usageId}/revoke', 'SterilizationController@revokeUse')->name('sterilization.revoke-use');
+    Route::resource('sterilization', 'SterilizationController')->only(['index', 'store', 'update', 'destroy']);
+
+    Route::get('sterilization-kits/{id}/edit', 'SterilizationKitController@edit')->name('sterilization-kits.edit');
+    Route::resource('sterilization-kits', 'SterilizationKitController')->only(['index', 'store', 'update', 'destroy']);
 });

@@ -304,4 +304,8 @@ return [
     'hr_admin' => 'HR & Administration',
     'report_center' => 'Report Center',
 
+    // Clinic Affairs (Sterilization Module)
+    'clinic_affairs'           => 'Clinic Affairs',
+    'sterilization_management' => 'Sterilization',
+
 ];

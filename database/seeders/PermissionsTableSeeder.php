@@ -92,6 +92,10 @@ class PermissionsTableSeeder extends Seeder
             ['name' => '管理系统设置', 'slug' => 'manage-settings', 'module' => '系统设置', 'description' => '管理系统全局设置'],
             ['name' => '管理系统维护', 'slug' => 'manage-system-maintenance', 'module' => '系统设置', 'description' => '访问系统维护页面（备份、清理、日志）'],
             ['name' => '管理菜单', 'slug' => 'manage-menu-items', 'module' => '系统设置', 'description' => '管理菜单项与菜单结构'],
+
+            // 诊所事务
+            ['name' => '查看消毒记录', 'slug' => 'view-sterilization',   'module' => '诊所事务', 'description' => '查看灭菌记录和器械包列表，登记使用'],
+            ['name' => '管理消毒记录', 'slug' => 'manage-sterilization', 'module' => '诊所事务', 'description' => '新增/编辑/删除灭菌记录与器械包台账'],
         ];
 
         foreach ($permissions as $permission) {

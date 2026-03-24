@@ -44,6 +44,9 @@ class MenuItemsSeeder extends Seeder
         $clinicalCenter = $this->item(null, 'menu.clinical_center', null, 'icon-briefcase', null, 30, 'SADNR');
         $this->seedClinicalCenter($clinicalCenter);
 
+        $clinicAffairs = $this->item(null, 'menu.clinic_affairs', null, 'icon-layers', null, 35, 'SADN');
+        $this->seedClinicAffairs($clinicAffairs);
+
         $opsCenter = $this->item(null, 'menu.operations_center', null, 'icon-wallet', null, 40, 'SADNR');
         $this->seedOperationsCenter($opsCenter);
 
@@ -245,6 +248,16 @@ class MenuItemsSeeder extends Seeder
      * @param  array       $urlOverrides  角色专属 URL 覆盖，如 ['D' => 'doctor-claims']
      * @return int                        新建菜单项的 ID
      */
+    // ── 诊所事务 ───────────────────────────────────────────────────────────
+
+    private function seedClinicAffairs(int $parentId): void
+    {
+        $this->item($parentId, 'menu.sterilization_management', 'sterilization', 'icon-shield',
+            'view-sterilization', 10, 'SADN');
+    }
+
+    // ── Helper ─────────────────────────────────────────────────────────────
+
     private function item(
         ?int $parentId,
         string $titleKey,
