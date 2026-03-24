@@ -3,6 +3,14 @@
 return [
     'records_tab'     => '灭菌记录',
     'kits_tab'        => '器械包管理',
+    'records_export'  => '导出记录',
+    'kits_desc'       => '维护器械包编号、名称、器械数量与启停状态。',
+    'filter_kit'      => '器械包',
+    'filter_status'   => '状态',
+    'record_add_title' => '新增灭菌记录',
+    'record_edit_title' => '编辑灭菌记录',
+    'kit_add_title'    => '新增器械包',
+    'kit_edit_title'   => '编辑器械包',
 
     // 器械包字段
     'kit_no'          => '包号',

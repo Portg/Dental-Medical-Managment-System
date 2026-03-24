@@ -3,6 +3,14 @@
 return [
     'records_tab'     => 'Sterilization Records',
     'kits_tab'        => 'Instrument Kits',
+    'records_export'  => 'Export Records',
+    'kits_desc'       => 'Manage kit number, name, instrument count, and status.',
+    'filter_kit'      => 'Kit',
+    'filter_status'   => 'Status',
+    'record_add_title' => 'Add Sterilization Record',
+    'record_edit_title' => 'Edit Sterilization Record',
+    'kit_add_title'    => 'Add Instrument Kit',
+    'kit_edit_title'   => 'Edit Instrument Kit',
 
     // Kit fields
     'kit_no'          => 'Kit No.',

@@ -21,7 +21,10 @@ function initKitSelectOptions() {
     sterilizationKits.forEach(function (kit) {
         $sel.append(`<option value="${kit.id}">${kit.kit_no} - ${kit.name}</option>`);
     });
-    $sel.select2({ width: '100%' });
+    $sel.select2({
+        width: '100%',
+        dropdownParent: $('#recordModal'),
+    });
 }
 
 /* ── 2. 灭菌记录 DataTable ───────────────────────── */
@@ -110,7 +113,7 @@ function bindFilters() {
 function bindRecordModal() {
     $('#btn-add-record').click(function () {
         resetRecordModal();
-        $('#record-modal-title').text(LanguageManager.trans('common.add'));
+        $('#record-modal-title').text(LanguageManager.trans('sterilization.record_add_title'));
         $('#recordModal').modal('show');
     });
 
@@ -158,7 +161,7 @@ function editRecord(id) {
         $('#record-duration').val(data.duration_minutes);
         $('#record-sterilized-at').val(data.sterilized_at ? data.sterilized_at.replace(' ', 'T').slice(0, 16) : '');
         $('#record-notes').val(data.notes);
-        $('#record-modal-title').text(LanguageManager.trans('common.edit'));
+        $('#record-modal-title').text(LanguageManager.trans('sterilization.record_edit_title'));
         $('#recordModal').modal('show');
     });
 }
@@ -221,7 +224,7 @@ function logUse(recordId) {
 function bindKitModal() {
     $('#btn-add-kit').click(function () {
         resetKitModal();
-        $('#kit-modal-title').text(LanguageManager.trans('common.add'));
+        $('#kit-modal-title').text(LanguageManager.trans('sterilization.kit_add_title'));
         $('#kitModal').modal('show');
     });
 
@@ -284,7 +287,7 @@ function editKit(id) {
         (data.instruments || []).forEach(function (inst) {
             addInstrumentRow(inst.instrument_name, inst.quantity);
         });
-        $('#kit-modal-title').text(LanguageManager.trans('common.edit'));
+        $('#kit-modal-title').text(LanguageManager.trans('sterilization.kit_edit_title'));
         $('#kitModal').modal('show');
     });
 }

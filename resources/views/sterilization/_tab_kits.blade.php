@@ -1,7 +1,7 @@
 <div class="sterilization-section-header">
     <div>
         <div class="sterilization-section-title">{{ __('sterilization.kits_tab') }}</div>
-        <div class="sterilization-section-desc">维护器械包编号、名称、器械数量与启停状态。</div>
+        <div class="sterilization-section-desc">{{ __('sterilization.kits_desc') }}</div>
     </div>
     <div class="sterilization-tab-toolbar">
         @can('manage-sterilization')

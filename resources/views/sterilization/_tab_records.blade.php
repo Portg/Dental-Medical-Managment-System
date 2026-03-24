@@ -1,16 +1,16 @@
 <div class="filter-area-l2 sterilization-filter-panel">
     <div class="row filter-row">
         <div class="col-md-3">
-            <label class="filter-label">器械包</label>
-        <select class="form-control select2" id="filter-kit-id">
-            <option value="">{{ __('common.all') }}（器械包）</option>
-            @foreach($kits as $kit)
-            <option value="{{ $kit->id }}">{{ $kit->kit_no }} - {{ $kit->name }}</option>
-            @endforeach
-        </select>
+            <label class="filter-label">{{ __('sterilization.filter_kit') }}</label>
+            <select class="form-control select2" id="filter-kit-id">
+                <option value="">{{ __('common.all') }}（{{ __('sterilization.filter_kit') }}）</option>
+                @foreach($kits as $kit)
+                <option value="{{ $kit->id }}">{{ $kit->kit_no }} - {{ $kit->name }}</option>
+                @endforeach
+            </select>
         </div>
         <div class="col-md-2">
-            <label class="filter-label">状态</label>
+            <label class="filter-label">{{ __('sterilization.filter_status') }}</label>
             <select class="form-control" id="filter-status">
                 <option value="">{{ __('common.all') }}（状态）</option>
                 <option value="valid">{{ __('sterilization.status_valid') }}</option>
@@ -33,7 +33,7 @@
             <button class="btn btn-success ml-1" id="btn-add-record">{{ __('common.add') }}</button>
             <a class="btn btn-default sterilization-export-btn ml-1" href="{{ route('sterilization.export') }}">
                 <i class="fa fa-download"></i>
-                <span>{{ __('common.export') }}</span>
+                <span>{{ __('sterilization.records_export') }}</span>
             </a>
             @endcan
         </div>
