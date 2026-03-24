@@ -116,9 +116,9 @@ class MedicalServiceController extends Controller
             'is_active', 'is_discountable', 'is_favorite', 'sort_order',
         ]));
         if ($status) {
-            return response()->json(['message' => __('clinical_services.clinical_services_added_successfully'), 'status' => true]);
+            return response()->json(['message' => __('clinical_services.clinical_services_added_successfully'), 'status' => 1]);
         }
-        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => 0]);
     }
 
     /**
@@ -169,9 +169,9 @@ class MedicalServiceController extends Controller
             'is_active', 'is_discountable', 'is_favorite', 'sort_order',
         ]));
         if ($status) {
-            return response()->json(['message' => __('clinical_services.clinical_services_updated_successfully'), 'status' => true]);
+            return response()->json(['message' => __('clinical_services.clinical_services_updated_successfully'), 'status' => 1]);
         }
-        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => 0]);
     }
 
     /**
@@ -184,9 +184,9 @@ class MedicalServiceController extends Controller
     {
         $status = $this->medicalServiceService->deleteService((int) $id);
         if ($status) {
-            return response()->json(['message' => __('clinical_services.clinical_services_deleted_successfully'), 'status' => true]);
+            return response()->json(['message' => __('clinical_services.clinical_services_deleted_successfully'), 'status' => 1]);
         }
-        return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
+        return response()->json(['message' => __('messages.error_occurred'), 'status' => 0]);
     }
 
     /**

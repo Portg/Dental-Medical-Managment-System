@@ -532,13 +532,13 @@ class InvoiceService
                     'medical_services.price',
                     'medical_services.is_discountable',
                     'medical_services.is_favorite',
-                    DB::raw("COALESCE(service_categories.name, '$noCategory') as category_label"),
+                    'service_categories.name as category_name',
                 ])
                 ->get();
 
             $tree = [];
             foreach ($services as $svc) {
-                $cat = $svc->category_label;
+                $cat = $svc->category_name ?? $noCategory;
                 if (!isset($tree[$cat])) {
                     $tree[$cat] = [];
                 }

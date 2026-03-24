@@ -66,9 +66,17 @@ class MedicalServiceService
     /**
      * Get a single service for editing.
      */
-    public function getServiceForEdit(int $id): ?MedicalService
+    public function getServiceForEdit(int $id): ?object
     {
-        return MedicalService::where('id', $id)->first();
+        return DB::table('medical_services')
+            ->leftJoin('service_categories', 'service_categories.id', '=', 'medical_services.category_id')
+            ->where('medical_services.id', $id)
+            ->whereNull('medical_services.deleted_at')
+            ->select([
+                'medical_services.*',
+                'service_categories.name as category_name',
+            ])
+            ->first();
     }
 
     /**
@@ -140,16 +148,18 @@ class MedicalServiceService
         }
         $services = $query->get(['id', 'price']);
         $count = 0;
-        foreach ($services as $svc) {
-            $newPrice = $data['mode'] === 'percent'
-                ? bcmul((string) $svc->price, bcdiv((string)(100 + $data['value']), '100', 4), 2)
-                : bcadd((string) $svc->price, (string) $data['value'], 2);
-            if (bccomp($newPrice, '0', 2) < 0) {
-                $newPrice = '0.00';
+        DB::transaction(function () use ($services, $data, &$count) {
+            foreach ($services as $svc) {
+                $newPrice = $data['mode'] === 'percent'
+                    ? bcmul((string) $svc->price, bcdiv((string)(100 + $data['value']), '100', 4), 2)
+                    : bcadd((string) $svc->price, (string) $data['value'], 2);
+                if (bccomp($newPrice, '0', 2) < 0) {
+                    $newPrice = '0.00';
+                }
+                MedicalService::where('id', $svc->id)->update(['price' => $newPrice]);
+                $count++;
             }
-            MedicalService::where('id', $svc->id)->update(['price' => $newPrice]);
-            $count++;
-        }
+        });
         Cache::forget(self::CACHE_KEY_NAMES);
         Cache::forget('billing_service_category_tree');
         return $count;

@@ -45,8 +45,24 @@ return [
     'batch_scope_category'          => 'Current Category Only',
 
     // Field Labels
+    'name'                          => 'Service Name',
+    'is_active'                     => 'Status',
     'is_discountable'               => 'Discountable',
     'is_favorite'                   => 'Favorite',
     'unit'                          => 'Unit',
     'description'                   => 'Description',
+    'service_items'                 => 'Billing Items',
+    'add_item'                      => 'Add Item',
+
+    // Import
+    'download_import_template'      => 'Download Import Template',
+    'import_template_hint'          => 'Fill in the template format: name (required), price, unit, category columns',
+    'select_file'                   => 'Select File',
+    'start_import'                  => 'Start Import',
+
+    // Batch Price Update
+    'batch_price_scope_hint'        => 'Will batch update prices of matching service items',
+    'batch_mode'                    => 'Adjustment Mode',
+    'batch_value_placeholder'       => 'Enter adjustment value',
+    'confirm_price_change'          => 'Confirm Price Change',
 ];

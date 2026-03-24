@@ -10,8 +10,7 @@ class ServicePackageService
 {
     public function getAll(): \Illuminate\Database\Eloquent\Collection
     {
-        return ServicePackage::whereNull('deleted_at')
-            ->with('items.service')
+        return ServicePackage::with('items.service')
             ->orderBy('name')
             ->get();
     }

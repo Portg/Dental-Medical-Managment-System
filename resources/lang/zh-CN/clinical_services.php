@@ -45,8 +45,24 @@ return [
     'batch_scope_category'          => '仅当前大类',
 
     // 项目字段标签
+    'name'                          => '项目名称',
+    'is_active'                     => '状态',
     'is_discountable'               => '允许打折',
     'is_favorite'                   => '常用项目',
     'unit'                          => '单位',
     'description'                   => '说明',
+    'service_items'                 => '收费项目',
+    'add_item'                      => '添加明细',
+
+    // 导入
+    'download_import_template'      => '下载导入模板',
+    'import_template_hint'          => '请按模板格式填写，name（必填）、price、unit、category 列',
+    'select_file'                   => '选择文件',
+    'start_import'                  => '开始导入',
+
+    // 批量改价
+    'batch_price_scope_hint'        => '将批量调整符合条件的收费项目价格',
+    'batch_mode'                    => '调整方式',
+    'batch_value_placeholder'       => '输入调整值',
+    'confirm_price_change'          => '确认改价',
 ];
