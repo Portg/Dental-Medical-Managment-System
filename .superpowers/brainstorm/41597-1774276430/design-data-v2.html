@@ -1,0 +1,124 @@
+<h2>数据模型 · 修订版</h2>
+<p class="subtitle">JSON → 独立子表；usages 增加冗余字段</p>
+
+<!-- 消毒登记 3张表 -->
+<div style="margin-bottom:28px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <span style="background:#ef4444;color:white;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">消毒登记</span>
+    <span style="color:#94a3b8;font-size:13px;">kits 拆出子表；usages 增加冗余字段</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+    <!-- sterilization_kits -->
+    <div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #ef4444;">
+      <div style="color:#ef4444;font-weight:700;margin-bottom:12px;font-size:13px;">sterilization_kits（器械包）</div>
+      <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;color:#94a3b8;width:140px;">id</td><td>bigint PK</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">kit_no</td><td>string 包号（唯一）</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">name</td><td>string 包名称</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">is_active</td><td>boolean</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">_who_added</td><td>FK→users</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">timestamps</td><td>+ deleted_at</td></tr>
+      </table>
+      <div style="margin-top:12px;border-top:1px solid #334155;padding-top:12px;">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:8px;font-size:13px;">🆕 sterilization_kit_instruments（器械明细）</div>
+        <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+          <tr><td style="padding:4px 0;color:#94a3b8;width:140px;">id</td><td>bigint PK</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">kit_id</td><td>FK→kits</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">instrument_name</td><td>string 器械名称</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">quantity</td><td>integer 数量</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">sort_order</td><td>integer 显示顺序</td></tr>
+        </table>
+        <div style="margin-top:8px;background:#0f172a;border-radius:6px;padding:8px;font-size:11px;color:#64748b;">
+          一个器械包可含多种器械（探针×1、镊子×2、口镜×1…），独立行存储，可增删改排序
+        </div>
+      </div>
+    </div>
+
+    <!-- sterilization_records -->
+    <div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #ef4444;">
+      <div style="color:#ef4444;font-weight:700;margin-bottom:12px;font-size:13px;">sterilization_records（灭菌批次）</div>
+      <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;color:#94a3b8;width:140px;">id</td><td>bigint PK</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">kit_id</td><td>FK→kits</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">batch_no</td><td>string 批次号（自动）</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">method</td><td>enum 高压蒸汽/化学/干热</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">temperature</td><td>decimal 温度℃</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">duration_minutes</td><td>integer 时长(分钟)</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">operator_id</td><td>FK→users</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">sterilized_at</td><td>datetime 灭菌时间</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">expires_at</td><td>datetime 有效期至</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">status</td><td>enum 有效/已使用/已过期</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">notes</td><td>text 备注</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">timestamps</td><td>+ deleted_at</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- sterilization_usages 单独一行，重点展示冗余字段 -->
+  <div style="background:#1e293b;border-radius:10px;padding:16px;border:2px solid #f59e0b;">
+    <div style="color:#f59e0b;font-weight:700;margin-bottom:4px;font-size:13px;">sterilization_usages（使用追溯）</div>
+    <div style="color:#64748b;font-size:12px;margin-bottom:14px;">冗余字段讨论：医疗场景建议保留"记录时快照"，历史数据即使患者/医生被删除仍可查</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div>
+        <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;margin-bottom:8px;">外键关联（规范化）</div>
+        <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+          <tr><td style="padding:4px 0;color:#94a3b8;width:150px;">id</td><td>bigint PK</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">record_id</td><td>FK→sterilization_records</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">appointment_id</td><td>FK→appointments（可空）</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">patient_id</td><td>FK→patients（可空）</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">used_by</td><td>FK→users 操作医生</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">used_at</td><td>datetime</td></tr>
+          <tr><td style="padding:4px 0;color:#94a3b8;">notes</td><td>text</td></tr>
+        </table>
+      </div>
+      <div>
+        <div style="color:#f59e0b;font-size:11px;text-transform:uppercase;margin-bottom:8px;">+ 冗余快照字段（推荐加）</div>
+        <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+          <tr style="background:#422006;">
+            <td style="padding:4px 0;color:#f59e0b;width:150px;">patient_name</td>
+            <td>string 患者姓名快照</td>
+          </tr>
+          <tr style="background:#422006;">
+            <td style="padding:4px 0;color:#f59e0b;">doctor_name</td>
+            <td>string 医生姓名快照</td>
+          </tr>
+          <tr style="background:#422006;">
+            <td style="padding:4px 0;color:#f59e0b;">kit_name</td>
+            <td>string 器械包名称快照</td>
+          </tr>
+          <tr style="background:#422006;">
+            <td style="padding:4px 0;color:#f59e0b;">batch_no</td>
+            <td>string 批次号快照</td>
+          </tr>
+        </table>
+        <div style="margin-top:10px;background:#0f172a;border-radius:6px;padding:10px;font-size:11px;color:#94a3b8;line-height:1.8;">
+          <strong style="color:#f59e0b;">为什么加：</strong><br>
+          · 导出报表无需多表 JOIN，生成快<br>
+          · 患者/医生被软删除后记录仍完整<br>
+          · 写入时自动从关联记录填充，无需手工录入
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 收费项目不变，简要确认 -->
+<div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #3b82f6;">
+  <div style="color:#3b82f6;font-weight:700;margin-bottom:8px;font-size:13px;">收费项目管理（无变化）</div>
+  <div style="color:#94a3b8;font-size:13px;">service_categories / medical_services（+4字段）/ service_packages + service_package_items — 结构不变</div>
+</div>
+
+<div style="margin-top:24px;text-align:center;">
+  <div class="options" style="max-width:600px;margin:0 auto;">
+    <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+      <div class="letter">✓</div>
+      <div class="content"><h3>确认，进入 UI 布局设计</h3></div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">✎</div>
+      <div class="content"><h3>还需调整</h3><p>在终端说明</p></div>
+    </div>
+  </div>
+</div>

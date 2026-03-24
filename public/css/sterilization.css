@@ -1,5 +1,106 @@
 /* sterilization.css */
 
+.sterilization-page .portlet-body {
+    padding-top: 8px;
+}
+
+.sterilization-tabs {
+    margin-bottom: 0;
+    border-bottom: 1px solid #e7ecf1;
+}
+
+.sterilization-tabs > li > a {
+    color: #5f6b7a;
+    font-weight: 500;
+    padding: 12px 18px;
+}
+
+.sterilization-tabs > li.active > a,
+.sterilization-tabs > li.active > a:focus,
+.sterilization-tabs > li.active > a:hover {
+    color: #00838f;
+    border: 1px solid #e7ecf1;
+    border-bottom-color: #fff;
+    background: #fff;
+}
+
+.sterilization-tab-content {
+    padding-top: 16px;
+}
+
+.sterilization-filter-panel {
+    margin-bottom: 16px;
+}
+
+.sterilization-filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.sterilization-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.sterilization-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+    line-height: 1.4;
+}
+
+.sterilization-section-desc {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #909399;
+}
+
+.sterilization-tab-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.sterilization-table-panel {
+    border: 1px solid #ebeef5;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    padding: 0 16px 8px;
+}
+
+.sterilization-table {
+    margin-bottom: 0;
+    width: 100% !important;
+}
+
+.sterilization-table.dataTable {
+    border-bottom: 1px solid #ebeef5;
+}
+
+.sterilization-page .select2-container {
+    width: 100% !important;
+}
+
+.sterilization-page .select2-container .select2-selection--single {
+    height: 34px;
+    border-radius: 6px;
+    border-color: #c2cad8;
+}
+
+.sterilization-page .select2-container .select2-selection__rendered {
+    line-height: 32px;
+}
+
+.sterilization-page .select2-container .select2-selection__arrow {
+    height: 34px;
+}
+
 /* 状态徽章颜色补充 */
 .badge-warning   { color: #856404; background-color: #fff3cd; }
 .badge-danger    { color: #721c24; background-color: #f8d7da; }
@@ -15,4 +116,21 @@
 #instruments-table td {
     vertical-align: middle;
     padding: 4px 6px;
+}
+
+@media (max-width: 991px) {
+    .sterilization-section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sterilization-filter-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        margin-top: 12px;
+    }
+
+    .sterilization-tab-toolbar {
+        justify-content: flex-start;
+    }
 }

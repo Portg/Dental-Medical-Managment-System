@@ -47,6 +47,102 @@
 ```
 
 ---
+## [2026-03-24] Session: 消毒登记模块实现（Task 1~10 全部完成）
+
+任务类型：executing-plans  关联切片：消毒管理
+
+### 本次完成了什么
+- **Task 1** `2026_03_23_000004_create_sterilization_tables.php` — 4 张表迁移成功
+- **Task 2** 4 个模型：`SterilizationKit / KitInstrument / Record / Usage`
+- **Task 3** TDD：写测试 → Red → 实现 `SterilizationService` → Green（9 tests pass）
+- **Task 4** `SterilizationKitService` + `SterilizationKitController`（CRUD + 明细同步）
+- **Task 5** `SterilizationController`（CRUD + 使用登记 + 撤销 + CSV 导出 + edit 回填）
+- **Task 6** `PermissionsTableSeeder`：新增 view/manage-sterilization；`MenuItemsSeeder`：新增「诊所事务」(sort_order=35) + `seedClinicAffairs()`；权限分配到 SADN 角色
+- **Task 7** 13 条路由（含 export/edit/use/revoke 前置防参数冲突）；zh-CN/en sterilization.php；menu.php 补 clinic_affairs/sterilization_management
+- **Task 8** 6 个 Blade 视图：index + _tab_records + _tab_kits + _modal_record + _modal_kit + _modal_use
+- **Task 9** `public/include_js/sterilization.js`（DataTable + 3 个弹框 + 过滤器）+ `public/css/sterilization.css`
+- **Task 10** 9 tests all pass，13 routes verified，1 commit `56ad1ef`
+
+### 关键决策
+| 决策内容 | 选择方案 | 原因摘要 |
+|----------|---------|---------|
+| User::factory() 需要 role_id | setUp 先 `Role::create(['slug'=>'admin'])` 再传 role_id | users 表 role_id FK 非空；参照 BillingStockOutTest 模式 |
+| `$user->name` → null | 改用 `$user->full_name`（accessor）| User 模型无 name 字段，使用 getFullNameAttribute() |
+| 有效期测试精度 | `assertEqualsWithDelta(90, round(...), 1)` | 测试运行时 now() 有微秒偏差，(int)diffInDays 截断得 89 |
+| export 路由前置 | `sterilization/export` 在 resource 之前注册 | 防止 Laravel 把 `export` 解析为 `{sterilization}` 参数 |
+
+### AI 推理链（关键决策）
+
+决策：User factory role_id
+1. 读取了 BillingStockOutTest 的 setUp 模式
+2. 发现 users 表有 `users_role_id_foreign` FK 约束
+3. 考虑了：A) 修改 UserFactory 加默认 role_id；B) 测试中手动创建 Role 传入
+4. 方案A 需修改共享 factory 可能影响其他测试
+5. 选择方案B：每个 setUp 创建一个最小 Role，通过 factory 参数传入
+
+决策：export 路由前置
+1. 读取了 Plan Task 7 注意事项
+2. 注意到「sterilization/export 必须在 resource 之前」
+3. Laravel resource 会把 `sterilization/{sterilization}` 匹配所有 GET，包括 /export
+4. 前置注册 named route 确保 export 不被参数路由劫持
+
+### 放弃的方案
+| 方案描述 | 放弃原因 |
+|----------|---------|
+| 修改 UserFactory 加默认 role_id | 会影响其他测试的隔离性，且 factory 需要 DB 已有 roles 数据 |
+| 使用 Maatwebsite\Excel 做 export | 为 CSV stream 实现更轻量，且无需额外依赖；Excel 导出可后续迭代 |
+
+### 遗留问题（下次会话继续）
+- [ ] 浏览器手工测试验收（登录真实账号验证菜单/DataTable/弹框/使用登记流程）
+- [ ] export 当前为 CSV stream；若需要 Excel 格式可用 Maatwebsite\Excel 迭代
+- [ ] sterilization_usages 撤销后页面无刷新提示——已实现 JS revokeUse 但未暴露入口按钮（used 记录的 action 列无撤销按钮）
+
+### Spec 变更建议
+- 无需更新，已按 2026-03-23-billing-sterilization-design.md 完整实现
+
+---
+## [2026-03-23] Session: 收费项目管理升级 + 消毒登记功能 — 实现计划
+
+任务类型：writing-plans  关联切片：收费项目、消毒管理
+
+### 本次完成了什么
+- 生成两份详细实现计划：
+  - `docs/superpowers/plans/2026-03-23-billing-services-upgrade.md`（13 个 Task，含 TDD 测试步骤）
+  - `docs/superpowers/plans/2026-03-23-sterilization-module.md`（10 个 Task，含 TDD 测试步骤）
+- 对两份计划各跑 1 轮 reviewer，修复 4 个阻塞问题
+- 计划已通过最终 review（状态：Approved）
+
+### 关键决策
+
+| 决策内容 | 选择方案 | 原因摘要 |
+|----------|---------|---------|
+| billing 和 sterilization 分为两个独立计划 | 两个计划文件 | 两个子系统可独立执行；共享 PermissionSeeder 步骤已在各计划中标注协调方式 |
+| import/export 路由权限 | import 用 `can:import-medical-services`，export 用 `can:manage-medical-services` | Reviewer 发现缺失权限守卫，spec §八 明确定义了两个独立权限 |
+| `_modal_batch_price` 作为独立 blade partial | 独立文件，在 index 中 `@include` | 原计划遗漏该文件，导致 JS `#batchPriceModal` 无对应 HTML，reviewer 发现后补充 |
+| 批次号并发方案 | `SELECT MAX... FOR UPDATE` 行锁 | 诊所并发量低；设计文档已确认；写入 SterilizationService 测试用例验证 |
+
+### AI 推理链（关键决策）
+
+决策：billing 和 sterilization 分为两个独立计划
+1. 读取了 writing-plans skill 中「Scope Check」章节
+2. 注意到「multiple independent subsystems should be separate plans」
+3. 考虑了：A) 合并为一个大计划；B) 拆分为两个独立计划
+4. 方案A 问题：Task 数量超过 20 个，一次执行容易失焦；两个功能 UI 完全无关
+5. 选择方案B；共享的 PermissionSeeder 步骤通过在计划中加「前提条件」说明协调
+
+### 放弃的方案
+
+| 方案描述 | 放弃原因 |
+|----------|---------|
+| billing + sterilization 共享一个计划 | 超过 20 个 Task，两个 UI 无关，reviewer 会更难检查范围 |
+| import 不加权限中间件 | Reviewer 明确指出 spec §八 定义了 `import-medical-services` 权限，需强制守卫 |
+
+### 遗留问题（下次会话继续）
+- [ ] 执行 billing-services-upgrade 计划（Task 1~13）
+- [ ] 执行 sterilization-module 计划（Task 1~10）
+- [ ] 两个计划的 PermissionsTableSeeder 最终合并为一次 `db:seed` 跑，避免重复
+
+---
 ## [2026-03-23] Session: 收费项目管理升级 + 消毒登记功能 — 设计文档
 
 任务类型：设计 / Brainstorming  关联切片：收费项目、消毒管理

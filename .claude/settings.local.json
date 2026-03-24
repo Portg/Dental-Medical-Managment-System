@@ -197,7 +197,11 @@
       "Bash(then echo:*)",
       "Bash(elif file:*)",
       "Bash(else echo:*)",
-      "Bash(do echo:*)"
+      "Bash(do echo:*)",
+      "Bash(/Users/xudong/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.5/skills/brainstorming/scripts/start-server.sh --project-dir /Users/xudong/git/dental-medical-managment-system)",
+      "Bash(php artisan tinker --execute=\":*)",
+      "Bash(git branch:*)",
+      "Bash(git worktree:*)"
     ]
   },
   "hooks": {

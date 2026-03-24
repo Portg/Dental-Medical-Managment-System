@@ -1,0 +1,49 @@
+<h2>消毒登记：做到哪个深度？</h2>
+<p class="subtitle">从竞品 MVP 到完整追溯体系，范围差异很大</p>
+
+<div class="options">
+  <div class="option" data-choice="mvp" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>MVP — 对标竞品，能过卫生局检查</h3>
+      <p>消毒记录列表、新增/编辑/删除、日期+操作员筛选、导出 Excel / 打印<br>
+      <span style="color:#94a3b8;font-size:12px;">1张表：sterilization_records（日期、操作员、消毒类型、时长、备注）</span></p>
+    </div>
+  </div>
+  <div class="option" data-choice="kit" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>MVP + 器械包管理</h3>
+      <p>在 A 基础上增加器械包台账：包名、包内器械清单、有效期提醒<br>
+      <span style="color:#94a3b8;font-size:12px;">2张表：+ sterilization_kits</span></p>
+    </div>
+  </div>
+  <div class="option" data-choice="full" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>完整追溯 — 关联患者诊疗</h3>
+      <p>在 B 基础上：记录哪个器械包用于哪个患者哪次就诊，实现完整追溯链<br>
+      <span style="color:#94a3b8;font-size:12px;">3张表：+ sterilization_usages（关联 appointment / patient）</span></p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:28px;background:#1e293b;border-radius:12px;padding:20px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center;">
+    <div>
+      <div style="font-size:24px;margin-bottom:8px;">🟢</div>
+      <div style="color:#f1f5f9;font-weight:600;margin-bottom:4px;">方案 A</div>
+      <div style="color:#94a3b8;font-size:13px;">工作量小<br>2周内可上线<br>满足监管要求</div>
+    </div>
+    <div>
+      <div style="font-size:24px;margin-bottom:8px;">🟡</div>
+      <div style="color:#f1f5f9;font-weight:600;margin-bottom:4px;">方案 B</div>
+      <div style="color:#94a3b8;font-size:13px;">工作量中等<br>管理更规范<br>有效期提醒实用</div>
+    </div>
+    <div>
+      <div style="font-size:24px;margin-bottom:8px;">🔴</div>
+      <div style="color:#f1f5f9;font-weight:600;margin-bottom:4px;">方案 C</div>
+      <div style="color:#94a3b8;font-size:13px;">工作量大<br>完整追溯链<br>超越竞品水平</div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,96 @@
+<h2>两个功能的现状 vs 目标</h2>
+<p class="subtitle">先确认范围，再进入布局设计</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;">
+
+  <!-- 功能一：消毒登记 -->
+  <div style="background:#1e293b;border-radius:12px;padding:24px;border:2px solid #ef4444;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="background:#ef4444;color:white;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">全新功能</span>
+      <h3 style="margin:0;color:#f1f5f9;">消毒登记</h3>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="label" style="color:#94a3b8;margin-bottom:8px;">本系统现状</div>
+      <div style="background:#0f172a;border-radius:8px;padding:12px;color:#ef4444;font-size:13px;">
+        ❌ 完全不存在（0%）
+      </div>
+    </div>
+    <div>
+      <div class="label" style="color:#94a3b8;margin-bottom:8px;">竞品（口腔云）已有</div>
+      <ul style="margin:0;padding-left:18px;color:#cbd5e1;font-size:13px;line-height:2;">
+        <li>消毒记录列表（日期、操作员、项目、时长）</li>
+        <li>日期范围 + 操作员筛选</li>
+        <li>导出 / 打印</li>
+        <li>入口：事务 → 消毒</li>
+      </ul>
+    </div>
+    <div style="margin-top:16px;background:#0f172a;border-radius:8px;padding:12px;">
+      <div class="label" style="color:#f59e0b;margin-bottom:6px;">⚠ 监管合规刚需</div>
+      <div style="color:#94a3b8;font-size:12px;">卫生局检查必查项，建议先做 MVP</div>
+    </div>
+  </div>
+
+  <!-- 功能二：收费项目管理 -->
+  <div style="background:#1e293b;border-radius:12px;padding:24px;border:2px solid #3b82f6;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="background:#3b82f6;color:white;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">UI 升级</span>
+      <h3 style="margin:0;color:#f1f5f9;">收费项目管理</h3>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="label" style="color:#94a3b8;margin-bottom:8px;">本系统现状（clinic-services 页）</div>
+      <div style="background:#0f172a;border-radius:8px;padding:12px;color:#94a3b8;font-size:13px;line-height:1.8;">
+        只有 3 列：项目名称 / 价格 / 录入人<br>
+        无分类、无批量操作、无套餐
+      </div>
+    </div>
+    <div>
+      <div class="label" style="color:#94a3b8;margin-bottom:8px;">竞品 8.6.1~8.6.8 有</div>
+      <ul style="margin:0;padding-left:18px;color:#cbd5e1;font-size:13px;line-height:2;">
+        <li>8.6.1 分类树 + 项目列表（单位/价格/折扣开关）</li>
+        <li>8.6.2 一键清空价目表</li>
+        <li>8.6.3 批量修改价格</li>
+        <li>8.6.4 Excel 批量导入</li>
+        <li>8.6.5 常用项目设置</li>
+        <li>8.6.6 收费套餐（组合项目）</li>
+        <li>8.6.7 收费大类管理</li>
+        <li>8.6.8 预约项目设置</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:28px;background:#1e293b;border-radius:12px;padding:20px;">
+  <h3 style="margin:0 0 16px;color:#f1f5f9;">下面先聚焦收费项目：8 个特性，哪些在这次范围内？</h3>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="list" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>8.6.1 分类树 + 列表升级</h3>
+        <p>左侧收费大类树，右侧项目列表加字段（单位、是否显示、是否可打折）</p>
+      </div>
+    </div>
+    <div class="option" data-choice="batch" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>8.6.3 批量修改 + 8.6.4 Excel 导入</h3>
+        <p>勾选多条批量改价 / 用表格模板批量导入项目</p>
+      </div>
+    </div>
+    <div class="option" data-choice="favorite" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>8.6.5 常用项目</h3>
+        <p>划价时快速找到高频使用的项目</p>
+      </div>
+    </div>
+    <div class="option" data-choice="package" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>8.6.6 收费套餐</h3>
+        <p>多个项目打包为一个套餐一起收费</p>
+      </div>
+    </div>
+  </div>
+  <p style="color:#64748b;font-size:13px;margin-top:12px;">可多选。点击后在终端回复，或直接告诉我优先级。</p>
+</div>

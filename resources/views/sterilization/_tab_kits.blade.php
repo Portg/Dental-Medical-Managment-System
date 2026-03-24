@@ -1,16 +1,26 @@
-@can('manage-sterilization')
-<button class="btn btn-success mb-2" id="btn-add-kit">{{ __('common.add') }}</button>
-@endcan
+<div class="sterilization-section-header">
+    <div>
+        <div class="sterilization-section-title">{{ __('sterilization.kits_tab') }}</div>
+        <div class="sterilization-section-desc">维护器械包编号、名称、器械数量与启停状态。</div>
+    </div>
+    <div class="sterilization-tab-toolbar">
+        @can('manage-sterilization')
+        <button class="btn btn-success" id="btn-add-kit">{{ __('common.add') }}</button>
+        @endcan
+    </div>
+</div>
 
-<table id="kits-datatable" class="table table-bordered table-hover w-100">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>{{ __('sterilization.kit_no') }}</th>
-            <th>{{ __('sterilization.kit_name') }}</th>
-            <th>器械数量</th>
-            <th>状态</th>
-            <th>{{ __('common.action') }}</th>
-        </tr>
-    </thead>
-</table>
+<div class="sterilization-table-panel">
+    <table id="kits-datatable" class="table table-hover list-table sterilization-table w-100">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>{{ __('sterilization.kit_no') }}</th>
+                <th>{{ __('sterilization.kit_name') }}</th>
+                <th>器械数量</th>
+                <th>状态</th>
+                <th>{{ __('common.action') }}</th>
+            </tr>
+        </thead>
+    </table>
+</div>

@@ -1,34 +1,43 @@
 @extends('layouts.app')
 
 @section('css')
+<link rel="stylesheet" href="{{ asset('css/list-page.css') }}?v={{ filemtime(public_path('css/list-page.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/sterilization.css') }}">
 @endsection
 
 @section('content')
-<div class="page-content">
-    <div class="page-header">
-        <h3>{{ __('menu.sterilization_management') }}</h3>
-    </div>
+<div class="row">
+    <div class="col-md-12">
+        <div class="portlet light bordered sterilization-page">
+            <div class="portlet-body">
+                <div class="page-header-l1">
+                    <div>
+                        <h1 class="page-title">{{ __('menu.sterilization_management') }}</h1>
+                    </div>
+                </div>
 
-    <ul class="nav nav-tabs" id="sterilizationTabs" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" data-toggle="tab" href="#tab-records" role="tab">
-                {{ __('sterilization.records_tab') }}
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#tab-kits" role="tab">
-                {{ __('sterilization.kits_tab') }}
-            </a>
-        </li>
-    </ul>
+                <ul class="nav nav-tabs sterilization-tabs" id="sterilizationTabs" role="tablist">
+                    <li class="active">
+                        <a data-toggle="tab" href="#tab-records" role="tab">
+                            {{ __('sterilization.records_tab') }}
+                        </a>
+                    </li>
+                    <li>
+                        <a data-toggle="tab" href="#tab-kits" role="tab">
+                            {{ __('sterilization.kits_tab') }}
+                        </a>
+                    </li>
+                </ul>
 
-    <div class="tab-content mt-3">
-        <div class="tab-pane fade show active" id="tab-records" role="tabpanel">
-            @include('sterilization._tab_records')
-        </div>
-        <div class="tab-pane fade" id="tab-kits" role="tabpanel">
-            @include('sterilization._tab_kits')
+                <div class="tab-content sterilization-tab-content">
+                    <div class="tab-pane active" id="tab-records" role="tabpanel">
+                        @include('sterilization._tab_records')
+                    </div>
+                    <div class="tab-pane" id="tab-kits" role="tabpanel">
+                        @include('sterilization._tab_kits')
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

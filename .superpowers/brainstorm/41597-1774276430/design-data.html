@@ -1,0 +1,129 @@
+<h2>设计方案 · 第一节：数据模型</h2>
+<p class="subtitle">确认表结构后再进入 UI 布局设计</p>
+
+<!-- 收费项目 -->
+<div style="margin-bottom:32px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <span style="background:#3b82f6;color:white;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">收费项目管理</span>
+    <span style="color:#94a3b8;font-size:13px;">新增 2 张表，修改 1 张表</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+
+    <!-- service_categories -->
+    <div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #3b82f6;">
+      <div style="color:#3b82f6;font-weight:700;margin-bottom:12px;font-size:13px;">🆕 service_categories</div>
+      <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;color:#94a3b8;">id</td><td>bigint PK</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">name</td><td>string 大类名称</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">sort_order</td><td>integer 显示顺序</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">is_active</td><td>boolean 显示/隐藏</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">_who_added</td><td>bigint FK→users</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">timestamps</td><td>+ deleted_at</td></tr>
+      </table>
+    </div>
+
+    <!-- medical_services（改） -->
+    <div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #f59e0b;">
+      <div style="color:#f59e0b;font-weight:700;margin-bottom:12px;font-size:13px;">✏️ medical_services（加字段）</div>
+      <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;color:#94a3b8;">已有</td><td>id/name/price/unit/description/is_active...</td></tr>
+        <tr style="background:#422006;"><td style="padding:4px 0;color:#f59e0b;">+category_id</td><td>FK→service_categories</td></tr>
+        <tr style="background:#422006;"><td style="padding:4px 0;color:#f59e0b;">+is_discountable</td><td>boolean 允许打折</td></tr>
+        <tr style="background:#422006;"><td style="padding:4px 0;color:#f59e0b;">+is_favorite</td><td>boolean 常用项目</td></tr>
+        <tr style="background:#422006;"><td style="padding:4px 0;color:#f59e0b;">+sort_order</td><td>integer 排序</td></tr>
+      </table>
+    </div>
+
+    <!-- service_packages -->
+    <div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #3b82f6;">
+      <div style="color:#3b82f6;font-weight:700;margin-bottom:12px;font-size:13px;">🆕 service_packages + service_package_items</div>
+      <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+        <tr><td colspan="2" style="padding:4px 0;color:#64748b;font-size:11px;">service_packages</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">id/name</td><td>套餐名称</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">total_price</td><td>套餐总价</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">is_active</td><td>boolean</td></tr>
+        <tr><td colspan="2" style="padding:8px 0 4px;color:#64748b;font-size:11px;">service_package_items（中间表）</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">package_id</td><td>FK→service_packages</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">service_id</td><td>FK→medical_services</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">qty</td><td>integer 数量</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">price</td><td>decimal 单独定价</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 消毒登记 -->
+<div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <span style="background:#ef4444;color:white;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">消毒登记</span>
+    <span style="color:#94a3b8;font-size:13px;">全新 3 张表</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+
+    <!-- sterilization_kits -->
+    <div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #ef4444;">
+      <div style="color:#ef4444;font-weight:700;margin-bottom:12px;font-size:13px;">🆕 sterilization_kits（器械包）</div>
+      <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;color:#94a3b8;">id</td><td>bigint PK</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">kit_no</td><td>string 包号</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">name</td><td>string 包名称</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">instruments</td><td>JSON 器械清单</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">is_active</td><td>boolean</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">timestamps</td><td>+ deleted_at</td></tr>
+      </table>
+    </div>
+
+    <!-- sterilization_records -->
+    <div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #ef4444;">
+      <div style="color:#ef4444;font-weight:700;margin-bottom:12px;font-size:13px;">🆕 sterilization_records（灭菌批次）</div>
+      <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;color:#94a3b8;">id</td><td>bigint PK</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">kit_id</td><td>FK→kits</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">batch_no</td><td>string 批次号（自动生成）</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">method</td><td>enum 高压蒸汽/化学/干热</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">temperature</td><td>decimal 温度℃</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">duration_minutes</td><td>integer 时长</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">operator_id</td><td>FK→users</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">sterilized_at</td><td>datetime</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">expires_at</td><td>datetime 有效期</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">status</td><td>enum 有效/已使用/已过期</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">notes</td><td>text 备注</td></tr>
+      </table>
+    </div>
+
+    <!-- sterilization_usages -->
+    <div style="background:#1e293b;border-radius:10px;padding:16px;border:1px solid #ef4444;">
+      <div style="color:#ef4444;font-weight:700;margin-bottom:12px;font-size:13px;">🆕 sterilization_usages（使用追溯）</div>
+      <table style="width:100%;font-size:12px;color:#cbd5e1;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;color:#94a3b8;">id</td><td>bigint PK</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">record_id</td><td>FK→records</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">appointment_id</td><td>FK→appointments（可空）</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">patient_id</td><td>FK→patients（可空）</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">used_by</td><td>FK→users 操作医生</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">used_at</td><td>datetime</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">notes</td><td>text</td></tr>
+        <tr><td style="padding:4px 0;color:#94a3b8;">timestamps</td><td></td></tr>
+      </table>
+      <div style="margin-top:10px;background:#0f172a;border-radius:6px;padding:8px;font-size:11px;color:#64748b;">
+        appointment_id 可空：允许独立登记消毒（不绑定预约也能用）
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top:24px;background:#1e293b;border-radius:10px;padding:16px;text-align:center;">
+  <p style="color:#f1f5f9;margin:0 0 8px;">数据模型看起来合适吗？确认后进入 UI 布局设计。</p>
+  <div class="options" style="max-width:500px;margin:0 auto;">
+    <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+      <div class="letter">✓</div>
+      <div class="content"><h3>确认，进入 UI 设计</h3></div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">✎</div>
+      <div class="content"><h3>需要调整</h3><p>在终端告诉我哪里需要修改</p></div>
+    </div>
+  </div>
+</div>

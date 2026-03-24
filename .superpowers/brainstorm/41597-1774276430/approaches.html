@@ -1,0 +1,75 @@
+<h2>实现方案对比</h2>
+<p class="subtitle">两个功能各有一个核心架构决策，请选择倾向方向</p>
+
+<!-- 收费项目 -->
+<div style="margin-bottom:32px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <span style="background:#3b82f6;color:white;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">收费项目管理</span>
+    <span style="color:#94a3b8;font-size:13px;">关键决策：是改造现有页面，还是重建？</span>
+  </div>
+  <div class="options">
+    <div class="option" data-choice="billing-rebuild" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>重建（推荐）— 新增 ServiceCategory + ServicePackage 模型</h3>
+        <p>新建收费大类表（service_categories）和套餐表（service_packages）；
+        现有 medical_services 表加 category_id / is_active / is_discountable 字段；
+        clinic-services 页全面重写为左侧树 + 右侧表格布局。支持 A/B/C/D 四个特性。</p>
+        <div class="pros-cons" style="margin-top:8px;">
+          <div class="pros"><h4>优</h4><ul><li>结构清晰，四个特性一次到位</li><li>批量导入模板固定，不易出错</li></ul></div>
+          <div class="cons"><h4>劣</h4><ul><li>需要写迁移文件</li><li>现有 billing_tab 的分类树需同步适配</li></ul></div>
+        </div>
+      </div>
+    </div>
+    <div class="option" data-choice="billing-patch" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>渐进改造 — 不动现有表结构，只加字段和新页面</h3>
+        <p>medical_services 加 category（字符串）/is_active 字段；
+        大类管理单独一个简单列表页；套餐单独一个页面；
+        现有 clinic-services 列表改版为参考 8.6.1 样式但维持现有数据结构。</p>
+        <div class="pros-cons" style="margin-top:8px;">
+          <div class="pros"><h4>优</h4><ul><li>改动更小，风险低</li><li>不影响已有账单数据</li></ul></div>
+          <div class="cons"><h4>劣</h4><ul><li>大类用字符串关联，后期难扩展</li><li>套餐和大类孤立，不如方案A联动</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 消毒登记 -->
+<div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <span style="background:#ef4444;color:white;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">消毒登记</span>
+    <span style="color:#94a3b8;font-size:13px;">关键决策：与患者就诊的关联时机</span>
+  </div>
+  <div class="options">
+    <div class="option" data-choice="steril-appointment" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>关联预约（推荐）— 使用记录挂到 Appointment</h3>
+        <p>sterilization_usages 通过 appointment_id 关联就诊预约，
+        在预约详情页/患者详情页可直接看到"本次使用了哪些器械包"；
+        器械包有效期到期时在日历/预约提醒中出现告警。</p>
+        <div class="pros-cons" style="margin-top:8px;">
+          <div class="pros"><h4>优</h4><ul><li>追溯链最完整（器械→批次→患者→就诊）</li><li>复用现有 Appointment 模型</li></ul></div>
+          <div class="cons"><h4>劣</h4><ul><li>需要在预约详情页加"消毒"标签页</li></ul></div>
+        </div>
+      </div>
+    </div>
+    <div class="option" data-choice="steril-standalone" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>独立模块 — 使用记录手工填写患者姓名</h3>
+        <p>sterilization_usages 只存患者姓名字符串，不做外键关联；
+        消毒模块完全独立，不侵入预约/患者页面。</p>
+        <div class="pros-cons" style="margin-top:8px;">
+          <div class="pros"><h4>优</h4><ul><li>实现最简单，不影响其他模块</li></ul></div>
+          <div class="cons"><h4>劣</h4><ul><li>追溯不完整，搜索患者消毒记录需手工比对</li><li>与选 C 追溯深度不匹配</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="color:#64748b;font-size:13px;margin-top:16px;">点击选择或直接回复（如"A 和 C"）。我的推荐是 A + C。</p>

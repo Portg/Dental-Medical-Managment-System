@@ -1,0 +1,94 @@
+<h2>消毒管理放在哪个菜单位置？</h2>
+<p class="subtitle">现有 6 个一级菜单，3 个放置方案</p>
+
+<!-- 现有导航结构 -->
+<div style="background:#0f172a;border-radius:8px;padding:12px;margin-bottom:20px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+  <span style="font-size:11px;color:#64748b;margin-right:4px;">现有导航：</span>
+  <span style="background:#1e293b;color:#94a3b8;padding:4px 10px;border-radius:4px;font-size:12px;">今日工作</span>
+  <span style="background:#1e293b;color:#94a3b8;padding:4px 10px;border-radius:4px;font-size:12px;">患者中心</span>
+  <span style="background:#1e293b;color:#94a3b8;padding:4px 10px;border-radius:4px;font-size:12px;">诊疗中心</span>
+  <span style="background:#1e293b;color:#94a3b8;padding:4px 10px;border-radius:4px;font-size:12px;">运营中心</span>
+  <span style="background:#1e293b;color:#94a3b8;padding:4px 10px;border-radius:4px;font-size:12px;">数据中心</span>
+  <span style="background:#1e293b;color:#94a3b8;padding:4px 10px;border-radius:4px;font-size:12px;">系统管理</span>
+</div>
+
+<div class="options">
+
+  <!-- 方案 A -->
+  <div class="option" data-choice="clinical" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>挂在「诊疗中心」下</h3>
+      <p>诊疗中心 → 器械消毒 → 消毒登记</p>
+      <div style="background:#0f172a;border-radius:6px;padding:10px;margin-top:8px;font-size:12px;">
+        <div style="color:#94a3b8;margin-bottom:6px;">诊疗中心（现有）</div>
+        <div style="padding-left:12px;color:#94a3b8;line-height:2;font-size:11px;">
+          ├ 预约管理<br>
+          ├ 病历管理<br>
+          ├ 治疗方案<br>
+          ├ 诊疗配置<br>
+          <span style="color:#ef4444;">└ 器械消毒 ← 新增</span>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>优</h4><ul><li>不加新一级菜单，导航更精简</li><li>消毒是临床操作，语义合适</li></ul></div>
+        <div class="cons"><h4>劣</h4><ul><li>诊疗中心已有 4 个子组，再加略显臃肿</li><li>未来扩展其他"事务"类功能没有落点</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 B（推荐） -->
+  <div class="option" data-choice="affairs" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>新增一级菜单「诊所事务」⭐ 推荐</h3>
+      <p>诊所事务 → 消毒管理；未来可扩展更多日常运营事项</p>
+      <div style="background:#0f172a;border-radius:6px;padding:10px;margin-top:8px;font-size:12px;">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+          <span style="background:#1e293b;color:#94a3b8;padding:3px 8px;border-radius:4px;font-size:11px;">今日工作</span>
+          <span style="background:#1e293b;color:#94a3b8;padding:3px 8px;border-radius:4px;font-size:11px;">患者中心</span>
+          <span style="background:#1e293b;color:#94a3b8;padding:3px 8px;border-radius:4px;font-size:11px;">诊疗中心</span>
+          <span style="background:#ef4444;color:white;padding:3px 8px;border-radius:4px;font-size:11px;">诊所事务 ←新</span>
+          <span style="background:#1e293b;color:#94a3b8;padding:3px 8px;border-radius:4px;font-size:11px;">运营中心</span>
+          <span style="background:#1e293b;color:#64748b;padding:3px 8px;border-radius:4px;font-size:11px;">…</span>
+        </div>
+        <div style="color:#ef4444;font-size:11px;line-height:2;padding-left:12px;">
+          诊所事务<br>
+          <span style="padding-left:12px;">├ 消毒管理（本期）</span><br>
+          <span style="padding-left:12px;color:#475569;">├ 患者召回（未来）</span><br>
+          <span style="padding-left:12px;color:#475569;">└ 诊室日志（未来）</span>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>优</h4><ul><li>与竞品"事务"概念一致，用户习惯迁移成本低</li><li>为未来患者召回、诊室日志等预留扩展位</li><li>语义清晰：诊所日常事务独立于临床和财务</li></ul></div>
+        <div class="cons"><h4>劣</h4><ul><li>导航多一个一级菜单（共 7 个）</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 C -->
+  <div class="option" data-choice="ops" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>挂在「运营中心」下</h3>
+      <p>运营中心 → 诊室管理 → 消毒登记</p>
+      <div style="background:#0f172a;border-radius:6px;padding:10px;margin-top:8px;font-size:12px;color:#475569;line-height:1.8;">
+        运营中心已有耗材管理、供应商、员工管理等<br>
+        消毒是操作性工作，与财务运营类别混搭语义模糊
+      </div>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>优</h4><ul><li>不加新一级菜单</li></ul></div>
+        <div class="cons"><h4>劣</h4><ul><li>运营中心定位偏财务/人事，消毒放这里语义不对</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:16px;background:#1e3a5f;border-radius:8px;padding:14px;border:1px solid #3b82f6;">
+  <div style="color:#3b82f6;font-weight:700;margin-bottom:4px;">我的推荐：方案 B「诊所事务」</div>
+  <div style="color:#94a3b8;font-size:13px;">
+    sort_order = 35（插在诊疗中心和运营中心之间）；一级菜单名称用「诊所事务」比「事务管理」更具体，不易和其他系统的"事务"混淆。<br>
+    收费项目（clinic-services）仍在系统管理下不动。
+  </div>
+</div>

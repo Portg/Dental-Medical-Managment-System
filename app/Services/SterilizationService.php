@@ -154,7 +154,11 @@ class SterilizationService
                 'sterilization_records.*',
                 'sterilization_kits.name as kit_name',
                 'sterilization_kits.kit_no',
-                'users.name as operator_name',
+                DB::raw(
+                    app()->getLocale() === 'zh-CN'
+                        ? "CONCAT(IFNULL(users.surname, ''), IFNULL(users.othername, '')) as operator_name"
+                        : "TRIM(CONCAT(IFNULL(users.surname, ''), ' ', IFNULL(users.othername, ''))) as operator_name"
+                ),
                 DB::raw("
                     CASE
                         WHEN sterilization_records.status = 'used'   THEN 'used'

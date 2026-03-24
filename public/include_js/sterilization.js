@@ -7,6 +7,7 @@ $(document).ready(function () {
     initKitSelectOptions();
     initRecordsTable();
     initKitsTable();
+    bindTabs();
     bindRecordModal();
     bindKitModal();
     bindUseModal();
@@ -48,7 +49,8 @@ function initRecordsTable() {
             { data: 'status_badge', orderable: false },
             { data: 'action', orderable: false },
         ],
-        language: { url: '/vendor/datatables/zh-CN.json' },
+        dom: 'rtip',
+        language: LanguageManager.getDataTableLang(),
     });
 }
 
@@ -57,6 +59,7 @@ function initKitsTable() {
     kitsTable = $('#kits-datatable').DataTable({
         processing: true,
         serverSide: true,
+        autoWidth: false,
         ajax: '/sterilization-kits',
         columns: [
             { data: 'DT_RowIndex', orderable: false },
@@ -66,13 +69,39 @@ function initKitsTable() {
             { data: 'is_active', render: function (v) { return v ? '<span class="badge badge-success">启用</span>' : '<span class="badge badge-secondary">停用</span>'; } },
             { data: 'action', orderable: false },
         ],
-        language: { url: '/vendor/datatables/zh-CN.json' },
+        dom: 'rtip',
+        language: LanguageManager.getDataTableLang(),
+    });
+}
+
+function bindTabs() {
+    $('#sterilizationTabs a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        const target = $(e.target).attr('href');
+
+        if (target === '#tab-records' && recordsTable) {
+            setTimeout(function () {
+                recordsTable.columns.adjust().draw(false);
+            }, 50);
+        }
+
+        if (target === '#tab-kits' && kitsTable) {
+            setTimeout(function () {
+                kitsTable.columns.adjust().draw(false);
+            }, 50);
+        }
     });
 }
 
 /* ── 4. 筛选条件 ──────────────────────────────────── */
 function bindFilters() {
     $('#btn-filter-records').click(function () {
+        recordsTable.ajax.reload();
+    });
+
+    $('#btn-reset-records').click(function () {
+        $('#filter-kit-id').val(null).trigger('change');
+        $('#filter-status').val('');
+        $('#filter-date-from, #filter-date-to').val('');
         recordsTable.ajax.reload();
     });
 }

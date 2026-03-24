@@ -29,7 +29,7 @@ class MedicalServiceController extends Controller
     {
         if ($request->ajax()) {
             $data = $this->medicalServiceService->getServiceList(
-                $request->search,
+                $request->input('search.value'),
                 $request->category_id ? (int) $request->category_id : null
             );
 
