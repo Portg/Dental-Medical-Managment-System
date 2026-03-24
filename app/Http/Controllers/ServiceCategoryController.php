@@ -45,13 +45,19 @@ class ServiceCategoryController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        $this->service->delete($id);
+        $result = $this->service->delete($id);
+        if (!$result) {
+            return response()->json(['status' => 0, 'message' => __('messages.error_occurred')]);
+        }
         return response()->json(['status' => 1, 'message' => __('common.deleted_successfully')]);
     }
 
     public function reorder(Request $request): JsonResponse
     {
-        $v = Validator::make($request->all(), ['order' => 'required|array']);
+        $v = Validator::make($request->all(), [
+            'order'   => 'required|array',
+            'order.*' => 'required|integer|exists:service_categories,id',
+        ]);
         if ($v->fails()) {
             return response()->json(['status' => 0, 'message' => $v->errors()->first()]);
         }

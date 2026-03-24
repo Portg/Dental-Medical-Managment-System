@@ -9,13 +9,20 @@ use Illuminate\Support\Facades\Cache;
 class MedicalService extends Model
 {
     use SoftDeletes;
-    protected $fillable = ['name', 'unit', 'price', 'category', 'description', 'is_active', 'is_prescription', '_who_added'];
+    protected $fillable = ['name', 'unit', 'price', 'category', 'description', 'is_active', 'is_prescription', '_who_added', 'category_id', 'is_discountable', 'is_favorite', 'sort_order'];
 
     protected $casts = [
-        'is_prescription' => 'boolean',
-        'is_active' => 'boolean',
-        'price' => 'decimal:2',
+        'is_prescription'  => 'boolean',
+        'is_active'        => 'boolean',
+        'price'            => 'decimal:2',
+        'is_discountable'  => 'boolean',
+        'is_favorite'      => 'boolean',
     ];
+
+    public function category()
+    {
+        return $this->belongsTo(ServiceCategory::class, 'category_id');
+    }
 
     /**
      * Scope: 处方类项目

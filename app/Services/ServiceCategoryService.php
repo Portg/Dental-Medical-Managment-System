@@ -5,6 +5,7 @@ namespace App\Services;
 use App\ServiceCategory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class ServiceCategoryService
 {
@@ -13,8 +14,7 @@ class ServiceCategoryService
 
     public function getAll(): \Illuminate\Database\Eloquent\Collection
     {
-        return ServiceCategory::whereNull('deleted_at')
-            ->orderBy('sort_order')
+        return ServiceCategory::orderBy('sort_order')
             ->orderBy('name')
             ->get(['id', 'name', 'sort_order', 'is_active']);
     }
@@ -51,9 +51,11 @@ class ServiceCategoryService
 
     public function reorder(array $orderedIds): void
     {
-        foreach ($orderedIds as $pos => $id) {
-            ServiceCategory::where('id', $id)->update(['sort_order' => $pos + 1]);
-        }
+        DB::transaction(function () use ($orderedIds) {
+            foreach ($orderedIds as $pos => $id) {
+                ServiceCategory::where('id', $id)->update(['sort_order' => $pos + 1]);
+            }
+        });
         Cache::forget(self::CACHE_KEY);
         Cache::forget('billing_service_category_tree');
     }
