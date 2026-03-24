@@ -185,6 +185,6 @@ class SterilizationController extends Controller
             ? "<button class='btn btn-xs btn-primary' onclick='editRecord({$row->id})'>编辑</button>"
             : '';
         $delBtn = "<button class='btn btn-xs btn-danger ml-1' onclick='deleteRecord({$row->id})'>删除</button>";
-        return "<div class='btn-group'>{$editBtn}{$useBtn}{$delBtn}</div>";
+        return "<div class='btn-group sterilization-action-group'>{$editBtn}{$useBtn}{$delBtn}</div>";
     }
 }

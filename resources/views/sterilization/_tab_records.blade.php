@@ -1,3 +1,10 @@
+<div class="sterilization-section-header sterilization-section-header-records">
+    <div>
+        <div class="sterilization-section-title">{{ __('sterilization.records_tab') }}</div>
+        <div class="sterilization-section-desc">{{ __('sterilization.records_desc') }}</div>
+    </div>
+</div>
+
 <div class="filter-area-l2 sterilization-filter-panel">
     <div class="row filter-row">
         <div class="col-md-3">
@@ -40,18 +47,20 @@
     </div>
 </div>
 
-<table id="records-datatable" class="table table-hover list-table sterilization-table w-100">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>{{ __('sterilization.batch_no') }}</th>
-            <th>器械包</th>
-            <th>{{ __('sterilization.method') }}</th>
-            <th>{{ __('sterilization.sterilized_at') }}</th>
-            <th>{{ __('sterilization.expires_at') }}</th>
-            <th>{{ __('sterilization.operator') }}</th>
-            <th>状态</th>
-            <th>{{ __('common.action') }}</th>
-        </tr>
-    </thead>
-</table>
+<div class="sterilization-table-panel">
+    <table id="records-datatable" class="table table-hover list-table sterilization-table w-100">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>{{ __('sterilization.batch_no') }}</th>
+                <th>器械包</th>
+                <th>{{ __('sterilization.method') }}</th>
+                <th>{{ __('sterilization.sterilized_at') }}</th>
+                <th>{{ __('sterilization.expires_at') }}</th>
+                <th>{{ __('sterilization.operator') }}</th>
+                <th>状态</th>
+                <th>{{ __('common.action') }}</th>
+            </tr>
+        </thead>
+    </table>
+</div>

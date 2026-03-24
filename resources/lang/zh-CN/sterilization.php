@@ -4,6 +4,7 @@ return [
     'records_tab'     => '灭菌记录',
     'kits_tab'        => '器械包管理',
     'records_export'  => '导出记录',
+    'records_desc'    => '查看灭菌批次、有效期、操作员与使用状态，支持按器械包和日期筛选。',
     'kits_desc'       => '维护器械包编号、名称、器械数量与启停状态。',
     'filter_kit'      => '器械包',
     'filter_status'   => '状态',
