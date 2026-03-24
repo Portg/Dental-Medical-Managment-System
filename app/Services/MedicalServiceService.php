@@ -16,15 +16,23 @@ class MedicalServiceService
     /**
      * Get medical services list for DataTables.
      */
-    public function getServiceList(?string $search): Collection
+    public function getServiceList(?string $search, ?int $categoryId = null): Collection
     {
         $query = DB::table('medical_services')
             ->leftJoin('users', 'users.id', 'medical_services._who_added')
+            ->leftJoin('service_categories', 'service_categories.id', 'medical_services.category_id')
             ->whereNull('medical_services.deleted_at')
-            ->select(['medical_services.*', 'users.surname']);
+            ->select([
+                'medical_services.*',
+                'users.surname',
+                'service_categories.name as category_name',
+            ]);
 
         if ($search) {
             $query->where('medical_services.name', 'like', '%' . $search . '%');
+        }
+        if ($categoryId) {
+            $query->where('medical_services.category_id', $categoryId);
         }
 
         return $query->orderBy('medical_services.id', 'desc')->get();
@@ -69,9 +77,16 @@ class MedicalServiceService
     public function createService(array $data): ?MedicalService
     {
         $service = MedicalService::create([
-            'name' => $data['name'],
-            'price' => $data['price'],
-            '_who_added' => Auth::User()->id,
+            'name'            => $data['name'],
+            'price'           => $data['price'],
+            'unit'            => $data['unit'] ?? null,
+            'description'     => $data['description'] ?? null,
+            'category_id'     => $data['category_id'] ?? null,
+            'is_active'       => $data['is_active'] ?? true,
+            'is_discountable' => $data['is_discountable'] ?? true,
+            'is_favorite'     => $data['is_favorite'] ?? false,
+            'sort_order'      => $data['sort_order'] ?? 0,
+            '_who_added'      => Auth::id(),
         ]);
 
         Cache::forget(self::CACHE_KEY_NAMES);
@@ -85,9 +100,15 @@ class MedicalServiceService
     public function updateService(int $id, array $data): bool
     {
         $result = (bool) MedicalService::where('id', $id)->update([
-            'name' => $data['name'],
-            'price' => $data['price'],
-            '_who_added' => Auth::User()->id,
+            'name'            => $data['name'],
+            'price'           => $data['price'],
+            'unit'            => $data['unit'] ?? null,
+            'description'     => $data['description'] ?? null,
+            'category_id'     => $data['category_id'] ?? null,
+            'is_active'       => $data['is_active'] ?? true,
+            'is_discountable' => $data['is_discountable'] ?? true,
+            'is_favorite'     => $data['is_favorite'] ?? false,
+            'sort_order'      => $data['sort_order'] ?? 0,
         ]);
 
         Cache::forget(self::CACHE_KEY_NAMES);
@@ -105,5 +126,32 @@ class MedicalServiceService
         Cache::forget(self::CACHE_KEY_NAMES);
 
         return $result;
+    }
+
+    /**
+     * 批量改价：按 category_id（空=全部）调整价格，支持百分比或固定金额。
+     * @param array{mode: 'percent'|'fixed', value: float, category_id?: int|null} $data
+     */
+    public function batchUpdatePrice(array $data): int
+    {
+        $query = MedicalService::whereNull('deleted_at');
+        if (!empty($data['category_id'])) {
+            $query->where('category_id', $data['category_id']);
+        }
+        $services = $query->get(['id', 'price']);
+        $count = 0;
+        foreach ($services as $svc) {
+            $newPrice = $data['mode'] === 'percent'
+                ? bcmul((string) $svc->price, bcdiv((string)(100 + $data['value']), '100', 4), 2)
+                : bcadd((string) $svc->price, (string) $data['value'], 2);
+            if (bccomp($newPrice, '0', 2) < 0) {
+                $newPrice = '0.00';
+            }
+            MedicalService::where('id', $svc->id)->update(['price' => $newPrice]);
+            $count++;
+        }
+        Cache::forget(self::CACHE_KEY_NAMES);
+        Cache::forget('billing_service_category_tree');
+        return $count;
     }
 }

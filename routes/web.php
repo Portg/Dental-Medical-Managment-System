@@ -99,9 +99,16 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('medical-cards-items', 'MedicalCardItemController');
     Route::get('individual-medical-cards/{id}', 'MedicalCardController@individualMedicalCards');
 
+    Route::post('clinic-services/batch-update-price', 'MedicalServiceController@batchUpdatePrice')
+        ->name('clinic-services.batch-update-price');
+    Route::get('clinic-services/export', 'MedicalServiceController@export')
+        ->name('clinic-services.export')
+        ->middleware('can:manage-medical-services');
+    Route::post('clinic-services/import', 'MedicalServiceController@import')
+        ->name('clinic-services.import')
+        ->middleware('can:import-medical-services');
     Route::resource('clinic-services', 'MedicalServiceController');
 
-    Route::get('search-medical-service', 'MedicalServiceController@filterServices');
     Route::get('services-array', 'MedicalServiceController@servicesArray');
 
     // Discount Approval (PRD 4.1.2 BR-035) — must be before resource route
@@ -648,4 +655,17 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('ocr-recognize', 'OcrRecognizeController@index');
     Route::post('ocr-recognize/recognize', 'OcrRecognizeController@recognize');
     Route::post('ocr-recognize/create', 'OcrRecognizeController@createFromOcr');
+
+    // Service Categories (admin)
+    Route::get('admin/service-categories', 'ServiceCategoryController@index')->name('admin.service-categories.index');
+    Route::post('admin/service-categories/reorder', 'ServiceCategoryController@reorder')->name('admin.service-categories.reorder');
+    Route::post('admin/service-categories', 'ServiceCategoryController@store')->name('admin.service-categories.store');
+    Route::put('admin/service-categories/{id}', 'ServiceCategoryController@update')->name('admin.service-categories.update');
+    Route::delete('admin/service-categories/{id}', 'ServiceCategoryController@destroy')->name('admin.service-categories.destroy');
+
+    // Service Packages (admin)
+    Route::get('admin/service-packages', 'ServicePackageController@index')->name('admin.service-packages.index');
+    Route::post('admin/service-packages', 'ServicePackageController@store')->name('admin.service-packages.store');
+    Route::put('admin/service-packages/{id}', 'ServicePackageController@update')->name('admin.service-packages.update');
+    Route::delete('admin/service-packages/{id}', 'ServicePackageController@destroy')->name('admin.service-packages.destroy');
 });
