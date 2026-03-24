@@ -190,6 +190,14 @@ class MedicalServiceController extends Controller
     }
 
     /**
+     * Export clinic services (stub — Task 13 will implement the real Excel export).
+     */
+    public function export(Request $request): \Illuminate\Http\JsonResponse
+    {
+        return response()->json(['message' => 'Export not yet implemented', 'status' => 0]);
+    }
+
+    /**
      * 批量改价接口。
      */
     public function batchUpdatePrice(Request $request): \Illuminate\Http\JsonResponse

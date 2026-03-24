@@ -101,6 +101,8 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::post('clinic-services/batch-update-price', 'MedicalServiceController@batchUpdatePrice')
         ->name('clinic-services.batch-update-price');
+    Route::get('clinic-services/export', 'MedicalServiceController@export')
+        ->name('clinic-services.export');
     Route::resource('clinic-services', 'MedicalServiceController');
 
     Route::get('search-medical-service', 'MedicalServiceController@filterServices');

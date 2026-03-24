@@ -298,20 +298,22 @@ window.editRecord = function (id) {
 };
 
 window.deleteRecord = function (id) {
-    Swal.fire({
+    swal({
         title: LanguageManager.trans('common.confirm_delete'),
         text: LanguageManager.trans('common.cannot_undo'),
         type: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#e73d4a',
+        confirmButtonClass: 'btn-danger',
         confirmButtonText: LanguageManager.trans('common.delete'),
-        cancelButtonText: LanguageManager.trans('common.cancel')
-    }).then(function (result) {
-        if (result.value) {
+        cancelButtonText: LanguageManager.trans('common.cancel'),
+        closeOnConfirm: false
+    }, function (confirmed) {
+        if (confirmed) {
             $.ajax({
                 url: '/clinic-services/' + id,
                 type: 'DELETE',
                 success: function (res) {
+                    swal.close();
                     if (res.status) {
                         toastr.success(res.message);
                         if (servicesTable) servicesTable.ajax.reload();
@@ -320,6 +322,7 @@ window.deleteRecord = function (id) {
                     }
                 },
                 error: function () {
+                    swal.close();
                     toastr.error(LanguageManager.trans('common.error'));
                 }
             });
@@ -534,20 +537,22 @@ window.editPackage = function (id) {
 };
 
 window.deletePackage = function (id) {
-    Swal.fire({
+    swal({
         title: LanguageManager.trans('common.confirm_delete'),
         text: LanguageManager.trans('common.cannot_undo'),
         type: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#e73d4a',
+        confirmButtonClass: 'btn-danger',
         confirmButtonText: LanguageManager.trans('common.delete'),
-        cancelButtonText: LanguageManager.trans('common.cancel')
-    }).then(function (result) {
-        if (result.value) {
+        cancelButtonText: LanguageManager.trans('common.cancel'),
+        closeOnConfirm: false
+    }, function (confirmed) {
+        if (confirmed) {
             $.ajax({
                 url: '/admin/service-packages/' + id,
                 type: 'DELETE',
                 success: function (res) {
+                    swal.close();
                     if (res.status) {
                         toastr.success(res.message);
                         if (packagesTable) packagesTable.ajax.reload();
@@ -556,6 +561,7 @@ window.deletePackage = function (id) {
                     }
                 },
                 error: function () {
+                    swal.close();
                     toastr.error(LanguageManager.trans('common.error'));
                 }
             });
@@ -597,20 +603,15 @@ function appendPackageItemRow(serviceId, serviceName, qty, price) {
         placeholder: '-- 选择项目 --',
         allowClear: true,
         ajax: {
-            url: '/clinic-services/filter',
+            url: '/search-medical-service',
             dataType: 'json',
             delay: 250,
             data: function (params) {
                 return {q: params.term};
             },
             processResults: function (data) {
-                var items = [];
-                if (data) {
-                    $.each(data, function (i, svc) {
-                        items.push({id: svc.id, text: svc.name});
-                    });
-                }
-                return {results: items};
+                // filterServices returns a plain array of {id, text, price}
+                return {results: Array.isArray(data) ? data : []};
             },
             cache: true
         }
@@ -626,67 +627,27 @@ window.removePackageItem = function (btn) {
 /* ── Category Management ─────────────────────────── */
 function bindCategoryButtons() {
     $('#btn-add-category').on('click', function () {
-        Swal.fire({
+        swal({
             title: LanguageManager.trans('common.add') + ' ' + LanguageManager.trans('clinical_services.service_categories'),
-            input: 'text',
+            type: 'input',
             inputPlaceholder: '分类名称',
             showCancelButton: true,
             confirmButtonText: LanguageManager.trans('common.save'),
             cancelButtonText: LanguageManager.trans('common.cancel'),
-            inputValidator: function (value) {
-                if (!value || !value.trim()) {
-                    return '请输入分类名称';
-                }
-            }
-        }).then(function (result) {
-            if (result.value) {
-                $.ajax({
-                    url: '/admin/service-categories',
-                    type: 'POST',
-                    data: {name: result.value.trim()},
-                    success: function (res) {
-                        if (res.status) {
-                            toastr.success(res.message);
-                            loadCategories();
-                        } else {
-                            toastr.error(res.message || LanguageManager.trans('common.error'));
-                        }
-                    },
-                    error: function (xhr) {
-                        var msg = LanguageManager.trans('common.error');
-                        if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-                        toastr.error(msg);
-                    }
-                });
-            }
-        });
-    });
-}
-
-window.editCategory = function (id, name, sortOrder, isActive) {
-    Swal.fire({
-        title: '编辑分类',
-        input: 'text',
-        inputValue: name,
-        showCancelButton: true,
-        confirmButtonText: LanguageManager.trans('common.save'),
-        cancelButtonText: LanguageManager.trans('common.cancel'),
-        inputValidator: function (value) {
+            closeOnConfirm: false,
+            showLoaderOnConfirm: true
+        }, function (value) {
+            if (value === false) { return; }
             if (!value || !value.trim()) {
-                return '请输入分类名称';
+                swal.showInputError('请输入分类名称');
+                return false;
             }
-        }
-    }).then(function (result) {
-        if (result.value) {
             $.ajax({
-                url: '/admin/service-categories/' + id,
-                type: 'PUT',
-                data: {
-                    name:       result.value.trim(),
-                    sort_order: sortOrder,
-                    is_active:  isActive
-                },
+                url: '/admin/service-categories',
+                type: 'POST',
+                data: {name: value.trim()},
                 success: function (res) {
+                    swal.close();
                     if (res.status) {
                         toastr.success(res.message);
                         loadCategories();
@@ -695,30 +656,76 @@ window.editCategory = function (id, name, sortOrder, isActive) {
                     }
                 },
                 error: function (xhr) {
+                    swal.close();
                     var msg = LanguageManager.trans('common.error');
                     if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
                     toastr.error(msg);
                 }
             });
+        });
+    });
+}
+
+window.editCategory = function (id, name, sortOrder, isActive) {
+    swal({
+        title: '编辑分类',
+        type: 'input',
+        inputValue: name,
+        showCancelButton: true,
+        confirmButtonText: LanguageManager.trans('common.save'),
+        cancelButtonText: LanguageManager.trans('common.cancel'),
+        closeOnConfirm: false,
+        showLoaderOnConfirm: true
+    }, function (value) {
+        if (value === false) { return; }
+        if (!value || !value.trim()) {
+            swal.showInputError('请输入分类名称');
+            return false;
         }
+        $.ajax({
+            url: '/admin/service-categories/' + id,
+            type: 'PUT',
+            data: {
+                name:       value.trim(),
+                sort_order: sortOrder,
+                is_active:  isActive
+            },
+            success: function (res) {
+                swal.close();
+                if (res.status) {
+                    toastr.success(res.message);
+                    loadCategories();
+                } else {
+                    toastr.error(res.message || LanguageManager.trans('common.error'));
+                }
+            },
+            error: function (xhr) {
+                swal.close();
+                var msg = LanguageManager.trans('common.error');
+                if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                toastr.error(msg);
+            }
+        });
     });
 };
 
 window.deleteCategory = function (id) {
-    Swal.fire({
+    swal({
         title: LanguageManager.trans('common.confirm_delete'),
         text: LanguageManager.trans('common.cannot_undo'),
         type: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#e73d4a',
+        confirmButtonClass: 'btn-danger',
         confirmButtonText: LanguageManager.trans('common.delete'),
-        cancelButtonText: LanguageManager.trans('common.cancel')
-    }).then(function (result) {
-        if (result.value) {
+        cancelButtonText: LanguageManager.trans('common.cancel'),
+        closeOnConfirm: false
+    }, function (confirmed) {
+        if (confirmed) {
             $.ajax({
                 url: '/admin/service-categories/' + id,
                 type: 'DELETE',
                 success: function (res) {
+                    swal.close();
                     if (res.status) {
                         toastr.success(res.message);
                         currentCategoryId = 0;
@@ -729,6 +736,7 @@ window.deleteCategory = function (id) {
                     }
                 },
                 error: function () {
+                    swal.close();
                     toastr.error(LanguageManager.trans('common.error'));
                 }
             });
