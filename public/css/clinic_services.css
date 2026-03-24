@@ -1,74 +1,92 @@
 /* public/css/clinic_services.css */
 
-/* ── Category filter bar (horizontal pills) ── */
+/* ── Category filter bar — single scrollable row ── */
 .category-filter-bar {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 4px;
     padding: 8px 0;
     border-bottom: 1px solid #e7ecf1;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    min-height: 44px;
 }
 
+/* Scrollable pill container — never wraps */
 .category-pills {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
     margin: 0;
-    padding: 0;
+    padding: 2px 0 6px 0;  /* bottom padding for scrollbar clearance */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #ddd transparent;
+}
+
+.category-pills::-webkit-scrollbar {
+    height: 3px;
+}
+
+.category-pills::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 2px;
 }
 
 .category-pills > li {
     margin: 0;
+    flex-shrink: 0;
 }
 
-.category-pills > li > a {
+/* Override Bootstrap's .nav-pills > li > a with higher specificity */
+ul.category-pills > li > a {
+    display: inline-block;
     padding: 4px 12px;
     font-size: 13px;
-    border-radius: 20px;
+    border-radius: 20px !important;  /* pill shape — override Bootstrap's 4px */
     color: #555;
     background: #f4f4f4;
     border: 1px solid #e0e0e0;
-    transition: all 0.15s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
     white-space: nowrap;
+    line-height: 1.5;
 }
 
-.category-pills > li > a:hover {
-    background: #e8f4fe;
-    border-color: #3699ff;
-    color: #3699ff;
+ul.category-pills > li > a:hover {
+    background: #e0f5f6;
+    border-color: #00838F;
+    color: #00838F;
 }
 
-.category-pills > li.active > a,
-.category-pills > li.active > a:hover {
-    background: #3699ff;
-    border-color: #3699ff;
-    color: #fff;
+/* Active state — system teal, matching Bootstrap theme */
+ul.category-pills > li.active > a,
+ul.category-pills > li.active > a:hover {
+    background: #00838F !important;
+    border-color: #00838F !important;
+    color: #fff !important;
 }
 
 /* ── Category pill inline action icons ── */
 .cat-pill-actions {
     display: none;
-    margin-left: 6px;
+    margin-left: 5px;
     font-size: 10px;
 }
 
 .cat-pill-actions .fa {
     margin-left: 3px;
-    opacity: 0.7;
+    opacity: 0.75;
 }
 
 .cat-pill-actions .fa-pencil {
-    color: #fff;
+    color: rgba(255,255,255,0.85);
 }
 
 .cat-pill-actions .fa-trash {
-    color: #ffcdd2;
+    color: rgba(255,200,200,0.9);
 }
 
-.category-pills > li:hover .cat-pill-actions,
-.category-pills > li.active .cat-pill-actions {
+ul.category-pills > li:hover .cat-pill-actions,
+ul.category-pills > li.active .cat-pill-actions {
     display: inline;
 }
 
