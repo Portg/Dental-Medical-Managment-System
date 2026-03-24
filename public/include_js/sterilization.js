@@ -12,6 +12,7 @@ $(document).ready(function () {
     bindKitModal();
     bindUseModal();
     bindFilters();
+    initUsePatientSelect();
 });
 
 /* ── 1. 初始化器械包下拉 ───────────────────────────── */
@@ -205,6 +206,28 @@ function bindUseModal() {
                 }
             },
         });
+    });
+}
+
+function initUsePatientSelect() {
+    $('#use-patient-id').select2({
+        ajax: {
+            url: '/search-patient',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return { q: params.term };
+            },
+            processResults: function (data) {
+                return { results: data };
+            },
+            cache: true,
+        },
+        minimumInputLength: 1,
+        placeholder: LanguageManager.trans('patient.select_patient') || '选择患者',
+        allowClear: true,
+        width: '100%',
+        dropdownParent: $('#useModal'),
     });
 }
 
