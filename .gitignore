@@ -23,3 +23,4 @@ deploy/dist/
 deploy/output/
 .worktrees/
 .gstack/
+.claude/worktrees/
