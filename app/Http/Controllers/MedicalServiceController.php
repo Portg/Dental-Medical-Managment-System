@@ -190,11 +190,36 @@ class MedicalServiceController extends Controller
     }
 
     /**
-     * Export clinic services (stub — Task 13 will implement the real Excel export).
+     * Export clinic services as Excel file.
      */
-    public function export(Request $request): \Illuminate\Http\JsonResponse
+    public function export(): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        return response()->json(['message' => 'Export not yet implemented', 'status' => 0]);
+        $filename = '收费项目_' . now()->format('Ymd') . '.xlsx';
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\MedicalServicesExport(),
+            $filename
+        );
+    }
+
+    /**
+     * Import clinic services from Excel file.
+     */
+    public function import(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $v = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:xlsx,xls|max:2048',
+        ]);
+        if ($v->fails()) {
+            return response()->json(['status' => 0, 'message' => $v->errors()->first()]);
+        }
+
+        $importer = new \App\Imports\MedicalServicesImport();
+        \Maatwebsite\Excel\Facades\Excel::import($importer, $request->file('file'));
+
+        return response()->json([
+            'status'  => 1,
+            'message' => "成功导入 {$importer->importedCount} 条记录",
+        ]);
     }
 
     /**

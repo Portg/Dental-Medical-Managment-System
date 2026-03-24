@@ -407,6 +407,7 @@ function bindImportModal() {
                     toastr.success(res.message || LanguageManager.trans('common.imported_successfully') || '导入成功');
                     $('#importModal').modal('hide');
                     if (servicesTable) servicesTable.ajax.reload();
+                    loadCategories();
                 } else {
                     toastr.error(res.message || LanguageManager.trans('common.error'));
                 }
