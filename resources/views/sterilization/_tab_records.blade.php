@@ -31,7 +31,10 @@
             <button class="btn btn-primary" id="btn-filter-records">{{ __('common.search') }}</button>
             @can('manage-sterilization')
             <button class="btn btn-success ml-1" id="btn-add-record">{{ __('common.add') }}</button>
-            <a class="btn btn-secondary ml-1" href="{{ route('sterilization.export') }}">{{ __('common.export') }}</a>
+            <a class="btn btn-default sterilization-export-btn ml-1" href="{{ route('sterilization.export') }}">
+                <i class="fa fa-download"></i>
+                <span>{{ __('common.export') }}</span>
+            </a>
             @endcan
         </div>
     </div>

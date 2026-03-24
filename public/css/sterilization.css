@@ -39,6 +39,20 @@
     gap: 8px;
 }
 
+.sterilization-filter-actions .btn,
+.sterilization-filter-actions .sterilization-export-btn {
+    min-width: 88px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.sterilization-export-btn {
+    text-decoration: none !important;
+}
+
 .sterilization-section-header {
     display: flex;
     justify-content: space-between;
