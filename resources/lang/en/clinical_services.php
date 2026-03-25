@@ -53,6 +53,18 @@ return [
     'description'                   => 'Description',
     'service_items'                 => 'Billing Items',
     'add_item'                      => 'Add Item',
+    'page_description'              => 'Maintain billing items, packages, and categories for billing, prescriptions, and reporting.',
+    'service_items_hint'            => 'Manage service names, categories, prices, and active status in one place.',
+    'service_packages_hint'         => 'Bundle multiple billing items into standard packages with unified pricing and status.',
+    'add_service_item'              => 'Add Item',
+    'add_service_package'           => 'Add Package',
+    'search_placeholder'            => 'Search service name',
+    'package_search_placeholder'    => 'Search package name',
+    'current_category'              => 'Current Category',
+    'filtered_results'              => 'Filtered Results',
+    'category_filter_hint'          => 'Switch the current maintenance scope by service category.',
+    'more_actions'                  => 'More Actions',
+    'package_items_empty'           => 'Click "Add Item" to start configuring package items',
 
     // Import
     'download_import_template'      => 'Download Import Template',

@@ -10,24 +10,28 @@
     <div class="col-md-12">
         <div class="portlet light bordered">
             <div class="portlet-body">
-                <div class="page-header-l1">
-                    <h1 class="page-title">{{ __('menu.service_items') }}</h1>
+                <div class="page-header-l1 service-page-header">
+                    <div>
+                        <h1 class="page-title">{{ __('menu.service_items') }}</h1>
+                    </div>
                 </div>
 
-                <ul class="nav nav-tabs" id="clinicServicesTabs" role="tablist">
+                <ul class="nav nav-tabs service-module-tabs" id="clinicServicesTabs" role="tablist">
                     <li class="active">
                         <a href="#tab-services" data-toggle="tab" role="tab">
                             {{ __('clinical_services.service_items') }}
+                            <span class="module-tab-count" id="services-total-count">0</span>
                         </a>
                     </li>
                     <li>
                         <a href="#tab-packages" data-toggle="tab" role="tab">
                             {{ __('clinical_services.service_packages') }}
+                            <span class="module-tab-count" id="packages-total-count">0</span>
                         </a>
                     </li>
                 </ul>
 
-                <div class="tab-content" style="margin-top: 15px;">
+                <div class="tab-content service-tab-content">
                     <div class="tab-pane active" id="tab-services">
                         @include('clinical_services._tab_services')
                     </div>

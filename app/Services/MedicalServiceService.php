@@ -16,7 +16,7 @@ class MedicalServiceService
     /**
      * Get medical services list for DataTables.
      */
-    public function getServiceList(?string $search, ?int $categoryId = null): Collection
+    public function getServiceList(?string $search, ?int $categoryId = null, ?int $status = null): Collection
     {
         $query = DB::table('medical_services')
             ->leftJoin('users', 'users.id', 'medical_services._who_added')
@@ -33,6 +33,9 @@ class MedicalServiceService
         }
         if ($categoryId) {
             $query->where('medical_services.category_id', $categoryId);
+        }
+        if ($status !== null) {
+            $query->where('medical_services.is_active', $status);
         }
 
         return $query->orderBy('medical_services.id', 'desc')->get();

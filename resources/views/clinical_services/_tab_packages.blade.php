@@ -1,22 +1,42 @@
-<div class="row" style="margin-bottom: 10px;">
-    <div class="col-md-12">
+<div class="service-toolbar-card">
+    <div class="service-toolbar-main">
+        <div class="service-toolbar-filters">
+            <div class="service-filter-field service-filter-search">
+                <div class="search-input-wrapper">
+                    <i class="fa fa-search search-icon"></i>
+                    <input type="text" class="form-control" id="package-search-input"
+                           placeholder="{{ __('clinical_services.package_search_placeholder') }}">
+                </div>
+            </div>
+            <div class="service-filter-field service-filter-status">
+                <select id="package-status-filter" class="form-control">
+                    <option value="">{{ __('common.status') }}</option>
+                    <option value="1">{{ __('common.active') }}</option>
+                    <option value="0">{{ __('common.inactive') }}</option>
+                </select>
+            </div>
+        </div>
         @can('manage-service-packages')
-        <button class="btn btn-success" id="btn-add-package">
-            <i class="fa fa-plus"></i> {{ __('common.add') }}
-        </button>
+        <div class="service-toolbar-actions">
+            <button class="btn btn-success" id="btn-add-package">
+                <i class="fa fa-plus"></i> {{ __('clinical_services.add_service_package') }}
+            </button>
+        </div>
         @endcan
     </div>
 </div>
 
-<table id="packages-datatable" class="table table-striped table-bordered table-hover" style="width:100%;">
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>{{ __('clinical_services.package_name') }}</th>
-            <th>{{ __('clinical_services.package_total_price') }}</th>
-            <th>{{ __('clinical_services.package_description') }}</th>
-            <th>{{ __('clinical_services.is_active') }}</th>
-            <th>{{ __('common.action') }}</th>
-        </tr>
-    </thead>
-</table>
+<div class="service-table-card">
+    <table id="packages-datatable" class="table list-table service-table" style="width:100%;">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>{{ __('clinical_services.package_name') }}</th>
+                <th>{{ __('clinical_services.package_total_price') }}</th>
+                <th>{{ __('clinical_services.package_description') }}</th>
+                <th>{{ __('clinical_services.is_active') }}</th>
+                <th>{{ __('common.action') }}</th>
+            </tr>
+        </thead>
+    </table>
+</div>

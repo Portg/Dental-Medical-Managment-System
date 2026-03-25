@@ -53,6 +53,18 @@ return [
     'description'                   => '说明',
     'service_items'                 => '收费项目',
     'add_item'                      => '添加明细',
+    'page_description'              => '维护收费项目、套餐与分类，用于划价收费、处方联动与统计分析。',
+    'service_items_hint'            => '统一维护项目名称、分类、标准价格与启用状态。',
+    'service_packages_hint'         => '将多个收费项目组合为标准套餐，统一管理价格与启用状态。',
+    'add_service_item'              => '新增项目',
+    'add_service_package'           => '新增套餐',
+    'search_placeholder'            => '搜索项目名称',
+    'package_search_placeholder'    => '搜索套餐名称',
+    'current_category'              => '当前分类',
+    'filtered_results'              => '筛选结果',
+    'category_filter_hint'          => '按收费大类快速切换当前维护范围。',
+    'more_actions'                  => '更多操作',
+    'package_items_empty'           => '点击“添加明细”开始配置套餐项目',
 
     // 导入
     'download_import_template'      => '下载导入模板',

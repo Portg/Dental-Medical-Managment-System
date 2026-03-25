@@ -30,7 +30,8 @@ class MedicalServiceController extends Controller
         if ($request->ajax()) {
             $data = $this->medicalServiceService->getServiceList(
                 $request->input('search.value'),
-                $request->category_id ? (int) $request->category_id : null
+                $request->category_id ? (int) $request->category_id : null,
+                $request->status !== null && $request->status !== '' ? (int) $request->status : null
             );
 
             return Datatables::of($data)

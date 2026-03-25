@@ -4,12 +4,14 @@
 var servicesTable = null;
 var packagesTable = null;
 var currentCategoryId = 0; // 0 = all
+var packageStatusFilterValue = '';
 
 /* ── Init ────────────────────────────────────────── */
 $(document).ready(function () {
     initCategoryTree();
     initServicesTable();
     initPackagesTable();
+    bindToolbarActions();
     bindCategoryButtons();
     bindServiceModal();
     bindPackageModal();
@@ -83,6 +85,7 @@ function initServicesTable() {
             url: '/clinic-services',
             data: function (d) {
                 d.category_id = currentCategoryId > 0 ? currentCategoryId : '';
+                d.status = $('#service-status-filter').val();
             }
         },
         columns: [
@@ -118,6 +121,19 @@ function initServicesTable() {
             {data: 'action', name: 'action', orderable: false, searchable: false}
         ]
     });
+
+    servicesTable.on('xhr.dt draw.dt', function () {
+        updateServiceSummary();
+    });
+
+    $('#service-search-input').on('input', function () {
+        servicesTable.search(this.value).draw();
+    });
+
+    $('#service-status-filter').on('change', function () {
+        servicesTable.ajax.reload();
+    });
+
 }
 
 /* ── Packages DataTable ──────────────────────────── */
@@ -176,6 +192,60 @@ function initPackagesTable() {
             }
         ]
     });
+
+    $.fn.dataTable.ext.search.push(function (settings, data) {
+        if (settings.nTable !== $('#packages-datatable')[0]) {
+            return true;
+        }
+
+        if (packageStatusFilterValue === '') {
+            return true;
+        }
+
+        if (packageStatusFilterValue === '1') {
+            return (data[4] || '').indexOf('label-success') !== -1;
+        }
+
+        return (data[4] || '').indexOf('label-danger') !== -1;
+    });
+
+    packagesTable.on('xhr.dt draw.dt', function () {
+        updatePackageSummary();
+    });
+
+    $('#package-search-input').on('input', function () {
+        packagesTable.search(this.value).draw();
+    });
+
+    $('#package-status-filter').on('change', function () {
+        packageStatusFilterValue = this.value;
+        packagesTable.draw();
+    });
+
+}
+
+function bindToolbarActions() {
+    $('#btn-import-menu').on('click', function (e) {
+        e.preventDefault();
+        window.openImportModal();
+    });
+
+    $('#btn-batch-price-menu').on('click', function (e) {
+        e.preventDefault();
+        window.openBatchPriceModal();
+    });
+}
+
+function updateServiceSummary() {
+    if (!servicesTable) return;
+    var pageInfo = servicesTable.page.info();
+    $('#services-total-count').text(pageInfo.recordsTotal || 0);
+}
+
+function updatePackageSummary() {
+    if (!packagesTable) return;
+    var pageInfo = packagesTable.page.info();
+    $('#packages-total-count').text(pageInfo.recordsTotal || 0);
 }
 
 /* ── Service Modal ───────────────────────────────── */
@@ -184,6 +254,7 @@ function bindServiceModal() {
     $('#service-category-id').select2({
         allowClear: true,
         placeholder: '-- ' + LanguageManager.trans('clinical_services.service_categories') + ' --',
+        dropdownParent: $('#serviceModal'),
         ajax: {
             url: '/admin/service-categories',
             dataType: 'json',
@@ -333,11 +404,17 @@ window.deleteRecord = function (id) {
 /* ── Batch Price Modal ───────────────────────────── */
 function bindBatchPriceModal() {
     $('#btn-batch-price').on('click', function () {
+        window.openBatchPriceModal();
+    });
+
+    function openModal() {
         $('#batch-price-value').val('');
         $('input[name="batch-mode"][value="percent"]').prop('checked', true);
         $('#batch-unit-label').text('%');
         $('#batchPriceModal').modal('show');
-    });
+    }
+
+    window.openBatchPriceModal = openModal;
 
     // Toggle unit label based on mode
     $('input[name="batch-mode"]').on('change', function () {
@@ -382,9 +459,15 @@ function bindBatchPriceModal() {
 /* ── Import Modal ────────────────────────────────── */
 function bindImportModal() {
     $('#btn-import').on('click', function () {
+        window.openImportModal();
+    });
+
+    function openModal() {
         $('#import-file').val('');
         $('#importModal').modal('show');
-    });
+    }
+
+    window.openImportModal = openModal;
 
     $('#btn-confirm-import').on('click', function () {
         var file = $('#import-file')[0].files[0];
@@ -495,6 +578,7 @@ function resetPackageForm() {
     $('#package-price').val('');
     $('#package-description').val('');
     $('#package-items-body').empty();
+    updatePackageItemsEmptyState();
 }
 
 window.editPackage = function (id) {
@@ -529,6 +613,7 @@ window.editPackage = function (id) {
                 appendPackageItemRow(item.service_id, serviceName, item.qty, item.price);
             });
         }
+        updatePackageItemsEmptyState();
 
         $('#package-modal-title').text(LanguageManager.trans('common.edit'));
         $('#packageModal').modal('show');
@@ -575,8 +660,10 @@ window.addPackageItem = function () {
 };
 
 function appendPackageItemRow(serviceId, serviceName, qty, price) {
+    updatePackageItemsEmptyState(true);
+
     var rowHtml =
-        '<tr>' +
+        '<tr class="service-package-item-row">' +
             '<td>' +
                 '<select class="form-control pkg-service-id select2" style="width:100%;">' +
                     (serviceId
@@ -603,6 +690,7 @@ function appendPackageItemRow(serviceId, serviceName, qty, price) {
     $row.find('.pkg-service-id').select2({
         placeholder: '-- 选择项目 --',
         allowClear: true,
+        dropdownParent: $('#packageModal'),
         ajax: {
             url: '/search-medical-service',
             dataType: 'json',
@@ -623,7 +711,25 @@ function appendPackageItemRow(serviceId, serviceName, qty, price) {
 
 window.removePackageItem = function (btn) {
     $(btn).closest('tr').remove();
+    updatePackageItemsEmptyState();
 };
+
+function updatePackageItemsEmptyState(forceHide) {
+    var $tbody = $('#package-items-body');
+    $tbody.find('.service-items-empty').remove();
+
+    if (forceHide) {
+        return;
+    }
+
+    if ($tbody.find('tr').length === 0) {
+        $tbody.append(
+            '<tr class="service-items-empty">' +
+                '<td colspan="4" class="service-items-empty__cell">' + LanguageManager.trans('clinical_services.package_items_empty') + '</td>' +
+            '</tr>'
+        );
+    }
+}
 
 /* ── Category Management ─────────────────────────── */
 function bindCategoryButtons() {
