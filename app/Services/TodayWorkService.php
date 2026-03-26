@@ -733,16 +733,20 @@ class TodayWorkService
             ->join('patients as p', 'p.id', '=', 'lc.patient_id')
             ->join('users as d', 'd.id', '=', 'lc.doctor_id')
             ->leftJoin('labs as l', 'l.id', '=', 'lc.lab_id')
+            ->leftJoin('lab_case_items as lci', 'lci.lab_case_id', '=', 'lc.id')
             ->where(function ($q) use ($today) {
                 $q->where('lc.expected_return_date', $today)
                   ->orWhere('lc.actual_return_date', $today);
             })
             ->whereNull('lc.deleted_at')
+            ->groupBy('lc.id', 'lc.lab_case_no', 'lc.status', 'lc.expected_return_date',
+                'lc.actual_return_date', 'p.id', 'p.surname', 'p.othername',
+                'd.surname', 'd.othername', 'l.name')
             ->select(
                 'lc.id',
                 'lc.lab_case_no',
-                'lc.prosthesis_type',
-                'lc.material',
+                DB::raw("GROUP_CONCAT(DISTINCT lci.prosthesis_type SEPARATOR ', ') as prosthesis_type"),
+                DB::raw("GROUP_CONCAT(DISTINCT lci.material SEPARATOR ', ') as material"),
                 'lc.status',
                 'lc.expected_return_date',
                 'lc.actual_return_date',
