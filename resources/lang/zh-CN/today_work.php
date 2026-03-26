@@ -9,6 +9,14 @@ return [
     'today_receivable'    => '今日应收（千元）',
     'today_collected'     => '今日实收（千元）',
 
+    // KPI short labels (no "今日" prefix)
+    'kpi_patients'        => '就诊',
+    'kpi_doctors'         => '出诊',
+    'kpi_revisits'        => '回访',
+    'kpi_appointments'    => '预约',
+    'kpi_receivable'      => '应收（千元）',
+    'kpi_collected'       => '实收（千元）',
+
     'not_arrived'         => '预约未到',
     'waiting'             => '候诊中',
     'called'              => '已叫号',
@@ -59,13 +67,13 @@ return [
     'paid'                => '已收',
 
     // 信息维度 Tab
-    'tab_today_work'     => '今日工作',
-    'tab_billing'        => '今日对账',
-    'tab_followups'      => '今日回访',
+    'tab_today_work'     => '工作台',
+    'tab_billing'        => '对账',
+    'tab_followups'      => '回访',
     'tab_tomorrow'       => '明日预约',
-    'tab_week_missed'    => '一周失约',
-    'tab_birthdays'      => '今日生日',
-    'tab_doctor_table'   => '医生表',
+    'tab_week_missed'    => '失约',
+    'tab_birthdays'      => '生日',
+    'tab_doctor_table'   => '医生',
 
     // 今日对账
     'billing_method'     => '支付方式',

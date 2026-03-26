@@ -7,12 +7,12 @@
 @endsection
 
 @section('content')
-    {{-- Page Header --}}
+    {{-- Page Header — actions only, title expressed through tabs --}}
     <div class="tw-header">
-        <h3>{{ __('today_work.title') }}</h3>
+        <div></div>
         <div class="tw-header-actions">
             <button class="btn btn-sm btn-success" onclick="quickRegisterPatient()">
-                {{ __('today_work.new_patient') }}
+                <i class="fa fa-plus"></i> {{ __('today_work.new_patient') }}
             </button>
             <button class="btn btn-sm btn-primary" onclick="openAppointmentDrawer()">
                 {{ __('today_work.new_appointment') }}
@@ -23,31 +23,31 @@
         </div>
     </div>
 
-    {{-- KPI Row (6 cards) --}}
+    {{-- KPI Row — flat, dense, no redundant "今日" prefix --}}
     <div class="tw-kpi-row" id="tw-kpi-row">
         <div class="tw-kpi-card patients">
             <div class="kpi-value" id="kpi-patients">{{ $kpi['today_patients'] }}</div>
-            <div class="kpi-label">{{ __('today_work.today_patients') }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_patients') }}</div>
         </div>
         <div class="tw-kpi-card doctors">
             <div class="kpi-value" id="kpi-doctors">{{ $kpi['today_doctors'] }}</div>
-            <div class="kpi-label">{{ __('today_work.today_doctors') }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_doctors') }}</div>
         </div>
         <div class="tw-kpi-card revisits">
             <div class="kpi-value" id="kpi-revisits">{{ $kpi['today_revisits'] }}</div>
-            <div class="kpi-label">{{ __('today_work.today_revisits') }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_revisits') }}</div>
         </div>
         <div class="tw-kpi-card appointments">
             <div class="kpi-value" id="kpi-appointments">{{ $kpi['today_appointments'] }}</div>
-            <div class="kpi-label">{{ __('today_work.today_appointments') }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_appointments') }}</div>
         </div>
         <div class="tw-kpi-card receivable">
             <div class="kpi-value money" id="kpi-receivable">&yen;{{ $kpi['today_receivable'] }}</div>
-            <div class="kpi-label">{{ __('today_work.today_receivable') }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_receivable') }}</div>
         </div>
         <div class="tw-kpi-card collected">
             <div class="kpi-value money" id="kpi-collected">&yen;{{ $kpi['today_collected'] }}</div>
-            <div class="kpi-label">{{ __('today_work.today_collected') }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_collected') }}</div>
         </div>
     </div>
 
@@ -113,9 +113,7 @@
 
     {{-- DataTable View --}}
     <div id="tw-table-view">
-        <div class="portlet light bordered">
-            <div class="portlet-body">
-                <table class="table table-striped table-bordered table-hover" id="tw-table" width="100%">
+                <table class="table table-hover" id="tw-table" width="100%">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -129,8 +127,6 @@
                         </tr>
                     </thead>
                 </table>
-            </div>
-        </div>
     </div>
 
     {{-- Kanban View --}}

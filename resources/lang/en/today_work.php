@@ -9,6 +9,14 @@ return [
     'today_receivable'    => 'Receivable (K)',
     'today_collected'     => 'Collected (K)',
 
+    // KPI short labels
+    'kpi_patients'        => 'Treated',
+    'kpi_doctors'         => 'On Duty',
+    'kpi_revisits'        => 'Follow-ups',
+    'kpi_appointments'    => 'Appointments',
+    'kpi_receivable'      => 'Receivable (K)',
+    'kpi_collected'       => 'Collected (K)',
+
     'not_arrived'         => 'Not Arrived',
     'waiting'             => 'Waiting',
     'called'              => 'Called',

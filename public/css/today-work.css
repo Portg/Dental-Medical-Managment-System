@@ -1,189 +1,155 @@
-/* ── KPI Cards ──────────────────────────────────── */
-.tw-kpi-row {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 15px;
-    flex-wrap: wrap;
-}
-.tw-kpi-card {
-    flex: 1;
-    min-width: 130px;
-    background: #fff;
-    border-radius: 6px;
-    padding: 14px 16px;
-    text-align: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    border-top: 3px solid #e0e0e0;
-}
-.tw-kpi-card .kpi-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: #333;
-    line-height: 1.2;
-}
-.tw-kpi-card .kpi-value.money { color: #E65100; }
-.tw-kpi-card .kpi-label {
-    font-size: 12px;
-    color: #888;
-    margin-top: 4px;
-}
-.tw-kpi-card.patients  { border-top-color: #1A237E; }
-.tw-kpi-card.doctors   { border-top-color: #2196F3; }
-.tw-kpi-card.revisits  { border-top-color: #4CAF50; }
-.tw-kpi-card.appointments { border-top-color: #FF9800; }
-.tw-kpi-card.receivable { border-top-color: #E65100; }
-.tw-kpi-card.collected  { border-top-color: #D32F2F; }
+/* today-work.css
+ * Dentrix-inspired: flat, borderless, information-dense
+ * Accent: single blue (#2563EB)
+ * Palette: white / #F9FAFB (gray-50) / #F3F4F6 (gray-100) / #E5E7EB (gray-200)
+ */
 
-/* ── Per-Tab Toolbar (filter bar inside each tab) ── */
-.tw-tab-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    padding: 8px 0;
-    flex-wrap: wrap;
-}
-
-/* ── Toolbar ────────────────────────────────────── */
-.tw-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-.tw-toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-.tw-toolbar .search-box {
-    position: relative;
-}
-.tw-toolbar .search-box input {
-    width: 220px;
-    padding-right: 30px;
-}
-.tw-toolbar .search-box .fa-search {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #999;
-}
-.tw-date-picker {
-    width: 140px !important;
-}
-.tw-doctor-filter {
-    width: 130px !important;
-}
-.tw-status-filter {
-    width: 120px !important;
-}
-
-/* ── Action Buttons ─────────────────────────────── */
-.tw-action-btn { margin: 1px 2px; }
-.tw-quick-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-}
-
-/* ── Page Header ────────────────────────────────── */
+/* ── Page Header — compact, no redundant title ──── */
 .tw-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+    min-height: 32px;
 }
-.tw-header h3 { margin: 0; font-weight: 700; }
-.tw-header-actions { display: flex; gap: 8px; }
+.tw-header h3 {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    letter-spacing: -0.01em;
+}
+.tw-header-actions {
+    display: flex;
+    gap: 6px;
+}
+.tw-header-actions .btn {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+/* Secondary buttons — outlined, readable */
+.tw-header-actions .btn-primary,
+.tw-header-actions .btn-default {
+    background: #fff;
+    border: 1px solid #D1D5DB;
+    color: #374151;
+    box-shadow: none;
+}
+.tw-header-actions .btn-primary:hover,
+.tw-header-actions .btn-default:hover {
+    background: #F9FAFB;
+    border-color: #9CA3AF;
+    color: #111827;
+}
 
-/* ── View Toggle ───────────────────────────────── */
-.tw-toolbar .view-toggle .btn.active {
-    background: #00838F;
-    color: #fff;
-    border-color: #00838F;
+/* ── KPI Row — flat, no borders, no shadows ──────── */
+.tw-kpi-row {
+    display: flex;
+    gap: 0;
+    margin-bottom: 12px;
+    flex-wrap: nowrap;
+    border-bottom: 1px solid #F3F4F6;
+}
+.tw-kpi-card {
+    flex: 1;
+    min-width: 0;
+    background: #fff;
+    border-radius: 0;
+    padding: 12px 16px;
+    text-align: left;
+    box-shadow: none;
+    border-top: none;
+    border-right: 1px solid #E5E7EB;
+}
+.tw-kpi-card:last-child {
+    border-right: none;
+}
+.tw-kpi-card .kpi-value {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+.tw-kpi-card .kpi-value.money {
+    color: #111827;
+}
+.tw-kpi-card .kpi-label {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    color: #9CA3AF;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 500;
+}
+/* Remove all rainbow color borders */
+.tw-kpi-card.patients,
+.tw-kpi-card.doctors,
+.tw-kpi-card.revisits,
+.tw-kpi-card.appointments,
+.tw-kpi-card.receivable,
+.tw-kpi-card.collected {
+    border-top: none;
 }
 
-/* ── Patient Drawer ────────────────────────────── */
-.patient-drawer-overlay {
-    position: fixed; top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 1040;
-    opacity: 0; visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-}
-.patient-drawer-overlay.open { opacity: 1; visibility: visible; }
-.patient-drawer {
-    position: fixed; top: 0; right: -420px;
-    width: 400px; max-width: 95%; height: 100%;
-    background: #fff; z-index: 1050;
-    box-shadow: -2px 0 8px rgba(0,0,0,0.15);
-    transition: right 0.3s ease;
-    display: flex; flex-direction: column;
-}
-.patient-drawer.open { right: 0; }
-.pd-header {
-    padding: 16px 20px; border-bottom: 1px solid #e8e8e8;
-    background: linear-gradient(to bottom, #fff, #fafafa);
-    flex-shrink: 0;
-}
-.pd-header-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.pd-name { font-size: 18px; font-weight: 600; color: #333; }
-.pd-meta { font-size: 13px; color: #666; margin-top: 4px; }
-.pd-phone { font-size: 13px; color: #666; margin-top: 2px; }
-.pd-allergy { margin-top: 8px; padding: 6px 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404; font-size: 12px; display: none; }
-.pd-close { background: none; border: none; font-size: 22px; color: #999; cursor: pointer; padding: 0; }
-.pd-close:hover { color: #333; }
-.pd-body { flex: 1; overflow-y: auto; }
-.pd-body .nav-tabs { padding: 0 20px; background: #fafafa; margin: 0; }
-.pd-body .nav-tabs > li > a { font-size: 13px; padding: 10px 14px; }
-.pd-body .tab-content { padding: 16px 20px; }
-.pd-record-item { padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
-.pd-record-item:last-child { border-bottom: none; }
-.pd-record-date { font-size: 12px; color: #999; }
-.pd-record-detail { font-size: 13px; color: #333; margin-top: 2px; }
-.pd-empty { text-align: center; color: #bbb; padding: 30px 10px; font-size: 13px; }
-.pd-footer { padding: 12px 20px; border-top: 1px solid #e8e8e8; background: #fafafa; flex-shrink: 0; text-align: center; }
-
-/* ── Info Tabs ────────────────────────────────────── */
+/* ── Info Tabs — underline style ──────────────────── */
 .tw-info-tabs {
-    margin-bottom: 15px;
-    border-bottom: 2px solid #e8e8e8;
+    margin-bottom: 0;
+    border-bottom: 1px solid #E5E7EB;
 }
 .tw-info-tabs > li > a {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 13px;
-    padding: 8px 16px;
-    color: #666;
+    font-weight: 500;
+    padding: 8px 14px;
+    color: #6B7280;
     border: none;
     border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
 }
 .tw-info-tabs > li > a:hover {
     background: transparent;
-    color: #333;
-    border-bottom-color: #ccc;
+    color: #2563EB;
+    border-bottom-color: #BFDBFE;
 }
 .tw-info-tabs > li.active > a,
 .tw-info-tabs > li.active > a:hover,
 .tw-info-tabs > li.active > a:focus {
-    color: #00838F;
+    color: #2563EB;
     border: none;
-    border-bottom: 2px solid #00838F;
+    border-bottom: 2px solid #2563EB;
     background: transparent;
 }
 .tw-tab-badge {
-    background: #00838F;
-    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 16px;
+    padding: 0 5px;
+    background: #F3F4F6;
+    color: #6B7280;
     font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 10px;
+    font-weight: 600;
+    border-radius: 4px;
     vertical-align: middle;
     margin-left: 2px;
+    font-variant-numeric: tabular-nums;
+}
+.tw-info-tabs > li.active .tw-tab-badge {
+    background: #EFF6FF;
+    color: #2563EB;
 }
 .tw-tab-badge:empty {
     display: none;
@@ -194,71 +160,312 @@
 .tw-tab-loading {
     text-align: center;
     padding: 40px;
-    color: #999;
+    color: #9CA3AF;
+    font-size: 13px;
 }
 .tw-tab-empty {
     text-align: center;
     padding: 40px;
-    color: #bbb;
-    font-size: 14px;
+    color: #9CA3AF;
+    font-size: 13px;
 }
+
+/* ── Toolbar — unified 32px toolbelt ─────────────── */
+.tw-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
+    padding: 8px 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+    border-bottom: 1px solid #F3F4F6;
+}
+.tw-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+.tw-toolbar .search-box {
+    position: relative;
+}
+.tw-toolbar .search-box input {
+    width: 200px;
+    height: 32px;
+    padding-left: 10px;
+    padding-right: 28px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #374151;
+}
+.tw-toolbar .search-box input:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 1px #2563EB;
+    outline: none;
+}
+.tw-toolbar .search-box .fa-search {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9CA3AF;
+    font-size: 12px;
+}
+
+/* All toolbar inputs: 32px height */
+.tw-date-picker {
+    width: 130px !important;
+    height: 32px !important;
+    border: 1px solid #D1D5DB !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    color: #374151 !important;
+}
+.tw-date-picker:focus {
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 1px #2563EB !important;
+    outline: none;
+}
+.tw-doctor-filter {
+    width: 120px !important;
+    height: 32px !important;
+    border: 1px solid #D1D5DB !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    color: #374151 !important;
+}
+.tw-status-filter {
+    width: 110px !important;
+    height: 32px !important;
+    border: 1px solid #D1D5DB !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    color: #374151 !important;
+}
+
+/* Per-Tab Toolbar */
+.tw-tab-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 0;
+    padding: 8px 0;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #F3F4F6;
+}
+.tw-tab-toolbar .form-control {
+    height: 32px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #374151;
+}
+.tw-tab-toolbar .form-control:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 1px #2563EB;
+    outline: none;
+}
+.tw-tab-toolbar label {
+    font-size: 12px;
+    color: #9CA3AF;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* ── View Toggle ─────────────────────────────────── */
+.tw-toolbar .view-toggle .btn-group .btn {
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 0;
+    font-size: 13px;
+    border: 1px solid #D1D5DB;
+    background: #fff;
+    color: #6B7280;
+}
+.tw-toolbar .view-toggle .btn-group .btn:first-child {
+    border-radius: 6px 0 0 6px;
+}
+.tw-toolbar .view-toggle .btn-group .btn:last-child {
+    border-radius: 0 6px 6px 0;
+}
+.tw-toolbar .view-toggle .btn.active {
+    background: #2563EB;
+    color: #fff;
+    border-color: #2563EB;
+}
+.tw-toolbar .view-toggle #kanban-collapse-btn {
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid #D1D5DB;
+    background: #fff;
+    color: #6B7280;
+    margin-left: 4px;
+}
+.tw-toolbar .view-toggle #kanban-collapse-btn:hover {
+    background: #F9FAFB;
+}
+
+/* ── Action Buttons — compact ────────────────────── */
+.tw-action-btn {
+    margin: 1px 2px;
+}
+.tw-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+/* ── Info Table — dense, flat ────────────────────── */
 .tw-info-table {
     width: 100%;
     margin-bottom: 0;
 }
 .tw-info-table th {
-    background: #f8f9fa;
-    font-size: 12px;
+    background: #F9FAFB;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
     font-weight: 600;
-    color: #666;
+    color: #9CA3AF;
     padding: 8px 12px;
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid #E5E7EB;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 .tw-info-table td {
     font-size: 13px;
     padding: 8px 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #F3F4F6;
+    color: #374151;
 }
 .tw-info-table tr:last-child td {
     border-bottom: none;
 }
 .tw-info-table .clickable-name {
-    color: #00838F;
+    color: #2563EB;
     cursor: pointer;
 }
 .tw-info-table .clickable-name:hover {
     text-decoration: underline;
 }
 
-/* ── Doctor Table ─────────────────────────────────── */
+/* ── Doctor Table — flat groups ──────────────────── */
 .doctor-group {
     background: #fff;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    margin-bottom: 12px;
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0;
     overflow: hidden;
+    border-bottom: 1px solid #F3F4F6;
+}
+.doctor-group:last-child {
+    border-bottom: none;
 }
 .doctor-group-header {
-    padding: 12px 16px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e8e8e8;
+    padding: 10px 16px;
+    background: #F9FAFB;
+    border-bottom: 1px solid #F3F4F6;
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
 }
 .doctor-group-header .doctor-name {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 600;
-    font-size: 14px;
-    color: #333;
+    font-size: 13px;
+    color: #111827;
 }
 .doctor-group-header .doctor-stats {
     font-size: 12px;
-    color: #666;
+    color: #9CA3AF;
+    font-variant-numeric: tabular-nums;
 }
 .doctor-group-header .doctor-stats span {
-    margin-left: 12px;
+    margin-left: 10px;
 }
 .doctor-group-body {
     padding: 0;
+}
+
+/* ── Patient Drawer — cleaner ────────────────────── */
+.patient-drawer-overlay {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
+    z-index: 1040;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+.patient-drawer-overlay.open { opacity: 1; visibility: visible; }
+.patient-drawer {
+    position: fixed; top: 0; right: -420px;
+    width: 400px; max-width: 95%; height: 100%;
+    background: #fff; z-index: 1050;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.08);
+    transition: right 0.2s ease;
+    display: flex; flex-direction: column;
+}
+.patient-drawer.open { right: 0; }
+.pd-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid #F3F4F6;
+    background: #fff;
+    flex-shrink: 0;
+}
+.pd-header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.pd-name {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+}
+.pd-meta { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
+.pd-phone { font-size: 12px; color: #9CA3AF; margin-top: 1px; }
+.pd-allergy {
+    margin-top: 8px;
+    padding: 4px 8px;
+    background: #FEF3C7;
+    border: 1px solid #FDE68A;
+    border-radius: 4px;
+    color: #92400E;
+    font-size: 12px;
+    display: none;
+}
+.pd-close { background: none; border: none; font-size: 20px; color: #9CA3AF; cursor: pointer; padding: 0; }
+.pd-close:hover { color: #374151; }
+.pd-body { flex: 1; overflow-y: auto; }
+.pd-body .nav-tabs { padding: 0 20px; background: #F9FAFB; margin: 0; border-bottom: 1px solid #E5E7EB; }
+.pd-body .nav-tabs > li > a { font-size: 12px; padding: 8px 12px; color: #6B7280; }
+.pd-body .nav-tabs > li.active > a { color: #2563EB; border-bottom-color: #2563EB; }
+.pd-body .tab-content { padding: 14px 20px; }
+.pd-record-item { padding: 8px 0; border-bottom: 1px solid #F3F4F6; }
+.pd-record-item:last-child { border-bottom: none; }
+.pd-record-date { font-size: 11px; color: #9CA3AF; }
+.pd-record-detail { font-size: 13px; color: #374151; margin-top: 1px; }
+.pd-empty { text-align: center; color: #9CA3AF; padding: 30px 10px; font-size: 13px; }
+.pd-footer {
+    padding: 10px 20px;
+    border-top: 1px solid #F3F4F6;
+    background: #F9FAFB;
+    flex-shrink: 0;
+    text-align: center;
+}
+.pd-footer .btn {
+    height: 32px;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #2563EB;
+    border-color: #2563EB;
+}
+.pd-footer .btn:hover {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
 }

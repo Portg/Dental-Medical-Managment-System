@@ -41,13 +41,13 @@
     padding: 3px 7px;
 }
 
-/* Column header colors by status */
-.kanban-col[data-status="not_arrived"] .kanban-col-header { border-bottom-color: #FF9800; }
-.kanban-col[data-status="waiting"] .kanban-col-header     { border-bottom-color: #2196F3; }
-.kanban-col[data-status="called"] .kanban-col-header      { border-bottom-color: #673AB7; }
-.kanban-col[data-status="in_treatment"] .kanban-col-header { border-bottom-color: #4CAF50; }
-.kanban-col[data-status="completed"] .kanban-col-header    { border-bottom-color: #9E9E9E; }
-.kanban-col[data-status="no_show"] .kanban-col-header      { border-bottom-color: #F44336; }
+/* Column header colors — unified light gray */
+.kanban-col[data-status="not_arrived"] .kanban-col-header,
+.kanban-col[data-status="waiting"] .kanban-col-header,
+.kanban-col[data-status="called"] .kanban-col-header,
+.kanban-col[data-status="in_treatment"] .kanban-col-header,
+.kanban-col[data-status="completed"] .kanban-col-header,
+.kanban-col[data-status="no_show"] .kanban-col-header { border-bottom-color: #E5E7EB; }
 
 .kanban-col-body {
     padding: 8px;
