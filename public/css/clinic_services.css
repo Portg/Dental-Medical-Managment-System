@@ -1,134 +1,218 @@
-/* public/css/clinic_services.css */
+/* public/css/clinic_services.css
+ * Dentrix-inspired: flat, borderless, information-dense
+ * Accent: single blue (#2563EB)
+ * Palette: white / #F9FAFB (gray-50) / #F3F4F6 (gray-100) / #E5E7EB (gray-200)
+ */
 
+/* ── Page header — tighter ── */
 .service-page-header {
-    margin-bottom: 18px;
+    margin-bottom: 12px;
 }
 
+.service-page-header .page-title {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    letter-spacing: -0.01em;
+}
+
+/* ── Tabs — flat underline style, no pill borders ── */
 .service-module-tabs {
     display: flex;
-    gap: 10px;
+    gap: 0;
     margin-bottom: 0;
-    border-bottom: none;
+    border-bottom: 1px solid #E5E7EB;
 }
 
 .service-module-tabs > li {
     float: none;
-    margin-bottom: 0;
+    margin-bottom: -1px;
 }
 
 .service-module-tabs > li > a {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    border: 1px solid #d9e5e7;
-    border-radius: 10px;
-    background: #f6fafb;
-    color: #46606c;
-    font-weight: 600;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: #6B7280;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.service-module-tabs > li > a:hover {
+    color: #2563EB;
+    background: transparent;
+    border-bottom-color: #BFDBFE;
 }
 
 .service-module-tabs > li.active > a,
 .service-module-tabs > li.active > a:hover,
 .service-module-tabs > li.active > a:focus {
-    border: 1px solid #00838F;
-    background: #e8f7f8;
-    color: #006874;
+    border: none;
+    border-bottom: 2px solid #2563EB;
+    background: transparent;
+    color: #2563EB;
 }
 
 .module-tab-count {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 26px;
-    height: 22px;
-    padding: 0 7px;
-    border-radius: 999px;
-    background: rgba(0, 131, 143, 0.12);
-    color: #006874;
-    font-size: 12px;
-    font-weight: 700;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: #F3F4F6;
+    color: #6B7280;
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.service-module-tabs > li.active .module-tab-count {
+    background: #EFF6FF;
+    color: #2563EB;
 }
 
 .service-tab-content {
-    margin-top: 18px;
+    margin-top: 0;
 }
 
+/* ── Cards — flat, borderless, no shadows ── */
 .service-toolbar-card,
 .service-category-card,
 .service-table-card {
-    border: 1px solid #e6eef0;
-    border-radius: 12px;
+    border: none;
+    border-radius: 0;
     background: #fff;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    box-shadow: none;
 }
 
-.service-toolbar-card,
+/* ── Toolbar — unified 32px toolbelt ── */
+.service-toolbar-card {
+    padding: 8px 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid #F3F4F6;
+}
+
 .service-category-card {
-    padding: 18px 20px;
-    margin-bottom: 16px;
+    padding: 6px 0;
+    margin-bottom: 0;
 }
 
 .service-table-card {
     overflow: hidden;
 }
 
-.service-toolbar-main,
+.service-toolbar-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
 .service-category-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 8px;
 }
 
 .service-category-title {
     margin: 0;
-    font-size: 15px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
     font-weight: 600;
-    color: #22313f;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .service-toolbar-actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: nowrap;
+    gap: 6px;
     justify-content: flex-end;
 }
 
+/* All toolbar controls: uniform 32px height */
 .service-toolbar-actions .btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    min-height: 36px;
-    border-radius: 8px;
-    padding: 0 14px;
+    gap: 5px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Primary action — accent blue */
+.service-toolbar-actions .btn-success {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: #fff;
+}
+
+.service-toolbar-actions .btn-success:hover {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
+}
+
+/* Secondary action — neutral */
+.service-toolbar-actions .btn-default {
+    background: #fff;
+    border: 1px solid #D1D5DB;
+    color: #374151;
+}
+
+.service-toolbar-actions .btn-default:hover {
+    background: #F9FAFB;
+    border-color: #9CA3AF;
 }
 
 .service-more-actions .dropdown-toggle {
-    min-height: 36px;
-    border-radius: 8px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: 6px;
 }
 
 .service-more-actions .dropdown-menu {
-    min-width: 180px;
-    padding: 6px 0;
-    border-radius: 10px;
-    border: 1px solid #dfe7ea;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    min-width: 160px;
+    padding: 4px 0;
+    border-radius: 6px;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .service-more-actions .dropdown-menu > li > a {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 14px;
-    color: #40515d;
+    padding: 6px 12px;
+    color: #374151;
+    font-size: 13px;
 }
 
+.service-more-actions .dropdown-menu > li > a:hover {
+    background: #F9FAFB;
+    color: #111827;
+}
+
+/* ── Filter controls — uniform 32px ── */
 .service-toolbar-filters {
     display: flex;
     flex: 1;
-    gap: 12px;
+    gap: 6px;
     align-items: center;
 }
 
@@ -138,48 +222,54 @@
 
 .service-filter-field .form-control,
 .service-filter-field .btn {
-    height: 38px;
-    border-radius: 8px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid #D1D5DB;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: #374151;
+    background: #fff;
+}
+
+.service-filter-field .form-control:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 1px #2563EB;
+    outline: none;
 }
 
 .service-filter-search {
     flex: 1;
+    max-width: 280px;
 }
 
 .service-filter-status {
-    width: 150px;
+    width: 120px;
 }
 
-/* ── Category filter bar — single scrollable row ── */
+/* ── Category filter bar — compact chips ── */
 .category-filter-bar {
     display: flex;
     align-items: center;
-    padding-top: 14px;
-    margin-top: 14px;
-    border-top: 1px solid #eef3f4;
-    min-height: 44px;
+    padding-top: 0;
+    margin-top: 0;
+    border-top: none;
+    min-height: 32px;
 }
 
-/* Scrollable pill container — never wraps */
 .category-pills {
     display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
-    gap: 6px;
+    gap: 4px;
     margin: 0;
-    padding: 2px 0 6px 0;  /* bottom padding for scrollbar clearance */
+    padding: 2px 0;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: #ddd transparent;
+    scrollbar-width: none;
 }
 
 .category-pills::-webkit-scrollbar {
-    height: 3px;
-}
-
-.category-pills::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 2px;
+    height: 0;
+    display: none;
 }
 
 .category-pills > li {
@@ -187,53 +277,57 @@
     flex-shrink: 0;
 }
 
-/* Override Bootstrap's .nav-pills > li > a with higher specificity */
 ul.category-pills > li > a {
     display: inline-block;
-    padding: 7px 14px;
-    font-size: 13px;
-    border-radius: 999px !important;
-    color: #546571;
-    background: #f6f9fa;
-    border: 1px solid #dfe7ea;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    padding: 4px 10px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    border-radius: 4px !important;
+    color: #6B7280;
+    background: transparent;
+    border: 1px solid transparent;
+    transition: background 0.1s, color 0.1s;
     white-space: nowrap;
     line-height: 1.5;
     font-weight: 500;
 }
 
 ul.category-pills > li > a:hover {
-    background: #ebf7f8;
-    border-color: #00838F;
-    color: #00838F;
+    background: #F3F4F6;
+    border-color: transparent;
+    color: #374151;
 }
 
-/* Active state — system teal, matching Bootstrap theme */
 ul.category-pills > li.active > a,
 ul.category-pills > li.active > a:hover {
-    background: #00838F !important;
-    border-color: #00838F !important;
-    color: #fff !important;
+    background: #EFF6FF !important;
+    border-color: transparent !important;
+    color: #2563EB !important;
+    font-weight: 600;
 }
 
 /* ── Category pill inline action icons ── */
 .cat-pill-actions {
     display: none;
-    margin-left: 5px;
+    margin-left: 4px;
     font-size: 10px;
 }
 
 .cat-pill-actions .fa {
-    margin-left: 3px;
-    opacity: 0.75;
+    margin-left: 2px;
+    opacity: 0.6;
 }
 
 .cat-pill-actions .fa-pencil {
-    color: rgba(255,255,255,0.85);
+    color: #6B7280;
 }
 
 .cat-pill-actions .fa-trash {
-    color: rgba(255,200,200,0.9);
+    color: #EF4444;
+}
+
+ul.category-pills > li.active .cat-pill-actions .fa-pencil {
+    color: #2563EB;
 }
 
 ul.category-pills > li:hover .cat-pill-actions,
@@ -241,9 +335,27 @@ ul.category-pills > li.active .cat-pill-actions {
     display: inline;
 }
 
-/* ── Packages table ── */
+/* ── Category add button — compact ── */
+.service-category-header .btn-circle {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    padding: 0;
+    font-size: 11px;
+    line-height: 24px;
+    border-radius: 4px;
+    background: #2563EB;
+    border-color: #2563EB;
+}
+
+.service-category-header .btn-circle:hover {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
+}
+
+/* ── Data table — dense, no card chrome ── */
 #packages-datatable .badge {
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .service-table.dataTable {
@@ -257,11 +369,34 @@ ul.category-pills > li.active .cat-pill-actions {
 
 .service-table.list-table thead th:first-child,
 .service-table.list-table tbody td:first-child {
-    width: 58px;
+    width: 48px;
+}
+
+/* Tighter table cell padding for density */
+.service-table.list-table thead th {
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.service-table.list-table tbody td {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #374151;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.service-table.list-table tbody tr:hover {
+    background: #F9FAFB;
 }
 
 .service-table-card .dataTables_wrapper {
-    padding: 0 18px 14px;
+    padding: 0;
 }
 
 .service-table-card .dataTables_length,
@@ -271,13 +406,21 @@ ul.category-pills > li.active .cat-pill-actions {
 
 .service-table-card .dataTables_info,
 .service-table-card .dataTables_paginate {
-    margin-top: 12px;
+    margin-top: 8px;
+    padding: 0 12px 10px;
+}
+
+.service-table-card .dataTables_info {
+    font-size: 12px;
+    color: #9CA3AF;
 }
 
 .service-table-card .dataTables_paginate .paginate_button {
-    border-radius: 8px !important;
+    border-radius: 4px !important;
+    font-size: 12px;
 }
 
+/* ── Modal — cleaner, flatter ── */
 .service-form-modal__dialog {
     width: 720px;
     max-width: 94%;
@@ -288,82 +431,108 @@ ul.category-pills > li.active .cat-pill-actions {
 }
 
 .service-form-modal .modal-content {
-    border: 1px solid #dfe7ea;
-    border-radius: 14px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .service-form-modal__header {
-    padding: 18px 22px;
-    border-bottom: 1px solid #edf2f4;
-    background: #f8fbfc;
+    padding: 14px 20px;
+    border-bottom: 1px solid #F3F4F6;
+    background: #fff;
 }
 
 .service-form-modal__header .modal-title {
-    font-size: 17px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
     font-weight: 600;
-    color: #22313f;
+    color: #111827;
 }
 
 .service-form-modal__header .close {
     margin-top: 0;
-    opacity: 0.45;
+    opacity: 0.4;
+    font-size: 18px;
 }
 
 .service-form-modal__body {
-    padding: 22px;
+    padding: 20px;
     max-height: 72vh;
     overflow-y: auto;
 }
 
 .service-form-modal__footer {
-    padding: 16px 22px;
-    border-top: 1px solid #edf2f4;
-    background: #fbfcfd;
+    padding: 12px 20px;
+    border-top: 1px solid #F3F4F6;
+    background: #F9FAFB;
 }
 
 .service-form-modal__footer .btn {
-    min-width: 88px;
-    border-radius: 8px;
+    min-width: 80px;
+    height: 32px;
+    border-radius: 6px;
+    font-size: 13px;
 }
 
+.service-form-modal__footer .btn-success,
+.service-form-modal__footer .btn-primary {
+    background: #2563EB;
+    border-color: #2563EB;
+}
+
+.service-form-modal__footer .btn-success:hover,
+.service-form-modal__footer .btn-primary:hover {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
+}
+
+/* ── Form fields — compact ── */
 .service-form-group {
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 .service-form-group label {
     display: block;
-    margin-bottom: 7px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #40515d;
+    margin-bottom: 4px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6B7280;
 }
 
 .service-form-group .form-control,
 .service-form-modal .select2-container .select2-selection--single {
-    height: 40px;
-    border-radius: 8px;
+    height: 34px;
+    border-radius: 6px;
+    border: 1px solid #D1D5DB;
+    font-size: 13px;
+}
+
+.service-form-group .form-control:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 1px #2563EB;
 }
 
 .service-form-group textarea.form-control {
-    min-height: 88px;
+    min-height: 72px;
     resize: vertical;
 }
 
 .service-form-modal .select2-container--default .select2-selection--single {
-    border-color: #cfd9dd;
-    padding: 5px 12px;
+    border-color: #D1D5DB;
+    padding: 3px 10px;
 }
 
 .service-form-modal .select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 28px;
+    line-height: 26px;
     padding-left: 0;
-    color: #22313f;
+    color: #374151;
+    font-size: 13px;
 }
 
 .service-form-modal .select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 38px;
+    height: 32px;
 }
 
 .service-form-modal .select2-container {
@@ -371,41 +540,43 @@ ul.category-pills > li.active .cat-pill-actions {
 }
 
 .service-form-row {
-    margin-left: -8px;
-    margin-right: -8px;
+    margin-left: -6px;
+    margin-right: -6px;
 }
 
 .service-form-row > [class*="col-"] {
-    padding-left: 8px;
-    padding-right: 8px;
+    padding-left: 6px;
+    padding-right: 6px;
 }
 
+/* ── Toggle items — subtle, flat ── */
 .service-form-toggles {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 8px;
     margin-top: 2px;
 }
 
 .service-toggle-item {
-    min-width: 150px;
-    padding: 11px 14px;
-    border: 1px solid #e5edef;
-    border-radius: 10px;
-    background: #fafcfc;
+    min-width: 140px;
+    padding: 8px 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    background: #F9FAFB;
 }
 
 .service-toggle-label {
     margin-bottom: 0;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
-    color: #30424f;
+    color: #374151;
 }
 
+/* ── Subsection (package items) — minimal chrome ── */
 .service-subsection {
-    margin-top: 6px;
-    border: 1px solid #e7eef0;
-    border-radius: 12px;
+    margin-top: 4px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
     overflow: hidden;
 }
 
@@ -413,19 +584,20 @@ ul.category-pills > li.active .cat-pill-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 14px 16px;
-    background: #f8fbfc;
-    border-bottom: 1px solid #edf2f4;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #F9FAFB;
+    border-bottom: 1px solid #F3F4F6;
 }
 
 .service-subsection__title {
-    font-size: 14px;
-    color: #22313f;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
 }
 
 .service-subsection__body {
-    padding: 0 16px 12px;
+    padding: 0 14px 10px;
 }
 
 .service-items-table {
@@ -433,28 +605,35 @@ ul.category-pills > li.active .cat-pill-actions {
 }
 
 .service-items-table > thead > tr > th {
-    padding: 12px 10px;
-    border-bottom: 1px solid #e8eff1;
-    color: #60707b;
-    font-size: 12px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #E5E7EB;
+    color: #9CA3AF;
+    font-size: 11px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 .service-items-table > tbody > tr > td {
-    padding: 10px;
+    padding: 8px 10px;
     vertical-align: middle;
-    border-top: 1px solid #eef3f4;
+    border-top: 1px solid #F3F4F6;
+    font-size: 13px;
 }
 
 .service-items-empty__cell {
-    padding: 26px 12px !important;
+    padding: 20px 12px !important;
     text-align: center;
-    color: #7a8792;
-    background: #fcfdfd;
+    color: #9CA3AF;
+    background: #fff;
+    font-size: 13px;
 }
 
 .service-package-item-row .btn-danger {
-    border-radius: 8px;
+    border-radius: 4px;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
 }
 
 /* ── Package items table ── */
@@ -466,6 +645,7 @@ ul.category-pills > li.active .cat-pill-actions {
     cursor: pointer;
 }
 
+/* ── Responsive ── */
 @media (max-width: 991px) {
     .service-toolbar-main,
     .service-category-header {
@@ -479,6 +659,10 @@ ul.category-pills > li.active .cat-pill-actions {
         align-items: stretch;
     }
 
+    .service-filter-search {
+        max-width: none;
+    }
+
     .service-toolbar-actions {
         justify-content: flex-start;
     }
@@ -487,22 +671,23 @@ ul.category-pills > li.active .cat-pill-actions {
 @media (max-width: 767px) {
     .service-toolbar-card,
     .service-category-card {
-        padding: 16px;
+        padding: 8px 0;
     }
 
     .service-module-tabs {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        overflow-x: auto;
     }
 
     .service-table-card .dataTables_wrapper {
-        padding: 0 12px 12px;
+        padding: 0;
     }
 
     .service-form-modal__body,
     .service-form-modal__header,
     .service-form-modal__footer {
-        padding-left: 16px;
-        padding-right: 16px;
+        padding-left: 14px;
+        padding-right: 14px;
     }
 
     .service-subsection__header {

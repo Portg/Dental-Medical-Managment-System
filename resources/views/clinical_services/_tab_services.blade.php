@@ -23,7 +23,7 @@
             </button>
             <div class="btn-group service-more-actions">
                 <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
-                    {{ __('clinical_services.more_actions') }} <span class="caret"></span>
+                    <i class="fa fa-ellipsis-h"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
                     <li>
@@ -50,8 +50,12 @@
 </div>
 
 <div class="service-category-card">
-    <div class="service-category-header">
-        <h4 class="service-category-title">{{ __('clinical_services.service_categories') }}</h4>
+    <div class="category-filter-bar" style="display:flex;align-items:center;gap:6px;">
+        <ul class="nav nav-pills category-pills" id="category-list">
+            <li class="active" data-id="0" data-name="{{ __('common.all') }}" style="cursor:pointer;">
+                <a href="#">{{ __('common.all') }}</a>
+            </li>
+        </ul>
         @can('manage-service-categories')
         <button class="btn btn-circle btn-icon-only btn-success btn-sm" id="btn-add-category"
                 title="{{ __('common.add') }}">
@@ -59,21 +63,13 @@
         </button>
         @endcan
     </div>
-
-    <div class="category-filter-bar">
-        <ul class="nav nav-pills category-pills" id="category-list">
-            <li class="active" data-id="0" data-name="{{ __('common.all') }}" style="cursor:pointer;">
-                <a href="#">{{ __('common.all') }}</a>
-            </li>
-        </ul>
-    </div>
 </div>
 
 <div class="service-table-card">
     <table id="services-datatable" class="table list-table service-table" style="width:100%;">
         <thead>
             <tr>
-                <th>#</th>
+                <th>{{ __('common.id') }}</th>
                 <th>{{ __('clinical_services.name') }}</th>
                 <th>{{ __('clinical_services.service_categories') }}</th>
                 <th>{{ __('clinical_services.unit') }}</th>

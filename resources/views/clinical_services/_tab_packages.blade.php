@@ -30,7 +30,7 @@
     <table id="packages-datatable" class="table list-table service-table" style="width:100%;">
         <thead>
             <tr>
-                <th>#</th>
+                <th>{{ __('common.id') }}</th>
                 <th>{{ __('clinical_services.package_name') }}</th>
                 <th>{{ __('clinical_services.package_total_price') }}</th>
                 <th>{{ __('clinical_services.package_description') }}</th>

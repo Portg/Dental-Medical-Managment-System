@@ -2,34 +2,30 @@
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('css/list-page.css') }}?v={{ filemtime(public_path('css/list-page.css')) }}">
-<link rel="stylesheet" href="{{ asset('css/clinic_services.css') }}">
+<link rel="stylesheet" href="{{ asset('css/clinic_services.css') }}?v={{ filemtime(public_path('css/clinic_services.css')) }}">
 @endsection
 
 @section('content')
 <div class="row">
     <div class="col-md-12">
-        <div class="portlet light bordered">
+        <div class="portlet light">
             <div class="portlet-body">
-                <div class="page-header-l1 service-page-header">
-                    <div>
-                        <h1 class="page-title">{{ __('menu.service_items') }}</h1>
-                    </div>
+                <div class="service-page-header" style="display:flex;align-items:center;justify-content:space-between;">
+                    <ul class="nav nav-tabs service-module-tabs" id="clinicServicesTabs" role="tablist">
+                        <li class="active">
+                            <a href="#tab-services" data-toggle="tab" role="tab">
+                                {{ __('clinical_services.service_items') }}
+                                <span class="module-tab-count" id="services-total-count">0</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#tab-packages" data-toggle="tab" role="tab">
+                                {{ __('clinical_services.service_packages') }}
+                                <span class="module-tab-count" id="packages-total-count">0</span>
+                            </a>
+                        </li>
+                    </ul>
                 </div>
-
-                <ul class="nav nav-tabs service-module-tabs" id="clinicServicesTabs" role="tablist">
-                    <li class="active">
-                        <a href="#tab-services" data-toggle="tab" role="tab">
-                            {{ __('clinical_services.service_items') }}
-                            <span class="module-tab-count" id="services-total-count">0</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#tab-packages" data-toggle="tab" role="tab">
-                            {{ __('clinical_services.service_packages') }}
-                            <span class="module-tab-count" id="packages-total-count">0</span>
-                        </a>
-                    </li>
-                </ul>
 
                 <div class="tab-content service-tab-content">
                     <div class="tab-pane active" id="tab-services">
