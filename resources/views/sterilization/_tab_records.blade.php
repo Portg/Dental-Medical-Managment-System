@@ -51,7 +51,7 @@
     <table id="records-datatable" class="table table-hover list-table sterilization-table w-100">
         <thead>
             <tr>
-                <th>#</th>
+                <th>{{ __('common.id') }}</th>
                 <th>{{ __('sterilization.batch_no') }}</th>
                 <th>器械包</th>
                 <th>{{ __('sterilization.method') }}</th>

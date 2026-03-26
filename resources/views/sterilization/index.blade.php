@@ -3,20 +3,14 @@
 @section('css')
 <link rel="stylesheet" href="{{ asset('css/list-page.css') }}?v={{ filemtime(public_path('css/list-page.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/form-modal.css') }}?v={{ filemtime(public_path('css/form-modal.css')) }}">
-<link rel="stylesheet" href="{{ asset('css/sterilization.css') }}">
+<link rel="stylesheet" href="{{ asset('css/sterilization.css') }}?v={{ filemtime(public_path('css/sterilization.css')) }}">
 @endsection
 
 @section('content')
 <div class="row">
     <div class="col-md-12">
-        <div class="portlet light bordered sterilization-page">
+        <div class="portlet light sterilization-page">
             <div class="portlet-body">
-                <div class="page-header-l1">
-                    <div>
-                        <h1 class="page-title">{{ __('menu.sterilization_management') }}</h1>
-                    </div>
-                </div>
-
                 <ul class="nav nav-tabs sterilization-tabs" id="sterilizationTabs" role="tablist">
                     <li class="active">
                         <a data-toggle="tab" href="#tab-records" role="tab">
