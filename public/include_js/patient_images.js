@@ -9,6 +9,8 @@ function loadImagesTable() {
     dataTable = $(getTableSelector()).DataTable({
         processing: true,
         serverSide: true,
+        autoWidth: false,
+        scrollX: true,
         ajax: {
             url: '/patient-images',
             type: 'GET'
@@ -25,7 +27,17 @@ function loadImagesTable() {
             {data: 'deleteBtn', name: 'deleteBtn', orderable: false, searchable: false}
         ],
         order: [[5, 'desc']],
-        language: LanguageManager.getDataTableLang()
+        language: LanguageManager.getDataTableLang(),
+        initComplete: function() {
+            if (typeof syncPatientImagesLayoutState === 'function') {
+                syncPatientImagesLayoutState();
+            }
+        },
+        drawCallback: function() {
+            if (typeof syncPatientImagesLayoutState === 'function') {
+                syncPatientImagesLayoutState();
+            }
+        }
     });
 
     setupEmptyStateHandler();
