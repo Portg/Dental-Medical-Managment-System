@@ -90,6 +90,7 @@ return [
     'add_treatment_plan' => '添加治疗计划',
     'edit_treatment_plan' => '编辑治疗计划',
     'view_treatment_plan' => '查看治疗计划',
+    'search_treatment_plan_placeholder' => '搜索患者姓名、编号或计划名称...',
     'plan_name' => '计划名称',
     'description' => '描述',
     'planned_procedures' => '计划操作',

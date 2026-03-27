@@ -90,6 +90,7 @@ return [
     'add_treatment_plan' => 'Add Treatment Plan',
     'edit_treatment_plan' => 'Edit Treatment Plan',
     'view_treatment_plan' => 'View Treatment Plan',
+    'search_treatment_plan_placeholder' => 'Search patient name, ID or plan name...',
     'plan_name' => 'Plan Name',
     'description' => 'Description',
     'planned_procedures' => 'Planned Procedures',

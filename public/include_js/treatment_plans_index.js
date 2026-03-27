@@ -4,7 +4,14 @@ $(document).ready(function() {
     dataTable = $('#treatment_plans_table').DataTable({
         processing: true,
         serverSide: true,
-        ajax: window.TreatmentPlansConfig.ajaxUrl,
+        ajax: {
+            url: window.TreatmentPlansConfig.ajaxUrl,
+            data: function(d) {
+                d.search_keyword = $('#search-input').val();
+                d.status = $('#filter-status').val();
+                d.priority = $('#filter-priority').val();
+            }
+        },
         columns: [
             {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
             {data: 'patient_no', name: 'patient_no'},
@@ -18,9 +25,7 @@ $(document).ready(function() {
             {data: 'created_at', name: 'created_at', render: function(data) {
                 return data ? data.substring(0, 10) : '-';
             }},
-            {data: 'viewBtn', name: 'viewBtn', orderable: false, searchable: false},
-            {data: 'editBtn', name: 'editBtn', orderable: false, searchable: false},
-            {data: 'deleteBtn', name: 'deleteBtn', orderable: false, searchable: false}
+            {data: 'action', name: 'action', orderable: false, searchable: false}
         ],
         dom: 'rtip',
         language: LanguageManager.getDataTableLang(),
@@ -39,6 +44,20 @@ $(document).ready(function() {
         }
     });
 });
+
+// Create new treatment plan
+function createRecord() {
+    $('#treatment_plan_modal_title').text(LanguageManager.trans('medical_cases.add_treatment_plan'));
+    resetTreatmentPlanForm();
+    $('#treatment_plan_modal').modal('show');
+}
+
+// Override list-page doSearch for filter support
+function doSearch() {
+    if (dataTable) {
+        dataTable.draw(true);
+    }
+}
 
 // View Treatment Plan
 function viewTreatmentPlan(id) {
