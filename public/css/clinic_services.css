@@ -1,6 +1,6 @@
 /* public/css/clinic_services.css
  * Dentrix-inspired: flat, borderless, information-dense
- * Accent: single blue (#2563EB)
+ * Accent: Teal/Cyan (#00838F) — matches global list-page theme
  * Palette: white / #F9FAFB (gray-50) / #F3F4F6 (gray-100) / #E5E7EB (gray-200)
  */
 
@@ -47,18 +47,18 @@
 }
 
 .service-module-tabs > li > a:hover {
-    color: #2563EB;
+    color: #00838F;
     background: transparent;
-    border-bottom-color: #BFDBFE;
+    border-bottom-color: #80DEEA;
 }
 
 .service-module-tabs > li.active > a,
 .service-module-tabs > li.active > a:hover,
 .service-module-tabs > li.active > a:focus {
     border: none;
-    border-bottom: 2px solid #2563EB;
+    border-bottom: 2px solid #00838F;
     background: transparent;
-    color: #2563EB;
+    color: #00838F;
 }
 
 .module-tab-count {
@@ -77,8 +77,8 @@
 }
 
 .service-module-tabs > li.active .module-tab-count {
-    background: #EFF6FF;
-    color: #2563EB;
+    background: #E0F7FA;
+    color: #00838F;
 }
 
 .service-tab-content {
@@ -156,16 +156,16 @@
     font-weight: 500;
 }
 
-/* Primary action — accent blue */
+/* Primary action — teal accent */
 .service-toolbar-actions .btn-success {
-    background: #2563EB;
-    border-color: #2563EB;
+    background: #00838F;
+    border-color: #00838F;
     color: #fff;
 }
 
 .service-toolbar-actions .btn-success:hover {
-    background: #1D4ED8;
-    border-color: #1D4ED8;
+    background: #005662;
+    border-color: #005662;
 }
 
 /* Secondary action — neutral */
@@ -232,8 +232,8 @@
 }
 
 .service-filter-field .form-control:focus {
-    border-color: #2563EB;
-    box-shadow: 0 0 0 1px #2563EB;
+    border-color: #00838F;
+    box-shadow: 0 0 0 1px #00838F;
     outline: none;
 }
 
@@ -300,9 +300,9 @@ ul.category-pills > li > a:hover {
 
 ul.category-pills > li.active > a,
 ul.category-pills > li.active > a:hover {
-    background: #EFF6FF !important;
+    background: #E0F7FA !important;
     border-color: transparent !important;
-    color: #2563EB !important;
+    color: #00838F !important;
     font-weight: 600;
 }
 
@@ -327,7 +327,7 @@ ul.category-pills > li.active > a:hover {
 }
 
 ul.category-pills > li.active .cat-pill-actions .fa-pencil {
-    color: #2563EB;
+    color: #00838F;
 }
 
 ul.category-pills > li:hover .cat-pill-actions,
@@ -344,13 +344,13 @@ ul.category-pills > li.active .cat-pill-actions {
     font-size: 11px;
     line-height: 24px;
     border-radius: 4px;
-    background: #2563EB;
-    border-color: #2563EB;
+    background: #00838F;
+    border-color: #00838F;
 }
 
 .service-category-header .btn-circle:hover {
-    background: #1D4ED8;
-    border-color: #1D4ED8;
+    background: #005662;
+    border-color: #005662;
 }
 
 /* ── Data table — dense, no card chrome ── */
@@ -477,14 +477,14 @@ ul.category-pills > li.active .cat-pill-actions {
 
 .service-form-modal__footer .btn-success,
 .service-form-modal__footer .btn-primary {
-    background: #2563EB;
-    border-color: #2563EB;
+    background: #00838F;
+    border-color: #00838F;
 }
 
 .service-form-modal__footer .btn-success:hover,
 .service-form-modal__footer .btn-primary:hover {
-    background: #1D4ED8;
-    border-color: #1D4ED8;
+    background: #005662;
+    border-color: #005662;
 }
 
 /* ── Form fields — compact ── */
@@ -510,8 +510,8 @@ ul.category-pills > li.active .cat-pill-actions {
 }
 
 .service-form-group .form-control:focus {
-    border-color: #2563EB;
-    box-shadow: 0 0 0 1px #2563EB;
+    border-color: #00838F;
+    box-shadow: 0 0 0 1px #00838F;
 }
 
 .service-form-group textarea.form-control {
