@@ -59,6 +59,7 @@
 
 @section('empty_icon', 'fa-image')
 @section('empty_title', __('patient_images.no_images_found'))
+@section('empty_desc', __('patient_images.no_images_found_filtered'))
 
 @section('modals')
     @include('patient_images.create')

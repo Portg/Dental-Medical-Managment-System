@@ -51,4 +51,5 @@ return [
     'image_deleted_successfully' => '影像删除成功',
     'delete_confirmation' => '确定要删除此影像吗？此操作不可撤销。',
     'no_images_found' => '暂无影像记录',
+    'no_images_found_filtered' => '当前筛选条件下暂无影像记录，请调整查询条件后再试。',
 ];

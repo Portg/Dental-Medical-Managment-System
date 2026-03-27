@@ -51,4 +51,5 @@ return [
     'image_deleted_successfully' => 'Image deleted successfully',
     'delete_confirmation' => 'Are you sure you want to delete this image? This action cannot be undone.',
     'no_images_found' => 'No images found',
+    'no_images_found_filtered' => 'No patient images match the current filters. Adjust the search criteria and try again.',
 ];
