@@ -3,6 +3,7 @@ $(document).ready(function() {
 
     // Initialize select2
     $('.select2').select2();
+    $('[data-toggle="tooltip"]').tooltip();
 
     $('#image_file').on('change', handleImageFileSelection);
 });
@@ -48,7 +49,7 @@ function loadImagesTable() {
 function addImage() {
     resetForm();
     $('#imageModalLabel').text(LanguageManager.trans('patient_images.add_image'));
-    $('#file_required').show();
+    $('[data-toggle="tooltip"]').tooltip();
     $('#imageModal').modal('show');
 }
 
@@ -159,7 +160,7 @@ function editImage(id) {
             $('.loading').hide();
             resetForm();
             $('#imageModalLabel').text(LanguageManager.trans('patient_images.edit_image'));
-            $('#file_required').hide();
+            $('[data-toggle="tooltip"]').tooltip();
 
             $('#image_id').val(response.id);
             $('#patient_id').val(response.patient_id).trigger('change');

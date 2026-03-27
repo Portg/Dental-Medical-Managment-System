@@ -8,6 +8,46 @@
         padding: 24px;
     }
 
+    #imageModal .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    #imageModal .modal-footer .btn {
+        min-width: 88px;
+        border-radius: 6px;
+        box-shadow: none;
+        text-shadow: none;
+    }
+
+    #imageModal .modal-footer .btn-default {
+        float: none;
+        margin-left: 0;
+        background: #f3f5f7;
+        border-color: #d6dde3;
+        color: #415364;
+    }
+
+    #imageModal .modal-footer .btn-default:hover,
+    #imageModal .modal-footer .btn-default:focus {
+        background: #e8edf1;
+        border-color: #c8d3db;
+        color: #243444;
+    }
+
+    #imageModal .modal-footer .btn-primary {
+        background: #0f5c66;
+        border-color: #0f5c66;
+        color: #fff;
+    }
+
+    #imageModal .modal-footer .btn-primary:hover,
+    #imageModal .modal-footer .btn-primary:focus {
+        background: #0b4a53;
+        border-color: #0b4a53;
+    }
+
     .patient-image-form {
         display: flex;
         flex-direction: column;
@@ -107,13 +147,28 @@
         font-weight: 600;
         color: #1f2937;
         margin-bottom: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .patient-image-dropzone__hint {
-        max-width: 360px;
         font-size: 14px;
-        line-height: 1.7;
+        line-height: 1.6;
         color: #6b7280;
+    }
+
+    .patient-image-tooltip {
+        width: 18px;
+        height: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #dcecef;
+        color: #58707a;
+        font-size: 11px;
+        cursor: help;
     }
 
     .patient-image-file-meta {
@@ -213,6 +268,12 @@
         line-height: 1;
     }
 
+    .patient-image-field-optional {
+        color: #8a97a6;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
     .patient-image-field .form-control,
     .patient-image-field .select2-container .select2-selection--single {
         min-height: 42px;
@@ -290,8 +351,18 @@
                                         <div class="patient-image-dropzone__icon">
                                             <i class="fa fa-cloud-upload"></i>
                                         </div>
-                                        <div class="patient-image-dropzone__title">{{ __('patient_images.image_file') }} <span class="text-danger" id="file_required">*</span></div>
-                                        <div class="patient-image-dropzone__hint">{{ __('patient_images.file_hint') }}</div>
+                                        <div class="patient-image-dropzone__title">
+                                            {{ __('patient_images.image_file') }}
+                                            <span
+                                                class="patient-image-tooltip"
+                                                data-toggle="tooltip"
+                                                data-placement="top"
+                                                title="{{ __('patient_images.file_hint') }}"
+                                            >
+                                                <i class="fa fa-info"></i>
+                                            </span>
+                                        </div>
+                                        <div class="patient-image-dropzone__hint">点击或拖拽上传</div>
                                         <div class="patient-image-file-meta" id="selected_file_meta">
                                             <i class="fa fa-file-image-o"></i>
                                             <span id="selected_file_name">{{ __('patient_images.selected_file') }}</span>
@@ -323,9 +394,9 @@
                         <div class="patient-image-section__body">
                             <div class="patient-image-grid">
                                 <div class="patient-image-field">
-                                    <label for="patient_id">{{ __('patient_images.patient') }} <span class="text-danger">*</span></label>
+                                    <label for="patient_id">{{ __('patient_images.patient') }}</label>
                                     <select name="patient_id" id="patient_id" class="form-control select2">
-                                        <option value="">{{ __('common.select') }}</option>
+                                        <option value=""></option>
                                         @foreach($patients as $patient)
                                             <option value="{{ $patient->id }}">{{ $patient->full_name }} ({{ $patient->patient_no }})</option>
                                         @endforeach
@@ -333,9 +404,9 @@
                                 </div>
 
                                 <div class="patient-image-field">
-                                    <label for="image_type">{{ __('patient_images.image_type') }} <span class="text-danger">*</span></label>
+                                    <label for="image_type">{{ __('patient_images.image_type') }}</label>
                                     <select name="image_type" id="image_type" class="form-control">
-                                        <option value="">{{ __('common.select') }}</option>
+                                        <option value=""></option>
                                         <option value="X-Ray">{{ __('patient_images.type_x_ray') }}</option>
                                         <option value="CT">{{ __('patient_images.type_ct') }}</option>
                                         <option value="Intraoral">{{ __('patient_images.type_intraoral') }}</option>
@@ -345,12 +416,12 @@
                                 </div>
 
                                 <div class="patient-image-field patient-image-field--full">
-                                    <label for="title">{{ __('patient_images.title') }} <span class="text-danger">*</span></label>
-                                    <input type="text" name="title" id="title" class="form-control" placeholder="{{ __('patient_images.title_placeholder') }}">
+                                    <label for="title">{{ __('patient_images.title') }}</label>
+                                    <input type="text" name="title" id="title" class="form-control" placeholder="">
                                 </div>
 
                                 <div class="patient-image-field">
-                                    <label for="image_date">{{ __('patient_images.image_date') }} <span class="text-danger">*</span></label>
+                                    <label for="image_date">{{ __('patient_images.image_date') }}</label>
                                     <input type="date" name="image_date" id="image_date" class="form-control">
                                 </div>
                             </div>
@@ -367,15 +438,18 @@
                                 <div class="patient-image-field">
                                     <div class="patient-image-aux-card">
                                         <label for="tooth_number">{{ __('patient_images.tooth_number') }}</label>
-                                        <input type="text" name="tooth_number" id="tooth_number" class="form-control" placeholder="{{ __('patient_images.tooth_number_placeholder') }}">
+                                        <input type="text" name="tooth_number" id="tooth_number" class="form-control" placeholder="">
                                         <div class="patient-image-field-help">{{ __('patient_images.auxiliary_info_hint') }}</div>
                                     </div>
                                 </div>
 
                                 <div class="patient-image-field">
                                     <div class="patient-image-aux-card">
-                                        <label for="description">{{ __('patient_images.description') }}</label>
-                                        <textarea name="description" id="description" class="form-control" rows="3" placeholder="{{ __('patient_images.description_placeholder') }}"></textarea>
+                                        <label for="description">
+                                            {{ __('patient_images.description') }}
+                                            <span class="patient-image-field-optional">(Optional)</span>
+                                        </label>
+                                        <textarea name="description" id="description" class="form-control" rows="3" placeholder=""></textarea>
                                     </div>
                                 </div>
                             </div>
