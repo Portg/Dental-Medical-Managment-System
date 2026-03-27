@@ -3,6 +3,8 @@ $(document).ready(function() {
 
     // Initialize select2
     $('.select2').select2();
+
+    $('#image_file').on('change', handleImageFileSelection);
 });
 
 function loadImagesTable() {
@@ -54,8 +56,38 @@ function resetForm() {
     $('#imageForm')[0].reset();
     $('#image_id').val('');
     $('#patient_id').val('').trigger('change');
-    $('#current_image_preview').hide();
+    setImagePreviewState(null, '');
     $('#imageForm .alert-danger').hide();
+}
+
+function setImagePreviewState(src, fileName) {
+    var hasImage = !!src;
+    $('#preview_image').attr('src', src || '');
+    $('#current_image_preview').toggle(hasImage);
+    $('#image_preview_placeholder').toggle(!hasImage);
+
+    var hasFileName = !!fileName;
+    $('#selected_file_name').text(fileName || LanguageManager.trans('patient_images.selected_file'));
+    $('#selected_file_meta').toggleClass('is-visible', hasFileName);
+}
+
+function handleImageFileSelection() {
+    var file = $('#image_file')[0].files[0];
+
+    if (!file) {
+        setImagePreviewState('', '');
+        return;
+    }
+
+    setImagePreviewState('', file.name);
+
+    if (file.type && file.type.indexOf('image/') === 0) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            setImagePreviewState(e.target.result, file.name);
+        };
+        reader.readAsDataURL(file);
+    }
 }
 
 function saveImage() {
@@ -138,8 +170,8 @@ function editImage(id) {
             $('#description').val(response.description);
 
             if (response.file_path) {
-                $('#preview_image').attr('src', '/' + response.file_path);
-                $('#current_image_preview').show();
+                var existingFileName = response.file_name || response.title || LanguageManager.trans('patient_images.selected_file');
+                setImagePreviewState('/' + response.file_path, existingFileName);
             }
 
             $('#imageModal').modal('show');
