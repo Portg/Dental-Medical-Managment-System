@@ -10,7 +10,7 @@
             min-width: 960px;
         }
 
-        .portlet-body.patient-images-empty #patient_images_table_wrapper .table-scrollable,
+        .portlet-body.patient-images-empty #patient_images_table_wrapper .table-scrollable tbody,
         .portlet-body.patient-images-empty #patient_images_table_wrapper > .row:last-child {
             display: none;
         }
