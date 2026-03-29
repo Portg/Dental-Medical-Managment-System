@@ -1,5 +1,10 @@
 var dataTable;
 
+function toggleTreatmentPlanCompletionFields() {
+    var isCompleted = $('#plan_status').val() === 'Completed';
+    $('#completion_fields_card').toggle(isCompleted);
+}
+
 $(document).ready(function() {
     dataTable = $('#treatment_plans_table').DataTable({
         processing: true,
@@ -35,14 +40,7 @@ $(document).ready(function() {
     setupEmptyStateHandler();
 
     // Show/hide completed fields based on status
-    $('#plan_status').on('change', function() {
-        var status = $(this).val();
-        if (status == 'Completed') {
-            $('#actual_cost_row, #actual_completion_date_row, #completion_notes_row').show();
-        } else {
-            $('#actual_cost_row, #actual_completion_date_row, #completion_notes_row').hide();
-        }
-    });
+    $('#plan_status').on('change', toggleTreatmentPlanCompletionFields);
 });
 
 // Create new treatment plan
@@ -216,8 +214,8 @@ function deleteTreatmentPlan(id) {
 function resetTreatmentPlanForm() {
     $('#treatment_plan_id').val('');
     $('#treatment_plan_form')[0].reset();
-    $('#treatment_plan_modal .alert-danger').hide().find('ul').empty();
-    $('#actual_cost_row, #actual_completion_date_row, #completion_notes_row').hide();
+    $('#treatment_plan_modal .alert-danger').hide().html('<ul></ul>');
+    toggleTreatmentPlanCompletionFields();
 }
 
 // Reset on modal close
