@@ -1,0 +1,215 @@
+/**
+ * Patient Image Upload Modal Styles
+ * Optimized for medical system backend: dense, upload-first, one-screen layout
+ */
+
+/* ── Upload Zone ── */
+.img-upload-zone {
+    position: relative;
+    border: 2px dashed #d9d9d9;
+    border-radius: 6px;
+    background: #fafbfc;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 16px;
+    min-height: 100px;
+}
+
+.img-upload-zone:hover,
+.img-upload-zone.dragover {
+    border-color: #00ACC1;
+    background: #f0fafb;
+}
+
+.img-upload-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Placeholder state (no file selected) */
+.img-upload-placeholder {
+    padding: 20px 16px 16px;
+}
+
+.img-upload-placeholder i {
+    font-size: 28px;
+    color: #00ACC1;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.img-upload-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 4px;
+}
+
+.img-upload-hint {
+    font-size: 12px;
+    color: #999;
+    margin: 0;
+}
+
+/* Preview state (file selected) */
+.img-upload-preview {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    gap: 12px;
+    text-align: left;
+}
+
+.img-preview-thumb {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #f0f0f0;
+    border: 1px solid #e8e8e8;
+}
+
+.img-preview-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.img-preview-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.img-preview-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.img-preview-meta {
+    font-size: 12px;
+    color: #999;
+}
+
+.img-preview-remove {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #999;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    z-index: 3;
+    position: relative;
+}
+
+.img-preview-remove:hover {
+    background: #fff1f0;
+    color: #E74C3C;
+}
+
+/* ── Form Sections ── */
+.img-form-section {
+    margin-bottom: 14px;
+}
+
+.img-form-section:last-child {
+    margin-bottom: 0;
+}
+
+.img-section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.img-section-hint {
+    font-size: 12px;
+    font-weight: 400;
+    color: #999;
+}
+
+/* ── Form Grid ── */
+.img-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+}
+
+.img-form-field-full {
+    grid-column: 1 / -1;
+}
+
+.img-form-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.img-form-field .form-control {
+    height: 32px;
+    font-size: 13px;
+    padding: 4px 10px;
+}
+
+.img-form-field textarea.form-control {
+    height: auto;
+    resize: vertical;
+    min-height: 48px;
+}
+
+.img-form-field select.form-control {
+    padding-right: 24px;
+}
+
+/* ── Save Button Enhancement ── */
+.btn-save-image {
+    padding: 7px 20px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.btn-save-image i {
+    margin-right: 4px;
+}
+
+/* ── Overrides for this modal ── */
+#addImageModal .modal-body {
+    padding: 16px 20px;
+    max-height: 65vh;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .img-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .img-form-field-full {
+        grid-column: 1;
+    }
+}
