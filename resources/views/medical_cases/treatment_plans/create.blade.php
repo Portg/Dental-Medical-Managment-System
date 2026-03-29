@@ -140,9 +140,9 @@
                     justify-content: flex-end;
                     align-items: center;
                     gap: 12px;
-                    padding: 16px 24px;
-                    border-top: 1px solid #e5eaef;
-                    background: #fff;
+                    padding: 14px 24px 18px;
+                    border-top: 0;
+                    background: transparent;
                 }
 
                 #treatment_plan_modal .modal-footer .btn {
