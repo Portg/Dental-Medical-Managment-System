@@ -53,7 +53,7 @@
                 }
 
                 #treatment_plan_modal .plan-card-header {
-                    margin-bottom: 16px;
+                    margin-bottom: 14px;
                 }
 
                 #treatment_plan_modal .plan-card-title {
@@ -61,13 +61,6 @@
                     font-size: 15px;
                     font-weight: 600;
                     color: #183247;
-                }
-
-                #treatment_plan_modal .plan-card-copy {
-                    margin-top: 4px;
-                    font-size: 12px;
-                    line-height: 1.5;
-                    color: #66788a;
                 }
 
                 #treatment_plan_modal .plan-grid {
@@ -102,21 +95,6 @@
                     font-size: 13px;
                     font-weight: 600;
                     color: #25455e;
-                }
-
-                #treatment_plan_modal .plan-field-label-note {
-                    margin-left: 6px;
-                    font-size: 12px;
-                    font-weight: 400;
-                    color: #7d8c99;
-                }
-
-                #treatment_plan_modal .plan-field-help {
-                    margin-top: -2px;
-                    margin-bottom: 8px;
-                    font-size: 12px;
-                    line-height: 1.5;
-                    color: #6f8191;
                 }
 
                 #treatment_plan_modal .plan-field .form-control {
@@ -216,7 +194,6 @@
                         <section class="plan-form-card is-primary">
                             <div class="plan-card-header">
                                 <h5 class="plan-card-title">{{ __('medical_cases.plan_overview') }}</h5>
-                                <div class="plan-card-copy">{{ __('medical_cases.plan_overview_help') }}</div>
                             </div>
                             <div class="plan-grid">
                                 <div class="plan-field span-12">
@@ -229,7 +206,6 @@
                         <section class="plan-form-card">
                             <div class="plan-card-header">
                                 <h5 class="plan-card-title">{{ __('medical_cases.plan_execution') }}</h5>
-                                <div class="plan-card-copy">{{ __('medical_cases.plan_execution_help') }}</div>
                             </div>
                             <div class="plan-grid">
                                 <div class="plan-field span-3">
@@ -268,20 +244,14 @@
                         <section class="plan-form-card">
                             <div class="plan-card-header">
                                 <h5 class="plan-card-title">{{ __('medical_cases.plan_details') }}</h5>
-                                <div class="plan-card-copy">{{ __('medical_cases.plan_details_help') }}</div>
                             </div>
                             <div class="plan-grid">
                                 <div class="plan-field span-8">
                                     <label for="planned_procedures">{{ __('medical_cases.planned_procedures') }}</label>
-                                    <div class="plan-field-help">{{ __('medical_cases.planned_procedures_help') }}</div>
                                     <textarea name="planned_procedures" id="planned_procedures" class="form-control template-enabled phrase-enabled" data-template-type="treatment_plan" rows="5"></textarea>
                                 </div>
                                 <div class="plan-field span-4">
-                                    <label for="plan_description">
-                                        {{ __('medical_cases.description') }}
-                                        <span class="plan-field-label-note">{{ __('common.optional') }}</span>
-                                    </label>
-                                    <div class="plan-field-help">{{ __('medical_cases.plan_description_help') }}</div>
+                                    <label for="plan_description">{{ __('medical_cases.description') }}</label>
                                     <textarea name="description" id="plan_description" class="form-control template-enabled phrase-enabled" data-template-type="treatment_plan" rows="4"></textarea>
                                 </div>
                             </div>
@@ -290,7 +260,6 @@
                         <section class="plan-form-card" id="completion_fields_card" style="display: none;">
                             <div class="plan-card-header">
                                 <h5 class="plan-card-title">{{ __('medical_cases.completion_information') }}</h5>
-                                <div class="plan-card-copy">{{ __('medical_cases.completion_information_help') }}</div>
                             </div>
                             <div class="plan-grid">
                                 <div class="plan-field span-3" id="actual_cost_row">
@@ -303,7 +272,6 @@
                                 </div>
                                 <div class="plan-field span-6" id="completion_notes_row">
                                     <label for="completion_notes">{{ __('medical_cases.completion_notes') }}</label>
-                                    <div class="plan-field-help">{{ __('medical_cases.completion_notes_help') }}</div>
                                     <textarea name="completion_notes" id="completion_notes" class="form-control" rows="4"></textarea>
                                 </div>
                             </div>
