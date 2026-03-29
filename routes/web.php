@@ -597,6 +597,10 @@ Route::group(['middleware' => ['auth']], function () {
     // ============================================================
 
     Route::get('doctor-schedules', 'DoctorScheduleController@index');
+    Route::post('doctor-schedules', 'DoctorScheduleController@store');
+    Route::get('doctor-schedules/{id}/edit', 'DoctorScheduleController@edit');
+    Route::put('doctor-schedules/{id}', 'DoctorScheduleController@update');
+    Route::delete('doctor-schedules/{id}', 'DoctorScheduleController@destroy');
     Route::get('doctor-schedules/grid-data', 'DoctorScheduleController@gridData');
     Route::post('doctor-schedules/assign', 'DoctorScheduleController@assign');
     Route::post('doctor-schedules/remove', 'DoctorScheduleController@remove');

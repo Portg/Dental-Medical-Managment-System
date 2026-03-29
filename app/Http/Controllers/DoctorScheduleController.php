@@ -53,6 +53,108 @@ class DoctorScheduleController extends Controller
         return response()->json(['status' => 1, 'data' => $grid]);
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'doctor_id' => 'required|integer|exists:users,id',
+            'branch_id' => 'nullable|integer|exists:branches,id',
+            'schedule_date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'max_patients' => 'required|integer|min:1',
+            'is_recurring' => 'nullable|boolean',
+            'recurring_pattern' => 'nullable|in:daily,weekly,monthly',
+            'recurring_until' => 'nullable|date|after_or_equal:schedule_date',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 0, 'message' => $validator->errors()->first()], 422);
+        }
+
+        if (!Auth::user()->can('manage-schedules') && Auth::id() !== (int) $request->doctor_id) {
+            return response()->json([
+                'status' => 0,
+                'message' => __('doctor_schedules.cannot_edit_others'),
+            ], 403);
+        }
+
+        $result = $this->service->createSchedule($request->all(), (int) Auth::id());
+
+        return response()->json([
+            'status' => $result['success'] ? 1 : 0,
+            'message' => $result['message'],
+            'data' => $result['data'] ?? null,
+        ], $result['success'] ? 200 : 422);
+    }
+
+    public function edit($id): JsonResponse
+    {
+        $schedule = $this->service->find((int) $id);
+        if (!$schedule) {
+            return response()->json(['message' => __('doctor_schedules.not_found')], 404);
+        }
+
+        return response()->json([
+            'id' => $schedule->id,
+            'doctor_id' => $schedule->doctor_id,
+            'branch_id' => $schedule->branch_id,
+            'schedule_date' => optional($schedule->schedule_date)->format('Y-m-d'),
+            'start_time' => $schedule->start_time ?: $schedule->getEffectiveStartTime(),
+            'end_time' => $schedule->end_time ?: $schedule->getEffectiveEndTime(),
+            'max_patients' => $schedule->max_patients ?: $schedule->getEffectiveMaxPatients(),
+            'notes' => $schedule->notes,
+            'is_recurring' => (bool) $schedule->is_recurring,
+            'recurring_pattern' => $schedule->recurring_pattern,
+            'recurring_until' => optional($schedule->recurring_until)->format('Y-m-d'),
+        ]);
+    }
+
+    public function update(Request $request, $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'doctor_id' => 'required|integer|exists:users,id',
+            'branch_id' => 'nullable|integer|exists:branches,id',
+            'schedule_date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'max_patients' => 'required|integer|min:1',
+            'is_recurring' => 'nullable|boolean',
+            'recurring_pattern' => 'nullable|in:daily,weekly,monthly',
+            'recurring_until' => 'nullable|date|after_or_equal:schedule_date',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 0, 'message' => $validator->errors()->first()], 422);
+        }
+
+        if (!Auth::user()->can('manage-schedules') && Auth::id() !== (int) $request->doctor_id) {
+            return response()->json([
+                'status' => 0,
+                'message' => __('doctor_schedules.cannot_edit_others'),
+            ], 403);
+        }
+
+        $result = $this->service->updateSchedule((int) $id, $request->all(), (int) Auth::id());
+
+        return response()->json([
+            'status' => $result['success'] ? 1 : 0,
+            'message' => $result['message'],
+            'data' => $result['data'] ?? null,
+        ], $result['success'] ? 200 : 422);
+    }
+
+    public function destroy($id): JsonResponse
+    {
+        $result = $this->service->removeSchedule((int) $id);
+
+        return response()->json([
+            'status' => $result['success'] ? 1 : 0,
+            'message' => $result['message'],
+        ], $result['success'] ? 200 : 422);
+    }
+
     /**
      * AJAX: Assign a shift to doctor + date.
      */

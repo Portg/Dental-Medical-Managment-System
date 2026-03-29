@@ -257,6 +257,64 @@ class DoctorScheduleService
     }
 
     /**
+     * Store a manually configured schedule row from the list modal.
+     */
+    public function createSchedule(array $data, int $userId): array
+    {
+        $conflict = $this->checkManualTimeConflict(
+            (int) $data['doctor_id'],
+            $data['schedule_date'],
+            $data['start_time'],
+            $data['end_time']
+        );
+
+        if ($conflict) {
+            return ['success' => false, 'message' => $conflict];
+        }
+
+        $schedule = DoctorSchedule::create($this->buildSchedulePayload($data, $userId));
+
+        return [
+            'success' => true,
+            'message' => __('doctor_schedules.added_successfully'),
+            'data' => $schedule,
+        ];
+    }
+
+    /**
+     * Update a manually configured schedule row from the list modal.
+     */
+    public function updateSchedule(int $id, array $data, int $userId): array
+    {
+        $schedule = DoctorSchedule::find($id);
+        if (!$schedule) {
+            return ['success' => false, 'message' => __('doctor_schedules.not_found')];
+        }
+
+        $conflict = $this->checkManualTimeConflict(
+            (int) $data['doctor_id'],
+            $data['schedule_date'],
+            $data['start_time'],
+            $data['end_time'],
+            $id
+        );
+
+        if ($conflict) {
+            return ['success' => false, 'message' => $conflict];
+        }
+
+        $payload = $this->buildSchedulePayload($data, $userId);
+        $payload['changed_by'] = $userId;
+        $schedule->update($payload);
+
+        return [
+            'success' => true,
+            'message' => __('doctor_schedules.updated_successfully'),
+            'data' => $schedule->fresh(),
+        ];
+    }
+
+    /**
      * Copy a week's schedules to another week.
      *
      * @return array{success: bool, message: string, count?: int}
@@ -449,5 +507,59 @@ class DoctorScheduleService
     public function find(int $id): ?DoctorSchedule
     {
         return DoctorSchedule::with('shift')->find($id);
+    }
+
+    private function buildSchedulePayload(array $data, int $userId): array
+    {
+        $isRecurring = !empty($data['is_recurring']);
+
+        return [
+            'doctor_id' => (int) $data['doctor_id'],
+            'branch_id' => !empty($data['branch_id']) ? (int) $data['branch_id'] : null,
+            'schedule_date' => $data['schedule_date'],
+            'start_time' => $data['start_time'],
+            'end_time' => $data['end_time'],
+            'max_patients' => (int) $data['max_patients'],
+            'notes' => $data['notes'] ?? null,
+            'is_recurring' => $isRecurring,
+            'recurring_pattern' => $isRecurring ? ($data['recurring_pattern'] ?? 'weekly') : null,
+            'recurring_until' => $isRecurring ? ($data['recurring_until'] ?? null) : null,
+            '_who_added' => $userId,
+        ];
+    }
+
+    private function checkManualTimeConflict(
+        int $doctorId,
+        string $date,
+        string $startTime,
+        string $endTime,
+        ?int $ignoreScheduleId = null
+    ): ?string {
+        $schedules = DoctorSchedule::with('shift')
+            ->where('doctor_id', $doctorId)
+            ->where('schedule_date', $date)
+            ->whereNull('deleted_at')
+            ->when($ignoreScheduleId, function ($query) use ($ignoreScheduleId) {
+                $query->where('id', '!=', $ignoreScheduleId);
+            })
+            ->get();
+
+        foreach ($schedules as $existing) {
+            $existingStart = $existing->getEffectiveStartTime();
+            $existingEnd = $existing->getEffectiveEndTime();
+
+            if (!$existingStart || !$existingEnd) {
+                continue;
+            }
+
+            if ($startTime < $existingEnd && $endTime > $existingStart) {
+                return __('doctor_schedules.time_conflict', [
+                    'shift' => $existing->shift ? $existing->shift->name : __('doctor_schedules.legacy_shift'),
+                    'time' => trim($existingStart . ' - ' . $existingEnd),
+                ]);
+            }
+        }
+
+        return null;
     }
 }
