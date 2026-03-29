@@ -2,6 +2,8 @@
 @php use App\Services\DataMaskingService; @endphp
 @section('css')
     @include('layouts.page_loader')
+    <link rel="stylesheet" href="{{ asset('css/form-modal.css') }}?v={{ filemtime(public_path('css/form-modal.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/patient-image-modal.css') }}?v={{ filemtime(public_path('css/patient-image-modal.css')) }}">
     <style>
         /* ── Patient Detail Three-Zone Layout ── */
         .patient-summary-bar {
