@@ -13,9 +13,9 @@ class TreatmentPlanService
     /**
      * Get all treatment plans for DataTables.
      */
-    public function getAllPlans(): Collection
+    public function getAllPlans(?string $keyword = null, ?string $status = null, ?string $priority = null): Collection
     {
-        return DB::table('treatment_plans')
+        $query = DB::table('treatment_plans')
             ->leftJoin('patients', 'patients.id', 'treatment_plans.patient_id')
             ->leftJoin('medical_cases', 'medical_cases.id', 'treatment_plans.medical_case_id')
             ->leftJoin('users', 'users.id', 'treatment_plans._who_added')
@@ -29,8 +29,26 @@ class TreatmentPlanService
                 'medical_cases.case_no',
                 'medical_cases.title as case_title',
                 DB::raw(app()->getLocale() === 'zh-CN' ? "CONCAT(users.surname, users.othername) as added_by" : "CONCAT(users.surname, ' ', users.othername) as added_by")
-            )
-            ->get();
+            );
+
+        if ($keyword) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('patients.patient_no', 'like', "%{$keyword}%")
+                  ->orWhere('patients.surname', 'like', "%{$keyword}%")
+                  ->orWhere('patients.othername', 'like', "%{$keyword}%")
+                  ->orWhere('treatment_plans.plan_name', 'like', "%{$keyword}%");
+            });
+        }
+
+        if ($status) {
+            $query->where('treatment_plans.status', $status);
+        }
+
+        if ($priority) {
+            $query->where('treatment_plans.priority', $priority);
+        }
+
+        return $query->get();
     }
 
     /**
@@ -152,14 +170,19 @@ class TreatmentPlanService
     {
         return DataTables::of($data)
             ->addIndexColumn()
-            ->addColumn('viewBtn', function ($row) {
-                return '<a href="#" onclick="viewTreatmentPlan(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a>';
-            })
-            ->addColumn('editBtn', function ($row) {
-                return '<a href="#" onclick="editTreatmentPlan(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
-            })
-            ->addColumn('deleteBtn', function ($row) {
-                return '<a href="#" onclick="deleteTreatmentPlan(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            ->addColumn('action', function ($row) {
+                $viewLabel = __('common.view');
+                $editLabel = __('common.edit');
+                $deleteLabel = __('common.delete');
+
+                return '<div class="btn-group">'
+                    . '<a href="#" onclick="viewTreatmentPlan(' . $row->id . ')" class="btn blue btn-sm">' . $viewLabel . '</a>'
+                    . '<button type="button" class="btn blue btn-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">'
+                    . '<span class="caret"></span></button>'
+                    . '<ul class="dropdown-menu dropdown-menu-right" role="menu">'
+                    . '<li><a href="#" onclick="editTreatmentPlan(' . $row->id . ')"><i class="fa fa-pencil"></i> ' . $editLabel . '</a></li>'
+                    . '<li><a href="#" onclick="deleteTreatmentPlan(' . $row->id . ')"><i class="fa fa-trash"></i> ' . $deleteLabel . '</a></li>'
+                    . '</ul></div>';
             })
             ->addColumn('statusBadge', function ($row) {
                 $class = 'default';
@@ -177,7 +200,7 @@ class TreatmentPlanService
                 elseif ($row->priority == 'Urgent') $class = 'danger';
                 return '<span class="label label-' . $class . '">' . __('medical_cases.priority_' . strtolower($row->priority)) . '</span>';
             })
-            ->rawColumns(['viewBtn', 'editBtn', 'deleteBtn', 'statusBadge', 'priorityBadge'])
+            ->rawColumns(['action', 'statusBadge', 'priorityBadge'])
             ->make(true);
     }
 }

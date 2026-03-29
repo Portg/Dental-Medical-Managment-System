@@ -26,7 +26,11 @@ class TreatmentPlanController extends Controller
     public function listAll(Request $request)
     {
         if ($request->ajax()) {
-            $data = $this->treatmentPlanService->getAllPlans();
+            $data = $this->treatmentPlanService->getAllPlans(
+                $request->input('search_keyword'),
+                $request->input('status'),
+                $request->input('priority')
+            );
 
             return $this->treatmentPlanService->buildDataTable($data);
         }
