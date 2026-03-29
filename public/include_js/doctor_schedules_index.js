@@ -206,6 +206,7 @@ function deleteRecord(id) {
         showCancelButton: true,
         confirmButtonClass: 'btn-danger',
         confirmButtonText: LanguageManager.trans('common.yes_delete_it'),
+        cancelButtonText: LanguageManager.trans('common.cancel'),
         closeOnConfirm: false
     }, function () {
         $.LoadingOverlay('show');
