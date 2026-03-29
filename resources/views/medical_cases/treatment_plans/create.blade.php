@@ -22,7 +22,7 @@
 
                 #treatment_plan_modal .modal-body {
                     padding: 24px;
-                    background: #f5f8fb;
+                    background: #fff;
                 }
 
                 #treatment_plan_modal .alert-danger {
@@ -38,22 +38,19 @@
                 #treatment_plan_modal .plan-form-shell {
                     display: flex;
                     flex-direction: column;
-                    gap: 18px;
+                    gap: 20px;
                 }
 
                 #treatment_plan_modal .plan-form-card {
-                    background: #fff;
-                    border: 1px solid #e5eaef;
-                    border-radius: 8px;
-                    padding: 18px 20px;
+                    padding: 0;
                 }
 
                 #treatment_plan_modal .plan-form-card.is-primary {
-                    padding: 20px 22px;
+                    padding: 0;
                 }
 
                 #treatment_plan_modal .plan-card-header {
-                    margin-bottom: 14px;
+                    margin-bottom: 12px;
                 }
 
                 #treatment_plan_modal .plan-card-title {
@@ -67,6 +64,11 @@
                     display: grid;
                     grid-template-columns: repeat(12, minmax(0, 1fr));
                     gap: 16px;
+                }
+
+                #treatment_plan_modal .plan-form-card + .plan-form-card {
+                    border-top: 1px solid #e8edf2;
+                    padding-top: 20px;
                 }
 
                 #treatment_plan_modal .plan-field {
