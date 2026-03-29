@@ -4,6 +4,7 @@ $(document).ready(function() {
     loadPatientImages();
     // loadPatientInvoices() — now lazy-loaded via BillingModule in billing_tab
     loadPatientFollowups();
+    initImageUploadZone();
 });
 
 // Load Patient Appointments
@@ -105,8 +106,89 @@ function loadPatientFollowups() {
 function addPatientImage() {
     $('#patientImageForm')[0].reset();
     $('#patientImageForm .alert-danger').hide();
+    resetImagePreview();
     $('#addImageModal').modal('show');
 }
+
+// Image upload preview
+function initImageUploadZone() {
+    var zone = document.getElementById('imageUploadZone');
+    var input = document.getElementById('image_file');
+    if (!zone || !input) return;
+
+    // Drag-drop visual feedback
+    ['dragenter', 'dragover'].forEach(function(evt) {
+        zone.addEventListener(evt, function(e) {
+            e.preventDefault();
+            zone.classList.add('dragover');
+        });
+    });
+    ['dragleave', 'drop'].forEach(function(evt) {
+        zone.addEventListener(evt, function(e) {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+        });
+    });
+
+    // Handle drop
+    zone.addEventListener('drop', function(e) {
+        var files = e.dataTransfer.files;
+        if (files.length > 0) {
+            input.files = files;
+            showImagePreview(files[0]);
+        }
+    });
+
+    // Handle file input change
+    input.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            showImagePreview(this.files[0]);
+        }
+    });
+
+    // Remove button
+    var removeBtn = document.getElementById('imagePreviewRemove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            input.value = '';
+            resetImagePreview();
+        });
+    }
+}
+
+function showImagePreview(file) {
+    var placeholder = document.getElementById('imageUploadPlaceholder');
+    var preview = document.getElementById('imageUploadPreview');
+    var img = document.getElementById('imagePreviewImg');
+    var nameEl = document.getElementById('imagePreviewName');
+    var metaEl = document.getElementById('imagePreviewMeta');
+
+    if (!placeholder || !preview) return;
+
+    // Show thumbnail
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // File info
+    nameEl.textContent = file.name;
+    var sizeMB = (file.size / 1024 / 1024).toFixed(2);
+    metaEl.textContent = sizeMB + ' MB';
+
+    placeholder.style.display = 'none';
+    preview.style.display = 'flex';
+}
+
+function resetImagePreview() {
+    var placeholder = document.getElementById('imageUploadPlaceholder');
+    var preview = document.getElementById('imageUploadPreview');
+    if (placeholder) placeholder.style.display = '';
+    if (preview) preview.style.display = 'none';
+}
+
 
 function savePatientImage() {
     var formData = new FormData($('#patientImageForm')[0]);
