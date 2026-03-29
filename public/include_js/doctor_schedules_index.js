@@ -41,6 +41,36 @@ $(function () {
     });
 });
 
+function showScheduleFormErrors(request) {
+    var $alert = $('.alert-danger');
+    var response = request.responseJSON || {};
+    var messages = [];
+
+    $alert.hide().empty();
+
+    if (response.message) {
+        messages.push(response.message);
+    } else if (response.errors) {
+        $.each(response.errors, function (key, value) {
+            if ($.isArray(value)) {
+                messages = messages.concat(value);
+            } else if (value) {
+                messages.push(value);
+            }
+        });
+    }
+
+    if (!messages.length) {
+        messages.push(LanguageManager.trans('messages.error_occurred', LanguageManager.trans('common.error')));
+    }
+
+    $.each(messages, function (index, message) {
+        $alert.append('<p>' + message + '</p>');
+    });
+
+    $alert.show();
+}
+
 function initCalendar() {
     var calendarOpts = {
         header: {
@@ -58,6 +88,8 @@ function initCalendar() {
     };
     if (window.DoctorSchedulesConfig.locale === 'zh-CN') {
         calendarOpts.lang = 'zh-cn';
+    } else {
+        calendarOpts.lang = 'en';
     }
     $('#schedule_calendar').fullCalendar(calendarOpts);
 }
@@ -66,6 +98,7 @@ function createRecord() {
     $('#schedule-form')[0].reset();
     $('#id').val('');
     $('#recurring_options').hide();
+    $('.alert-danger').hide().empty();
     $('#btn-save').attr('disabled', false);
     $('#btn-save').text(LanguageManager.trans('common.save_record'));
     $('#schedule-modal').modal('show');
@@ -97,10 +130,7 @@ function save_new_record() {
             $.LoadingOverlay('hide');
             $('#btn-save').attr('disabled', false);
             $('#btn-save').text(LanguageManager.trans('common.save_record'));
-            var json = $.parseJSON(request.responseText);
-            $.each(json.errors, function (key, value) {
-                $('.alert-danger').show().append('<p>' + value + '</p>');
-            });
+            showScheduleFormErrors(request);
         }
     });
 }
@@ -109,6 +139,7 @@ function editRecord(id) {
     $.LoadingOverlay('show');
     $('#schedule-form')[0].reset();
     $('#id').val('');
+    $('.alert-danger').hide().empty();
     $('#btn-save').attr('disabled', false);
     $.ajax({
         type: 'get',
@@ -136,6 +167,11 @@ function editRecord(id) {
         },
         error: function () {
             $.LoadingOverlay('hide');
+            swal(
+                LanguageManager.trans('common.alert'),
+                LanguageManager.trans('doctor_schedules.not_found'),
+                'error'
+            );
         }
     });
 }
@@ -157,10 +193,7 @@ function update_record() {
             $.LoadingOverlay('hide');
             $('#btn-save').attr('disabled', false);
             $('#btn-save').text(LanguageManager.trans('common.update_record'));
-            var json = $.parseJSON(request.responseText);
-            $.each(json.errors, function (key, value) {
-                $('.alert-danger').show().append('<p>' + value + '</p>');
-            });
+            showScheduleFormErrors(request);
         }
     });
 }

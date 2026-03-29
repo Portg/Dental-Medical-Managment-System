@@ -77,7 +77,11 @@
 <script src="{{ asset('backend/assets/global/plugins/fullcalendar/lang/zh-cn.js') }}" type="text/javascript"></script>
 @endif
 <script>
-LanguageManager.loadFromPHP(@json(__('doctor_schedules')), 'doctor_schedules');
+LanguageManager.loadAllFromPHP({
+    doctor_schedules: @json(__('doctor_schedules')),
+    shifts: @json(__('shifts')),
+    messages: @json(__('messages'))
+});
 window.DoctorSchedulesConfig = {
     locale: '{{ app()->getLocale() }}',
     urls: {
