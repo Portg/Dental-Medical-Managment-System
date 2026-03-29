@@ -152,6 +152,65 @@ class DoctorScheduleService
     }
 
     /**
+     * Get calendar events for FullCalendar.
+     */
+    public function getCalendarEvents(?string $start, ?string $end, ?int $doctorId = null): array
+    {
+        $query = DoctorSchedule::with(['doctor', 'shift', 'branch'])
+            ->whereNull('deleted_at');
+
+        if ($start) {
+            $query->whereDate('schedule_date', '>=', Carbon::parse($start)->toDateString());
+        }
+
+        if ($end) {
+            $query->whereDate('schedule_date', '<', Carbon::parse($end)->toDateString());
+        }
+
+        if ($doctorId) {
+            $query->where('doctor_id', $doctorId);
+        }
+
+        $user = Auth::user();
+        if ($user && !$user->can('manage-schedules') && !$user->can('view-all-schedules')) {
+            $query->where('doctor_id', $user->id);
+        }
+
+        return $query->orderBy('schedule_date')
+            ->orderBy('start_time')
+            ->get()
+            ->map(function ($schedule) {
+                $doctorName = $schedule->doctor
+                    ? (app()->getLocale() === 'zh-CN'
+                        ? trim(($schedule->doctor->surname ?? '') . ($schedule->doctor->othername ?? ''))
+                        : trim(($schedule->doctor->surname ?? '') . ' ' . ($schedule->doctor->othername ?? '')))
+                    : __('common.none');
+
+                $shiftName = $schedule->shift ? $schedule->shift->name : __('doctor_schedules.legacy_shift');
+                $startTime = $schedule->start_time ?: $schedule->getEffectiveStartTime() ?: '00:00';
+                $endTime = $schedule->end_time ?: $schedule->getEffectiveEndTime() ?: '00:00';
+                $date = optional($schedule->schedule_date)->format('Y-m-d');
+
+                return [
+                    'id' => $schedule->id,
+                    'title' => $doctorName . ' · ' . $shiftName,
+                    'start' => $date . 'T' . $startTime,
+                    'end' => $date . 'T' . $endTime,
+                    'color' => optional($schedule->shift)->color ?: '#409EFF',
+                    'allDay' => false,
+                    'extendedProps' => [
+                        'doctor_name' => $doctorName,
+                        'branch_name' => optional($schedule->branch)->name ?: __('common.none'),
+                        'time_range' => trim($startTime . ' - ' . $endTime),
+                        'recurring' => (bool) $schedule->is_recurring,
+                    ],
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
      * Assign a shift to a doctor on a specific date.
      * Checks for time conflicts (AG-010 enhanced).
      *

@@ -597,6 +597,7 @@ Route::group(['middleware' => ['auth']], function () {
     // ============================================================
 
     Route::get('doctor-schedules', 'DoctorScheduleController@index');
+    Route::get('doctor-schedules/calendar', 'DoctorScheduleController@calendar');
     Route::post('doctor-schedules', 'DoctorScheduleController@store');
     Route::get('doctor-schedules/{id}/edit', 'DoctorScheduleController@edit');
     Route::put('doctor-schedules/{id}', 'DoctorScheduleController@update');

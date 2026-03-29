@@ -53,6 +53,18 @@ class DoctorScheduleController extends Controller
         return response()->json(['status' => 1, 'data' => $grid]);
     }
 
+    public function calendar(Request $request): JsonResponse
+    {
+        $doctorId = $request->filled('doctor_id') ? (int) $request->input('doctor_id') : null;
+        $events = $this->service->getCalendarEvents(
+            $request->input('start'),
+            $request->input('end'),
+            $doctorId
+        );
+
+        return response()->json($events);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
