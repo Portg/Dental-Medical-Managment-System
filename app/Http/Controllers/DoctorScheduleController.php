@@ -31,6 +31,13 @@ class DoctorScheduleController extends Controller
      */
     public function index(Request $request)
     {
+        if ($request->ajax()) {
+            $doctorId = $request->filled('doctor_id') ? (int) $request->input('doctor_id') : null;
+            $data = $this->service->getListSchedules($doctorId);
+
+            return $this->service->buildIndexDataTable($data);
+        }
+
         $viewData = $this->service->getGridViewData();
         return view('doctor_schedules.index', $viewData);
     }

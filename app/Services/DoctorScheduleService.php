@@ -13,9 +13,99 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Yajra\DataTables\DataTables;
 
 class DoctorScheduleService
 {
+    /**
+     * Get schedules for list view / DataTables.
+     */
+    public function getListSchedules(?int $doctorId = null): Collection
+    {
+        $query = DoctorSchedule::with(['doctor', 'shift', 'branch'])
+            ->whereNull('deleted_at');
+
+        if ($doctorId) {
+            $query->where('doctor_id', $doctorId);
+        }
+
+        $user = Auth::user();
+        if ($user && !$user->can('manage-schedules') && !$user->can('view-all-schedules')) {
+            $query->where('doctor_id', $user->id);
+        }
+
+        return $query->orderByDesc('schedule_date')
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    /**
+     * Build the DataTables response for the schedule list view.
+     */
+    public function buildIndexDataTable($data)
+    {
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('doctor_name', function ($row) {
+                if (!$row->doctor) {
+                    return __('common.none');
+                }
+
+                return app()->getLocale() === 'zh-CN'
+                    ? trim(($row->doctor->surname ?? '') . ($row->doctor->othername ?? ''))
+                    : trim(($row->doctor->surname ?? '') . ' ' . ($row->doctor->othername ?? ''));
+            })
+            ->addColumn('time_range', function ($row) {
+                if ($row->shift && !empty($row->shift->time_range)) {
+                    return $row->shift->time_range;
+                }
+
+                $start = $row->getEffectiveStartTime();
+                $end = $row->getEffectiveEndTime();
+
+                if (!$start && !$end) {
+                    return __('common.none');
+                }
+
+                return trim(($start ?: '--:--') . ' - ' . ($end ?: '--:--'));
+            })
+            ->addColumn('max_patients', function ($row) {
+                return $row->getEffectiveMaxPatients();
+            })
+            ->addColumn('recurring_info', function ($row) {
+                if (!$row->is_recurring) {
+                    return __('common.no');
+                }
+
+                $patterns = [
+                    'daily' => __('doctor_schedules.pattern_daily'),
+                    'weekly' => __('doctor_schedules.pattern_weekly'),
+                    'monthly' => __('doctor_schedules.pattern_monthly'),
+                ];
+
+                $label = $patterns[$row->recurring_pattern] ?? __('common.yes');
+                if ($row->recurring_until) {
+                    return $label . ' · ' . $row->recurring_until->format('Y-m-d');
+                }
+
+                return $label;
+            })
+            ->addColumn('branch_name', function ($row) {
+                return optional($row->branch)->name ?: __('common.none');
+            })
+            ->addColumn('editBtn', function ($row) {
+                return '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a>';
+            })
+            ->addColumn('deleteBtn', function ($row) {
+                return '<a href="#" onclick="deleteRecord(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+            })
+            ->editColumn('schedule_date', function ($row) {
+                return $row->schedule_date ? $row->schedule_date->format('Y-m-d') : '';
+            })
+            ->rawColumns(['editBtn', 'deleteBtn'])
+            ->make(true);
+    }
+
     /**
      * Get all data needed for the monthly grid view.
      */
