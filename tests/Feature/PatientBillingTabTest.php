@@ -168,4 +168,76 @@ class PatientBillingTabTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    /** @test */
+    public function add_overdue_payment_creates_payment_and_updates_invoice(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $this->overdueInvoice->id . '/add-overdue-payment', [
+                'amount'         => '200.00',
+                'payment_method' => 'Cash',
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', 1)
+                 ->assertJsonPath('data.new_outstanding', '300.00');
+
+        $this->assertDatabaseHas('invoice_payments', [
+            'invoice_id'     => $this->overdueInvoice->id,
+            'amount'         => '200.00',
+            'payment_method' => 'Cash',
+        ]);
+
+        $this->assertDatabaseHas('invoices', [
+            'id'                 => $this->overdueInvoice->id,
+            'paid_amount'        => '500.00',
+            'outstanding_amount' => '300.00',
+            'payment_status'     => 'partial',
+        ]);
+    }
+
+    /** @test */
+    public function add_overdue_payment_with_discount_reduces_total(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $this->overdueInvoice->id . '/add-overdue-payment', [
+                'amount'              => '400.00',
+                'additional_discount' => '100.00',
+                'payment_method'      => 'Cash',
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', 1)
+                 ->assertJsonPath('data.new_outstanding', '0.00');
+
+        $this->assertDatabaseHas('invoices', [
+            'id'                 => $this->overdueInvoice->id,
+            'outstanding_amount' => '0.00',
+            'payment_status'     => 'paid',
+        ]);
+    }
+
+    /** @test */
+    public function add_overdue_payment_rejects_amount_exceeding_outstanding(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $this->overdueInvoice->id . '/add-overdue-payment', [
+                'amount'         => '600.00',
+                'payment_method' => 'Cash',
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function add_overdue_payment_rejects_on_fully_paid_invoice(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $this->invoice->id . '/add-overdue-payment', [
+                'amount'         => '10.00',
+                'payment_method' => 'Cash',
+            ]);
+
+        $response->assertStatus(422);
+    }
 }

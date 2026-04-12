@@ -784,6 +784,44 @@ class InvoiceService
         return $invoice->save();
     }
 
+    /**
+     * 欠费补收与再优惠（3.4.7）
+     */
+    public function addOverduePayment(int $invoiceId, array $data): array
+    {
+        $invoice = \App\Invoice::findOrFail($invoiceId);
+
+        $amount             = (string) ($data['amount'] ?? '0');
+        $additionalDiscount = (string) ($data['additional_discount'] ?? '0');
+
+        // 再优惠：减少 total_amount，Invoice::saving() 重算 outstanding
+        if (bccomp($additionalDiscount, '0', 2) > 0) {
+            $invoice->total_amount = bcsub((string) $invoice->total_amount, $additionalDiscount, 2);
+        }
+
+        // 创建补收记录
+        if (bccomp($amount, '0', 2) > 0) {
+            \App\InvoicePayment::create([
+                'invoice_id'     => $invoiceId,
+                'amount'         => $amount,
+                'payment_method' => $data['payment_method'],
+                'payment_date'   => $data['payment_date'] ?? now()->toDateString(),
+                'branch_id'      => Auth::user()->branch_id,
+                '_who_added'     => Auth::user()->id,
+            ]);
+
+            $invoice->paid_amount = bcadd((string) $invoice->paid_amount, $amount, 2);
+        }
+
+        // saving() hook 自动重算 outstanding_amount 和 payment_status
+        $invoice->save();
+
+        // Refresh to get hook-computed values
+        $invoice->refresh();
+
+        return ['new_outstanding' => (string) $invoice->outstanding_amount];
+    }
+
     // ─── DataTable builders ─────────────────────────────────────
 
     /**

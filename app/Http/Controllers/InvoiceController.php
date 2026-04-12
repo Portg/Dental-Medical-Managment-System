@@ -194,6 +194,50 @@ class InvoiceController extends Controller
         return response()->json(['status' => 1, 'data' => $data]);
     }
 
+    public function addOverduePayment(Request $request, $id)
+    {
+        $invoice = \App\Invoice::find($id);
+        if (!$invoice) {
+            return response()->json(['message' => __('messages.record_not_found'), 'status' => 0], 404);
+        }
+
+        $outstanding   = (string) $invoice->outstanding_amount;
+        $amountInput   = (string) ($request->input('amount', '0'));
+        $discountInput = (string) ($request->input('additional_discount', '0'));
+
+        // Guard: already paid
+        if (bccomp($outstanding, '0', 2) <= 0) {
+            return response()->json(['message' => __('invoices.invoice_already_paid'), 'status' => 0], 422);
+        }
+
+        $total = bcadd($amountInput, $discountInput, 2);
+        if (bccomp($total, $outstanding, 2) > 0) {
+            return response()->json(['message' => __('invoices.overdue_amount_exceeds'), 'status' => 0], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'amount'              => 'nullable|numeric|min:0',
+            'additional_discount' => 'nullable|numeric|min:0',
+            'payment_method'      => 'required_with:amount|nullable|string',
+            'payment_date'        => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'status' => 0], 422);
+        }
+
+        try {
+            $result = $this->invoiceService->addOverduePayment((int) $id, $request->all());
+            return response()->json([
+                'message' => __('invoices.overdue_payment_success'),
+                'status'  => 1,
+                'data'    => $result,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage(), 'status' => 0], 422);
+        }
+    }
+
     /**
      * Remove the specified resource from storage.
      */
