@@ -26,6 +26,9 @@ class Invoice extends Model
         'is_credit', 'credit_approved_by', 'credit_approved_at',
         // 划价模式
         'billing_mode',
+        'doctor_id',
+        'nurse_id',
+        'assistant_id',
     ];
 
     protected $casts = [
@@ -230,6 +233,21 @@ class Invoice extends Model
     public function creditApprovedBy()
     {
         return $this->belongsTo('App\User', 'credit_approved_by');
+    }
+
+    public function doctor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\User::class, 'doctor_id');
+    }
+
+    public function nurse(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\User::class, 'nurse_id');
+    }
+
+    public function assistant(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\User::class, 'assistant_id');
     }
 
     /**
