@@ -202,10 +202,14 @@ class InvoiceController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'amount'              => 'nullable|numeric|min:0',
-            'additional_discount' => 'nullable|numeric|min:0',
-            'payment_method'      => 'required_with:amount|nullable|string',
-            'payment_date'        => 'nullable|date',
+            'amount'               => 'required_without:additional_discount|nullable|numeric|min:0',
+            'additional_discount'  => 'nullable|numeric|min:0',
+            'payment_method'       => 'required_with:amount|nullable|string',
+            'payment_date'         => 'nullable|date',
+            'cheque_no'            => 'required_if:payment_method,Cheque',
+            'bank_name'            => 'required_if:payment_method,Cheque',
+            'insurance_company_id' => 'required_if:payment_method,Insurance|nullable|exists:insurance_companies,id',
+            'self_account_id'      => 'required_if:payment_method,Self Account|nullable|exists:self_accounts,id',
         ]);
 
         if ($validator->fails()) {

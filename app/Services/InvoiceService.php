@@ -794,9 +794,10 @@ class InvoiceService
         $amount             = (string) ($data['amount'] ?? '0');
         $additionalDiscount = (string) ($data['additional_discount'] ?? '0');
 
-        // 再优惠：减少 total_amount，Invoice::saving() 重算 outstanding
+        // 再优惠：累加 discount_amount，减少 total_amount，Invoice::saving() 重算 outstanding
         if (bccomp($additionalDiscount, '0', 2) > 0) {
-            $invoice->total_amount = bcsub((string) $invoice->total_amount, $additionalDiscount, 2);
+            $invoice->discount_amount = bcadd((string) $invoice->discount_amount, $additionalDiscount, 2);
+            $invoice->total_amount    = bcsub((string) $invoice->total_amount, $additionalDiscount, 2);
         }
 
         // 创建补收记录

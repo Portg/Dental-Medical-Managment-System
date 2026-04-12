@@ -151,7 +151,7 @@ class InvoicePaymentController extends Controller
 
         $status = $this->invoicePaymentService->updatePayment((int) $id, $data);
         if ($status) {
-            return response()->json(['message' => __('messages.payment_updated_successfully'), 'status' => true]);
+            return response()->json(['message' => __('invoices.payment_method_updated'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
     }

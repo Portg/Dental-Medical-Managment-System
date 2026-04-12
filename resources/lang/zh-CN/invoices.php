@@ -277,7 +277,6 @@ return [
     'set_as_credit' => '设为挂账',
     'credit_invoices' => '挂账发票',
     'credit_approved' => '挂账已通过',
-    'invoice_already_paid' => '发票已支付完成',
 
     // 划价收费
     'billing_tab' => '划价',
