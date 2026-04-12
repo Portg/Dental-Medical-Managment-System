@@ -240,4 +240,33 @@ class PatientBillingTabTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    /** @test */
+    public function update_payment_method_without_changing_amount(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->putJson('/payments/' . $this->payment->id, [
+                'payment_method' => 'WeChat',
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', true);
+
+        $this->assertDatabaseHas('invoice_payments', [
+            'id'             => $this->payment->id,
+            'payment_method' => 'WeChat',
+            'amount'         => '500.00',
+        ]);
+    }
+
+    /** @test */
+    public function update_payment_method_rejects_cheque_without_cheque_no(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->putJson('/payments/' . $this->payment->id, [
+                'payment_method' => 'Cheque',
+            ]);
+
+        $response->assertStatus(422);
+    }
 }

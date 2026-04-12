@@ -117,19 +117,43 @@ class InvoicePaymentController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $payment = \App\InvoicePayment::find($id);
+        if (!$payment) {
+            return response()->json(['message' => __('messages.record_not_found'), 'status' => false], 404);
+        }
 
-        Validator::make($request->all(), [
-            'amount' => 'required',
-            'payment_date' => 'required',
-            'payment_method' => 'required'
-        ])->validate();
+        $validator = Validator::make($request->all(), [
+            'payment_method'       => 'required|string',
+            'cheque_no'            => 'required_if:payment_method,Cheque',
+            'bank_name'            => 'required_if:payment_method,Cheque',
+            'insurance_company_id' => 'required_if:payment_method,Insurance|nullable|exists:insurance_companies,id',
+            'self_account_id'      => 'required_if:payment_method,Self Account|nullable|exists:self_accounts,id',
+            'amount'               => 'nullable|numeric|min:0',
+            'payment_date'         => 'nullable|date',
+        ]);
 
-        $status = $this->invoicePaymentService->updatePayment((int) $id, $request->only(['amount', 'payment_date', 'payment_method']));
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'status' => false], 422);
+        }
+
+        // Preserve existing amount and date unless request explicitly provides them
+        $data = array_merge(
+            [
+                'amount'       => $payment->amount,
+                'payment_date' => $payment->payment_date,
+            ],
+            $request->only([
+                'payment_method', 'amount', 'payment_date',
+                'cheque_no', 'bank_name', 'account_name',
+                'insurance_company_id', 'self_account_id',
+            ])
+        );
+
+        $status = $this->invoicePaymentService->updatePayment((int) $id, $data);
         if ($status) {
             return response()->json(['message' => __('messages.payment_updated_successfully'), 'status' => true]);
         }
         return response()->json(['message' => __('messages.error_occurred_later'), 'status' => false]);
-
     }
 
     /**
