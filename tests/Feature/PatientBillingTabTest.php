@@ -151,9 +151,10 @@ class PatientBillingTabTest extends TestCase
                  ->assertJsonPath('status', 1);
 
         $this->assertDatabaseHas('invoices', [
-            'id'        => $this->invoice->id,
-            'doctor_id' => $this->doctor->id,
-            'nurse_id'  => null,
+            'id'           => $this->invoice->id,
+            'doctor_id'    => $this->doctor->id,
+            'nurse_id'     => null,
+            'assistant_id' => null,
         ]);
     }
 

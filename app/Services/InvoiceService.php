@@ -745,8 +745,7 @@ class InvoiceService
      */
     public function getBillingDetail(int $invoiceId): array
     {
-        $invoice = \App\Invoice::with(['doctor', 'nurse', 'assistant'])
-            ->findOrFail($invoiceId);
+        $invoice = \App\Invoice::findOrFail($invoiceId);
 
         $branchId = \Illuminate\Support\Facades\Auth::user()->branch_id;
         $users = \App\User::where('branch_id', $branchId)
@@ -776,11 +775,13 @@ class InvoiceService
      */
     public function updateStaff(int $invoiceId, array $data): bool
     {
-        return (bool) \App\Invoice::where('id', $invoiceId)->update([
+        $invoice = \App\Invoice::findOrFail($invoiceId);
+        $invoice->fill([
             'doctor_id'    => $data['doctor_id'] ?? null,
             'nurse_id'     => $data['nurse_id'] ?? null,
             'assistant_id' => $data['assistant_id'] ?? null,
         ]);
+        return $invoice->save();
     }
 
     // ─── DataTable builders ─────────────────────────────────────
