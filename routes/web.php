@@ -119,6 +119,10 @@ Route::group(['middleware' => ['auth']], function () {
     // Credit/Deferred Payment (PRD 4.1.3)
     Route::post('invoices/{id}/set-credit', 'InvoiceController@setCredit');
 
+    // Billing panel endpoints — must be before resource to avoid route capture
+    Route::get('invoices/{id}/billing-detail', 'InvoiceController@billingDetail');
+    Route::post('invoices/{id}/add-overdue-payment', 'InvoiceController@addOverduePayment');
+
     Route::resource('invoices', 'InvoiceController');
     Route::get('patient-invoices/{patient_id}', 'InvoiceController@patientInvoices');
 

@@ -19,9 +19,9 @@ class InvoiceController extends Controller
     {
         $this->invoiceService = $invoiceService;
 
-        $this->middleware('can:view-invoices')->only(['index', 'show', 'previewInvoice', 'invoiceShareDetails', 'sendInvoice', 'invoiceAmount', 'patientInvoices', 'printReceipt', 'exportReport', 'invoiceProceduresToJson', 'searchInvoices', 'getServiceCategories', 'patientReceipts']);
+        $this->middleware('can:view-invoices')->only(['index', 'show', 'previewInvoice', 'invoiceShareDetails', 'sendInvoice', 'invoiceAmount', 'patientInvoices', 'printReceipt', 'exportReport', 'invoiceProceduresToJson', 'searchInvoices', 'getServiceCategories', 'patientReceipts', 'billingDetail']);
         $this->middleware('can:create-invoices')->only(['create', 'store', 'createBilling']);
-        $this->middleware('can:edit-invoices')->only(['edit', 'update', 'pendingDiscountApprovals', 'approveDiscount', 'rejectDiscount', 'setCredit']);
+        $this->middleware('can:edit-invoices')->only(['edit', 'update', 'pendingDiscountApprovals', 'approveDiscount', 'rejectDiscount', 'setCredit', 'addOverduePayment']);
         $this->middleware('can:delete-invoices')->only(['destroy']);
     }
 
@@ -167,7 +167,31 @@ class InvoiceController extends Controller
      */
     public function update(Request $request, $invoice)
     {
-        //
+        $validator = Validator::make($request->all(), [
+            'doctor_id'    => 'nullable|exists:users,id',
+            'nurse_id'     => 'nullable|exists:users,id',
+            'assistant_id' => 'nullable|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'status' => 0], 422);
+        }
+
+        $this->invoiceService->updateStaff(
+            (int) $invoice,
+            $request->only(['doctor_id', 'nurse_id', 'assistant_id'])
+        );
+
+        return response()->json(['message' => __('common.updated_successfully'), 'status' => 1]);
+    }
+
+    /**
+     * 收费面板详情 (收费 Tab)
+     */
+    public function billingDetail($id)
+    {
+        $data = $this->invoiceService->getBillingDetail((int) $id);
+        return response()->json(['status' => 1, 'data' => $data]);
     }
 
     /**
