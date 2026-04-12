@@ -317,3 +317,142 @@
     margin-bottom: 10px;
     display: block;
 }
+
+/* ══ Right Slide Panel (账单 / 收费单 详情面板) ══ */
+
+/* Overlay */
+.billing-panel-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 1040;
+}
+.billing-panel-overlay.active {
+    display: block;
+}
+
+/* Panel */
+.billing-side-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 420px;
+    max-width: 100vw;
+    height: 100%;
+    background: #fff;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
+    z-index: 1050;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+}
+.billing-side-panel.open {
+    transform: translateX(0);
+}
+
+/* Panel header */
+.billing-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e7ecf1;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+}
+.billing-panel-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+.billing-panel-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+}
+.billing-panel-close:hover {
+    color: #333;
+}
+
+/* Panel body */
+.billing-panel-body {
+    padding: 20px;
+}
+.billing-panel-section {
+    margin-bottom: 20px;
+}
+.billing-panel-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0f3f6;
+}
+.billing-panel-section-title.overdue {
+    color: #e67e22;
+}
+
+/* Meta info row */
+.billing-panel-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.billing-panel-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+}
+.billing-panel-meta-row .label {
+    color: #888;
+}
+.billing-panel-meta-row .value {
+    font-weight: 600;
+    color: #333;
+}
+.billing-panel-meta-row .value.overdue {
+    color: #e67e22;
+}
+
+/* Panel form */
+.billing-panel-body .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+}
+.billing-panel-body .form-control {
+    font-size: 13px;
+}
+.billing-panel-body .form-text {
+    font-size: 11px;
+    color: #999;
+}
+
+/* Save button */
+.billing-panel-save {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+}
+
+/* DataTable row cursor */
+#patient_invoices_table tbody tr,
+#patient_receipts_table tbody tr {
+    cursor: pointer;
+}
+#patient_invoices_table tbody tr:hover,
+#patient_receipts_table tbody tr:hover {
+    background-color: #f5f8ff;
+}
