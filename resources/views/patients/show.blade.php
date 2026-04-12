@@ -4,6 +4,7 @@
     @include('layouts.page_loader')
     <link rel="stylesheet" href="{{ asset('css/form-modal.css') }}?v={{ filemtime(public_path('css/form-modal.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/patient-image-modal.css') }}?v={{ filemtime(public_path('css/patient-image-modal.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/patient-billing.css') }}?v={{ filemtime(public_path('css/patient-billing.css')) }}">
     <style>
         /* ── Patient Detail Three-Zone Layout ── */
         .patient-summary-bar {
@@ -299,7 +300,7 @@
                             <a href="#images_tab" data-toggle="tab">{{ __('patient.images') }} <span class="badge">{{ $imagesCount }}</span></a>
                         </li>
                         <li>
-                            <a href="#invoices_tab" data-toggle="tab">{{ __('patient.invoices') }} <span class="badge">{{ $invoicesCount }}</span></a>
+                            <a href="#billing_tab" data-toggle="tab">{{ __('invoices.billing_tab_label', '收费') }}</a>
                         </li>
                         <li>
                             <a href="#followups_tab" data-toggle="tab">{{ __('patient.followups') }} <span class="badge">{{ $followupsCount }}</span></a>
@@ -580,22 +581,9 @@
                             </table>
                         </div>
 
-                        <!-- Invoices Tab -->
-                        <div class="tab-pane" id="invoices_tab">
-                            <br>
-                            <table class="table table-striped table-bordered table-hover table-checkable order-column" id="patient_invoices_table">
-                                <thead>
-                                <tr>
-                                    <th>{{ __('common.id') }}</th>
-                                    <th>{{ __('invoices.invoice_no') }}</th>
-                                    <th>{{ __('invoices.date') }}</th>
-                                    <th>{{ __('invoices.amount') }}</th>
-                                    <th>{{ __('invoices.status') }}</th>
-                                    <th>{{ __('common.view') }}</th>
-                                </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                        <!-- Billing Tab (划价收费) -->
+                        <div class="tab-pane" id="billing_tab">
+                            @include('patients.partials.billing_tab')
                         </div>
 
                         <!-- Follow-ups Tab -->
@@ -663,6 +651,15 @@
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/patient_detail.js') }}"></script>
+    <script src="{{ asset('include_js/patient_billing.js') }}?v={{ filemtime(public_path('include_js/patient_billing.js')) }}"></script>
+    <script>
+        // Initialize billing module on billing tab click
+        $('a[href="#billing_tab"]').on('shown.bs.tab', function () {
+            if (typeof BillingModule !== 'undefined') {
+                BillingModule.init({{ $patient->id }}, {!! json_encode($doctors ?? []) !!});
+            }
+        });
+    </script>
     <script>
         // Reveal / Hide PII toggle
         var piiRevealed = false;
