@@ -194,3 +194,16 @@
         </table>
     </div>
 </div>
+
+{{-- ══ Right Side Panel (账单详情 / 收费单详情) ══ --}}
+<div class="billing-panel-overlay" id="billingPanelOverlay"></div>
+
+<div class="billing-side-panel" id="billingSidePanel" role="dialog" aria-modal="true">
+    <div class="billing-panel-header">
+        <h4 id="billingPanelTitle">{{ __('invoices.panel_invoice_detail') }}</h4>
+        <button class="billing-panel-close" id="billingPanelClose" aria-label="Close">&#x2715;</button>
+    </div>
+    <div class="billing-panel-body" id="billingPanelBody">
+        {{-- Content rendered by JS --}}
+    </div>
+</div>
