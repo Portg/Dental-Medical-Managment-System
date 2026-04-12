@@ -235,16 +235,25 @@ class Invoice extends Model
         return $this->belongsTo('App\User', 'credit_approved_by');
     }
 
+    /**
+     * 主治医生
+     */
     public function doctor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\User::class, 'doctor_id');
     }
 
+    /**
+     * 护士
+     */
     public function nurse(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\User::class, 'nurse_id');
     }
 
+    /**
+     * 助理
+     */
     public function assistant(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\User::class, 'assistant_id');
