@@ -740,6 +740,49 @@ class InvoiceService
             ->make(true);
     }
 
+    /**
+     * 账单详情面板数据（3.4.9 / 3.4.7 面板用）
+     */
+    public function getBillingDetail(int $invoiceId): array
+    {
+        $invoice = \App\Invoice::with(['doctor', 'nurse', 'assistant'])
+            ->findOrFail($invoiceId);
+
+        $branchId = \Illuminate\Support\Facades\Auth::user()->branch_id;
+        $users = \App\User::where('branch_id', $branchId)
+            ->whereNull('deleted_at')
+            ->select('id', 'othername as name')
+            ->orderBy('othername')
+            ->get()
+            ->toArray();
+
+        return [
+            'id'                 => $invoice->id,
+            'invoice_no'         => $invoice->invoice_no,
+            'invoice_date'       => $invoice->invoice_date,
+            'total_amount'       => $invoice->total_amount,
+            'paid_amount'        => $invoice->paid_amount,
+            'outstanding_amount' => $invoice->outstanding_amount,
+            'payment_status'     => $invoice->payment_status,
+            'doctor_id'          => $invoice->doctor_id,
+            'nurse_id'           => $invoice->nurse_id,
+            'assistant_id'       => $invoice->assistant_id,
+            'users'              => $users,
+        ];
+    }
+
+    /**
+     * 更新账单人员字段（3.4.9）
+     */
+    public function updateStaff(int $invoiceId, array $data): bool
+    {
+        return (bool) \App\Invoice::where('id', $invoiceId)->update([
+            'doctor_id'    => $data['doctor_id'] ?? null,
+            'nurse_id'     => $data['nurse_id'] ?? null,
+            'assistant_id' => $data['assistant_id'] ?? null,
+        ]);
+    }
+
     // ─── DataTable builders ─────────────────────────────────────
 
     /**

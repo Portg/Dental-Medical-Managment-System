@@ -117,5 +117,54 @@ class PatientBillingTabTest extends TestCase
         ]);
     }
 
-    // ── Tests will be added in Tasks 3, 5, 6 ──
+    /** @test */
+    public function billing_detail_returns_invoice_with_staff_and_user_list(): void
+    {
+        $this->invoice->update(['doctor_id' => $this->doctor->id]);
+
+        $response = $this->actingAs($this->admin)
+            ->getJson('/invoices/' . $this->invoice->id . '/billing-detail');
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', 1)
+                 ->assertJsonPath('data.id', $this->invoice->id)
+                 ->assertJsonPath('data.doctor_id', $this->doctor->id)
+                 ->assertJsonStructure(['data' => [
+                     'id', 'invoice_no', 'invoice_date',
+                     'total_amount', 'paid_amount', 'outstanding_amount',
+                     'payment_status', 'doctor_id', 'nurse_id', 'assistant_id',
+                     'users',
+                 ]]);
+    }
+
+    /** @test */
+    public function update_staff_fields_on_invoice(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->patchJson('/invoices/' . $this->invoice->id, [
+                'doctor_id'    => $this->doctor->id,
+                'nurse_id'     => null,
+                'assistant_id' => null,
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', 1);
+
+        $this->assertDatabaseHas('invoices', [
+            'id'        => $this->invoice->id,
+            'doctor_id' => $this->doctor->id,
+            'nurse_id'  => null,
+        ]);
+    }
+
+    /** @test */
+    public function update_staff_rejects_nonexistent_user(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->patchJson('/invoices/' . $this->invoice->id, [
+                'doctor_id' => 99999,
+            ]);
+
+        $response->assertStatus(422);
+    }
 }
