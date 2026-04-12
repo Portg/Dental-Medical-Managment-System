@@ -13,6 +13,18 @@ var BillingModule = (function() {
     var initialized = false;
     var invoicesTableLoaded = false;
     var receiptsTableLoaded = false;
+    var panelOpen = false;
+    var panelType = null; // 'invoice' | 'payment'
+    var PAYMENT_METHODS = [
+        { code: 'Cash',         label: LanguageManager.trans('invoices.cash', '现金') },
+        { code: 'WeChat',       label: LanguageManager.trans('invoices.wechat', '微信') },
+        { code: 'Alipay',       label: LanguageManager.trans('invoices.alipay', '支付宝') },
+        { code: 'BankCard',     label: LanguageManager.trans('invoices.bank_card', '银行卡') },
+        { code: 'Insurance',    label: LanguageManager.trans('invoices.insurance', '保险') },
+        { code: 'Cheque',       label: LanguageManager.trans('invoices.cheque', '支票') },
+        { code: 'StoredValue',  label: LanguageManager.trans('invoices.stored_value', '储值') },
+        { code: 'Self Account', label: LanguageManager.trans('invoices.self_account', '自费账户') },
+    ];
 
     // ─── Init ──────────────────────────────────────────────────────
     function init(pid, doctorList) {
@@ -23,6 +35,7 @@ var BillingModule = (function() {
 
         loadServiceCategories();
         bindEvents();
+        bindPanelEvents();
     }
 
     // ─── Load service categories ───────────────────────────────────
@@ -559,7 +572,18 @@ var BillingModule = (function() {
                 {data: 'viewBtn', name: 'viewBtn', orderable: false, searchable: false}
             ],
             order: [[2, 'desc']],
-            language: LanguageManager.getDataTableLang()
+            createdRow: function (row, data) {
+                $(row).attr('data-invoice-id', data.id)
+                      .attr('data-outstanding', data.outstanding_amount || '0');
+            },
+            language: LanguageManager.getDataTableLang(),
+            initComplete: function () {
+                $('#patient_invoices_table tbody').on('click', 'tr', function (e) {
+                    if ($(e.target).is('a, button') || $(e.target).closest('a, button').length) return;
+                    var invoiceId = $(this).data('invoice-id');
+                    if (invoiceId) openInvoicePanel(invoiceId);
+                });
+            }
         });
     }
 
@@ -584,7 +608,17 @@ var BillingModule = (function() {
                 {data: 'added_by_name', name: 'added_by_name', defaultContent: '-'}
             ],
             order: [[2, 'desc']],
-            language: LanguageManager.getDataTableLang()
+            createdRow: function (row, data) {
+                $(row).attr('data-payment-id', data.id);
+            },
+            language: LanguageManager.getDataTableLang(),
+            initComplete: function () {
+                $('#patient_receipts_table tbody').on('click', 'tr', function (e) {
+                    if ($(e.target).is('a, button') || $(e.target).closest('a, button').length) return;
+                    var paymentId = $(this).data('payment-id');
+                    if (paymentId) openPaymentPanel(paymentId);
+                });
+            }
         });
     }
 
@@ -737,10 +771,309 @@ var BillingModule = (function() {
         });
     }
 
+    // ─── Panel Core ────────────────────────────────────────────────
+
+    function openPanel(title) {
+        panelOpen = true;
+        $('#billingPanelTitle').text(title);
+        $('#billingPanelBody').html(
+            '<div style="text-align:center;padding:40px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>'
+        );
+        $('#billingPanelOverlay').addClass('active');
+        $('#billingSidePanel').addClass('open');
+        setTimeout(function () {
+            $('#billingPanelClose').focus();
+        }, 260);
+    }
+
+    function closePanel() {
+        panelOpen = false;
+        $('#billingPanelOverlay').removeClass('active');
+        $('#billingSidePanel').removeClass('open');
+    }
+
+    function bindPanelEvents() {
+        $(document).on('click', '#billingPanelClose', function () {
+            closePanel();
+        });
+        $(document).on('click', '#billingPanelOverlay', function () {
+            closePanel();
+        });
+        $(document).on('keydown', function (e) {
+            if (e.key === 'Escape' && panelOpen) {
+                closePanel();
+            }
+        });
+        bindPanelSaveEvents();
+    }
+
+    function buildPaymentMethodSelect(name, selectedCode, cssClass) {
+        var html = '<select name="' + name + '" class="form-control ' + (cssClass || '') + '">';
+        $.each(PAYMENT_METHODS, function (_, m) {
+            html += '<option value="' + m.code + '"' + (m.code === selectedCode ? ' selected' : '') + '>'
+                 + m.label + '</option>';
+        });
+        html += '</select>';
+        return html;
+    }
+
+    function buildExtraPaymentFields(container, code) {
+        var $extra = container.find('.payment-extra-fields').empty();
+        if (code === 'Cheque') {
+            $extra.html(
+                '<div class="form-group"><label>' + LanguageManager.trans('invoices.cheque_no', '支票号') + '</label>' +
+                '<input type="text" name="cheque_no" class="form-control input-sm"></div>' +
+                '<div class="form-group"><label>' + LanguageManager.trans('invoices.bank_name', '银行') + '</label>' +
+                '<input type="text" name="bank_name" class="form-control input-sm"></div>'
+            );
+        }
+    }
+
+    function openInvoicePanel(invoiceId) {
+        panelType = 'invoice';
+        openPanel(LanguageManager.trans('invoices.panel_invoice_detail', '账单详情'));
+
+        $.get('/invoices/' + invoiceId + '/billing-detail', function (res) {
+            if (!res || res.status !== 1) {
+                $('#billingPanelBody').html(
+                    '<div class="alert alert-danger">' +
+                    LanguageManager.trans('invoices.panel_load_failed', '加载失败') + '</div>'
+                );
+                return;
+            }
+            var d = res.data;
+            var isOverdue = parseFloat(d.outstanding_amount) > 0;
+
+            var userOptions = '<option value=""></option>';
+            $.each(d.users, function (_, u) {
+                userOptions += '<option value="' + u.id + '">' + u.name + '</option>';
+            });
+
+            function staffSelect(name, selectedId) {
+                return '<select name="' + name + '" class="form-control input-sm">' +
+                       userOptions.replace('value="' + selectedId + '"', 'value="' + selectedId + '" selected') +
+                       '</select>';
+            }
+
+            var html =
+                '<div class="billing-panel-meta">' +
+                '<div class="billing-panel-meta-row"><span class="label">#</span><span class="value">' + (d.invoice_no || d.id) + '</span></div>' +
+                '<div class="billing-panel-meta-row"><span class="label">' + LanguageManager.trans('invoices.amount', '金额') + '</span><span class="value">¥' + parseFloat(d.total_amount).toFixed(2) + '</span></div>' +
+                (isOverdue ? '<div class="billing-panel-meta-row"><span class="label">' + LanguageManager.trans('invoices.overdue_payment', '欠费') + '</span><span class="value overdue">¥' + parseFloat(d.outstanding_amount).toFixed(2) + '</span></div>' : '') +
+                '</div>' +
+
+                '<div class="billing-panel-section">' +
+                '<div class="billing-panel-section-title">' + LanguageManager.trans('invoices.modify_staff', '修改人员') + '</div>' +
+                '<div class="form-group"><label>' + LanguageManager.trans('invoices.doctor', '医生') + '</label>' + staffSelect('doctor_id', d.doctor_id) + '</div>' +
+                '<div class="form-group"><label>' + LanguageManager.trans('invoices.nurse', '护士') + '</label>' + staffSelect('nurse_id', d.nurse_id) + '</div>' +
+                '<div class="form-group"><label>' + LanguageManager.trans('invoices.assistant', '助理') + '</label>' + staffSelect('assistant_id', d.assistant_id) + '</div>' +
+                '<button class="btn btn-primary billing-panel-save" id="panelSaveStaff" data-invoice-id="' + d.id + '">' +
+                LanguageManager.trans('common.save', '保存') + '</button>' +
+                '</div>';
+
+            if (isOverdue) {
+                html +=
+                    '<div class="billing-panel-section">' +
+                    '<div class="billing-panel-section-title overdue">' + LanguageManager.trans('invoices.overdue_payment', '欠费处理') + '</div>' +
+                    '<div class="form-group"><label>' + LanguageManager.trans('invoices.supplement_amount', '补收金额') + '</label>' +
+                    '<input type="number" name="overdue_amount" class="form-control input-sm" min="0" step="0.01" placeholder="0.00"></div>' +
+                    '<div class="form-group"><label>' + LanguageManager.trans('invoices.additional_discount', '再优惠金额') + '</label>' +
+                    '<input type="number" name="additional_discount" class="form-control input-sm" min="0" step="0.01" placeholder="0.00">' +
+                    '<span class="form-text">' + LanguageManager.trans('invoices.additional_discount_tip', '填写后从欠费中直接减免') + '</span></div>' +
+                    '<div class="form-group"><label>' + LanguageManager.trans('invoices.modify_payment_method', '收款方式') + '</label>' +
+                    buildPaymentMethodSelect('overdue_payment_method', 'Cash') + '</div>' +
+                    '<div class="payment-extra-fields"></div>' +
+                    '<button class="btn btn-warning billing-panel-save" id="panelSaveOverdue" data-invoice-id="' + d.id + '" data-outstanding="' + d.outstanding_amount + '">' +
+                    LanguageManager.trans('common.save', '保存') + '</button>' +
+                    '</div>';
+            }
+
+            $('#billingPanelBody').html(html);
+
+            $('#billingPanelBody').on('change', 'select[name="overdue_payment_method"]', function () {
+                buildExtraPaymentFields($('#billingPanelBody'), $(this).val());
+            });
+        }).fail(function () {
+            $('#billingPanelBody').html(
+                '<div class="alert alert-danger">' +
+                LanguageManager.trans('invoices.panel_load_failed', '加载失败') + '</div>'
+            );
+        });
+    }
+
+    function openPaymentPanel(paymentId) {
+        panelType = 'payment';
+        openPanel(LanguageManager.trans('invoices.panel_receipt_detail', '收费单详情'));
+
+        $.get('/payments/' + paymentId + '/edit', function (res) {
+            if (!res) {
+                $('#billingPanelBody').html(
+                    '<div class="alert alert-danger">' +
+                    LanguageManager.trans('invoices.panel_load_failed', '加载失败') + '</div>'
+                );
+                return;
+            }
+            var d = res;
+            var html =
+                '<div class="billing-panel-meta">' +
+                '<div class="billing-panel-meta-row"><span class="label">' + LanguageManager.trans('invoices.receipt_amount_readonly', '金额') + '</span>' +
+                '<span class="value">¥' + parseFloat(d.amount).toFixed(2) + '</span></div>' +
+                '<div class="billing-panel-meta-row"><span class="label">' + LanguageManager.trans('invoices.receipt_date', '日期') + '</span>' +
+                '<span class="value">' + (d.payment_date || '-') + '</span></div>' +
+                '</div>' +
+                '<div class="billing-panel-section">' +
+                '<div class="billing-panel-section-title">' + LanguageManager.trans('invoices.modify_payment_method', '修改收款方式') + '</div>' +
+                '<div class="form-group">' + buildPaymentMethodSelect('payment_method', d.payment_method) + '</div>' +
+                '<div class="payment-extra-fields"></div>' +
+                '<button class="btn btn-primary billing-panel-save" id="panelSavePayment" data-payment-id="' + d.id + '">' +
+                LanguageManager.trans('common.save', '保存') + '</button>' +
+                '</div>';
+
+            $('#billingPanelBody').html(html);
+            buildExtraPaymentFields($('#billingPanelBody'), d.payment_method);
+
+            $('#billingPanelBody').on('change', 'select[name="payment_method"]', function () {
+                buildExtraPaymentFields($('#billingPanelBody'), $(this).val());
+            });
+        }).fail(function () {
+            $('#billingPanelBody').html(
+                '<div class="alert alert-danger">' +
+                LanguageManager.trans('invoices.panel_load_failed', '加载失败') + '</div>'
+            );
+        });
+    }
+
+    function bindPanelSaveEvents() {
+        $(document).on('click', '#panelSaveStaff', function () {
+            var $btn = $(this);
+            var invoiceId = $btn.data('invoice-id');
+            $btn.prop('disabled', true).text(LanguageManager.trans('common.saving', '保存中...'));
+
+            $.ajax({
+                url: '/invoices/' + invoiceId,
+                method: 'PATCH',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    doctor_id:    $('#billingPanelBody select[name="doctor_id"]').val() || null,
+                    nurse_id:     $('#billingPanelBody select[name="nurse_id"]').val() || null,
+                    assistant_id: $('#billingPanelBody select[name="assistant_id"]').val() || null,
+                },
+                success: function (res) {
+                    if (res.status === 1) {
+                        toastr.success(res.message);
+                        closePanel();
+                        reloadInvoicesTable();
+                    } else {
+                        toastr.error(res.message);
+                        $btn.prop('disabled', false).text(LanguageManager.trans('common.save', '保存'));
+                    }
+                },
+                error: function (xhr) {
+                    var msg = xhr.responseJSON && xhr.responseJSON.message
+                        ? xhr.responseJSON.message
+                        : LanguageManager.trans('invoices.panel_load_failed', '保存失败');
+                    toastr.error(msg);
+                    $btn.prop('disabled', false).text(LanguageManager.trans('common.save', '保存'));
+                }
+            });
+        });
+
+        $(document).on('click', '#panelSaveOverdue', function () {
+            var $btn = $(this);
+            var invoiceId = $btn.data('invoice-id');
+            var outstanding = parseFloat($btn.data('outstanding'));
+            var amount = parseFloat($('#billingPanelBody input[name="overdue_amount"]').val()) || 0;
+            var discount = parseFloat($('#billingPanelBody input[name="additional_discount"]').val()) || 0;
+
+            if (amount + discount <= 0) {
+                toastr.warning(LanguageManager.trans('invoices.overdue_amount_required', '金额不能为零'));
+                return;
+            }
+            if (amount + discount > outstanding + 0.001) {
+                toastr.warning(LanguageManager.trans('invoices.overdue_amount_exceeds', '超过欠费金额'));
+                return;
+            }
+
+            $btn.prop('disabled', true).text(LanguageManager.trans('common.saving', '保存中...'));
+
+            var data = {
+                _token:              $('meta[name="csrf-token"]').attr('content'),
+                amount:              amount > 0 ? amount.toFixed(2) : null,
+                additional_discount: discount > 0 ? discount.toFixed(2) : null,
+                payment_method:      $('#billingPanelBody select[name="overdue_payment_method"]').val(),
+                cheque_no:           $('#billingPanelBody input[name="cheque_no"]').val() || null,
+                bank_name:           $('#billingPanelBody input[name="bank_name"]').val() || null,
+            };
+
+            $.post('/invoices/' + invoiceId + '/add-overdue-payment', data, function (res) {
+                if (res.status === 1) {
+                    toastr.success(res.message);
+                    closePanel();
+                    reloadInvoicesTable();
+                    reloadReceiptsTable();
+                } else {
+                    toastr.error(res.message);
+                    $btn.prop('disabled', false).text(LanguageManager.trans('common.save', '保存'));
+                }
+            }).fail(function (xhr) {
+                var msg = xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : LanguageManager.trans('invoices.panel_load_failed', '保存失败');
+                toastr.error(msg);
+                $btn.prop('disabled', false).text(LanguageManager.trans('common.save', '保存'));
+            });
+        });
+
+        $(document).on('click', '#panelSavePayment', function () {
+            var $btn = $(this);
+            var paymentId = $btn.data('payment-id');
+            $btn.prop('disabled', true).text(LanguageManager.trans('common.saving', '保存中...'));
+
+            var data = {
+                _token:         $('meta[name="csrf-token"]').attr('content'),
+                _method:        'PUT',
+                payment_method: $('#billingPanelBody select[name="payment_method"]').val(),
+                cheque_no:      $('#billingPanelBody input[name="cheque_no"]').val() || null,
+                bank_name:      $('#billingPanelBody input[name="bank_name"]').val() || null,
+            };
+
+            $.post('/payments/' + paymentId, data, function (res) {
+                if (res.status) {
+                    toastr.success(res.message);
+                    closePanel();
+                    reloadReceiptsTable();
+                } else {
+                    toastr.error(res.message);
+                    $btn.prop('disabled', false).text(LanguageManager.trans('common.save', '保存'));
+                }
+            }).fail(function (xhr) {
+                var msg = xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : LanguageManager.trans('invoices.panel_load_failed', '保存失败');
+                toastr.error(msg);
+                $btn.prop('disabled', false).text(LanguageManager.trans('common.save', '保存'));
+            });
+        });
+    }
+
+    function reloadInvoicesTable() {
+        if ($.fn.DataTable.isDataTable('#patient_invoices_table')) {
+            $('#patient_invoices_table').DataTable().ajax.reload(null, false);
+        }
+    }
+
+    function reloadReceiptsTable() {
+        if ($.fn.DataTable.isDataTable('#patient_receipts_table')) {
+            $('#patient_receipts_table').DataTable().ajax.reload(null, false);
+        }
+    }
+
     // ─── Public API ────────────────────────────────────────────────
     return {
         init: init,
         initInvoicesTable: initInvoicesTable,
-        initReceiptsTable: initReceiptsTable
+        initReceiptsTable: initReceiptsTable,
+        openInvoicePanel: openInvoicePanel,
+        openPaymentPanel: openPaymentPanel,
     };
 })();
