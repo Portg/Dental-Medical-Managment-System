@@ -201,6 +201,17 @@ class InvoiceController extends Controller
             return response()->json(['message' => __('messages.record_not_found'), 'status' => 0], 404);
         }
 
+        $validator = Validator::make($request->all(), [
+            'amount'              => 'nullable|numeric|min:0',
+            'additional_discount' => 'nullable|numeric|min:0',
+            'payment_method'      => 'required_with:amount|nullable|string',
+            'payment_date'        => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'status' => 0], 422);
+        }
+
         $outstanding   = (string) $invoice->outstanding_amount;
         $amountInput   = (string) ($request->input('amount', '0'));
         $discountInput = (string) ($request->input('additional_discount', '0'));
@@ -213,17 +224,6 @@ class InvoiceController extends Controller
         $total = bcadd($amountInput, $discountInput, 2);
         if (bccomp($total, $outstanding, 2) > 0) {
             return response()->json(['message' => __('invoices.overdue_amount_exceeds'), 'status' => 0], 422);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'amount'              => 'nullable|numeric|min:0',
-            'additional_discount' => 'nullable|numeric|min:0',
-            'payment_method'      => 'required_with:amount|nullable|string',
-            'payment_date'        => 'nullable|date',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first(), 'status' => 0], 422);
         }
 
         try {
