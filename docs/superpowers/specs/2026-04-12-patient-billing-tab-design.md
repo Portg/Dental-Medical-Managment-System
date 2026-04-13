@@ -78,30 +78,70 @@ DataTable 展示历史收费单，新增行点击交互：
 
 用纯 CSS `transform: translateX` 实现滑入动画，无需 Bootstrap 5：
 
-- 面板宽度：`280px`，`position: fixed`，右侧贴边
+- 面板宽度：桌面 `420px`，窄屏 `100vw`，`position: fixed`，右侧贴边
 - 背景遮罩（overlay）：点击关闭面板
 - 面板独立于 DataTable，不影响主列表滚动
 - 账单面板和收费单面板为同一个 DOM 节点，内容按触发类型动态渲染
+- 支持 `Esc` 关闭；打开后焦点进入面板首个可操作控件，关闭后焦点回到触发行
+- 保存按钮提交中展示 loading 并禁用，响应返回后恢复
+- DataTable 行点击打开面板，但「查看」按钮点击只跳转详情页，不触发行点击
 
 ---
 
 ## 架构
 
-### 改动文件（6 个）
+### 改动文件
 
 | 文件 | 变更类型 | 说明 |
 |------|---------|------|
-| `resources/views/patients/show.blade.php` | 修改 | 移除「发票」Tab；新增「收费」Tab；`@include billing_tab`；加载 `patient_billing.js` 和 `patient_billing.css` |
+| `resources/views/patients/show.blade.php` | 修改 | 将原 `invoices_tab` 整段替换为「收费」Tab，不保留旧 `patient_invoices_table`；`@include('patients.partials.billing_tab')`；加载 `patient_billing.js` 和 `patient-billing.css` |
 | `resources/views/patients/partials/billing_tab.blade.php` | 修改 | 账单 / 收费单子 Tab 行加 `data-*` 属性和点击回调；新增右侧面板 HTML（overlay + panel DOM） |
-| `public/include_js/patient_billing.js` | 修改 | 新增面板 open / close 逻辑；新增 3 个 AJAX 方法 |
-| `public/css/patient_billing.css` | **新建** | 面板滑入动画、overlay、面板内部样式 |
-| `app/Http/Controllers/InvoiceController.php` | 修改 | 实现 `update()`（人员字段）；新增 `addOverduePayment()` |
+| `public/include_js/patient_billing.js` | 修改 | 新增面板 open / close 逻辑；新增行点击处理；新增账单详情、人员更新、欠费补收、收费单更新 AJAX 方法 |
+| `public/css/patient-billing.css` | 修改 | 在既有文件中追加面板滑入动画、overlay、面板内部样式；不新建 `patient_billing.css` |
+| `app/Http/Controllers/InvoiceController.php` | 修改 | 实现 `update()`（人员字段）；新增 `billingDetail()`；新增 `addOverduePayment()` |
+| `app/Services/InvoiceService.php` | 修改 | 新增账单详情数据组装、人员字段更新、欠费补收服务方法；DataTable 增加行级 `data-*` 所需字段 |
+| `app/Http/Controllers/InvoicePaymentController.php` | 修改 | 调整 `update()` 支持仅修改收款方式及附属字段；不再假设现有实现可直接复用 |
+| `app/Services/InvoicePaymentService.php` | 修改 | `updatePayment()` 接收并保存 `cheque_no` / `bank_name` / `insurance_company_id` / `self_account_id`；必要时保留原金额与日期 |
+| `app/Invoice.php` | 修改 | `$fillable` 增加 `doctor_id` / `nurse_id` / `assistant_id`；增加对应 `belongsTo(User::class)` 关系 |
 | `database/migrations/<timestamp>_add_staff_to_invoices_table.php` | **新建** | invoices 表新增 `doctor_id` / `nurse_id` / `assistant_id` 可空外键；`<timestamp>` 由 `php artisan make:migration` 自动生成 |
+| `resources/lang/zh-CN/invoices.php` | 修改 | 新增本功能文案 |
+| `resources/lang/en/invoices.php` | 修改 | 新增本功能文案 |
+| `routes/web.php` | 修改 | 新增账单详情和欠费补收路由；保留已有 `PUT /payments/{id}` |
 
 ### 不改动
 
-- `routes/web.php`：3.4.11 使用已有 `PUT /payments/{id}`（`InvoicePaymentController@update`）
-- `InvoicePaymentController.php`：逻辑完整，直接复用
+- 不新增前端依赖，不引入 Bootstrap 5
+- 不改变账单详情页 `invoices/{id}` 原有入口
+- 不调整发票打印模板
+
+---
+
+## 现有代码差异与约束
+
+- 当前患者详情页已有 `#invoices_tab` 和 `#patient_invoices_table`；接入收费 Tab 时必须替换旧节点，不能让旧表格和 `billing_tab.blade.php` 里的同名表格并存。
+- 当前样式文件名是 `public/css/patient-billing.css`，不是 `patient_billing.css`。
+- 当前 `InvoicePaymentController@update()` 要求 `amount` / `payment_date` / `payment_method`，且只传这 3 个字段给 service；实现 3.4.11 前必须调整该方法，否则收款方式附属字段不会保存。
+- 当前 `GET /invoice-amount/{id}` 只适合收款余额场景，不足以渲染账单详情面板；本次新增 `GET /invoices/{id}/billing-detail`。
+- 当前 `Invoice` 模型保存时会自动重算 `outstanding_amount` 和 `payment_status`；欠费补收不要手写状态分支，保存账单后让模型规则统一处理。
+
+---
+
+## 支付方式编码
+
+前端和后端必须使用同一套编码。以 `InvoicePaymentService::PAYMENT_METHODS` 为准，前端选项同步改为：
+
+| 中文 | code |
+|------|------|
+| 现金 | `Cash` |
+| 微信 | `WeChat` |
+| 支付宝 | `Alipay` |
+| 银行卡 | `BankCard` |
+| 保险 | `Insurance` |
+| 支票 | `Cheque` |
+| 储值 | `StoredValue` |
+| 自费账户 | `Self Account` |
+
+实现时把现有前端 `WechatPay` 改为 `WeChat`，`SelfAccount` 改为 `Self Account`，并同步更新判断附属字段显示的 JS 条件。
 
 ---
 
@@ -120,7 +160,7 @@ DataTable 展示历史收费单，新增行点击交互：
 **账单行点击：**
 ```
 BillingModule.openInvoicePanel(invoiceId)
-→ GET /invoice-amount/{id}          ← 复用已有接口
+→ GET /invoices/{id}/billing-detail
 → 渲染面板：基本信息 + 人员下拉 + 欠费区块
 ```
 
@@ -131,6 +171,37 @@ BillingModule.openPaymentPanel(paymentId)
 → 渲染面板：收款方式选择 + 金额（只读）
 ```
 
+---
+
+## 接口契约
+
+### 账单详情面板
+
+```
+GET /invoices/{id}/billing-detail
+Response:
+{
+  status: 1,
+  data: {
+    id,
+    invoice_no,
+    invoice_date,
+    total_amount,
+    paid_amount,
+    outstanding_amount,
+    payment_status,
+    doctor_id,
+    nurse_id,
+    assistant_id,
+    doctors: [{ id, name }],
+    nurses: [{ id, name }],
+    assistants: [{ id, name }]
+  }
+}
+```
+
+用途：只供患者详情收费 Tab 的账单右侧面板使用，不替代 `GET /invoice-amount/{id}`。
+
 ### 3.4.9 修改人员
 
 ```
@@ -140,6 +211,12 @@ Response: { status: 1, message: '保存成功' }
 → 面板关闭 + 账单子 Tab 刷新当前行
 ```
 
+后端要求：
+
+- `doctor_id` / `nurse_id` / `assistant_id` 均允许为空
+- 非空时使用 `exists:users,id` 校验
+- 只更新这 3 个字段，不改动账单金额、状态、支付记录
+
 ### 3.4.7 欠费补收与再优惠
 
 ```
@@ -148,35 +225,53 @@ Request:  { amount, payment_method, additional_discount?,
             payment_date?, cheque_no?, bank_name?,
             insurance_company_id?, self_account_id? }
 服务端:   若 additional_discount > 0：
-            invoices.discount_amount += additional_discount
-            invoices.total_amount -= additional_discount（重新计算 outstanding）
-          新建 InvoicePayment 记录（amount 为实际补收金额）
-          invoices.paid_amount += amount
-          outstanding_amount <= 0 → payment_status = 'paid'
-          否则 → payment_status = 'partial'
+            用 bcmath 增加 invoices.discount_amount
+            用 bcmath 减少 invoices.total_amount
+          若 amount > 0：
+            复用 InvoicePaymentService::processMixedPayment()
+            新建 InvoicePayment 记录（amount 为实际补收金额）
+            更新 invoices.paid_amount
+          保存 invoice，由 Invoice 模型自动重算 outstanding_amount / payment_status
 Response: { status: 1, message: '补收成功', data: { new_outstanding } }
 → 面板关闭 + 账单子 Tab 刷新
 ```
 
 前端面板新增「再优惠金额」输入框（选填），提示「填写后将从欠费中直接减免，无需实际收款」。
 
+后端要求：
+
+- `amount` 和 `additional_discount` 至少一个大于 0
+- `amount + additional_discount` 不能超过当前 `outstanding_amount`
+- 金额计算统一使用 `bcadd` / `bcsub` / `bccomp`
+- `payment_method = StoredValue` 时继续走储值余额校验和会员流水逻辑
+- 折扣审批未通过且账单不能收款时，禁止补收；仅再优惠也需要明确返回错误，避免绕过折扣审批
+
 ### 3.4.11 修改收款方式
 
 ```
-PUT /payments/{id}                  ← 已有路由，无需新增
+PUT /payments/{id}
 Request:  { payment_method, cheque_no?, bank_name?,
             insurance_company_id?, self_account_id? }
 Response: { status: 1, message: '修改成功' }
 → 面板关闭 + 收费单子 Tab 刷新
 ```
 
+后端要求：
+
+- 保留原支付记录的 `amount` 和 `payment_date`，除非 request 显式传入且通过校验
+- 支票必须校验 `cheque_no` / `bank_name`
+- 保险必须校验 `insurance_company_id`
+- 自费账户必须校验 `self_account_id`
+- service 层必须把附属字段纳入 update whitelist
+
 ---
 
 ## 后端新增路由
 
-仅新增 1 条：
+新增 2 条：
 
 ```php
+Route::get('invoices/{id}/billing-detail', 'InvoiceController@billingDetail');
 Route::post('invoices/{id}/add-overdue-payment', 'InvoiceController@addOverduePayment');
 ```
 
@@ -194,6 +289,13 @@ $table->foreign('doctor_id')->references('id')->on('users')->nullOnDelete();
 $table->foreign('nurse_id')->references('id')->on('users')->nullOnDelete();
 $table->foreign('assistant_id')->references('id')->on('users')->nullOnDelete();
 ```
+
+迁移后同步更新：
+
+- `app/Invoice.php` 的 `$fillable`
+- `Invoice` 到 `User` 的 `doctor` / `nurse` / `assistant` 关系
+- 账单详情接口返回当前人员字段和下拉选项
+- `InvoiceController@update()` 的字段白名单和校验规则
 
 ---
 
@@ -214,27 +316,44 @@ $table->foreign('assistant_id')->references('id')->on('users')->nullOnDelete();
 |------|------|
 | doctor_id 不存在 | `exists:users,id` 校验，返回 `{ status: 0 }` |
 | 欠费补收金额 ≤ 0 | `min:0.01` 校验 |
+| 补收 + 再优惠超过欠费 | 返回 `{ status: 0, message }`，不写入任何记录 |
 | 发票已全额支付仍尝试补收 | 检查 `outstanding_amount`，返回错误 |
 | 无 `edit-invoices` 权限 | 中间件拦截，返回 403 |
-| 修改收款方式支票字段缺失 | 复用 `InvoicePaymentController@update` 现有校验 |
+| 修改收款方式支票字段缺失 | `InvoicePaymentController@update` 返回校验错误 |
+
+### 空态与部分状态
+
+| 场景 | 用户看到 |
+|------|----------|
+| 账单子 Tab 无数据 | 「暂无账单，可先在划价中新增收费项目」 |
+| 收费单子 Tab 无数据 | 「暂无收费记录」 |
+| 账单已结清 | 面板显示「该账单已结清」，隐藏欠费处理表单 |
+| 保险 / 自费账户搜索失败 | 保持面板打开，字段下方显示「选项加载失败，请重试」 |
+| 点击行内「查看」按钮 | 打开原账单详情页，不打开右侧面板 |
 
 ---
 
 ## 国际化
 
-新增用户可见文本均使用 `__()` / `LanguageManager.trans()`，需同步更新 `resources/lang/zh-CN/` 和 `en/` 对应语言文件。
+新增用户可见文本均使用 `__()` / `LanguageManager.trans()`，需同步更新 `resources/lang/zh-CN/invoices.php` 和 `resources/lang/en/invoices.php`。
 
 主要新增 key：
 
 ```
-billing.panel_invoice_detail   账单详情
-billing.modify_staff           修改人员
-billing.overdue_payment        欠费处理
-billing.supplement_amount      补收金额
-billing.modify_payment_method  修改收款方式
-billing.save_success           保存成功
-billing.load_failed            加载失败，请重试
-billing.amount_exceeds_overdue 补收金额不能超过欠费金额
+invoices.panel_invoice_detail        账单详情
+invoices.modify_staff                修改人员
+invoices.overdue_payment             欠费处理
+invoices.supplement_amount           补收金额
+invoices.additional_discount         再优惠金额
+invoices.modify_payment_method       修改收款方式
+invoices.save_success                保存成功
+invoices.load_failed                 加载失败，请重试
+invoices.amount_exceeds_overdue      补收金额不能超过欠费金额
+invoices.adjustment_exceeds_overdue  补收与再优惠合计不能超过欠费金额
+invoices.no_patient_invoices         暂无账单，可先在划价中新增收费项目
+invoices.no_patient_receipts         暂无收费记录
+invoices.invoice_settled             该账单已结清
+invoices.option_load_failed          选项加载失败，请重试
 ```
 
 ---

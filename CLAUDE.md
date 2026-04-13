@@ -1,73 +1,72 @@
 # Dental Medical Management System
 
-## Overview
+面向 AI 与协作者的**项目速查**：技术栈、目录约定、API 摘要、前后端规范与协作原则。更细的流程见仓库内 `.claude/skills/`。
 
-Laravel 11.x dental clinic management system with modular architecture (Doctor, Nurse, Receptionist, SuperAdmin, Pharmacy).
+## 速览
 
-- **PHP**: 8.2+
-- **Database**: MySQL 5.7+ (135 tables, soft deletes via `deleted_at`)
-- **i18n**: zh-CN (primary), en
+| 项 | 说明 |
+| --- | --- |
+| 后端 | PHP 8.2+，Laravel 11.x |
+| 数据库 | MySQL 5.7+（约 135 张表，软删除用 `deleted_at`） |
+| 前端 | Bootstrap 4、jQuery、Laravel Mix；页面 CSS/JS 与 Blade 分离（见下文） |
+| 语言 | 界面与文档以 **zh-CN** 为主，英文 `en` 为辅 |
 
-## Architecture
+## 技术栈（关键依赖）
 
-### Modular Structure (`nwidart/laravel-modules` v11)
+- **Laravel**：`laravel/framework` ^11、`laravel/sanctum` ^4、`laravel/ui` ^4
+- **数据与报表**：`yajra/laravel-datatables-oracle` ^11、`maatwebsite/excel` ^3.1、`barryvdh/laravel-dompdf` ^2
+- **其他**：`owen-it/laravel-auditing`、`spatie/laravel-backup`、`consoletvs/charts` 等（以 `composer.json` 为准）
 
-```
-Modules/
-├── Doctor/
-├── Nurse/
-├── Receptionist/
-├── SuperAdmin/
-└── Pharmacy/
-```
+> 升级或新增依赖前，请在 `composer.json` / `package.json` 中核对版本兼容性。
 
-Each module has its own `Http/Controllers/`, `Resources/views/`, and route files.
+## 架构
 
-### Key Tables
+### 应用结构（单体 `app/`）
 
-| Table                        | Purpose                              |
-| ---------------------------- | ------------------------------------ |
-| `users`                      | Auth & roles, `is_doctor` enum       |
-| `patients`                   | Patient info & medical history       |
-| `appointments`               | Scheduling, `sort_by` for ordering   |
-| `invoices` / `invoice_items` | Billing                              |
-| `doctor_claims`              | Doctor commissions                   |
+业务代码集中在 **`app/`**（`Http/Controllers/`、`Models/`、`Services/` 等），按**角色与业务域**组织（如医生/护士/前台/药房相关控制器与仪表盘），**不再使用** `nwidart/laravel-modules` 的 `Modules/*` 目录（若历史文档仍提及模块包，以当前仓库为准）。
 
-## Authentication
+### 核心业务表（节选）
 
-### Web (Session)
+| 表 | 用途 |
+| --- | --- |
+| `users` | 认证与角色，`is_doctor` 等 |
+| `patients` | 患者信息与病史 |
+| `appointments` | 预约，含 `sort_by` 等 |
+| `invoices` / `invoice_items` | 账单 |
+| `doctor_claims` | 医生提成 |
 
-Role-based via `AuthServiceProvider`:
+## 认证
 
-- Super Administrator, Administrator, Doctor, Nurse, Receptionist
-- Middleware: `->middleware('can:permission-slug')`
+### Web（Session）
 
-### API (Sanctum)
+基于角色与权限：`AuthServiceProvider`，中间件示例 `->middleware('can:permission-slug')`。常见角色含：超级管理员、管理员、医生、护士、前台等。
 
-Token + SPA cookie authentication at `/api/v1/`.
+### API（Sanctum）
+
+基址 **`/api/v1/`**，Token / SPA Cookie。示例：
 
 ```php
-// Login (no auth required)
-POST /api/v1/auth/login   {email, password}
+// 无需认证
+POST /api/v1/auth/login   { "email", "password" }
 
-// Authenticated endpoints
+// 需 auth:sanctum
 GET  /api/v1/auth/me
 POST /api/v1/auth/logout
 ```
 
-## API v1 Endpoints
+## API v1 摘要
 
-Base: `/api/v1/` | Auth: `auth:sanctum` | Response: `{success, data, message, meta?}`
+基址：`/api/v1/` | 中间件：`auth:sanctum` | 响应形态：`{ success, data, message, meta? }`（与具体控制器实现保持一致）
 
 ### Patients
 
 ```
-GET    /patients           # List (paginated)
-POST   /patients           # Create
-GET    /patients/{id}      # Show
-PUT    /patients/{id}      # Update
-DELETE /patients/{id}      # Soft delete
-GET    /patients/search?q= # Search by name/phone
+GET    /patients
+POST   /patients
+GET    /patients/{id}
+PUT    /patients/{id}
+DELETE /patients/{id}
+GET    /patients/search?q=
 GET    /patients/{id}/medical-history
 ```
 
@@ -79,7 +78,7 @@ POST   /appointments
 GET    /appointments/{id}
 PUT    /appointments/{id}
 DELETE /appointments/{id}
-GET    /appointments/calendar-events  # FullCalendar format
+GET    /appointments/calendar-events
 GET    /appointments/chairs
 GET    /appointments/doctor-time-slots?doctor_id=&date=
 POST   /appointments/{id}/reschedule
@@ -112,16 +111,18 @@ GET    /medical-cases/icd10-search?q=
 GET    /medical-cases/patient/{patientId}
 ```
 
-## Routing
+## 路由入口
 
-- Web routes: [routes/web.php](routes/web.php)
-- API v1 routes: [routes/api/v1.php](routes/api/v1.php)
+| 类型 | 文件 |
+| --- | --- |
+| Web | [routes/web.php](routes/web.php) |
+| API v1 | [routes/api/v1.php](routes/api/v1.php) |
 
-Key web prefixes: `/patients`, `/appointments`, `/invoices`, `/doctor-appointments`
+常见 Web 前缀示例：`/patients`、`/appointments`、`/invoices`、`/doctor-appointments`（以实际路由为准）。
 
-## i18n
+## 国际化（i18n）
 
-### Structure
+### 目录
 
 ```
 resources/lang/
@@ -136,16 +137,35 @@ resources/lang/
     └── ...
 ```
 
-### JavaScript
+### 前端 JS
 
 ```javascript
 LanguageManager.trans('common.save');
-LanguageManager.trans('validation.max', {max: 10});
+LanguageManager.trans('validation.max', { max: 10 });
 ```
 
-## Code Patterns
+页面级翻译可在 `@section('js')` 顶部注入：`LanguageManager.loadFromPHP(@json(__('module')), 'module')`。`common` 与 `validation` 若在布局中已全局加载，勿重复注入。
 
-### Validation
+## 前端规范（Blade / CSS / JS）
+
+- **DataTables**：Yajra 服务端模式  
+- **日历**：FullCalendar（预约等）  
+- **UI**：Bootstrap、Select2、Datepicker（中文 locale）
+
+### 资源拆分（强制）
+
+Blade 中**禁止**大段内联 `<style>` / `<script>`，须拆到独立文件：
+
+| 类型 | 路径 | 引入 |
+| --- | --- | --- |
+| CSS | `public/css/<page-name>.css` | `asset('css/<page-name>.css')` |
+| JS | `public/include_js/<page_name>.js` | `asset('include_js/<page_name>.js')` + `?v={{ filemtime(...) }}` |
+
+Blade 中仅保留结构与 `@section` / `@yield`；JS 内用 `LanguageManager.trans`，避免在 JS 里写 Blade `{{ __() }}`。
+
+## 代码片段约定
+
+### 校验
 
 ```php
 $validator = Validator::make($request->all(), [
@@ -156,7 +176,7 @@ if ($validator->fails()) {
 }
 ```
 
-### JSON Response
+### JSON 响应（示例）
 
 ```php
 return response()->json([
@@ -166,74 +186,57 @@ return response()->json([
 ]);
 ```
 
-### Soft Deletes
+### 软删除
 
-Always include `whereNull('deleted_at')` or use model's `SoftDeletes` trait.
+查询时包含 `whereNull('deleted_at')` 或使用模型 `SoftDeletes` trait。
 
-## Frontend
+## 本地与验证
 
-- **DataTables**: Yajra server-side processing
-- **Calendar**: FullCalendar for appointments
-- **UI**: Bootstrap, Select2, Datepicker (all with zh-CN locale)
-
-### File Separation (Blade / CSS / JS)
-
-Blade 视图中**禁止**内联 `<style>` 和 `<script>` 大段代码。必须拆分为独立文件引入：
-
-| 类型 | 存放路径 | 引入方式 |
-|------|---------|---------|
-| CSS  | `public/css/<page-name>.css` | `<link rel="stylesheet" href="{{ asset('css/<page-name>.css') }}">` |
-| JS   | `public/include_js/<page_name>.js` | `<script src="{{ asset('include_js/<page_name>.js') }}?v={{ filemtime(public_path('include_js/<page_name>.js')) }}"></script>` |
-
-- Blade 只保留 HTML 结构和必要的 `@section` / `@yield`
-- JS 中使用 `LanguageManager.trans('module.key')` 获取翻译，不用 Blade `{{ __() }}`
-- 页面级翻译在 `@section('js')` 顶部通过一行 `LanguageManager.loadFromPHP(@json(__('module')), 'module')` 注入
-- `common` 和 `validation` 已在布局模板全局加载，无需重复注入
-
-## Quick Start
+### 首次启动
 
 ```bash
 composer install && npm install
 cp .env.example .env
 php artisan key:generate
-# Configure DB in .env
+# 配置 .env 数据库
 php artisan migrate --seed
 php artisan serve
 ```
 
-## Architecture Principles
+### 修改代码后建议执行
 
-- Module dependencies flow: `app/` → `Modules/*`. Never create reverse dependencies.
-- When unsure about class placement, verify the module dependency graph before proposing.
-- For cross-module interfaces, prefer Service Provider or event-based decoupling.
-- One class = one responsibility. Do not merge multiple unrelated concerns into a single class.
+```bash
+php artisan test
+# 若修改了前端打包资源
+npm run production
+```
 
-## Implementation Approach
+（以实际 CI 与团队约定为准。）
 
-- When given a task, **implement actual code changes**. Do not stop at planning/exploration unless explicitly asked to only plan.
-- Bias toward action over analysis. If a plan exists and is approved, proceed to implementation immediately.
-- Never spend an entire session exploring and planning when the user asked for implementation.
+## 架构原则
 
-## Debugging & Root Cause Analysis
+- 依赖方向：`app/` 为核心；**不要**让底层模块反向依赖不合理边界（跨域协作优先用 Service、事件或明确接口）。
+- 类职责单一；不确定类归属时，先对照现有分层再改。
+- 跨模块协作优先 **Service Provider** 或 **事件** 解耦。
 
-- When diagnosing errors from logs, trace the **full call chain** through config/template/data before blaming code logic.
-- Do not guess at root causes. Verify by reading the actual configuration, template definitions, and runtime data paths.
-- If the user pushes back on a diagnosis, start fresh from the evidence rather than defending the initial theory.
+## 实现方式（给 AI）
 
-## Code Changes Discipline
+- 用户要求实现功能时，**直接改代码**；除非用户明确只要方案或调研，否则不要整轮只停留在规划。
+- 已有确认方案时，优先落地实现。
 
-- After editing files, always run the project build/compile command to verify changes before reporting completion.
-- Never remove existing imports, annotations (`@Transactional`, providers, aliases) unless you have explicitly verified they are unused.
-- When refactoring, check for post-refactor breakages in dependent files before marking the task as done.
+## 调试与根因
 
-## Design Document Edits
+- 从日志排查时，沿 **配置 → 模板 → 数据 → 代码** 追踪完整调用链，再下结论。
+- 避免猜测；用实际配置与运行路径验证。
+- 若用户质疑结论，基于证据重新查，而非固执原结论。
 
-- When asked to rewrite or fix a section in a design document, rewrite the **entire section** as requested. Do not attempt inline patches unless explicitly told to.
-- Respect the user's language preferences — this project uses Chinese (中文) for documentation and UI labels. Never substitute technical English terms where Chinese labels are expected.
+## 变更纪律
 
-## Technology Stack
+- 提交前运行项目约定的构建/测试命令，确认无报错再宣称完成。
+- 未核实前勿删 import、注解（如 `@Transactional`）、Provider 注册等。
+- 重构后检查依赖该代码的调用方。
 
-- **Backend**: PHP 8.2+, Laravel 11.x, MySQL 5.7+
-- **Frontend**: Bootstrap, jQuery, Yajra DataTables, FullCalendar, Select2
-- **Packages**: nwidart/laravel-modules v11, laravel/sanctum v4, barryvdh/laravel-dompdf v2, maatwebsite/excel v3.1
-- Always verify version compatibility before proposing dependency changes.
+## 设计文档
+
+- 用户要求重写某章节时，**整段重写**该章节；除非用户明确要求，否则不要只做零碎补丁。
+- 文档与 UI 标签用**中文**；需要中文标签处勿用英文技术术语替代。
