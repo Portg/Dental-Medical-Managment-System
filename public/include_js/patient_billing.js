@@ -17,7 +17,7 @@ var BillingModule = (function() {
     var panelType = null; // 'invoice' | 'payment'
     var PAYMENT_METHODS = [
         { code: 'Cash',         label: LanguageManager.trans('invoices.cash', '现金') },
-        { code: 'WeChat',       label: LanguageManager.trans('invoices.wechat', '微信') },
+        { code: 'WeChat',       label: LanguageManager.trans('invoices.wechat_pay', '微信') },
         { code: 'Alipay',       label: LanguageManager.trans('invoices.alipay', '支付宝') },
         { code: 'BankCard',     label: LanguageManager.trans('invoices.bank_card', '银行卡') },
         { code: 'Insurance',    label: LanguageManager.trans('invoices.insurance', '保险') },
@@ -154,7 +154,7 @@ var BillingModule = (function() {
             '<td><input type="number" class="form-control input-sm input-price item-price" value="' + item.price.toFixed(2) + '" step="0.01" min="0"></td>' +
             '<td><input type="number" class="form-control input-sm input-qty item-qty" value="' + item.qty + '" min="1" step="1"></td>' +
             '<td class="item-total">' + (item.price * item.qty).toFixed(2) + '</td>' +
-            '<td><input type="number" class="form-control input-sm input-discount item-discount" value="' + item.discount_rate + '" min="0" max="100" step="1">%</td>' +
+            '<td class="item-discount-cell"><input type="number" class="form-control input-sm input-discount item-discount" value="' + item.discount_rate + '" min="0" max="100" step="1">%</td>' +
             '<td><input type="number" class="form-control input-sm input-price item-discounted" value="' + item.discounted_price.toFixed(2) + '" step="0.01" min="0"></td>' +
             '<td><input type="number" class="form-control input-sm input-price item-actual" value="' + item.actual_paid.toFixed(2) + '" step="0.01" min="0"></td>' +
             '<td class="item-arrears">' + item.arrears.toFixed(2) + '</td>' +
@@ -282,13 +282,13 @@ var BillingModule = (function() {
         var html = '<div class="payment-row" data-index="' + idx + '">' +
             '<select class="form-control input-sm payment-method-select" data-index="' + idx + '">' +
             '<option value="Cash">' + LanguageManager.trans('invoices.cash') + '</option>' +
-            '<option value="WechatPay">' + LanguageManager.trans('invoices.wechat_pay') + '</option>' +
+            '<option value="WeChat">' + LanguageManager.trans('invoices.wechat_pay') + '</option>' +
             '<option value="Alipay">' + LanguageManager.trans('invoices.alipay') + '</option>' +
             '<option value="BankCard">' + LanguageManager.trans('invoices.bank_card') + '</option>' +
             '<option value="Insurance">' + LanguageManager.trans('invoices.insurance') + '</option>' +
             '<option value="Cheque">' + LanguageManager.trans('invoices.cheque') + '</option>' +
             '<option value="StoredValue">' + LanguageManager.trans('invoices.stored_value') + '</option>' +
-            '<option value="SelfAccount">' + LanguageManager.trans('invoices.self_account') + '</option>' +
+            '<option value="Self Account">' + LanguageManager.trans('invoices.self_account') + '</option>' +
             '</select>' +
             '<input type="number" class="form-control input-sm payment-amount-input" data-index="' + idx + '" placeholder="' + LanguageManager.trans('invoices.amount') + '" step="0.01" min="0">' +
             '<span class="payment-extra cheque-fields" data-index="' + idx + '">' +
@@ -322,7 +322,7 @@ var BillingModule = (function() {
         } else if (method === 'Insurance') {
             $row.find('.insurance-fields').show();
             initInsuranceSelect2($row.find('.billing-insurance-select'));
-        } else if (method === 'SelfAccount') {
+        } else if (method === 'Self Account') {
             $row.find('.self-account-fields').show();
             initSelfAccountSelect2($row.find('.billing-self-account-select'));
         }
@@ -391,7 +391,7 @@ var BillingModule = (function() {
                 payment.bank_name = $row.find('[data-field="bank_name"]').val();
             } else if (method === 'Insurance') {
                 payment.insurance_company_id = $row.find('[data-field="insurance_company_id"]').val();
-            } else if (method === 'SelfAccount') {
+            } else if (method === 'Self Account') {
                 payment.self_account_id = $row.find('[data-field="self_account_id"]').val();
             }
 
@@ -523,13 +523,13 @@ var BillingModule = (function() {
         var html = '<div class="payment-row" data-index="0">' +
             '<select class="form-control input-sm payment-method-select" data-index="0">' +
             '<option value="Cash">' + LanguageManager.trans('invoices.cash') + '</option>' +
-            '<option value="WechatPay">' + LanguageManager.trans('invoices.wechat_pay') + '</option>' +
+            '<option value="WeChat">' + LanguageManager.trans('invoices.wechat_pay') + '</option>' +
             '<option value="Alipay">' + LanguageManager.trans('invoices.alipay') + '</option>' +
             '<option value="BankCard">' + LanguageManager.trans('invoices.bank_card') + '</option>' +
             '<option value="Insurance">' + LanguageManager.trans('invoices.insurance') + '</option>' +
             '<option value="Cheque">' + LanguageManager.trans('invoices.cheque') + '</option>' +
             '<option value="StoredValue">' + LanguageManager.trans('invoices.stored_value') + '</option>' +
-            '<option value="SelfAccount">' + LanguageManager.trans('invoices.self_account') + '</option>' +
+            '<option value="Self Account">' + LanguageManager.trans('invoices.self_account') + '</option>' +
             '</select>' +
             '<input type="number" class="form-control input-sm payment-amount-input" data-index="0" placeholder="' + LanguageManager.trans('invoices.amount') + '" step="0.01" min="0">' +
             '<span class="payment-extra cheque-fields" data-index="0">' +
@@ -817,15 +817,38 @@ var BillingModule = (function() {
         return html;
     }
 
-    function buildExtraPaymentFields(container, code) {
+    function buildExtraPaymentFields(container, code, data) {
         var $extra = container.find('.payment-extra-fields').empty();
+        data = data || {};
         if (code === 'Cheque') {
             $extra.html(
                 '<div class="form-group"><label>' + LanguageManager.trans('invoices.cheque_no', '支票号') + '</label>' +
-                '<input type="text" name="cheque_no" class="form-control input-sm"></div>' +
+                '<input type="text" name="cheque_no" class="form-control input-sm" value="' + escapeHtml(data.cheque_no || '') + '"></div>' +
                 '<div class="form-group"><label>' + LanguageManager.trans('invoices.bank_name', '银行') + '</label>' +
-                '<input type="text" name="bank_name" class="form-control input-sm"></div>'
+                '<input type="text" name="bank_name" class="form-control input-sm" value="' + escapeHtml(data.bank_name || '') + '"></div>'
             );
+        } else if (code === 'Insurance') {
+            var insuranceOption = data.insurance_company_id
+                ? '<option value="' + escapeHtml(data.insurance_company_id) + '" selected>' + escapeHtml(data.name || data.insurance_company_name || '') + '</option>'
+                : '<option value=""></option>';
+            $extra.html(
+                '<div class="form-group"><label>' + LanguageManager.trans('invoices.insurance_company', '保险公司') + '</label>' +
+                '<select name="insurance_company_id" class="form-control input-sm billing-insurance-select">' +
+                insuranceOption +
+                '</select></div>'
+            );
+            initInsuranceSelect2($extra.find('.billing-insurance-select'));
+        } else if (code === 'Self Account') {
+            var selfAccountOption = data.self_account_id
+                ? '<option value="' + escapeHtml(data.self_account_id) + '" selected>' + escapeHtml(data.self_account_name || '') + '</option>'
+                : '<option value=""></option>';
+            $extra.html(
+                '<div class="form-group"><label>' + LanguageManager.trans('invoices.self_account', '自费账户') + '</label>' +
+                '<select name="self_account_id" class="form-control input-sm billing-self-account-select">' +
+                selfAccountOption +
+                '</select></div>'
+            );
+            initSelfAccountSelect2($extra.find('.billing-self-account-select'));
         }
     }
 
@@ -846,7 +869,7 @@ var BillingModule = (function() {
 
             var userOptions = '<option value=""></option>';
             $.each(d.users, function (_, u) {
-                userOptions += '<option value="' + u.id + '">' + u.name + '</option>';
+                userOptions += '<option value="' + escapeHtml(u.id) + '">' + escapeHtml(u.name || '') + '</option>';
             });
 
             function staffSelect(name, selectedId) {
@@ -857,7 +880,7 @@ var BillingModule = (function() {
 
             var html =
                 '<div class="billing-panel-meta">' +
-                '<div class="billing-panel-meta-row"><span class="label">#</span><span class="value">' + (d.invoice_no || d.id) + '</span></div>' +
+                '<div class="billing-panel-meta-row"><span class="label">#</span><span class="value">' + escapeHtml(d.invoice_no || d.id) + '</span></div>' +
                 '<div class="billing-panel-meta-row"><span class="label">' + LanguageManager.trans('invoices.amount', '金额') + '</span><span class="value">¥' + parseFloat(d.total_amount).toFixed(2) + '</span></div>' +
                 (isOverdue ? '<div class="billing-panel-meta-row"><span class="label">' + LanguageManager.trans('invoices.overdue_payment', '欠费') + '</span><span class="value overdue">¥' + parseFloat(d.outstanding_amount).toFixed(2) + '</span></div>' : '') +
                 '</div>' +
@@ -890,7 +913,8 @@ var BillingModule = (function() {
 
             $('#billingPanelBody').html(html);
 
-            $('#billingPanelBody').on('change', 'select[name="overdue_payment_method"]', function () {
+            $('#billingPanelBody').off('change.billingPanel', 'select[name="overdue_payment_method"]')
+                .on('change.billingPanel', 'select[name="overdue_payment_method"]', function () {
                 buildExtraPaymentFields($('#billingPanelBody'), $(this).val());
             });
         }).fail(function () {
@@ -919,7 +943,7 @@ var BillingModule = (function() {
                 '<div class="billing-panel-meta-row"><span class="label">' + LanguageManager.trans('invoices.receipt_amount_readonly', '金额') + '</span>' +
                 '<span class="value">¥' + parseFloat(d.amount).toFixed(2) + '</span></div>' +
                 '<div class="billing-panel-meta-row"><span class="label">' + LanguageManager.trans('invoices.receipt_date', '日期') + '</span>' +
-                '<span class="value">' + (d.payment_date || '-') + '</span></div>' +
+                '<span class="value">' + escapeHtml(d.payment_date || '-') + '</span></div>' +
                 '</div>' +
                 '<div class="billing-panel-section">' +
                 '<div class="billing-panel-section-title">' + LanguageManager.trans('invoices.modify_payment_method', '修改收款方式') + '</div>' +
@@ -930,9 +954,10 @@ var BillingModule = (function() {
                 '</div>';
 
             $('#billingPanelBody').html(html);
-            buildExtraPaymentFields($('#billingPanelBody'), d.payment_method);
+            buildExtraPaymentFields($('#billingPanelBody'), d.payment_method, d);
 
-            $('#billingPanelBody').on('change', 'select[name="payment_method"]', function () {
+            $('#billingPanelBody').off('change.billingPanel', 'select[name="payment_method"]')
+                .on('change.billingPanel', 'select[name="payment_method"]', function () {
                 buildExtraPaymentFields($('#billingPanelBody'), $(this).val());
             });
         }).fail(function () {
@@ -1003,6 +1028,8 @@ var BillingModule = (function() {
                 payment_method:      $('#billingPanelBody select[name="overdue_payment_method"]').val(),
                 cheque_no:           $('#billingPanelBody input[name="cheque_no"]').val() || null,
                 bank_name:           $('#billingPanelBody input[name="bank_name"]').val() || null,
+                insurance_company_id: $('#billingPanelBody select[name="insurance_company_id"]').val() || null,
+                self_account_id:     $('#billingPanelBody select[name="self_account_id"]').val() || null,
             };
 
             $.post('/invoices/' + invoiceId + '/add-overdue-payment', data, function (res) {
@@ -1035,6 +1062,8 @@ var BillingModule = (function() {
                 payment_method: $('#billingPanelBody select[name="payment_method"]').val(),
                 cheque_no:      $('#billingPanelBody input[name="cheque_no"]').val() || null,
                 bank_name:      $('#billingPanelBody input[name="bank_name"]').val() || null,
+                insurance_company_id: $('#billingPanelBody select[name="insurance_company_id"]').val() || null,
+                self_account_id: $('#billingPanelBody select[name="self_account_id"]').val() || null,
             };
 
             $.post('/payments/' + paymentId, data, function (res) {

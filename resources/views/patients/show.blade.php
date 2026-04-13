@@ -300,7 +300,7 @@
                             <a href="#images_tab" data-toggle="tab">{{ __('patient.images') }} <span class="badge">{{ $imagesCount }}</span></a>
                         </li>
                         <li>
-                            <a href="#billing_tab" data-toggle="tab">{{ __('invoices.billing_tab_label', '收费') }}</a>
+                            <a href="#billing_tab" data-toggle="tab">{{ __('invoices.billing_tab_label') }}</a>
                         </li>
                         <li>
                             <a href="#followups_tab" data-toggle="tab">{{ __('patient.followups') }} <span class="badge">{{ $followupsCount }}</span></a>

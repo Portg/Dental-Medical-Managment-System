@@ -112,12 +112,13 @@
 }
 .billing-table-wrapper {
     flex: 1;
-    overflow-y: auto;
+    overflow: auto;
     border: 1px solid #e7ecf1;
     border-radius: 4px 4px 0 0;
 }
 .billing-table {
     width: 100%;
+    min-width: 1020px;
     margin-bottom: 0;
     font-size: 13px;
 }
@@ -142,14 +143,32 @@
     padding: 2px 6px;
     font-size: 13px;
 }
+/* Hide number input spinners so values aren't clipped by browser UI */
+.billing-table input[type="number"]::-webkit-inner-spin-button,
+.billing-table input[type="number"]::-webkit-outer-spin-button,
+.billing-summary input[type="number"]::-webkit-inner-spin-button,
+.billing-summary input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.billing-table input[type="number"],
+.billing-summary input[type="number"] {
+    -moz-appearance: textfield;
+}
 .billing-table .input-price {
-    width: 80px;
+    width: 90px;
 }
 .billing-table .input-qty {
     width: 55px;
 }
+.billing-table td.item-discount-cell {
+    white-space: nowrap;
+}
 .billing-table .input-discount {
-    width: 60px;
+    width: 55px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 3px;
 }
 .billing-table .btn-remove-row {
     color: #e74c3c;
@@ -179,18 +198,30 @@
 }
 .billing-summary .summary-row {
     display: flex;
-    justify-content: flex-end;
-    gap: 25px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     font-size: 13px;
     margin-bottom: 4px;
 }
+.billing-summary .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
 .billing-summary .summary-label {
     color: #666;
+    white-space: nowrap;
 }
 .billing-summary .summary-value {
     font-weight: 600;
-    min-width: 80px;
+    min-width: 60px;
     text-align: right;
+    white-space: nowrap;
 }
 .billing-summary .summary-value.text-danger {
     color: #e74c3c;
@@ -200,18 +231,16 @@
     color: #e74c3c;
     font-weight: 700;
 }
-.billing-summary .order-discount-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-bottom: 4px;
+.billing-summary .order-discount-item {
+    margin-left: auto;
 }
-.billing-summary .order-discount-row input {
-    width: 60px;
-    height: 26px;
+.billing-summary .order-discount-item input {
+    width: 70px;
+    min-width: 70px;
+    height: 28px;
     text-align: center;
     font-size: 13px;
+    flex-shrink: 0;
 }
 
 /* ── Discount approval warning ── */

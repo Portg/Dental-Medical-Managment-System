@@ -41,13 +41,13 @@
                                     <th style="width:30px">#</th>
                                     <th>{{ __('invoices.procedure') }}</th>
                                     <th style="width:50px">{{ __('invoices.unit') }}</th>
-                                    <th style="width:60px">{{ __('invoices.unit_price') }}</th>
+                                    <th style="width:100px">{{ __('invoices.unit_price') }}</th>
                                     <th style="width:55px">{{ __('invoices.qty') }}</th>
-                                    <th style="width:80px">{{ __('invoices.total_amount') }}</th>
-                                    <th style="width:60px">{{ __('invoices.discount_rate') }}</th>
-                                    <th style="width:80px">{{ __('invoices.discounted_price') }}</th>
-                                    <th style="width:80px">{{ __('invoices.actual_paid') }}</th>
-                                    <th style="width:80px">{{ __('invoices.arrears') }}</th>
+                                    <th style="width:85px">{{ __('invoices.total_amount') }}</th>
+                                    <th style="width:85px">{{ __('invoices.discount_rate') }}</th>
+                                    <th style="width:100px">{{ __('invoices.discounted_price') }}</th>
+                                    <th style="width:100px">{{ __('invoices.actual_paid') }}</th>
+                                    <th style="width:85px">{{ __('invoices.arrears') }}</th>
                                     <th style="width:100px">{{ __('invoices.procedure_doctor') }}</th>
                                     <th style="width:60px">{{ __('invoices.tooth_no') }}</th>
                                     <th style="width:30px"></th>
@@ -65,20 +65,28 @@
                     {{-- Summary --}}
                     <div class="billing-summary">
                         <div class="summary-row">
-                            <span class="summary-label">{{ __('invoices.total_original') }}:</span>
-                            <span class="summary-value" id="summaryOriginal">0.00</span>
-                            <span class="summary-label">{{ __('invoices.total_discounted') }}:</span>
-                            <span class="summary-value" id="summaryDiscounted">0.00</span>
-                            <span class="summary-label">{{ __('invoices.total_actual') }}:</span>
-                            <span class="summary-value summary-total" id="summaryActual">0.00</span>
-                            <span class="summary-label">{{ __('invoices.total_arrears') }}:</span>
-                            <span class="summary-value text-danger" id="summaryArrears">0.00</span>
-                        </div>
-                        <div class="order-discount-row">
-                            <span class="summary-label">{{ __('invoices.order_discount_label') }}:</span>
-                            <input type="number" id="orderDiscountRate" class="form-control input-sm"
-                                   value="100" min="0" max="100" step="1">
-                            <span>%</span>
+                            <div class="summary-item">
+                                <span class="summary-label">{{ __('invoices.total_original') }}:</span>
+                                <span class="summary-value" id="summaryOriginal">0.00</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">{{ __('invoices.total_discounted') }}:</span>
+                                <span class="summary-value" id="summaryDiscounted">0.00</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">{{ __('invoices.total_actual') }}:</span>
+                                <span class="summary-value summary-total" id="summaryActual">0.00</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">{{ __('invoices.total_arrears') }}:</span>
+                                <span class="summary-value text-danger" id="summaryArrears">0.00</span>
+                            </div>
+                            <div class="summary-item order-discount-item">
+                                <span class="summary-label">{{ __('invoices.order_discount_label') }}:</span>
+                                <input type="number" id="orderDiscountRate" class="form-control input-sm"
+                                       value="100" min="0" max="100" step="1">
+                                <span>%</span>
+                            </div>
                         </div>
                         <div class="discount-approval-warning" id="discountApprovalWarning" style="display:none">
                             <i class="fa fa-exclamation-triangle"></i>
@@ -92,18 +100,18 @@
                             <div class="payment-row" data-index="0">
                                 <select class="form-control input-sm payment-method-select" data-index="0">
                                     <option value="Cash">{{ __('invoices.cash') }}</option>
-                                    <option value="WechatPay">{{ __('invoices.wechat_pay') }}</option>
+                                    <option value="WeChat">{{ __('invoices.wechat_pay') }}</option>
                                     <option value="Alipay">{{ __('invoices.alipay') }}</option>
                                     <option value="BankCard">{{ __('invoices.bank_card') }}</option>
                                     <option value="Insurance">{{ __('invoices.insurance') }}</option>
                                     <option value="Cheque">{{ __('invoices.cheque') }}</option>
                                     <option value="StoredValue">{{ __('invoices.stored_value') }}</option>
-                                    <option value="SelfAccount">{{ __('invoices.self_account') }}</option>
+                                    <option value="Self Account">{{ __('invoices.self_account') }}</option>
                                 </select>
                                 <input type="number" class="form-control input-sm payment-amount-input"
                                        data-index="0" placeholder="{{ __('invoices.amount') }}"
                                        step="0.01" min="0">
-                                {{-- Conditional fields for Cheque/Insurance/SelfAccount --}}
+                                {{-- Conditional fields for Cheque/Insurance/Self Account --}}
                                 <span class="payment-extra cheque-fields" data-index="0">
                                     <input type="text" class="form-control input-sm" data-field="cheque_no"
                                            placeholder="{{ __('invoices.cheque_no') }}">
