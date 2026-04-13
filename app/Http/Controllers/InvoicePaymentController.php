@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\InvoicePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\DataTables;
 
 class InvoicePaymentController extends Controller
@@ -123,7 +124,7 @@ class InvoicePaymentController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'payment_method'       => 'required|string',
+            'payment_method'       => ['required', 'string', Rule::in(array_keys(InvoicePaymentService::PAYMENT_METHODS))],
             'cheque_no'            => 'required_if:payment_method,Cheque',
             'bank_name'            => 'required_if:payment_method,Cheque',
             'insurance_company_id' => 'required_if:payment_method,Insurance|nullable|exists:insurance_companies,id',

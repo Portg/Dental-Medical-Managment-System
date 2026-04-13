@@ -776,11 +776,14 @@ class InvoiceService
     public function updateStaff(int $invoiceId, array $data): bool
     {
         $invoice = \App\Invoice::findOrFail($invoiceId);
-        $invoice->fill([
-            'doctor_id'    => $data['doctor_id'] ?? null,
-            'nurse_id'     => $data['nurse_id'] ?? null,
-            'assistant_id' => $data['assistant_id'] ?? null,
-        ]);
+        $staffFields = [];
+        foreach (['doctor_id', 'nurse_id', 'assistant_id'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $staffFields[$field] = $data[$field];
+            }
+        }
+
+        $invoice->fill($staffFields);
         return $invoice->save();
     }
 
@@ -789,38 +792,48 @@ class InvoiceService
      */
     public function addOverduePayment(int $invoiceId, array $data): array
     {
-        $invoice = \App\Invoice::findOrFail($invoiceId);
+        return DB::transaction(function () use ($invoiceId, $data) {
+            $invoice = \App\Invoice::lockForUpdate()->findOrFail($invoiceId);
 
-        $amount             = (string) ($data['amount'] ?? '0');
-        $additionalDiscount = (string) ($data['additional_discount'] ?? '0');
+            $amount             = (string) ($data['amount'] ?? '0');
+            $additionalDiscount = (string) ($data['additional_discount'] ?? '0');
 
-        // 再优惠：累加 discount_amount，减少 total_amount，Invoice::saving() 重算 outstanding
-        if (bccomp($additionalDiscount, '0', 2) > 0) {
-            $invoice->discount_amount = bcadd((string) $invoice->discount_amount, $additionalDiscount, 2);
-            $invoice->total_amount    = bcsub((string) $invoice->total_amount, $additionalDiscount, 2);
-        }
+            // 再优惠：累加 discount_amount，减少 total_amount，Invoice::saving() 重算 outstanding
+            if (bccomp($additionalDiscount, '0', 2) > 0) {
+                $invoice->discount_amount = bcadd((string) $invoice->discount_amount, $additionalDiscount, 2);
+                $invoice->total_amount    = bcsub((string) $invoice->total_amount, $additionalDiscount, 2);
+                $invoice->save();
+            }
 
-        // 创建补收记录
-        if (bccomp($amount, '0', 2) > 0) {
-            \App\InvoicePayment::create([
-                'invoice_id'     => $invoiceId,
-                'amount'         => $amount,
-                'payment_method' => $data['payment_method'],
-                'payment_date'   => $data['payment_date'] ?? now()->toDateString(),
-                'branch_id'      => Auth::user()->branch_id,
-                '_who_added'     => Auth::user()->id,
-            ]);
+            if (bccomp($amount, '0', 2) > 0) {
+                $payment = [
+                    'payment_method'       => $data['payment_method'],
+                    'amount'               => $amount,
+                    'cheque_no'            => $data['cheque_no'] ?? null,
+                    'account_name'         => $data['account_name'] ?? null,
+                    'bank_name'            => $data['bank_name'] ?? null,
+                    'insurance_company_id' => $data['insurance_company_id'] ?? null,
+                    'self_account_id'      => $data['self_account_id'] ?? null,
+                    'transaction_ref'      => $data['transaction_ref'] ?? null,
+                ];
 
-            $invoice->paid_amount = bcadd((string) $invoice->paid_amount, $amount, 2);
-        }
+                $result = app(InvoicePaymentService::class)->processMixedPayment(
+                    $invoice->id,
+                    [$payment],
+                    $data['payment_date'] ?? now()->toDateString()
+                );
 
-        // saving() hook 自动重算 outstanding_amount 和 payment_status
-        $invoice->save();
+                if (!$result['status']) {
+                    throw new \RuntimeException($result['message']);
+                }
+            } elseif (bccomp($additionalDiscount, '0', 2) === 0) {
+                $invoice->save();
+            }
 
-        // Refresh to get hook-computed values
-        $invoice->refresh();
+            $invoice->refresh();
 
-        return ['new_outstanding' => (string) $invoice->outstanding_amount];
+            return ['new_outstanding' => (string) $invoice->outstanding_amount];
+        });
     }
 
     // ─── DataTable builders ─────────────────────────────────────

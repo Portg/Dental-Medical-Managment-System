@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Helper\FunctionsHelper;
 use App\Services\InvoiceService;
+use App\Services\InvoicePaymentService;
 use App\Exports\InvoiceExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use PDF;
 
 class InvoiceController extends Controller
@@ -204,7 +206,7 @@ class InvoiceController extends Controller
         $validator = Validator::make($request->all(), [
             'amount'               => 'required_without:additional_discount|nullable|numeric|min:0',
             'additional_discount'  => 'nullable|numeric|min:0',
-            'payment_method'       => 'required_with:amount|nullable|string',
+            'payment_method'       => ['required_with:amount', 'nullable', 'string', Rule::in(array_keys(InvoicePaymentService::PAYMENT_METHODS))],
             'payment_date'         => 'nullable|date',
             'cheque_no'            => 'required_if:payment_method,Cheque',
             'bank_name'            => 'required_if:payment_method,Cheque',
@@ -217,8 +219,8 @@ class InvoiceController extends Controller
         }
 
         $outstanding   = (string) $invoice->outstanding_amount;
-        $amountInput   = (string) ($request->input('amount', '0'));
-        $discountInput = (string) ($request->input('additional_discount', '0'));
+        $amountInput   = (string) ($request->input('amount') ?? '0');
+        $discountInput = (string) ($request->input('additional_discount') ?? '0');
 
         // Guard: already paid
         if (bccomp($outstanding, '0', 2) <= 0) {

@@ -352,7 +352,9 @@ class PatientService
         // 所有分组（用于左侧面板单选）
         $allGroups = \App\DictItem::ofType('patient_group')->active()->ordered()->get();
 
-        $doctors = \App\User::where('is_doctor', true)->whereNull('deleted_at')->where('status', \App\User::STATUS_ACTIVE)->orderBy('surname')->get(['id', 'surname', 'othername']);
+        $doctors = \App\User::where('is_doctor', true)->whereNull('deleted_at')->where('status', \App\User::STATUS_ACTIVE)->orderBy('surname')->get(['id', 'surname', 'othername'])
+            ->map(fn($d) => ['id' => $d->id, 'name' => $d->full_name])
+            ->values();
 
         return compact(
             'patient', 'appointmentsCount', 'medicalCasesCount',

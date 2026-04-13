@@ -47,8 +47,10 @@ class InvoicePaymentService
         return DB::table('invoice_payments')
             ->leftJoin('insurance_companies', 'insurance_companies.id',
                 'invoice_payments.insurance_company_id')
+            ->leftJoin('self_accounts', 'self_accounts.id',
+                'invoice_payments.self_account_id')
             ->where('invoice_payments.id', $id)
-            ->select('invoice_payments.*', 'insurance_companies.name')
+            ->select('invoice_payments.*', 'insurance_companies.name', 'self_accounts.account_holder as self_account_name')
             ->first();
     }
 
