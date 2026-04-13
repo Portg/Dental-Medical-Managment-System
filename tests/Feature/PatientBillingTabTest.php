@@ -4,12 +4,14 @@ namespace Tests\Feature;
 
 use App\Appointment;
 use App\Branch;
+use App\InsuranceCompany;
 use App\Invoice;
 use App\InvoicePayment;
 use App\Patient;
 use App\Permission;
 use App\Role;
 use App\RolePermission;
+use App\SelfAccount;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -159,6 +161,43 @@ class PatientBillingTabTest extends TestCase
     }
 
     /** @test */
+    public function update_staff_preserves_unspecified_fields(): void
+    {
+        $nurse = User::factory()->create([
+            'role_id'   => $this->admin->role_id,
+            'branch_id' => $this->admin->branch_id,
+        ]);
+        $assistant = User::factory()->create([
+            'role_id'   => $this->admin->role_id,
+            'branch_id' => $this->admin->branch_id,
+        ]);
+        $this->invoice->update([
+            'doctor_id'    => $this->doctor->id,
+            'nurse_id'     => $nurse->id,
+            'assistant_id' => $assistant->id,
+        ]);
+
+        $newDoctor = User::factory()->create([
+            'role_id'   => $this->admin->role_id,
+            'branch_id' => $this->admin->branch_id,
+        ]);
+        $response = $this->actingAs($this->admin)
+            ->patchJson('/invoices/' . $this->invoice->id, [
+                'doctor_id' => $newDoctor->id,
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', 1);
+
+        $this->assertDatabaseHas('invoices', [
+            'id'           => $this->invoice->id,
+            'doctor_id'    => $newDoctor->id,
+            'nurse_id'     => $nurse->id,
+            'assistant_id' => $assistant->id,
+        ]);
+    }
+
+    /** @test */
     public function update_staff_rejects_nonexistent_user(): void
     {
         $response = $this->actingAs($this->admin)
@@ -218,6 +257,81 @@ class PatientBillingTabTest extends TestCase
     }
 
     /** @test */
+    public function add_overdue_payment_with_discount_only_reduces_total(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $this->overdueInvoice->id . '/add-overdue-payment', [
+                'additional_discount' => '100.00',
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', 1)
+                 ->assertJsonPath('data.new_outstanding', '400.00');
+
+        $this->assertDatabaseHas('invoices', [
+            'id'                 => $this->overdueInvoice->id,
+            'discount_amount'    => '100.00',
+            'total_amount'       => '700.00',
+            'outstanding_amount' => '400.00',
+            'payment_status'     => 'partial',
+        ]);
+
+        $this->assertDatabaseMissing('invoice_payments', [
+            'invoice_id' => $this->overdueInvoice->id,
+            'amount'     => '0.00',
+        ]);
+    }
+
+    /** @test */
+    public function add_overdue_payment_with_stored_value_deducts_member_balance(): void
+    {
+        $this->patient->update(['member_balance' => 500]);
+
+        $response = $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $this->overdueInvoice->id . '/add-overdue-payment', [
+                'amount'         => '200.00',
+                'payment_method' => 'StoredValue',
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', 1)
+                 ->assertJsonPath('data.new_outstanding', '300.00');
+
+        $this->assertEquals('300.00', (string) $this->patient->fresh()->member_balance);
+        $this->assertDatabaseHas('invoice_payments', [
+            'invoice_id'     => $this->overdueInvoice->id,
+            'amount'         => '200.00',
+            'payment_method' => 'StoredValue',
+        ]);
+    }
+
+    /** @test */
+    public function add_overdue_payment_persists_insurance_metadata(): void
+    {
+        $insuranceCompany = InsuranceCompany::create([
+            'name'       => 'Test Insurance',
+            '_who_added' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $this->overdueInvoice->id . '/add-overdue-payment', [
+                'amount'               => '200.00',
+                'payment_method'       => 'Insurance',
+                'insurance_company_id' => $insuranceCompany->id,
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', 1);
+
+        $this->assertDatabaseHas('invoice_payments', [
+            'invoice_id'            => $this->overdueInvoice->id,
+            'amount'                => '200.00',
+            'payment_method'        => 'Insurance',
+            'insurance_company_id'  => $insuranceCompany->id,
+        ]);
+    }
+
+    /** @test */
     public function add_overdue_payment_rejects_amount_exceeding_outstanding(): void
     {
         $response = $this->actingAs($this->admin)
@@ -256,6 +370,33 @@ class PatientBillingTabTest extends TestCase
             'id'             => $this->payment->id,
             'payment_method' => 'WeChat',
             'amount'         => '500.00',
+        ]);
+    }
+
+    /** @test */
+    public function update_payment_method_persists_self_account_metadata(): void
+    {
+        $selfAccount = SelfAccount::create([
+            'account_no'     => 'SA-0001',
+            'account_holder' => 'Test Holder',
+            'is_active'      => true,
+            '_who_added'     => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->putJson('/payments/' . $this->payment->id, [
+                'payment_method'  => 'Self Account',
+                'self_account_id' => $selfAccount->id,
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonPath('status', true);
+
+        $this->assertDatabaseHas('invoice_payments', [
+            'id'              => $this->payment->id,
+            'payment_method'  => 'Self Account',
+            'self_account_id' => $selfAccount->id,
+            'amount'          => '500.00',
         ]);
     }
 
