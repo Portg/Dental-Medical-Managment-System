@@ -2,7 +2,7 @@
 
 return [
     'page_title'          => '工作日志识别',
-    'list_title'          => '工作日志记录',
+    'list_title'          => '工作日志',
     'view_saved'          => '查看已保存记录',
     'upload_hint'         => '拖拽或点击上传工作日志表格照片',
     'supported_formats'   => '支持 JPG/PNG/BMP 格式，最大 8MB',

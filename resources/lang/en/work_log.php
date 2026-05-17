@@ -2,7 +2,7 @@
 
 return [
     'page_title'          => 'Work Log Recognition',
-    'list_title'          => 'Work Log Records',
+    'list_title'          => 'Work Log',
     'view_saved'          => 'View Saved Records',
     'upload_hint'         => 'Drag & drop or click to upload a work-log table photo',
     'supported_formats'   => 'JPG/PNG/BMP formats, max 8MB',

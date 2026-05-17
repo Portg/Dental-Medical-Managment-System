@@ -285,6 +285,7 @@ return [
     // OCR 识别
     'ocr_recognize' => '病历OCR识别',
     'work_log_recognize' => '工作日志识别',
+    'work_log'           => '工作日志',
 
     // 新增报表菜单项 (报表改造)
     'financial_calendar'      => '财务日历',
