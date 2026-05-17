@@ -518,7 +518,11 @@
 
                         <!-- Appointments Tab -->
                         <div class="tab-pane" id="appointments_tab">
-                            <br>
+                            <div class="table-toolbar" style="padding: 10px 0 6px;">
+                                <a href="{{ url('appointments?new_for=' . $patient->id) }}" class="btn blue btn-outline sbold btn-sm">
+                                    <i class="fa fa-plus"></i> {{ __('patient.new_appointment') }}
+                                </a>
+                            </div>
                             <table class="table table-striped table-bordered table-hover table-checkable order-column" id="patient_appointments_table">
                                 <thead>
                                 <tr>
@@ -536,7 +540,11 @@
 
                         <!-- Medical Cases Tab -->
                         <div class="tab-pane" id="medical_cases_tab">
-                            <br>
+                            <div class="table-toolbar" style="padding: 10px 0 6px;">
+                                <a href="{{ url('medical-case-new/' . $patient->id) }}" class="btn blue btn-outline sbold btn-sm">
+                                    <i class="fa fa-plus"></i> {{ __('patient.new_case') }}
+                                </a>
+                            </div>
                             <table class="table table-striped table-bordered table-hover table-checkable order-column" id="patient_cases_table">
                                 <thead>
                                 <tr>
