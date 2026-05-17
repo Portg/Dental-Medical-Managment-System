@@ -1145,6 +1145,17 @@
             $('a[href="#doctor_day_view_tab"]').on('shown.bs.tab', function () {
                 if (window._drgInstance) window._drgInstance.render();
             });
+
+            // When arriving from the patient list via ?new_for={patient_id},
+            // auto-open the appointment drawer with the patient pre-selected.
+            var params = new URLSearchParams(window.location.search);
+            var newForId = params.get('new_for');
+            if (newForId && typeof openAppointmentDrawer === 'function') {
+                openAppointmentDrawer({ patient_id: parseInt(newForId, 10) });
+                // Clean the query string without reloading the page.
+                var cleanUrl = window.location.pathname + window.location.hash;
+                window.history.replaceState(null, '', cleanUrl);
+            }
         });
     </script>
 @endsection

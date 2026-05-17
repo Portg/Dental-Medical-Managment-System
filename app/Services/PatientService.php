@@ -625,11 +625,26 @@ class PatientService
                         <li>
                             <a href="#" onclick="editRecord(' . $row->id . ')">' . __('patient.patient_profile') . '</a>
                         </li>
-                         <li>
-                           <a href="#" onclick="getPatientMedicalHistory(' . $row->id . ')" >' . __('patient.patient_history') . '</a>
+                        <li>
+                            <a href="#" onclick="getPatientMedicalHistory(' . $row->id . ')">' . __('patient.patient_history') . '</a>
                         </li>
-                         <li>
-                           <a href="#" onclick="deleteRecord(' . $row->id . ')" >' . __('patient.delete_patient') . '</a>
+                        <li class="divider"></li>
+                        <li>
+                            <a href="' . url('appointments?new_for=' . $row->id) . '">' . __('patient.new_appointment') . '</a>
+                        </li>
+                        <li>
+                            <a href="' . url('patients/' . $row->id) . '#appointments_tab">' . __('patient.appointments') . '</a>
+                        </li>
+                        <li class="divider"></li>
+                        <li>
+                            <a href="' . url('medical-case-new/' . $row->id) . '">' . __('patient.new_case') . '</a>
+                        </li>
+                        <li>
+                            <a href="' . url('patient-medical-cases/' . $row->id) . '">' . __('patient.medical_cases') . '</a>
+                        </li>
+                        <li class="divider"></li>
+                        <li>
+                            <a href="#" onclick="deleteRecord(' . $row->id . ')">' . __('patient.delete_patient') . '</a>
                         </li>
                     </ul>
                 </div>
