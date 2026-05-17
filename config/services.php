@@ -33,6 +33,7 @@ return [
     'ocr' => [
         'python_path' => env('OCR_PYTHON_PATH', 'python3'),
         'script_path' => env('OCR_SCRIPT_PATH', base_path('scripts/ocr_service.py')),
+        'worklog_script_path' => env('OCR_WORKLOG_SCRIPT_PATH', base_path('scripts/worklog_ocr.py')),
         'timeout' => env('OCR_TIMEOUT', 60),
         'server_url' => env('OCR_SERVER_URL', 'http://127.0.0.1:5000'),
     ],

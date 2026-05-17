@@ -665,6 +665,15 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('ocr-recognize/recognize', 'OcrRecognizeController@recognize');
     Route::post('ocr-recognize/create', 'OcrRecognizeController@createFromOcr');
 
+    // ============================================================
+    // Work Log OCR Recognition (口腔门诊工作日志识别)
+    // ============================================================
+
+    Route::get('work-log-ocr', 'WorkLogOcrController@index');
+    Route::post('work-log-ocr/recognize', 'WorkLogOcrController@recognize');
+    Route::post('work-log-ocr/store', 'WorkLogOcrController@store');
+    Route::get('work-logs', 'WorkLogOcrController@list');
+
     // Service Categories (admin)
     Route::get('admin/service-categories', 'ServiceCategoryController@index')->name('admin.service-categories.index');
     Route::post('admin/service-categories/reorder', 'ServiceCategoryController@reorder')->name('admin.service-categories.reorder');

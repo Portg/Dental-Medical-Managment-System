@@ -284,6 +284,7 @@ return [
 
     // OCR Recognition
     'ocr_recognize' => 'Medical Record OCR',
+    'work_log_recognize' => 'Work Log Recognition',
 
     // New Report Menu Items (Report Reform)
     'financial_calendar'      => 'Financial Calendar',
