@@ -38,6 +38,22 @@ class WorkLogOcrController extends Controller
      */
     public function recognize(Request $request)
     {
+        // When the photo exceeds PHP's upload_max_filesize / post MAX_FILE_SIZE,
+        // the file arrives with an upload error and Laravel's implicit `uploaded`
+        // rule yields a cryptic ":attribute 上传失败。". Surface the real cause
+        // (server-side size limit) so the operator knows what to change.
+        $uploaded = $request->file('image');
+        if ($uploaded !== null && !$uploaded->isValid()
+            && in_array($uploaded->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+            return response()->json([
+                'status'  => 0,
+                'message' => __('work_log.file_exceeds_server_limit', [
+                    'upload_max_filesize' => ini_get('upload_max_filesize'),
+                    'post_max_size'       => ini_get('post_max_size'),
+                ]),
+            ]);
+        }
+
         $validator = Validator::make($request->all(), [
             'image' => 'required|image|mimes:jpeg,png,jpg,bmp|max:8192',
         ], [

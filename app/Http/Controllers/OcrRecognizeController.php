@@ -41,6 +41,20 @@ class OcrRecognizeController extends Controller
      */
     public function recognize(Request $request)
     {
+        // Surface PHP's upload_max_filesize / post-size rejection instead of
+        // Laravel's cryptic implicit `uploaded` rule message.
+        $uploaded = $request->file('image');
+        if ($uploaded !== null && !$uploaded->isValid()
+            && in_array($uploaded->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+            return response()->json([
+                'status'  => 0,
+                'message' => __('ocr.file_exceeds_server_limit', [
+                    'upload_max_filesize' => ini_get('upload_max_filesize'),
+                    'post_max_size'       => ini_get('post_max_size'),
+                ]),
+            ]);
+        }
+
         $validator = Validator::make($request->all(), [
             'image' => 'required|image|mimes:jpeg,png,jpg,bmp|max:5120',
         ], [

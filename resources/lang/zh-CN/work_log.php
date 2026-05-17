@@ -39,6 +39,7 @@ return [
     'upload_required'   => '请上传工作日志图片',
     'invalid_image'     => '文件必须是图片格式',
     'file_too_large'    => '文件大小不能超过 8MB',
+    'file_exceeds_server_limit' => '图片超过服务器上传上限（PHP upload_max_filesize=:upload_max_filesize，post_max_size=:post_max_size）。请压缩图片，或调高服务器 php.ini 的 upload_max_filesize 与 post_max_size 后重启服务再试。',
     'no_rows'           => '没有可保存的记录',
     'row_name_required' => '第 :row 行：姓名为必填项',
     'save_success'      => '保存成功：新增 :created 条，关联患者 :linked 条，生成发票 :invoiced 张',

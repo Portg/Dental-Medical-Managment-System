@@ -195,4 +195,28 @@ class WorkLogServiceTest extends TestCase
         $response->assertStatus(200)->assertJson(['status' => 0]);
         $this->assertSame(0, WorkLog::count());
     }
+
+    public function test_oversized_upload_returns_actionable_message_not_generic_uploaded_error(): void
+    {
+        // Simulate PHP rejecting the file because it exceeds upload_max_filesize
+        // (UPLOAD_ERR_INI_SIZE). $test=false so isValid() reflects the error.
+        $file = new \Illuminate\Http\UploadedFile(
+            __FILE__,                 // path is not checked when error !== OK
+            'worklog.jpg',
+            'image/jpeg',
+            UPLOAD_ERR_INI_SIZE,
+            false
+        );
+
+        $response = $this->actingAs($this->admin)
+            ->post('work-log-ocr/recognize', ['image' => $file]);
+
+        $response->assertStatus(200)->assertJson(['status' => 0]);
+
+        $message = $response->json('message');
+        // Must NOT be the cryptic default uploaded-rule message.
+        $this->assertNotSame('image 上传失败。', $message);
+        // Must point the operator at the real server-side limit.
+        $this->assertStringContainsString('upload_max_filesize', $message);
+    }
 }
