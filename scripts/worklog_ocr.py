@@ -62,8 +62,9 @@ HEADER_FIELDS = [
     ('amount',          ['收费', '金额', '费用', '收费金额', '应收']),
 ]
 
-# Characters that PaddleOCR may produce for a handwritten checkmark.
-CHECKMARK_RE = re.compile(r'^[√✓✔vVγ✔✓]+$')
+# Characters that PaddleOCR may produce for a handwritten checkmark or cross.
+# 十字记录法 uses × / + / 十 in addition to the more common √ tick.
+CHECKMARK_RE = re.compile(r'^[√✓✔vVγ×xX+十]+$')
 
 
 def resize_image(image_path, max_side=MAX_IMAGE_SIDE):
@@ -205,9 +206,15 @@ def clean_amount(text):
 
 
 def is_checkmark(text):
-    """Return True if the OCR text looks like a handwritten checkmark/tick."""
+    """Return True if the OCR text looks like a handwritten checkmark or cross mark.
+
+    Covers both the common tick (√) and the 十字记录法 family (× + 十 x X).
+    """
     t = text.strip()
-    return bool(CHECKMARK_RE.match(t)) or t in {'√', '✓', '✔', 'V', 'v', '√'}
+    return bool(CHECKMARK_RE.match(t)) or t in {
+        '√', '✓', '✔', 'V', 'v',   # tick variants
+        '×', 'x', 'X', '+', '十',   # cross / plus variants
+    }
 
 
 def normalize_value(field, value):

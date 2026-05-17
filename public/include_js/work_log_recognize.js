@@ -182,6 +182,40 @@
         $('#confidence-value').text(pct + '%');
     }
 
+    // ==================== Date Normalization ====================
+
+    /**
+     * Convert a raw OCR date string to YYYY-MM-DD.
+     *
+     * Handles:
+     *   "3.24"  / "3/24"  / "3-24"  → uses year from #opt-year picker
+     *   "2026-3-24" / "2026-03-24"   → normalised to zero-padded form
+     *   Already correct YYYY-MM-DD   → returned as-is
+     */
+    function normalizeLogDate(raw) {
+        raw = $.trim(raw || '');
+        if (!raw) return '';
+
+        // Already full ISO date (possibly un-padded)
+        var fullMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (fullMatch) {
+            return fullMatch[1] + '-' +
+                   ('0' + fullMatch[2]).slice(-2) + '-' +
+                   ('0' + fullMatch[3]).slice(-2);
+        }
+
+        // Short "M.D" / "M/D" / "M-D" — combine with the year picker value.
+        var shortMatch = raw.match(/^(\d{1,2})[.\/-](\d{1,2})$/);
+        if (shortMatch) {
+            var year = parseInt($('#opt-year').val(), 10) || new Date().getFullYear();
+            return year + '-' +
+                   ('0' + parseInt(shortMatch[1], 10)).slice(-2) + '-' +
+                   ('0' + parseInt(shortMatch[2], 10)).slice(-2);
+        }
+
+        return raw;
+    }
+
     // ==================== Editable Grid ====================
 
     function addGridRow(row) {
@@ -207,6 +241,11 @@
                     sel.val(val);
                 }
                 td.append(sel);
+            } else if (field === 'log_date') {
+                var dateInput = $('<input type="date" class="form-control form-control-sm cell-input">');
+                dateInput.attr('data-field', 'log_date');
+                dateInput.val(normalizeLogDate(val));
+                td.append(dateInput);
             } else {
                 var input = $('<input type="text" class="form-control form-control-sm cell-input">');
                 input.attr('data-field', field);
