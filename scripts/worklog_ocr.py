@@ -41,19 +41,29 @@ MAX_IMAGE_SIDE = 960
 
 # Canonical field key -> header keywords that map to it.
 # Order here also defines the preferred output column order.
+#
+# '初诊' and '复诊' are kept as SEPARATE internal keys so that when a work-log
+# table has two sub-columns (one per visit type), we can tell which sub-column
+# a checkmark falls into by its x-position.  They are merged back into the
+# single 'visit_type' key before JSON is emitted.
 HEADER_FIELDS = [
-    ('log_date',       ['日期', '就诊日期', '时间']),
-    ('patient_name',   ['姓名', '患者姓名', '病人姓名']),
-    ('gender',         ['性别']),
-    ('age',            ['年龄']),
-    ('visit_type',     ['初诊', '复诊', '初复诊', '初/复诊', '初诊复诊']),
-    ('phone',          ['电话', '联系电话', '手机', '手机号']),
-    ('tooth_position', ['牙位', '牙位号', '患牙']),
-    ('diagnosis',      ['诊断', '初步诊断']),
-    ('prescription',   ['处方', '处置', '处理', '治疗']),
+    ('log_date',        ['日期', '就诊日期', '时间']),
+    ('patient_name',    ['姓名', '患者姓名', '病人姓名']),
+    ('gender',          ['性别']),
+    ('age',             ['年龄']),
+    ('visit_initial',   ['初诊']),
+    ('visit_revisit',   ['复诊']),
+    ('visit_type',      ['初复诊', '初/复诊', '初诊复诊']),
+    ('phone',           ['电话', '联系电话', '手机', '手机号']),
+    ('tooth_position',  ['牙位', '牙位号', '患牙']),
+    ('diagnosis',       ['诊断', '初步诊断']),
+    ('prescription',    ['处方', '处置', '处理', '治疗']),
     ('doctor_name_raw', ['医师', '医生', '接诊医师']),
-    ('amount',         ['收费', '金额', '费用', '收费金额', '应收']),
+    ('amount',          ['收费', '金额', '费用', '收费金额', '应收']),
 ]
+
+# Characters that PaddleOCR may produce for a handwritten checkmark.
+CHECKMARK_RE = re.compile(r'^[√✓✔vVγ✔✓]+$')
 
 
 def resize_image(image_path, max_side=MAX_IMAGE_SIDE):
@@ -194,6 +204,12 @@ def clean_amount(text):
     return m.group(0) if m else text.strip()
 
 
+def is_checkmark(text):
+    """Return True if the OCR text looks like a handwritten checkmark/tick."""
+    t = text.strip()
+    return bool(CHECKMARK_RE.match(t)) or t in {'√', '✓', '✔', 'V', 'v', '√'}
+
+
 def normalize_value(field, value):
     value = value.strip()
     if not value:
@@ -205,6 +221,22 @@ def normalize_value(field, value):
         return gm.get(value, value)
     if field == 'log_date':
         # "3.24" / "3/24" / "3-24" -> keep raw; PHP normalizes against year.
+        return value
+    if field == 'visit_initial':
+        # Split-column: checkmark in the 初诊 column → initial visit.
+        return 'initial' if is_checkmark(value) else ''
+    if field == 'visit_revisit':
+        # Split-column: checkmark in the 复诊 column → revisit.
+        return 'revisit' if is_checkmark(value) else ''
+    if field == 'visit_type':
+        # Merged header (初/复诊): try to read text content first.
+        if '初' in value and '复' not in value:
+            return 'initial'
+        if '复' in value and '初' not in value:
+            return 'revisit'
+        # Bare checkmark with no positional info → leave empty for manual fix.
+        if is_checkmark(value):
+            return ''
         return value
     return value
 
@@ -273,21 +305,30 @@ def main():
         return
 
     bounds = build_column_bounds(header_cols)
-    columns = [field for field, _, _ in bounds]
+    internal_columns = [field for field, _, _ in bounds]
 
     out_rows = []
     for idx in range(header_idx + 1, len(rows)):
         row = rows[idx]
-        bucket = {field: [] for field in columns}
+        bucket = {field: [] for field in internal_columns}
         for box, text, _ in row:
             field = assign_to_column(box_x_center(box), bounds)
             if field is not None:
                 bucket[field].append(text)
 
         record = {}
-        for field in columns:
+        for field in internal_columns:
             joined = " ".join(bucket[field]).strip()
             record[field] = normalize_value(field, joined)
+
+        # Merge split visit sub-columns into a single visit_type field.
+        # visit_initial / visit_revisit hold 'initial', 'revisit', or '' after
+        # normalize_value; whichever is non-empty wins.
+        vi = record.pop('visit_initial', None)
+        vr = record.pop('visit_revisit', None)
+        if vi is not None or vr is not None:
+            if not record.get('visit_type'):
+                record['visit_type'] = vi or vr or ''
 
         # Skip empty rows (no name and no diagnosis and no amount)
         if not any([record.get('patient_name'),
@@ -295,6 +336,17 @@ def main():
                     record.get('amount')]):
             continue
         out_rows.append(record)
+
+    # Build the public column list: replace internal sub-columns with visit_type.
+    seen_visit = False
+    columns = []
+    for c in internal_columns:
+        if c in ('visit_initial', 'visit_revisit'):
+            if not seen_visit:
+                columns.append('visit_type')
+                seen_visit = True
+        else:
+            columns.append(c)
 
     print(json.dumps({
         "header_found": True,
