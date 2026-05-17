@@ -245,6 +245,13 @@ def normalize_value(field, value):
         if is_checkmark(value):
             return ''
         return value
+    if field == 'tooth_position':
+        # Hand-drawn 十字 cross diagrams produce stray line artifacts (|, -, ─).
+        # Strip them out; the actual tooth number/text is preserved.
+        # Quadrant context lost in form-1 diagrams → user corrects manually.
+        cleaned = re.sub(r'[|｜—\-─]+', ' ', value)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        return cleaned if cleaned else value
     return value
 
 
