@@ -13,8 +13,9 @@ return [
     'no_header_detected'  => 'Table header could not be detected. Switched to manual entry — please fill in each row.',
     'review_title'        => 'Review Recognized Rows (editable)',
     'year'                => 'Year',
-    'opt_link_patients'   => 'Link existing patients',
+    'opt_link_patients'    => 'Link existing patients',
     'opt_generate_invoices' => 'Generate invoices for rows with amounts',
+    'opt_generate_cases'   => 'Generate draft cases',
     'add_row'             => 'Add Row',
     'save_all'            => 'Save All',
 
@@ -30,6 +31,7 @@ return [
     'col_doctor'       => 'Doctor',
     'col_amount'       => 'Amount',
     'col_invoice'      => 'Invoice',
+    'col_case'         => 'Case',
 
     'visit_initial' => 'Initial',
     'visit_revisit' => 'Revisit',
@@ -42,6 +44,7 @@ return [
     'file_exceeds_server_limit' => 'The image exceeds the server upload limit (PHP upload_max_filesize=:upload_max_filesize, post_max_size=:post_max_size). Compress the image, or raise upload_max_filesize and post_max_size in the server php.ini and restart the service, then retry.',
     'no_rows'           => 'No records to save',
     'row_name_required' => 'Row :row: patient name is required',
-    'save_success'      => 'Saved: :created added, :linked patient-linked, :invoiced invoiced',
+    'case_from_worklog' => 'Work log import',
+    'save_success'      => 'Saved: :created added, :linked patient-linked, :invoiced invoiced, :cased draft cases created',
     'save_failed'       => 'Save failed',
 ];

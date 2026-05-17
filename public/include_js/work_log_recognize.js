@@ -24,6 +24,16 @@
             addGridRow({});
         });
         $('#btn-save').on('click', submitBatch);
+
+        // "Generate draft cases" requires patient linking — disable it when
+        // link_patients is unchecked.
+        $('#opt-link-patients').on('change', function () {
+            if (!$(this).is(':checked')) {
+                $('#opt-generate-cases').prop('checked', false).prop('disabled', true);
+            } else {
+                $('#opt-generate-cases').prop('disabled', false);
+            }
+        });
     });
 
     // ==================== Drop Zone ====================
@@ -307,6 +317,7 @@
             rows: rows,
             link_patients: $('#opt-link-patients').is(':checked') ? 1 : 0,
             generate_invoices: $('#opt-generate-invoices').is(':checked') ? 1 : 0,
+            generate_cases: $('#opt-generate-cases').is(':checked') ? 1 : 0,
             year: $('#opt-year').val(),
             source_image: sourceImage
         };

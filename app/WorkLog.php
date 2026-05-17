@@ -13,7 +13,7 @@ class WorkLog extends Model
         'log_date', 'patient_name', 'gender', 'age', 'visit_type',
         'phone', 'tooth_position', 'diagnosis', 'prescription',
         'doctor_id', 'doctor_name_raw', 'amount',
-        'patient_id', 'invoice_id', 'source_image', 'batch_id', '_who_added',
+        'patient_id', 'invoice_id', 'medical_case_id', 'source_image', 'batch_id', '_who_added',
     ];
 
     protected $casts = [
@@ -37,6 +37,11 @@ class WorkLog extends Model
     public function invoice()
     {
         return $this->belongsTo('App\Invoice', 'invoice_id');
+    }
+
+    public function medicalCase()
+    {
+        return $this->belongsTo('App\MedicalCase', 'medical_case_id');
     }
 
     public function addedBy()

@@ -16,6 +16,7 @@
     <th>{{ __('work_log.col_doctor') }}</th>
     <th>{{ __('work_log.col_amount') }}</th>
     <th>{{ __('work_log.col_invoice') }}</th>
+    <th>{{ __('work_log.col_case') }}</th>
 @endsection
 
 @section('page_js')
@@ -48,7 +49,8 @@
                     {data: 'diagnosis', name: 'diagnosis'},
                     {data: 'doctor_label', name: 'doctor_name_raw'},
                     {data: 'amount', name: 'amount'},
-                    {data: 'invoice_label', name: 'invoice_id', orderable: false}
+                    {data: 'invoice_label', name: 'invoice_id', orderable: false},
+                    {data: 'case_label', name: 'medical_case_id', orderable: false, render: function(data) { return data; }}
                 ]
             });
 

@@ -83,6 +83,10 @@
                         <input class="form-check-input" type="checkbox" id="opt-generate-invoices" checked>
                         <label class="form-check-label" for="opt-generate-invoices">{{ __('work_log.opt_generate_invoices') }}</label>
                     </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="opt-generate-cases">
+                        <label class="form-check-label" for="opt-generate-cases">{{ __('work_log.opt_generate_cases') }}</label>
+                    </div>
                 </div>
             </div>
             <div class="card-body">

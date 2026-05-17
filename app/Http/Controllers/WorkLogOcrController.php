@@ -115,6 +115,7 @@ class WorkLogOcrController extends Controller
             'rows.*.patient_name' => 'nullable|string|max:100',
             'link_patients'     => 'nullable|boolean',
             'generate_invoices' => 'nullable|boolean',
+            'generate_cases'    => 'nullable|boolean',
             'year'              => 'nullable|integer|min:2000|max:2100',
             'source_image'      => 'nullable|string|max:255',
         ], [
@@ -135,6 +136,7 @@ class WorkLogOcrController extends Controller
                 [
                     'link_patients'     => $request->boolean('link_patients'),
                     'generate_invoices' => $request->boolean('generate_invoices'),
+                    'generate_cases'    => $request->boolean('generate_cases'),
                     'year'              => $request->input('year'),
                     'source_image'      => $request->input('source_image'),
                 ]
@@ -146,6 +148,7 @@ class WorkLogOcrController extends Controller
                     'created'  => $summary['created'],
                     'linked'   => $summary['linked'],
                     'invoiced' => $summary['invoiced'],
+                    'cased'    => $summary['cased'],
                 ]),
                 'data'    => $summary,
             ]);
@@ -163,7 +166,7 @@ class WorkLogOcrController extends Controller
     public function list(Request $request)
     {
         if ($request->ajax()) {
-            $query = WorkLog::with(['patient', 'doctor', 'invoice'])
+            $query = WorkLog::with(['patient', 'doctor', 'invoice', 'medicalCase'])
                 ->whereNull('deleted_at')
                 ->orderByDesc('log_date')
                 ->orderByDesc('id');
@@ -200,7 +203,14 @@ class WorkLogOcrController extends Controller
                     }
                     return '-';
                 })
-                ->rawColumns(['patient_link'])
+                ->addColumn('case_label', function ($row) {
+                    if ($row->medical_case_id && $row->medicalCase) {
+                        $url = url('medical-cases/' . $row->medical_case_id);
+                        return '<a href="' . $url . '">' . e($row->medicalCase->case_no) . '</a>';
+                    }
+                    return '-';
+                })
+                ->rawColumns(['patient_link', 'case_label'])
                 ->make(true);
         }
 

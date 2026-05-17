@@ -187,12 +187,14 @@ class WorkLogService
     {
         $linkPatients     = (bool) ($options['link_patients'] ?? false);
         $generateInvoices = (bool) ($options['generate_invoices'] ?? false);
+        $generateCases    = (bool) ($options['generate_cases'] ?? false);
         $sourceImage      = $options['source_image'] ?? null;
         $batchId          = (string) Str::uuid();
 
-        $created = 0;
-        $linked  = 0;
+        $created  = 0;
+        $linked   = 0;
         $invoiced = 0;
+        $cased    = 0;
 
         DB::beginTransaction();
         try {
@@ -215,7 +217,8 @@ class WorkLogService
                 $amountRaw = isset($row['amount']) ? preg_replace('/[^\d.]/', '', (string) $row['amount']) : '';
                 $amount    = ($amountRaw !== '' && (float) $amountRaw > 0) ? $amountRaw : null;
 
-                $doctorId = $this->matchDoctor($row['doctor_name_raw'] ?? null);
+                $visitType = $this->normalizeVisitType($row['visit_type'] ?? null);
+                $doctorId  = $this->matchDoctor($row['doctor_name_raw'] ?? null);
 
                 $patientId = null;
                 if ($linkPatients) {
@@ -237,12 +240,26 @@ class WorkLogService
                     $invoiced++;
                 }
 
+                $caseId = null;
+                if ($generateCases && $patientId !== null) {
+                    $caseId = $this->createDraftCase(
+                        $patientId,
+                        $doctorId,
+                        $logDate,
+                        $visitType,
+                        $row
+                    );
+                    if ($caseId) {
+                        $cased++;
+                    }
+                }
+
                 WorkLog::create([
                     'log_date'        => $logDate,
                     'patient_name'    => $name,
                     'gender'          => $this->blankToNull($row['gender'] ?? null),
                     'age'             => $this->blankToNull($row['age'] ?? null),
-                    'visit_type'      => $this->normalizeVisitType($row['visit_type'] ?? null),
+                    'visit_type'      => $visitType,
                     'phone'           => $phone,
                     'tooth_position'  => $this->blankToNull($row['tooth_position'] ?? null),
                     'diagnosis'       => $this->blankToNull($row['diagnosis'] ?? null),
@@ -252,6 +269,7 @@ class WorkLogService
                     'amount'          => $amount,
                     'patient_id'      => $patientId,
                     'invoice_id'      => $invoiceId,
+                    'medical_case_id' => $caseId,
                     'source_image'    => $sourceImage,
                     'batch_id'        => $batchId,
                     '_who_added'      => Auth::id(),
@@ -271,7 +289,43 @@ class WorkLogService
             'created'  => $created,
             'linked'   => $linked,
             'invoiced' => $invoiced,
+            'cased'    => $cased,
         ];
+    }
+
+    /**
+     * Create a draft MedicalCase from a work-log row.
+     * Returns the new case ID, or null on failure.
+     */
+    private function createDraftCase(
+        int $patientId,
+        ?int $doctorId,
+        ?string $logDate,
+        ?string $visitType,
+        array $row
+    ): ?int {
+        $diagnosis = $this->blankToNull($row['diagnosis'] ?? null);
+        $title = $diagnosis
+            ? mb_substr($diagnosis, 0, 50)
+            : (__('work_log.case_from_worklog') . ($logDate ? ' ' . $logDate : ''));
+
+        $case = \App\MedicalCase::create([
+            'case_no'        => \App\MedicalCase::CaseNumber(),
+            'title'          => $title,
+            'case_date'      => $logDate,
+            'patient_id'     => $patientId,
+            'doctor_id'      => $doctorId,
+            'visit_type'     => $visitType ?? \App\WorkLog::VISIT_INITIAL,
+            'examination'    => $this->blankToNull($row['tooth_position'] ?? null),
+            'diagnosis'      => $diagnosis,
+            'treatment'      => $this->blankToNull($row['prescription'] ?? null),
+            'status'         => \App\MedicalCase::STATUS_OPEN,
+            'is_draft'       => true,
+            'version_number' => 1,
+            '_who_added'     => Auth::id(),
+        ]);
+
+        return $case?->id;
     }
 
     private function normalizeDate($value, ?int $year): ?string
