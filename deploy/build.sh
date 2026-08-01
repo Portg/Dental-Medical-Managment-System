@@ -70,7 +70,8 @@ usage() {
   --upgrade                    生成升级包（仅代码+迁移，不含SQL和运行时依赖）
   --skip-obfuscate             跳过 PHP 代码混淆
   --skip-ocr                   跳过 OCR Python wheels 打包（减小包体积）
-  --skip-db-dump               不导出初始数据库（装机时改为 migrate + seed）
+  --init-db-from-local         用本地库的结构+数据做初始数据库（默认只导结构）
+                               注意：本地库全部数据都会进包，含账号/患者/日志
   --keep-dist                  保留 deploy/dist/ 不删除（编译 Inno .exe 安装包必须加）
   --version <X.Y.Z>            覆盖 VERSION 文件中的版本号
   --laragon-url <url>          Windows: 指定 laragon-wamp.exe 下载地址（.exe 直链）
@@ -94,7 +95,7 @@ TARGET=""
 UPGRADE=false
 SKIP_OBFUSCATE=false
 SKIP_OCR=false
-SKIP_DB_DUMP=false
+INIT_DB_FROM_LOCAL=false
 KEEP_DIST=false
 VERSION_OVERRIDE=""
 LARAGON_INSTALLER_EXE=""
@@ -119,8 +120,8 @@ while [[ $# -gt 0 ]]; do
             SKIP_OCR=true
             shift
             ;;
-        --skip-db-dump)
-            SKIP_DB_DUMP=true
+        --init-db-from-local)
+            INIT_DB_FROM_LOCAL=true
             shift
             ;;
         --keep-dist)
@@ -958,24 +959,18 @@ if [[ "$SKIP_OBFUSCATE" == false ]]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════
-# Step 5: 导出初始数据库（仅全量包）
+# Step 5: 导出数据库（仅全量包）
 #
-# 导出的是**结构 + 数据**，不是空 schema。原因有两条：
+# 默认：只导结构（--no-data），装机后由 artisan migrate + db:seed 生成数据。
+#       这是常规交付形态，产物不含任何本地库里的业务数据。
 #
-#  1. 参考数据靠 seeder 重建不可靠。权限/菜单/字典/诊疗项目/会计科目
-#     这些配置表是系统能用起来的前提，而 MenuItemsSeeder 会
-#     truncate menu_items 与 role_menu_items 再按代码里的定义重建，
-#     和迁移改过的库结构对不上时会把菜单弄回旧样子。
-#  2. install-win.ps1 的 seed 闸门是「users 表为空就跑 db:seed」。
-#     dump 带上 users 数据后 seed 自动跳过，随包的菜单数据才不会被清掉。
-#     ——所以 users 的数据**必须**在 dump 里，否则第 1 条的问题必然发生。
-#
-# 目标机是 MySQL 5.7，开发库通常是 MySQL 8.x，导出后会做 5.7 兼容性检查。
-# 不用 --databases：目标库叫 pristine_dental，与开发库不同名，
-# dump 里不能带 CREATE DATABASE / USE。
+# --init-db-from-local：改为导出**本地开发库的结构 + 数据**作为初始数据库。
+#       用于「装完即可用、带一套现成配置」的交付。注意这会把本地库里的
+#       全部数据（含账号、患者、日志）打进安装包，发给谁就等于给谁看，
+#       只在明确需要时使用。
 # ═══════════════════════════════════════════════════════════════════════
-if [[ "$UPGRADE" == false ]] && [[ "$SKIP_DB_DUMP" == false ]]; then
-    step "导出初始数据库（结构 + 数据）"
+if [[ "$UPGRADE" == false ]] && [[ "$INIT_DB_FROM_LOCAL" == true ]]; then
+    step "导出初始数据库（本地库结构 + 数据）"
 
     SCHEMA_DIR="$DIST_DIR/database/schema"
     mkdir -p "$SCHEMA_DIR"
@@ -985,9 +980,8 @@ if [[ "$UPGRADE" == false ]] && [[ "$SKIP_DB_DUMP" == false ]]; then
     # 项目里若混进了前者会盖过本步骤的产物，装机时导入的就是旧文件。
     rm -f "$DIST_DIR/database/schema.sql"
 
-    [[ ! -f "$PROJECT_ROOT/.env" ]] && fatal "导出初始数据库需要 .env（用 --skip-db-dump 可跳过，装机时改为 migrate + seed）"
+    [[ ! -f "$PROJECT_ROOT/.env" ]] && fatal "--init-db-from-local 需要 .env 来定位本地库"
 
-    # 从 .env 读取数据库配置
     DB_HOST=$(grep -E '^DB_HOST=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
     DB_PORT=$(grep -E '^DB_PORT=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
     DB_DATABASE=$(grep -E '^DB_DATABASE=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
@@ -999,9 +993,9 @@ if [[ "$UPGRADE" == false ]] && [[ "$SKIP_DB_DUMP" == false ]]; then
     [[ -z "$DB_DATABASE" ]] && fatal ".env 里没有 DB_DATABASE，无法导出初始数据库"
 
     info "数据源: ${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
+    warn "本地库的全部数据都会进安装包 —— 账号、患者、日志一并发给使用方"
 
-    # 基础参数。密码走 MYSQL_PWD 环境变量而非 -p 参数 ——
-    # 命令行参数会出现在 ps 输出里，构建机上任何用户都看得到。
+    # 密码走 MYSQL_PWD 而非 -p 参数：命令行参数会出现在 ps 输出里
     MYSQLDUMP_ARGS=(
         -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME"
         --default-character-set=utf8mb4
@@ -1030,7 +1024,6 @@ if [[ "$UPGRADE" == false ]] && [[ "$SKIP_DB_DUMP" == false ]]; then
         DB_DUMP_CONTAINER="${DB_DUMP_CONTAINER:-mysql}"
         if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$DB_DUMP_CONTAINER"; then
             info "构建机无 mysqldump，改用容器 ${DB_DUMP_CONTAINER} 内的 mysqldump"
-            # 容器内连本机，忽略 .env 的 host/port
             if docker exec -e MYSQL_PWD="$DB_PASSWORD" "$DB_DUMP_CONTAINER" \
                  mysqldump -u "$DB_USERNAME" \
                  --default-character-set=utf8mb4 --single-transaction \
@@ -1042,35 +1035,99 @@ if [[ "$UPGRADE" == false ]] && [[ "$SKIP_DB_DUMP" == false ]]; then
         fi
     fi
 
-    [[ "$DB_DUMPED" == false ]] && fatal "初始数据库导出失败（${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}）—— 请确认数据库可连接，或用 --skip-db-dump 跳过"
+    [[ "$DB_DUMPED" == false ]] && fatal "初始数据库导出失败（${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}）—— 请确认数据库可连接，或去掉 --init-db-from-local"
 
     # ── MySQL 5.7 兼容性与完整性检查 ─────────────────────────────
-    # 这些问题在构建机上完全看不出来，只会在诊所的 Win7 上导入时炸，
-    # 所以宁可让构建失败也不能把不能导入的 SQL 打进包里。
+    # 这些问题在构建机上完全看不出来，只会在诊所的 Win7 上导入时炸。
     if grep -qi 'utf8mb4_0900' "$SCHEMA_FILE"; then
-        fatal "导出的 SQL 含 utf8mb4_0900_* 排序规则 —— 那是 MySQL 8 的默认排序规则，5.7 上不存在，导入会报 Unknown collation。请把开发库统一为 utf8mb4_unicode_ci 后重新构建"
+        fatal "导出的 SQL 含 utf8mb4_0900_* 排序规则 —— 那是 MySQL 8 的默认排序规则，5.7 上不存在，导入会报 Unknown collation。请把本地库统一为 utf8mb4_unicode_ci 后重新构建"
     fi
     if grep -qiE '^(CREATE DATABASE|USE `)' "$SCHEMA_FILE"; then
-        fatal "导出的 SQL 含 CREATE DATABASE / USE 语句 —— 目标库名是 pristine_dental，与开发库不同名，会导入到错误的库"
+        fatal "导出的 SQL 含 CREATE DATABASE / USE 语句 —— 目标库名是 pristine_dental，与本地库不同名，会导入到错误的库"
     fi
 
     DUMP_TABLES=$(grep -c '^CREATE TABLE' "$SCHEMA_FILE" 2>/dev/null || true)
     DUMP_INSERTS=$(grep -c '^INSERT INTO' "$SCHEMA_FILE" 2>/dev/null || true)
     [[ "${DUMP_TABLES:-0}" -lt 50 ]] && fatal "导出的 SQL 只有 ${DUMP_TABLES} 张表，明显不完整（本系统约 125 张）"
-    [[ "${DUMP_INSERTS:-0}" -lt 1 ]] && fatal "导出的 SQL 不含任何 INSERT —— 初始数据库必须带数据，否则装机时 db:seed 会触发并清空菜单表"
 
     # users 必须有数据，否则装机脚本判定「库是空的」→ 跑 db:seed
     # → MenuItemsSeeder truncate 掉随包的 menu_items / role_menu_items
     if ! grep -qE '^INSERT INTO `users`' "$SCHEMA_FILE"; then
-        fatal "导出的 SQL 里 users 表没有数据 —— 装机时会触发 db:seed 并清掉随包的菜单数据。请确认开发库的 users 表非空"
+        fatal "导出的 SQL 里 users 表没有数据 —— 装机时会触发 db:seed 并清掉随包的菜单数据。请确认本地库的 users 表非空"
     fi
 
     SCHEMA_SIZE=$(du -h "$SCHEMA_FILE" | cut -f1)
     info "初始数据库导出完成: ${DUMP_TABLES} 张表 / ${DUMP_INSERTS} 条 INSERT 语句 (${SCHEMA_SIZE})"
     info "  装机时导入到 pristine_dental；users 非空 → db:seed 自动跳过"
+
 elif [[ "$UPGRADE" == false ]]; then
-    step "导出初始数据库（已跳过）"
-    warn "--skip-db-dump：安装包不含初始数据库，装机时改为 artisan migrate + db:seed"
+    step "导出数据库 Schema"
+
+    SCHEMA_DIR="$DIST_DIR/database/schema"
+    mkdir -p "$SCHEMA_DIR"
+
+    SCHEMA_DUMPED=false
+
+    # 方法 1: 使用 artisan schema:dump
+    if [[ -f "$PROJECT_ROOT/.env" ]] && command -v php &>/dev/null; then
+        (
+            cd "$PROJECT_ROOT"
+            if php artisan schema:dump --path="$SCHEMA_DIR/mysql-schema.sql" 2>/dev/null; then
+                true
+            else
+                # schema:dump 可能不支持 --path 参数，尝试不带路径
+                if php artisan schema:dump 2>/dev/null; then
+                    # 默认输出到 database/schema/mysql-schema.dump
+                    if [[ -f "$PROJECT_ROOT/database/schema/mysql-schema.dump" ]]; then
+                        cp "$PROJECT_ROOT/database/schema/mysql-schema.dump" "$SCHEMA_DIR/mysql-schema.sql"
+                    fi
+                fi
+            fi
+        ) && SCHEMA_DUMPED=true
+    fi
+
+    # 方法 2: 使用 mysqldump 回退
+    if [[ "$SCHEMA_DUMPED" == false ]] && command -v mysqldump &>/dev/null; then
+        if [[ -f "$PROJECT_ROOT/.env" ]]; then
+            # 从 .env 读取数据库配置
+            DB_HOST=$(grep -E '^DB_HOST=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+            DB_PORT=$(grep -E '^DB_PORT=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+            DB_DATABASE=$(grep -E '^DB_DATABASE=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+            DB_USERNAME=$(grep -E '^DB_USERNAME=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+            DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+
+            DB_HOST="${DB_HOST:-127.0.0.1}"
+            DB_PORT="${DB_PORT:-3306}"
+
+            if [[ -n "$DB_DATABASE" ]]; then
+                MYSQLDUMP_ARGS=(
+                    -h "$DB_HOST"
+                    -P "$DB_PORT"
+                    -u "$DB_USERNAME"
+                    --no-data
+                    --routines
+                    --triggers
+                    --single-transaction
+                    "$DB_DATABASE"
+                )
+                if [[ -n "$DB_PASSWORD" ]]; then
+                    MYSQLDUMP_ARGS=(-p"$DB_PASSWORD" "${MYSQLDUMP_ARGS[@]}")
+                fi
+
+                if mysqldump "${MYSQLDUMP_ARGS[@]}" > "$SCHEMA_DIR/mysql-schema.sql" 2>/dev/null; then
+                    SCHEMA_DUMPED=true
+                fi
+            fi
+        fi
+    fi
+
+    if [[ "$SCHEMA_DUMPED" == true ]] && [[ -f "$SCHEMA_DIR/mysql-schema.sql" ]]; then
+        SCHEMA_SIZE=$(du -sh "$SCHEMA_DIR/mysql-schema.sql" | cut -f1)
+        info "Schema 导出完成 (${SCHEMA_SIZE})"
+    else
+        warn "Schema 导出失败 — 安装包中将不包含数据库 schema"
+        warn "部署时需要手动运行 php artisan migrate"
+    fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════

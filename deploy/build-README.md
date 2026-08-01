@@ -193,6 +193,7 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 | `--upgrade` | 生成升级包（不含 schema.sql、storage/、scripts/） |
 | `--skip-obfuscate` | 跳过 PHP 代码混淆 |
 | `--skip-ocr` | 跳过 OCR Python wheels 下载 |
+| `--init-db-from-local` | 用**本地库的结构 + 数据**做初始数据库（默认只导结构）。⚠️ 见下 |
 | `--keep-dist` | 保留 `deploy/dist/` 不删除 —— **编译 Inno `.exe` 安装包必须加** |
 | `--version <X.Y.Z>` | 覆盖 VERSION 文件中的版本号 |
 | `--laragon-url <url>` | ⚠️ **本分支请勿使用**：会跳过 Win7 自组装运行时，改打入要求 Windows 10 的 `laragon-wamp.exe` |
@@ -203,6 +204,43 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 |----------|------|
 | `PYTHON_DOWNLOAD_URL` | Windows OCR 用 Python 安装器下载地址（默认官方 **3.8.10**，Win7 上可用的最高版本；3.9 起要求 Windows 8.1） |
 | `DOTNET48_DOWNLOAD_URL` | .NET Framework 4.8 离线安装包下载地址（WMF 5.1 的前置） |
+
+### 1.3.0 初始数据库：默认只导结构
+
+默认情况下，安装包里的 `database/schema/mysql-schema.sql` **只有表结构**
+（外加一张 `migrations` 表的已执行记录，用于避免装机时重跑迁移）。
+装机后由 `artisan migrate` + `db:seed` 生成基础数据，产物**不含任何本地库的业务数据**。
+
+需要「装完即可用、带一套现成配置」时，加 `--init-db-from-local`：
+
+```bash
+./deploy/build.sh --target win --init-db-from-local
+```
+
+它会把 `.env` 指向的本地库整个导出（结构 + 数据）作为初始数据库。
+
+> ⚠️ **本地库里的全部数据都会进安装包** —— 账号（含密码哈希）、患者、病历、
+> 操作日志一并打包，发给谁就等于给谁看。只在确认过数据内容后使用。
+> 构建时会打印数据源和一条警告。
+
+为什么带数据时必须包含 `users` 表：`install-win.ps1` 判断「要不要跑 `db:seed`」
+的依据是 `users` 表是否为空，而 `MenuItemsSeeder` 会 `truncate`
+`menu_items` 与 `role_menu_items` 再按代码重建。若 dump 不带 `users` 数据，
+装机时会触发 seed 并清掉随包的菜单配置。构建脚本对此有硬检查，缺 `users` 数据直接中止。
+
+目标机是 **MySQL 5.7**，而开发库通常是 MySQL 8.x，因此导出后会校验：
+
+| 检查 | 不通过的后果 |
+|------|-------------|
+| 含 `utf8mb4_0900_*` 排序规则 | 5.7 无此排序规则，导入报 Unknown collation |
+| 含 `CREATE DATABASE` / `USE` | 目标库名是 `pristine_dental`，会导入到错误的库 |
+| 表数 < 50 | dump 不完整 |
+| `users` 表无数据 | 装机时 seed 触发，清掉随包菜单 |
+
+任一不通过即中止构建 —— 这些问题在构建机上看不出来，只会在诊所的 Win7 上导入时炸。
+
+环境变量 `DB_DUMP_CONTAINER` 可指定借用哪个 Docker 容器里的 `mysqldump`
+（构建机没装 mysql 客户端时的回退，默认容器名 `mysql`）。
 
 ### 1.3.1 Windows：自组装运行时（本分支唯一正确方式）
 
@@ -233,7 +271,9 @@ build.sh 执行步骤:
       │
   [4] PHP 代码混淆（yakpro-po，可选，--skip-obfuscate 跳过）
       │
-  [5] 导出数据库 Schema（仅全量包，优先 artisan schema:dump，回退 mysqldump）
+  [5] 导出数据库（仅全量包）
+      默认：只导结构（artisan schema:dump，回退 mysqldump --no-data）
+      --init-db-from-local：改导本地库的结构 + 数据
       │
   [6] 复制部署脚本到包内（install/upgrade/start/stop + .env.deploy 模板）
       │
