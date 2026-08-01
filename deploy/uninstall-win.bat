@@ -1,5 +1,7 @@
 @echo off
-chcp 65001 >nul 2>&1
+REM build.sh 会把本文件转成 GBK(CP936) + CRLF 再打包，因此这里必须是 936；
+REM 用 65001 会让后续 GBK 字节被当成 UTF-8 解析，中文全部变乱码。
+chcp 936 >nul 2>&1
 setlocal enabledelayedexpansion
 title 牙科诊所管理系统 - 卸载
 
@@ -10,20 +12,28 @@ REM  用法:
 REM    uninstall-win.bat                        交互式卸载
 REM    uninstall-win.bat --keep-data            保留数据库和上传文件
 REM    uninstall-win.bat --yes                  跳过确认提示
+REM    uninstall-win.bat --cleanup-only         只清运行时产物，不删文件（供 Inno 卸载器调用）
+REM
+REM  非交互约定：--yes / --cleanup-only 一律不得出现 pause 或 set /p。
+REM  Inno 的 [UninstallRun] 用 runhidden waituntilterminated 调用本脚本，
+REM  窗口不可见，任何等待输入的语句都会让卸载永久挂起。
 REM ═══════════════════════════════════════════════════════════════
 
 set "KEEP_DATA=0"
 set "AUTO_YES=0"
+set "CLEANUP_ONLY=0"
+set "NO_PAUSE=0"
 set "SCRIPT_DIR=%~dp0"
 
 REM ── 参数解析 ────────────────────────────────────────────────────
 :parse_args
 if "%~1"=="" goto :args_done
-if /i "%~1"=="--keep-data" ( set "KEEP_DATA=1" & shift & goto :parse_args )
-if /i "%~1"=="--yes"       ( set "AUTO_YES=1"  & shift & goto :parse_args )
-if /i "%~1"=="-y"          ( set "AUTO_YES=1"  & shift & goto :parse_args )
-if /i "%~1"=="--help"      ( goto :show_help )
-if /i "%~1"=="-h"          ( goto :show_help )
+if /i "%~1"=="--keep-data"    ( set "KEEP_DATA=1" & shift & goto :parse_args )
+if /i "%~1"=="--yes"          ( set "AUTO_YES=1"  & set "NO_PAUSE=1" & shift & goto :parse_args )
+if /i "%~1"=="-y"             ( set "AUTO_YES=1"  & set "NO_PAUSE=1" & shift & goto :parse_args )
+if /i "%~1"=="--cleanup-only" ( set "CLEANUP_ONLY=1" & set "AUTO_YES=1" & set "NO_PAUSE=1" & shift & goto :parse_args )
+if /i "%~1"=="--help"         ( goto :show_help )
+if /i "%~1"=="-h"             ( goto :show_help )
 shift
 goto :parse_args
 :args_done
@@ -52,7 +62,7 @@ if exist "C:\DentalClinic\laragon\www\dental\artisan" (
 echo  [!] 未找到安装目录。
 echo      请在安装目录下运行此脚本，或确认系统已安装。
 echo.
-pause
+call :maybe_pause
 exit /b 1
 
 :dir_found
@@ -86,13 +96,15 @@ set /p "CONFIRM=  确认卸载？输入 YES 继续: "
 if /i not "!CONFIRM!"=="YES" (
     echo.
     echo  已取消卸载。
-    pause
+    call :maybe_pause
     exit /b 0
 )
 :confirmed
 
-set "TOTAL_STEPS=5"
-if "%KEEP_DATA%"=="1" set "TOTAL_STEPS=4"
+REM 步骤: 1 停服务 / 2 备份或删库 / 3 移除服务与计划任务 / 4 删除安装目录
+REM --cleanup-only 不做第 4 步（文件删除交给 Inno 卸载器）
+set "TOTAL_STEPS=4"
+if "%CLEANUP_ONLY%"=="1" set "TOTAL_STEPS=3"
 
 REM ═══════════════════════════════════════════════════════════════
 REM  Step 1: 停止所有服务
@@ -195,7 +207,17 @@ if defined MYSQL_EXE (
     )
     if defined MYSQLD_EXE (
         echo        临时启动 MySQL 以删除数据库...
-        start /B "" "!MYSQLD_EXE!" --defaults-file="%LARAGON_DIR%\etc\mysql\my.ini" >nul 2>&1
+        REM 随包的运行时是自组装的，laragon-core 里没有 etc\mysql\my.ini，
+        REM 装机时也不生成。硬传 --defaults-file 指向不存在的文件，mysqld
+        REM 起不来，后面的 DROP DATABASE 就静默失败 —— 库其实没删掉。
+        REM 有 my.ini 就用，没有就退回显式 basedir/datadir（与 install-win.ps1 一致）。
+        set "MYSQL_INI=%LARAGON_DIR%\etc\mysql\my.ini"
+        if exist "!MYSQL_INI!" (
+            start /B "" "!MYSQLD_EXE!" --defaults-file="!MYSQL_INI!" >nul 2>&1
+        ) else (
+            for %%B in ("!MYSQLD_EXE!\..\..") do set "MYSQL_BASEDIR=%%~fB"
+            start /B "" "!MYSQLD_EXE!" --basedir="!MYSQL_BASEDIR!" --datadir="%LARAGON_DIR%\data\mysql" >nul 2>&1
+        )
         timeout /t 5 /nobreak >nul
     )
 
@@ -224,13 +246,8 @@ if defined MYSQL_EXE (
 REM ═══════════════════════════════════════════════════════════════
 REM  Step N: 移除 Windows 服务和计划任务
 REM ═══════════════════════════════════════════════════════════════
-if "%KEEP_DATA%"=="1" (
-    echo.
-    echo  [3/%TOTAL_STEPS%] 移除 Windows 服务和计划任务...
-) else (
-    echo.
-    echo  [3/%TOTAL_STEPS%] 移除 Windows 服务和计划任务...
-)
+echo.
+echo  [3/%TOTAL_STEPS%] 移除 Windows 服务和计划任务...
 
 REM 删除 MySQL Windows 服务
 echo        移除 MySQL 服务 (DentalClinicMySQL)...
@@ -251,15 +268,23 @@ schtasks /delete /tn "DentalClinic-LogCleanup" /f >nul 2>&1
 echo        DentalClinic-LogCleanup                           [OK]
 
 REM ═══════════════════════════════════════════════════════════════
-REM  Step N: 删除安装目录
+REM  Step 4: 删除安装目录
+REM
+REM  --cleanup-only 必须跳过这一步。Inno 的 [UninstallRun] 是在
+REM  unins000.exe 仍在 %INSTALL_DIR% 里运行时调用本脚本的，此刻
+REM  rmdir 会连同 unins000.exe / unins000.dat（Inno 的卸载清单）一起删，
+REM  导致 Inno 无法完成自己的文件清理和「添加/删除程序」注销，
+REM  而正在执行的本脚本自身被删还会让 cmd.exe 读不到后续命令。
+REM  这一步交给 Inno 完成，本脚本只负责它不知道的运行时产物。
 REM ═══════════════════════════════════════════════════════════════
-if "%KEEP_DATA%"=="1" (
+if "%CLEANUP_ONLY%"=="1" (
     echo.
-    echo  [4/%TOTAL_STEPS%] 删除安装目录...
-) else (
-    echo.
-    echo  [4/%TOTAL_STEPS%] 删除安装目录...
+    echo        运行时产物已清理，文件删除由安装程序接管。   [OK]
+    goto :summary
 )
+
+echo.
+echo  [4/%TOTAL_STEPS%] 删除安装目录...
 
 REM 先切出安装目录再删除
 cd /d "%USERPROFILE%"
@@ -273,6 +298,8 @@ if exist "%INSTALL_DIR%" (
 ) else (
     echo        安装目录已删除                                  [OK]
 )
+
+:summary
 
 REM ═══════════════════════════════════════════════════════════════
 REM  完成
@@ -290,14 +317,25 @@ if "%KEEP_DATA%"=="0" (
 echo    - 删除数据库 pristine_dental
 echo    - 删除数据库用户 dental
 )
+if "%CLEANUP_ONLY%"=="1" (
+echo    - 安装目录由安装程序删除
+) else (
 echo    - 删除安装目录 %INSTALL_DIR%
+)
 if "%KEEP_DATA%"=="1" (
 echo.
 echo  数据已备份到桌面: dental-backup-*
 )
 echo.
-pause
+call :maybe_pause
 exit /b 0
+
+REM ── 仅在交互模式下暂停 ──────────────────────────────────────────
+REM 隐藏窗口（Inno runhidden）里 pause 等不到按键，会永久挂起卸载流程
+:maybe_pause
+if "%NO_PAUSE%"=="1" goto :eof
+pause
+goto :eof
 
 :show_help
 echo.
@@ -306,13 +344,16 @@ echo.
 echo  用法: uninstall-win.bat [选项]
 echo.
 echo  选项:
-echo    --keep-data    保留数据库，并备份上传文件和配置到桌面
-echo    --yes, -y      跳过确认提示（危险）
-echo    --help, -h     显示此帮助信息
+echo    --keep-data      保留数据库，并备份上传文件和配置到桌面
+echo    --yes, -y        跳过确认提示（危险），且不暂停
+echo    --cleanup-only   只清数据库/服务/计划任务，不删除安装目录、不暂停
+echo                     （供 Inno 卸载器 runhidden 调用，文件删除由 Inno 负责）
+echo    --help, -h       显示此帮助信息
 echo.
 echo  示例:
 echo    uninstall-win.bat                  交互式卸载（会确认）
 echo    uninstall-win.bat --keep-data      卸载但保留并备份数据
 echo    uninstall-win.bat --yes            静默完全卸载
+echo    uninstall-win.bat --cleanup-only   仅清运行时产物
 echo.
 exit /b 0

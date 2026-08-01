@@ -71,6 +71,9 @@ Source: "dist\laragon\*"; DestDir: "{app}\laragon"; Flags: ignoreversion recurse
 Source: "dist\vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 ; WMF 5.1：Win7 自带 PowerShell 2.0，install-win.bat 会按需静默安装
 Source: "dist\wmf51\*"; DestDir: "{app}\wmf51"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\wmf51'))
+; .NET Framework 4.8：WMF 5.1 要求 .NET 4.5.2+，而纯净 Win7 SP1 只有 3.5.1。
+; 不带这个，离线机器装不了 WMF，也就跑不了 install-win.ps1。
+Source: "dist\dotnet48\*"; DestDir: "{app}\dotnet48"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\dotnet48'))
 
 ; OCR Python 离线包
 Source: "dist\ocr-wheels\*"; DestDir: "{app}\ocr-wheels"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\ocr-wheels'))
@@ -101,23 +104,36 @@ Name: "{group}\卸载 {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\start-win.bat"; IconFilename: "{app}\laragon\laragon.exe"; IconIndex: 0; Tasks: desktopicon; Comment: "启动牙科诊所管理系统"
 
 [Run]
-; 安装完成后自动运行安装配置脚本
-Filename: "{app}\install-win.bat"; Parameters: """{app}"""; Description: "{cm:InstallingDeps}"; Flags: runhidden waituntilterminated; StatusMsg: "{cm:InstallingDeps}"
+; 注意：配置脚本不在这里跑。[Run] 拿不到子进程退出码，install-win.bat 失败
+; 或要求重启都会被 runhidden 悄悄吞掉，用户只看到「安装完成」却打不开系统。
+; 改由 [Code] 的 CurStepChanged → Exec() 执行，见文件末尾。
 
 ; 可选：安装后启动
 Filename: "{app}\start-win.bat"; Parameters: """{app}"""; Description: "{cm:LaunchAfterInstall}"; Flags: nowait postinstall skipifsilent shellexec
 
 [UninstallRun]
+; 两条都必须带 shellexec —— Inno 的 Filename 只保证能跑 .exe，
+; 底层的 CreateProcess 不认 .bat（要跑批处理得先起命令解释器）。
+; 少了这个标志，这两条会静默不执行，结果就是
+; 「卸载完了，DentalClinicMySQL 服务和三个计划任务还留在系统里」。
+; 同一份 .iss 里 start-win.bat 那条本来就带 shellexec，可对照。
+
 ; 卸载前停止所有服务
-Filename: "{app}\stop-win.bat"; Parameters: """{app}"""; Flags: runhidden waituntilterminated
+Filename: "{app}\stop-win.bat"; Parameters: """{app}"""; Flags: shellexec runhidden waituntilterminated
 
 ; 清理 Inno 不知道的运行时产物：MySQL 数据库、Windows 服务注册、三个计划任务。
 ; 这些都是 install-win.ps1 在安装后创建的，不在 Inno 的文件清单里，
 ; 只靠 {uninstallexe} 卸载会把 DentalClinicMySQL 服务和
 ; DentalClinic-Scheduler/QueueWorker/LogCleanup 计划任务留在系统里。
-; 用 --yes 跳过脚本自身的交互确认（InitializeUninstall 已经确认过一次了）。
+;
+; 必须用 --cleanup-only 而不是 --yes：
+;   1. 本条目执行时 unins000.exe 还在 {app} 里跑，--yes 会 rmdir /S 整个 {app}，
+;      连 unins000.dat（Inno 的卸载清单）一起删掉，Inno 既清不完文件，
+;      也注销不掉「添加/删除程序」条目；正在执行的 .bat 自身被删还会让 cmd 断流。
+;   2. --yes 走完流程后有 pause，而这里是 runhidden——没有窗口可以按键，
+;      卸载会永久卡死。--cleanup-only 全程无 pause / set /p。
 ; 不传安装目录：该脚本用 %~dp0 自己定位，多传的位置参数只会被解析循环 shift 掉。
-Filename: "{app}\uninstall-win.bat"; Parameters: "--yes"; Flags: runhidden waituntilterminated; Check: FileExists(ExpandConstant('{app}\uninstall-win.bat'))
+Filename: "{app}\uninstall-win.bat"; Parameters: "--cleanup-only"; Flags: shellexec runhidden waituntilterminated; Check: FileExists(ExpandConstant('{app}\uninstall-win.bat'))
 
 ; 兜底：强杀残留进程
 Filename: "{cmd}"; Parameters: "/c taskkill /f /im mysqld.exe 2>nul & taskkill /f /im nginx.exe 2>nul & taskkill /f /im python.exe 2>nul"; Flags: runhidden
@@ -154,14 +170,61 @@ begin
   end;
 end;
 
-// ── 安装过程中的进度提示 ────────────────────────────────────
+// ── 安装后配置 ──────────────────────────────────────────────
+//
+// install-win.bat 用 --unattended 调用：窗口不可见，脚本内不得有
+// choice / pause / set /p，否则会永久挂起。
+// 退出码约定（见 install-win.bat 顶部）：
+//   0    配置完成
+//   3010 前置组件（.NET 4.8 / WMF 5.1）已装好，需重启后重新运行安装程序
+//   其他 失败
+
+const
+  RC_REBOOT_REQUIRED = 3010;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+  AppDir: String;
 begin
-  if CurStep = ssPostInstall then
+  if CurStep <> ssPostInstall then
+    Exit;
+
+  WizardForm.StatusLabel.Caption := '正在配置系统环境，请稍候...';
+  AppDir := ExpandConstant('{app}');
+
+  // 必须经 cmd.exe /C 启动：CreateProcess（Exec 的底层）不认 .bat，
+  // 直接把 .bat 当 Filename 传会失败。外层再包一对引号是 cmd /C 的要求——
+  // 路径含空格时（如装到 Program Files）少了它就会被拆断。
+  // 退出码原样透传：批处理用 exit /b N 结束，cmd /C 返回同一个 N。
+  if not Exec(ExpandConstant('{cmd}'),
+              '/C ""' + AppDir + '\install-win.bat" --unattended "' + AppDir + '""',
+              AppDir,
+              SW_HIDE, ewWaitUntilTerminated, ResultCode) then
   begin
-    WizardForm.StatusLabel.Caption := '正在配置系统环境，请稍候...';
+    MsgBox('无法启动配置脚本 install-win.bat：' + #13#10 +
+           SysErrorMessage(ResultCode) + #13#10 + #13#10 +
+           '文件已安装完成，请在安装目录下手动运行 install-win.bat。',
+           mbError, MB_OK);
+    Exit;
   end;
+
+  if ResultCode = RC_REBOOT_REQUIRED then
+  begin
+    MsgBox('已为系统安装必需的前置组件（.NET Framework 4.8 / WMF 5.1）。' + #13#10 + #13#10 +
+           '请立即重启电脑，重启后在安装目录下运行 install-win.bat' + #13#10 +
+           '完成剩余配置，然后才能启动系统。' + #13#10 + #13#10 +
+           '安装目录: ' + ExpandConstant('{app}'),
+           mbInformation, MB_OK);
+    Exit;
+  end;
+
+  if ResultCode <> 0 then
+    MsgBox('系统配置脚本执行失败（错误码 ' + IntToStr(ResultCode) + '）。' + #13#10 + #13#10 +
+           '文件已安装完成，但数据库和服务尚未配置，系统还不能启动。' + #13#10 +
+           '请在安装目录下手动运行 install-win.bat 查看详细错误。' + #13#10 + #13#10 +
+           '安装目录: ' + ExpandConstant('{app}'),
+           mbError, MB_OK);
 end;
 
 // ── 卸载确认 ─────────────────────────────────────────────────

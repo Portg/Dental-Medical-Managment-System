@@ -1,5 +1,9 @@
 # ═══════════════════════════════════════════════════════════════════
-#  OCR 依赖 — Windows 7 版（win7/laravel-8 分支）
+#  OCR 依赖 — Windows 7 版（win7/deploy-only 分支）
+#
+#  只有顶层包写在这里；传递依赖锁在 scripts/requirements-lock.txt
+#  （由 build.sh 生成）。有锁文件时 build.sh 会用 --no-deps 按锁下载，
+#  本文件仅在重新解析依赖树时生效。
 #
 #  目标机运行 Python 3.8.10：这是官方最后一个提供 Windows 7 安装器的版本
 #  （3.9 起最低要求 Windows 8.1）。

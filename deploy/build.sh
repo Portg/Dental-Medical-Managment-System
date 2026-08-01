@@ -70,6 +70,8 @@ usage() {
   --upgrade                    生成升级包（仅代码+迁移，不含SQL和运行时依赖）
   --skip-obfuscate             跳过 PHP 代码混淆
   --skip-ocr                   跳过 OCR Python wheels 打包（减小包体积）
+  --skip-db-dump               不导出初始数据库（装机时改为 migrate + seed）
+  --keep-dist                  保留 deploy/dist/ 不删除（编译 Inno .exe 安装包必须加）
   --version <X.Y.Z>            覆盖 VERSION 文件中的版本号
   --laragon-url <url>          Windows: 指定 laragon-wamp.exe 下载地址（.exe 直链）
   -h, --help                   显示此帮助信息
@@ -78,8 +80,8 @@ usage() {
   PYTHON_DOWNLOAD_URL          Python Windows x64 安装器下载地址（OCR 用）
 
 示例:
-  ./deploy/build.sh --target win --laragon-url https://example.com/laragon-wamp.exe
-  ./deploy/build.sh --target win                          # Windows 安装包（需手动放置 laragon-wamp.exe）
+  ./deploy/build.sh --target win                          # Windows 全量 ZIP 安装包
+  ./deploy/build.sh --target win --keep-dist              # 保留 dist/，之后可编译 build-installer.iss
   ./deploy/build.sh --target linux --upgrade              # Linux 升级包
   ./deploy/build.sh --target mac --skip-obfuscate         # macOS 不混淆
   ./deploy/build.sh --target win --version 2.0.0          # 指定版本号
@@ -92,6 +94,8 @@ TARGET=""
 UPGRADE=false
 SKIP_OBFUSCATE=false
 SKIP_OCR=false
+SKIP_DB_DUMP=false
+KEEP_DIST=false
 VERSION_OVERRIDE=""
 LARAGON_INSTALLER_EXE=""
 LARAGON_URL_OVERRIDE=""
@@ -113,6 +117,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-ocr)
             SKIP_OCR=true
+            shift
+            ;;
+        --skip-db-dump)
+            SKIP_DB_DUMP=true
+            shift
+            ;;
+        --keep-dist)
+            KEEP_DIST=true
             shift
             ;;
         --version)
@@ -142,11 +154,98 @@ case "$TARGET" in
     *) fatal "--target 仅支持 win、linux、mac，当前值: $TARGET" ;;
 esac
 
+# ── SHA256 指纹表 ────────────────────────────────────────────────
+#
+#  为什么需要：下载全部走 HTTPS 且只检查「文件非空 / zip 能解开」，
+#  这挡不住上游把同一个 URL 换成新版本，也挡不住缓存目录被改动。
+#  而 .cache/ 是长期复用的——一旦混进错误的产物，后续每次构建都静默沿用。
+#
+#  只对**版本固定的 URL**生效。用 *_DOWNLOAD_URL 覆盖地址时自动跳过
+#  （换镜像换版本本来就会换指纹），仅打印警告。
+#  更新版本时同步更新此表：shasum -a 256 <文件>
+# ─────────────────────────────────────────────────────────────────
+expected_sha256() {
+    case "$1" in
+        # php-8.2.33-nts-Win32-vs16-x64.zip（与 windows.php.net/downloads/releases/sha256sum.txt 一致）
+        php82)        echo "d0bd189522fa50255ee94ed4b340ed4330f5ae33a90a74205275b0f0b221d388" ;;
+        # mysql-5.7.44-winx64.zip
+        mysql57)      echo "aed661fe8120254a1dc30f5a4d5de346681922f4847cf025e2d4084eca78e70e" ;;
+        # nginx-1.24.0.zip
+        nginx)        echo "69a36bfd2a61d7a736fafd392708bd0fb6cf15d741f8028fe6d8bb5ebd670eb9" ;;
+        # Win7AndW2K8R2-KB3191566-x64.zip (WMF 5.1)
+        wmf51)        echo "f383c34aa65332662a17d95409a2ddedadceda74427e35d05024cd0a6a2fa647" ;;
+        # laragon 8.6.1 源码 zip
+        laragon-core) echo "d66ae3c6f1949e39ee0cfb13cb79aa0d77b3542863291f707e4d4a96452ad4ae" ;;
+        # ndp48-x86-x64-allos-enu.exe (.NET Framework 4.8 离线安装包)
+        dotnet48)     echo "68c9986a8dcc0214d909aa1f31bee9fb5461bb839edca996a75b08ddffc1483f" ;;
+        *)            echo "" ;;
+    esac
+}
+
+sha256_of() {
+    if command -v sha256sum &>/dev/null; then
+        sha256sum "$1" 2>/dev/null | awk '{print $1}'
+    elif command -v shasum &>/dev/null; then
+        shasum -a 256 "$1" 2>/dev/null | awk '{print $1}'
+    else
+        echo ""
+    fi
+}
+
+# 用法: verify_sha256 <文件> <指纹表 key> <地址是否被覆盖:true|false>
+# 返回: 0=通过或无需校验, 1=不匹配
+verify_sha256() {
+    local file="$1" key="$2" overridden="${3:-false}"
+    local expected actual
+
+    expected="$(expected_sha256 "$key")"
+    [[ -z "$expected" ]] && return 0
+
+    if [[ "$overridden" == true ]]; then
+        warn "$key: 下载地址被环境变量覆盖，跳过 SHA256 校验"
+        return 0
+    fi
+
+    actual="$(sha256_of "$file")"
+    if [[ -z "$actual" ]]; then
+        warn "$key: 未找到 sha256sum/shasum，跳过 SHA256 校验"
+        return 0
+    fi
+
+    if [[ "$actual" != "$expected" ]]; then
+        error "$key: SHA256 不匹配 —— 产物与锁定版本不符"
+        error "  期望: $expected"
+        error "  实际: $actual"
+        error "  文件: $file"
+        return 1
+    fi
+
+    info "$key: SHA256 校验通过"
+    return 0
+}
+
 # ── 下载并解压一个 zip 包的辅助函数 ──────────────────────────────
-# 用法: download_and_extract <url> <cache_zip_path> <extract_dir> <component_name>
+# 用法: download_and_extract <url> <cache_zip_path> <extract_dir> <component_name> [sha_key] [url_overridden]
 # 返回: 0=成功, 1=失败
 download_and_extract() {
     local url="$1" cache_zip="$2" extract_dir="$3" name="$4"
+    local sha_key="${5:-}" overridden="${6:-false}"
+
+    # ── 缓存指纹校验（必须早于「已有解压结果 → 跳过」）
+    # 否则一个指纹不对的 zip 只要解压过一次，后续构建就再也不会被检查到。
+    if [[ -n "$sha_key" ]] && [[ -n "$(expected_sha256 "$sha_key")" ]] && [[ "$overridden" != true ]]; then
+        if [[ -f "$cache_zip" ]]; then
+            if ! verify_sha256 "$cache_zip" "$sha_key" "$overridden"; then
+                warn "$name: 缓存指纹不符，清除缓存并重新下载"
+                rm -f "$cache_zip"
+                rm -rf "$extract_dir"
+            fi
+        elif [[ -d "$extract_dir" ]]; then
+            # 有解压结果却没有源 zip：无从校验，不予复用
+            warn "$name: 缺少可校验的源 zip，丢弃无法验证的解压缓存"
+            rm -rf "$extract_dir"
+        fi
+    fi
 
     # 已有解压结果 → 跳过
     if [[ -d "$extract_dir" ]] && [[ "$(ls -A "$extract_dir" 2>/dev/null)" ]]; then
@@ -192,6 +291,13 @@ download_and_extract() {
                 error "$name: zip 文件无效或不完整 ($actual_size)，可能下载被截断"
             fi
             rm -f "$cache_zip"
+            return 1
+        fi
+
+        # 刚下载的产物也要对指纹 —— HTTPS 只保证传输，不保证对端给的是同一个版本
+        if [[ -n "$sha_key" ]] && ! verify_sha256 "$cache_zip" "$sha_key" "$overridden"; then
+            rm -f "$cache_zip"
+            error "$name: 下载产物指纹不符，已删除"
             return 1
         fi
     fi
@@ -261,7 +367,9 @@ fi
 #    而 install-win.ps1 用到了 PS3+ 语法。
 # ════════════════════════════════════════════════════════════════════════
 WIN7_RUNTIME_DIR=""
-if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
+# --upgrade 明确排除：升级包只带代码和迁移，目标机上的 PHP/MySQL/Nginx 早已装好。
+# 少了这个判断，升级包会连约 1.3GB 运行时一起下载、组装并打包。
+if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" == false ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
     CACHE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.cache"
     ASSEMBLED_DIR="$CACHE_DIR/win7-runtime"
 
@@ -271,6 +379,12 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
     LARAGON_CORE_URL="${LARAGON_DOWNLOAD_URL:-https://github.com/leokhoa/laragon/archive/refs/tags/8.6.1.zip}"
     COMPOSER_URL="${COMPOSER_DOWNLOAD_URL:-https://getcomposer.org/download/latest-stable/composer.phar}"
 
+    # 地址是否被环境变量覆盖 —— 覆盖了就不能再拿锁定版本的指纹去卡
+    PHP_URL_OVERRIDDEN=$([[ -n "${PHP_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+    MYSQL_URL_OVERRIDDEN=$([[ -n "${MYSQL_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+    NGINX_URL_OVERRIDDEN=$([[ -n "${NGINX_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+    LARAGON_URL_OVERRIDDEN=$([[ -n "${LARAGON_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+
     # 构建机 PHP 必须是 8.2.x —— vendor/ 由本机的 composer 产出，
     # 在 8.3+ 上构建可能拉进要求 8.3 的包，装到 Win7 目标机上就会崩。
     BUILD_PHP_VER="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "")"
@@ -278,6 +392,23 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
         fatal "构建机 PHP 版本为 ${BUILD_PHP_VER:-未知}，Win7 包必须在 PHP 8.2.x 上构建（目标机运行时为 8.2，8.3+ 不支持 Win7）"
     fi
     info "构建机 PHP: $(php -r 'echo PHP_VERSION;') ✓"
+
+    # ── 缓存清单：记录这份组装结果是用哪些地址产出的 ──────────────
+    # 只查「有没有 php.exe / mysqld.exe」是不够的：本分支历史上出现过
+    # PHP 7.4 的组装结果（.cache/php74-*），文件名同样是 php.exe，
+    # 存在性检查一律放行，于是错误版本的运行时被静默打进安装包。
+    # 这里把产出所依据的 URL 落成清单，复用前逐行比对，任何一项漂移即重建。
+    RUNTIME_MANIFEST="$ASSEMBLED_DIR/.build-manifest"
+    EXPECTED_PHP_DIR="$(basename "$PHP_URL" .zip)"
+    RUNTIME_MANIFEST_EXPECTED="$(cat <<MANIFEST
+schema=2
+php=$PHP_URL
+mysql=$MYSQL_URL
+nginx=$NGINX_URL
+laragon=$LARAGON_CORE_URL
+composer=$COMPOSER_URL
+MANIFEST
+)"
 
     # 缓存完整性检查：PHP / MySQL / Composer 三者齐备才算可复用。
     # 只查 PHP+MySQL 会让上次 Composer 下载失败的残缺缓存被反复复用，
@@ -291,10 +422,35 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
     done
     [[ -s "$ASSEMBLED_DIR/bin/composer/composer.phar" ]] && HAS_COMPOSER=true
 
-    if [[ "$HAS_PHP" == true ]] && [[ "$HAS_MYSQL" == true ]] && [[ "$HAS_COMPOSER" == true ]]; then
+    # 版本一致性：清单必须存在且与当前锁定的地址完全一致
+    MANIFEST_OK=false
+    if [[ -f "$RUNTIME_MANIFEST" ]]; then
+        if [[ "$(cat "$RUNTIME_MANIFEST")" == "$RUNTIME_MANIFEST_EXPECTED" ]]; then
+            MANIFEST_OK=true
+        else
+            warn "运行环境缓存的构建清单与当前锁定版本不一致"
+        fi
+    else
+        warn "运行环境缓存缺少构建清单（由旧版 build.sh 产出，无法确认版本）"
+    fi
+
+    # PHP 目录名必须带上锁定的版本号 —— 目标机的 install-win.ps1 靠目录名发现运行时
+    PHP_DIR_OK=false
+    [[ -d "$ASSEMBLED_DIR/bin/php/$EXPECTED_PHP_DIR" ]] && PHP_DIR_OK=true
+
+    if [[ "$HAS_PHP" == true ]] && [[ "$HAS_MYSQL" == true ]] && [[ "$HAS_COMPOSER" == true ]] \
+       && [[ "$MANIFEST_OK" == true ]] && [[ "$PHP_DIR_OK" == true ]]; then
         info "使用已组装的 Win7 运行环境缓存: $ASSEMBLED_DIR"
+        info "  PHP 目录: ${EXPECTED_PHP_DIR}（清单校验通过）"
         WIN7_RUNTIME_DIR="$ASSEMBLED_DIR"
     else
+        # 版本不符的缓存必须整个丢弃再重建，否则旧版本的文件会和新版本混在一起
+        if [[ -d "$ASSEMBLED_DIR" ]] && { [[ "$MANIFEST_OK" == false ]] || [[ "$PHP_DIR_OK" == false ]]; }; then
+            warn "丢弃无法确认版本的运行环境缓存并重新组装: $ASSEMBLED_DIR"
+            [[ "$PHP_DIR_OK" == false ]] && warn "  期望的 PHP 目录不存在: bin/php/$EXPECTED_PHP_DIR"
+            rm -rf "$ASSEMBLED_DIR"
+        fi
+
         echo ""
         echo -e "${BOLD}${CYAN}组装 Windows 7 运行环境 (PHP 8.2 + MySQL 5.7 + Nginx + Composer)${NC}"
         echo ""
@@ -306,7 +462,7 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
         ASSEMBLE_OK=true
 
         # ── laragon-core：只取目录骨架与 laragon.exe，不含任何 PHP/MySQL 二进制
-        if download_and_extract "$LARAGON_CORE_URL" "$CACHE_DIR/laragon-core.zip" "$CACHE_DIR/laragon-core" "Laragon core"; then
+        if download_and_extract "$LARAGON_CORE_URL" "$CACHE_DIR/laragon-core.zip" "$CACHE_DIR/laragon-core" "Laragon core" "laragon-core" "$LARAGON_URL_OVERRIDDEN"; then
             [[ -f "$CACHE_DIR/laragon-core/laragon.exe" ]] && cp "$CACHE_DIR/laragon-core/laragon.exe" "$ASSEMBLED_DIR/"
             [[ -d "$CACHE_DIR/laragon-core/bin/laragon" ]] && cp -r "$CACHE_DIR/laragon-core/bin/laragon" "$ASSEMBLED_DIR/bin/"
             [[ -d "$CACHE_DIR/laragon-core/etc" ]] && cp -rn "$CACHE_DIR/laragon-core/etc/"* "$ASSEMBLED_DIR/etc/" 2>/dev/null || true
@@ -315,7 +471,7 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
         fi
 
         # ── PHP 8.2.33（VS16 x64 NTS）—— Win7 上可用的最高 PHP 分支
-        if download_and_extract "$PHP_URL" "$CACHE_DIR/php82.zip" "$CACHE_DIR/php82-extracted" "PHP 8.2"; then
+        if download_and_extract "$PHP_URL" "$CACHE_DIR/php82.zip" "$CACHE_DIR/php82-extracted" "PHP 8.2" "php82" "$PHP_URL_OVERRIDDEN"; then
             PHP_VER_NAME="$(basename "$PHP_URL" .zip)"
             mkdir -p "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME"
             cp -r "$CACHE_DIR/php82-extracted/"* "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME/"
@@ -359,7 +515,7 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
         fi
 
         # ── MySQL 5.7.44
-        if download_and_extract "$MYSQL_URL" "$CACHE_DIR/mysql57.zip" "$CACHE_DIR/mysql57-extracted" "MySQL 5.7"; then
+        if download_and_extract "$MYSQL_URL" "$CACHE_DIR/mysql57.zip" "$CACHE_DIR/mysql57-extracted" "MySQL 5.7" "mysql57" "$MYSQL_URL_OVERRIDDEN"; then
             for _d in "$CACHE_DIR/mysql57-extracted"/*/; do
                 if [[ -f "${_d}bin/mysqld.exe" ]]; then
                     cp -r "$_d" "$ASSEMBLED_DIR/bin/mysql/$(basename "$_d")"
@@ -370,12 +526,56 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
                 mkdir -p "$ASSEMBLED_DIR/bin/mysql/mysql-5.7.44-winx64"
                 cp -r "$CACHE_DIR/mysql57-extracted/"* "$ASSEMBLED_DIR/bin/mysql/mysql-5.7.44-winx64/"
             fi
+
+            # ── 裁剪 MySQL 的非运行时产物
+            #
+            # 官方 winx64 zip 里约 870MB 是给「编译链接 MySQL 客户端程序」和
+            # 「跑官方测试」用的，跑一个数据库一个字节都用不上。不裁剪，
+            # 安装包会从 ~540MB 涨到 ~1.0GB。
+            #
+            # 注意：这一步必须在构建脚本里做。此前本机缓存是手工删过这些文件的，
+            # 于是「构建产物 540MB」这个结论根本无法从干净缓存复现 ——
+            # 换台机器构建就会得到一个体积翻倍的包。
+            _MYSQL_DIR="$ASSEMBLED_DIR/bin/mysql/mysql-5.7.44-winx64"
+            if [[ -d "$_MYSQL_DIR" ]]; then
+                _MYSQL_BEFORE=$(du -sh "$_MYSQL_DIR" 2>/dev/null | cut -f1)
+
+                # 静态链接库：编译期产物（mysqlserver.lib 一个就 553MB）
+                rm -f "$_MYSQL_DIR"/lib/*.lib
+                # 调试符号：约 118MB
+                rm -f "$_MYSQL_DIR"/bin/*.pdb
+                # 头文件：编译期产物
+                rm -rf "$_MYSQL_DIR/include"
+                # MeCab 日语分词词典：仅 mecab 全文检索解析器需要，本系统是 zh-CN
+                rm -rf "$_MYSQL_DIR/lib/mecab"
+                # 嵌入式服务器与测试用二进制（libmysqld.dll 只服务于这些程序）
+                rm -f "$_MYSQL_DIR"/lib/libmysqld.dll
+                rm -f "$_MYSQL_DIR"/bin/*_embedded.exe
+                rm -f "$_MYSQL_DIR"/bin/mysql_client_test*.exe
+                rm -f "$_MYSQL_DIR"/bin/mysqltest*.exe
+                rm -f "$_MYSQL_DIR"/bin/mysqlxtest.exe
+                # 官方测试套件与基准（部分发行版带）
+                rm -rf "$_MYSQL_DIR/mysql-test" "$_MYSQL_DIR/sql-bench"
+
+                # 裁完必须还能跑：这四个是安装/备份/卸载脚本实际调用的
+                for _need in mysqld.exe mysql.exe mysqldump.exe mysqladmin.exe; do
+                    if [[ ! -f "$_MYSQL_DIR/bin/$_need" ]]; then
+                        error "MySQL 裁剪后缺少 bin/$_need —— 裁剪规则过宽"; ASSEMBLE_OK=false
+                    fi
+                done
+                if [[ ! -d "$_MYSQL_DIR/share" ]]; then
+                    error "MySQL 裁剪后缺少 share/（错误信息文件），mysqld 将无法启动"; ASSEMBLE_OK=false
+                fi
+
+                _MYSQL_AFTER=$(du -sh "$_MYSQL_DIR" 2>/dev/null | cut -f1)
+                info "裁剪 MySQL 非运行时产物: ${_MYSQL_BEFORE} → ${_MYSQL_AFTER}"
+            fi
         else
             error "MySQL 5.7 下载失败"; ASSEMBLE_OK=false
         fi
 
         # ── Nginx
-        if download_and_extract "$NGINX_URL" "$CACHE_DIR/nginx-win7.zip" "$CACHE_DIR/nginx-win7-extracted" "Nginx"; then
+        if download_and_extract "$NGINX_URL" "$CACHE_DIR/nginx-win7.zip" "$CACHE_DIR/nginx-win7-extracted" "Nginx" "nginx" "$NGINX_URL_OVERRIDDEN"; then
             for _d in "$CACHE_DIR/nginx-win7-extracted"/*/; do
                 if [[ -f "${_d}nginx.exe" ]]; then
                     cp -r "$_d" "$ASSEMBLED_DIR/bin/nginx/$(basename "$_d")"
@@ -393,10 +593,24 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
         # ── Composer
         # 安装脚本把 Composer 当作硬性前置（install-win.ps1 找不到就退出），
         # 所以这里下载失败必须让整个组装失败，不能只 warn 后把残缺缓存留下。
+        #
+        # 指纹校验走上游 sidecar：latest-stable 是移动地址，写死指纹会在
+        # Composer 发新版时把构建卡死。getcomposer.org 对每个下载地址都提供
+        # 同名 .sha256sum，取它来卡当次下载的完整性。
         if [[ ! -s "$ASSEMBLED_DIR/bin/composer/composer.phar" ]]; then
             if curl -fsSL --retry 2 -o "$ASSEMBLED_DIR/bin/composer/composer.phar" "$COMPOSER_URL" \
                && [[ -s "$ASSEMBLED_DIR/bin/composer/composer.phar" ]]; then
-                info "Composer 已就位"
+                COMPOSER_EXPECTED="$(curl -fsSL --retry 2 --max-time 30 "${COMPOSER_URL}.sha256sum" 2>/dev/null | awk '{print $1}')"
+                COMPOSER_ACTUAL="$(sha256_of "$ASSEMBLED_DIR/bin/composer/composer.phar")"
+                if [[ -z "$COMPOSER_EXPECTED" ]]; then
+                    warn "Composer: 无法获取上游 SHA256（${COMPOSER_URL}.sha256sum），跳过校验"
+                    info "Composer 已就位"
+                elif [[ -n "$COMPOSER_ACTUAL" ]] && [[ "$COMPOSER_ACTUAL" != "$COMPOSER_EXPECTED" ]]; then
+                    rm -f "$ASSEMBLED_DIR/bin/composer/composer.phar"
+                    error "Composer: SHA256 不匹配（期望 ${COMPOSER_EXPECTED}，实际 ${COMPOSER_ACTUAL}）"; ASSEMBLE_OK=false
+                else
+                    info "Composer 已就位（SHA256 校验通过）"
+                fi
             else
                 rm -f "$ASSEMBLED_DIR/bin/composer/composer.phar"
                 error "Composer 下载失败 —— 安装脚本强制要求 Composer"; ASSEMBLE_OK=false
@@ -424,13 +638,44 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
         # 与 *> 重定向（PS3），在 PS2 上会直接解析失败。安装前按需静默安装。
         # 注意 WMF 5.1 本身要求 .NET Framework 4.5+。
         WMF_URL="${WMF_DOWNLOAD_URL:-https://download.microsoft.com/download/6/F/5/6F5FF66C-6775-42B0-86C4-47D41F2DA187/Win7AndW2K8R2-KB3191566-x64.zip}"
-        if download_and_extract "$WMF_URL" "$CACHE_DIR/wmf51.zip" "$CACHE_DIR/wmf51-extracted" "WMF 5.1 (PowerShell 5.1)"; then
+        WMF_URL_OVERRIDDEN=$([[ -n "${WMF_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+        if download_and_extract "$WMF_URL" "$CACHE_DIR/wmf51.zip" "$CACHE_DIR/wmf51-extracted" "WMF 5.1 (PowerShell 5.1)" "wmf51" "$WMF_URL_OVERRIDDEN"; then
             info "WMF 5.1 已就位"
         else
             error "WMF 5.1 下载失败 —— Win7 自带的 PowerShell 2.0 无法运行安装脚本"; ASSEMBLE_OK=false
         fi
 
+        # ── .NET Framework 4.8 离线安装包
+        # WMF 5.1 的安装前提是 .NET Framework 4.5.2+，而纯净 Win7 SP1 只带 3.5.1。
+        # 不随包提供，离线的目标机就装不上 WMF，也就跑不了 install-win.ps1 ——
+        # 「离线安装」这件事在纯净 Win7 上根本不成立。约 115MB。
+        DOTNET48_URL="${DOTNET48_DOWNLOAD_URL:-https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe}"
+        DOTNET48_URL_OVERRIDDEN=$([[ -n "${DOTNET48_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+        DOTNET48_CACHE="$CACHE_DIR/ndp48-x86-x64-allos-enu.exe"
+
+        # 缓存也要对指纹：这是个长期复用目录，混进错误产物会一直沿用
+        if [[ -s "$DOTNET48_CACHE" ]] && ! verify_sha256 "$DOTNET48_CACHE" "dotnet48" "$DOTNET48_URL_OVERRIDDEN"; then
+            warn ".NET 4.8: 缓存指纹不符，重新下载"
+            rm -f "$DOTNET48_CACHE"
+        fi
+
+        if [[ ! -s "$DOTNET48_CACHE" ]]; then
+            echo -e "  ${CYAN}下载 .NET Framework 4.8 离线安装包（约 115MB）...${NC}"
+            if curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$DOTNET48_CACHE" "$DOTNET48_URL" \
+               && [[ -s "$DOTNET48_CACHE" ]] \
+               && verify_sha256 "$DOTNET48_CACHE" "dotnet48" "$DOTNET48_URL_OVERRIDDEN"; then
+                info ".NET Framework 4.8 已下载"
+            else
+                rm -f "$DOTNET48_CACHE"
+                error ".NET 4.8 下载失败 —— 纯净 Win7 SP1 将无法安装 WMF 5.1"; ASSEMBLE_OK=false
+            fi
+        else
+            info ".NET Framework 4.8: 使用缓存"
+        fi
+
         if [[ "$ASSEMBLE_OK" == true ]]; then
+            # 组装成功才写清单 —— 半成品不留清单，下次构建会当作不可信缓存丢弃
+            printf '%s\n' "$RUNTIME_MANIFEST_EXPECTED" > "$RUNTIME_MANIFEST"
             WIN7_RUNTIME_DIR="$ASSEMBLED_DIR"
             info "Win7 运行环境组装完成: $ASSEMBLED_DIR"
         else
@@ -464,12 +709,16 @@ if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
 fi
 
 # ── 计算总步骤数 ───────────────────────────────────────────────────────
-TOTAL_STEPS=7
+# 必须与实际的 step "..." 调用数一致，否则会打出 [10/9] 这种进度。
+# 无条件执行的 6 步：清理目录 / 复制项目 / Composer / 复制部署脚本 / OCR / 打包
+TOTAL_STEPS=6
 if [[ "$SKIP_OBFUSCATE" == false ]]; then
-    TOTAL_STEPS=$((TOTAL_STEPS + 1))
+    TOTAL_STEPS=$((TOTAL_STEPS + 1))  # PHP 代码混淆
 fi
-if [[ "$UPGRADE" == false ]]; then
-    TOTAL_STEPS=$((TOTAL_STEPS + 1))  # schema dump
+# 全量包导出 schema，升级包生成升级元数据 —— 二选一，总有一步
+TOTAL_STEPS=$((TOTAL_STEPS + 1))
+if [[ "$TARGET" == "win" ]]; then
+    TOTAL_STEPS=$((TOTAL_STEPS + 2))  # .bat 转 GBK + .ps1 转 UTF-8 BOM
 fi
 
 # ── 构建路径 ───────────────────────────────────────────────────────────
@@ -709,76 +958,119 @@ if [[ "$SKIP_OBFUSCATE" == false ]]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════
-# Step 5: 数据库 Schema 导出（仅全量包）
+# Step 5: 导出初始数据库（仅全量包）
+#
+# 导出的是**结构 + 数据**，不是空 schema。原因有两条：
+#
+#  1. 参考数据靠 seeder 重建不可靠。权限/菜单/字典/诊疗项目/会计科目
+#     这些配置表是系统能用起来的前提，而 MenuItemsSeeder 会
+#     truncate menu_items 与 role_menu_items 再按代码里的定义重建，
+#     和迁移改过的库结构对不上时会把菜单弄回旧样子。
+#  2. install-win.ps1 的 seed 闸门是「users 表为空就跑 db:seed」。
+#     dump 带上 users 数据后 seed 自动跳过，随包的菜单数据才不会被清掉。
+#     ——所以 users 的数据**必须**在 dump 里，否则第 1 条的问题必然发生。
+#
+# 目标机是 MySQL 5.7，开发库通常是 MySQL 8.x，导出后会做 5.7 兼容性检查。
+# 不用 --databases：目标库叫 pristine_dental，与开发库不同名，
+# dump 里不能带 CREATE DATABASE / USE。
 # ═══════════════════════════════════════════════════════════════════════
-if [[ "$UPGRADE" == false ]]; then
-    step "导出数据库 Schema"
+if [[ "$UPGRADE" == false ]] && [[ "$SKIP_DB_DUMP" == false ]]; then
+    step "导出初始数据库（结构 + 数据）"
 
     SCHEMA_DIR="$DIST_DIR/database/schema"
     mkdir -p "$SCHEMA_DIR"
+    SCHEMA_FILE="$SCHEMA_DIR/mysql-schema.sql"
 
-    SCHEMA_DUMPED=false
+    # install-win.ps1 先找 database\schema.sql，找不到才用 database\schema\mysql-schema.sql。
+    # 项目里若混进了前者会盖过本步骤的产物，装机时导入的就是旧文件。
+    rm -f "$DIST_DIR/database/schema.sql"
 
-    # 方法 1: 使用 artisan schema:dump
-    if [[ -f "$PROJECT_ROOT/.env" ]] && command -v php &>/dev/null; then
-        (
-            cd "$PROJECT_ROOT"
-            if php artisan schema:dump --path="$SCHEMA_DIR/mysql-schema.sql" 2>/dev/null; then
-                true
-            else
-                # schema:dump 可能不支持 --path 参数，尝试不带路径
-                if php artisan schema:dump 2>/dev/null; then
-                    # 默认输出到 database/schema/mysql-schema.dump
-                    if [[ -f "$PROJECT_ROOT/database/schema/mysql-schema.dump" ]]; then
-                        cp "$PROJECT_ROOT/database/schema/mysql-schema.dump" "$SCHEMA_DIR/mysql-schema.sql"
-                    fi
-                fi
-            fi
-        ) && SCHEMA_DUMPED=true
+    [[ ! -f "$PROJECT_ROOT/.env" ]] && fatal "导出初始数据库需要 .env（用 --skip-db-dump 可跳过，装机时改为 migrate + seed）"
+
+    # 从 .env 读取数据库配置
+    DB_HOST=$(grep -E '^DB_HOST=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    DB_PORT=$(grep -E '^DB_PORT=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    DB_DATABASE=$(grep -E '^DB_DATABASE=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    DB_USERNAME=$(grep -E '^DB_USERNAME=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+
+    DB_HOST="${DB_HOST:-127.0.0.1}"
+    DB_PORT="${DB_PORT:-3306}"
+    [[ -z "$DB_DATABASE" ]] && fatal ".env 里没有 DB_DATABASE，无法导出初始数据库"
+
+    info "数据源: ${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
+
+    # 基础参数。密码走 MYSQL_PWD 环境变量而非 -p 参数 ——
+    # 命令行参数会出现在 ps 输出里，构建机上任何用户都看得到。
+    MYSQLDUMP_ARGS=(
+        -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME"
+        --default-character-set=utf8mb4
+        --single-transaction
+        --routines --triggers
+        --hex-blob
+        --add-drop-table
+        --no-tablespaces
+        "$DB_DATABASE"
+    )
+    # MySQL 8+ 客户端专有：GTID 语句 5.7 不认；column-statistics 查的表 5.7 没有。
+    # 老客户端不认这两个参数，所以失败后退回基础参数重试一次。
+    MYSQLDUMP_COMPAT_ARGS=(--set-gtid-purged=OFF --column-statistics=0)
+
+    DB_DUMPED=false
+    if command -v mysqldump &>/dev/null; then
+        if MYSQL_PWD="$DB_PASSWORD" mysqldump "${MYSQLDUMP_COMPAT_ARGS[@]}" "${MYSQLDUMP_ARGS[@]}" > "$SCHEMA_FILE" 2>/dev/null && [[ -s "$SCHEMA_FILE" ]]; then
+            DB_DUMPED=true
+        elif MYSQL_PWD="$DB_PASSWORD" mysqldump "${MYSQLDUMP_ARGS[@]}" > "$SCHEMA_FILE" 2>/dev/null && [[ -s "$SCHEMA_FILE" ]]; then
+            DB_DUMPED=true
+        fi
     fi
 
-    # 方法 2: 使用 mysqldump 回退
-    if [[ "$SCHEMA_DUMPED" == false ]] && command -v mysqldump &>/dev/null; then
-        if [[ -f "$PROJECT_ROOT/.env" ]]; then
-            # 从 .env 读取数据库配置
-            DB_HOST=$(grep -E '^DB_HOST=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-            DB_PORT=$(grep -E '^DB_PORT=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-            DB_DATABASE=$(grep -E '^DB_DATABASE=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-            DB_USERNAME=$(grep -E '^DB_USERNAME=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-            DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$PROJECT_ROOT/.env" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-
-            DB_HOST="${DB_HOST:-127.0.0.1}"
-            DB_PORT="${DB_PORT:-3306}"
-
-            if [[ -n "$DB_DATABASE" ]]; then
-                MYSQLDUMP_ARGS=(
-                    -h "$DB_HOST"
-                    -P "$DB_PORT"
-                    -u "$DB_USERNAME"
-                    --no-data
-                    --routines
-                    --triggers
-                    --single-transaction
-                    "$DB_DATABASE"
-                )
-                if [[ -n "$DB_PASSWORD" ]]; then
-                    MYSQLDUMP_ARGS=(-p"$DB_PASSWORD" "${MYSQLDUMP_ARGS[@]}")
-                fi
-
-                if mysqldump "${MYSQLDUMP_ARGS[@]}" > "$SCHEMA_DIR/mysql-schema.sql" 2>/dev/null; then
-                    SCHEMA_DUMPED=true
-                fi
+    # 回退：构建机没装 mysql 客户端时，借开发容器里的 mysqldump
+    if [[ "$DB_DUMPED" == false ]] && command -v docker &>/dev/null; then
+        DB_DUMP_CONTAINER="${DB_DUMP_CONTAINER:-mysql}"
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$DB_DUMP_CONTAINER"; then
+            info "构建机无 mysqldump，改用容器 ${DB_DUMP_CONTAINER} 内的 mysqldump"
+            # 容器内连本机，忽略 .env 的 host/port
+            if docker exec -e MYSQL_PWD="$DB_PASSWORD" "$DB_DUMP_CONTAINER" \
+                 mysqldump -u "$DB_USERNAME" \
+                 --default-character-set=utf8mb4 --single-transaction \
+                 --routines --triggers --hex-blob --add-drop-table \
+                 --no-tablespaces --set-gtid-purged=OFF \
+                 "$DB_DATABASE" > "$SCHEMA_FILE" 2>/dev/null && [[ -s "$SCHEMA_FILE" ]]; then
+                DB_DUMPED=true
             fi
         fi
     fi
 
-    if [[ "$SCHEMA_DUMPED" == true ]] && [[ -f "$SCHEMA_DIR/mysql-schema.sql" ]]; then
-        SCHEMA_SIZE=$(du -sh "$SCHEMA_DIR/mysql-schema.sql" | cut -f1)
-        info "Schema 导出完成 (${SCHEMA_SIZE})"
-    else
-        warn "Schema 导出失败 — 安装包中将不包含数据库 schema"
-        warn "部署时需要手动运行 php artisan migrate"
+    [[ "$DB_DUMPED" == false ]] && fatal "初始数据库导出失败（${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}）—— 请确认数据库可连接，或用 --skip-db-dump 跳过"
+
+    # ── MySQL 5.7 兼容性与完整性检查 ─────────────────────────────
+    # 这些问题在构建机上完全看不出来，只会在诊所的 Win7 上导入时炸，
+    # 所以宁可让构建失败也不能把不能导入的 SQL 打进包里。
+    if grep -qi 'utf8mb4_0900' "$SCHEMA_FILE"; then
+        fatal "导出的 SQL 含 utf8mb4_0900_* 排序规则 —— 那是 MySQL 8 的默认排序规则，5.7 上不存在，导入会报 Unknown collation。请把开发库统一为 utf8mb4_unicode_ci 后重新构建"
     fi
+    if grep -qiE '^(CREATE DATABASE|USE `)' "$SCHEMA_FILE"; then
+        fatal "导出的 SQL 含 CREATE DATABASE / USE 语句 —— 目标库名是 pristine_dental，与开发库不同名，会导入到错误的库"
+    fi
+
+    DUMP_TABLES=$(grep -c '^CREATE TABLE' "$SCHEMA_FILE" 2>/dev/null || true)
+    DUMP_INSERTS=$(grep -c '^INSERT INTO' "$SCHEMA_FILE" 2>/dev/null || true)
+    [[ "${DUMP_TABLES:-0}" -lt 50 ]] && fatal "导出的 SQL 只有 ${DUMP_TABLES} 张表，明显不完整（本系统约 125 张）"
+    [[ "${DUMP_INSERTS:-0}" -lt 1 ]] && fatal "导出的 SQL 不含任何 INSERT —— 初始数据库必须带数据，否则装机时 db:seed 会触发并清空菜单表"
+
+    # users 必须有数据，否则装机脚本判定「库是空的」→ 跑 db:seed
+    # → MenuItemsSeeder truncate 掉随包的 menu_items / role_menu_items
+    if ! grep -qE '^INSERT INTO `users`' "$SCHEMA_FILE"; then
+        fatal "导出的 SQL 里 users 表没有数据 —— 装机时会触发 db:seed 并清掉随包的菜单数据。请确认开发库的 users 表非空"
+    fi
+
+    SCHEMA_SIZE=$(du -h "$SCHEMA_FILE" | cut -f1)
+    info "初始数据库导出完成: ${DUMP_TABLES} 张表 / ${DUMP_INSERTS} 条 INSERT 语句 (${SCHEMA_SIZE})"
+    info "  装机时导入到 pristine_dental；users 非空 → db:seed 自动跳过"
+elif [[ "$UPGRADE" == false ]]; then
+    step "导出初始数据库（已跳过）"
+    warn "--skip-db-dump：安装包不含初始数据库，装机时改为 artisan migrate + db:seed"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -878,6 +1170,8 @@ for %%F in (python-installer.exe vc_redist.x64.exe) do (
     if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>&1
 )
 if exist "%PKG_DIR%\wmf51" xcopy "%PKG_DIR%\wmf51" "%INSTALL_DIR%\wmf51\" /E /I /H /Y /Q >nul 2>&1
+REM .NET 4.8：WMF 5.1 的前置，纯净 Win7 SP1 只有 3.5.1
+if exist "%PKG_DIR%\dotnet48" xcopy "%PKG_DIR%\dotnet48" "%INSTALL_DIR%\dotnet48\" /E /I /H /Y /Q >nul 2>&1
 echo         Files copied.
 
 echo  [3/3] Running installer...
@@ -1031,6 +1325,42 @@ if [[ -f "$OCR_REQUIREMENTS" ]]; then
                 cp "$OCR_WHEELS_DIR"/*.tar.gz "$OCR_CACHE_DIR/" 2>/dev/null || true
                 echo "$REQ_HASH" > "$OCR_CACHE_HASH_FILE"
                 info "已缓存到 deploy/.cache/ocr-wheels-${TARGET}/"
+
+                # ── 生成锁定文件（仅 win，且当前没有锁文件时）
+                # requirements.txt 只锁 5 个顶层包，传递依赖有 80 个且全部浮动；
+                # 不落锁，两次干净构建拿到的 wheel 集合就可能不同，出问题无法复现。
+                # 从这次实际下载到的 wheel 反推版本，来源即产物本身，不会写错。
+                if [[ "$TARGET" == "win" ]] && [[ ! -f "$OCR_LOCK_FILE" ]] && command -v python3 &>/dev/null; then
+                    if python3 - "$OCR_WHEELS_DIR" "$OCR_LOCK_FILE" <<'LOCKGEN'
+import re, sys, pathlib
+wheels_dir, lock_path = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+pins = {}
+for f in sorted(wheels_dir.iterdir()):
+    if f.name.endswith('.whl'):
+        parts = f.name[:-4].split('-')
+        name, ver = parts[0], parts[1]
+    elif f.name.endswith('.tar.gz'):
+        name, _, ver = f.name[:-7].rpartition('-')
+    else:
+        continue
+    pins[re.sub(r'[-_.]+', '-', name).lower()] = (name, ver)
+if not pins:
+    sys.exit(1)
+header = (
+    "# OCR 依赖锁定文件 —— Windows 7 / Python 3.8.10 / win_amd64\n"
+    "# 由 deploy/build.sh 在 pip download 成功后自动生成，请勿手工编辑。\n"
+    "# 升级依赖：删除本文件与 deploy/.cache/ocr-wheels-win/ 后重新构建。\n"
+    "# build.sh 检测到本文件会加 --no-deps，跳过依赖解析直接按版本下载。\n"
+)
+lock_path.write_text(header + "\n".join(f"{pins[k][0]}=={pins[k][1]}" for k in sorted(pins)) + "\n")
+print(len(pins))
+LOCKGEN
+                    then
+                        info "已生成 scripts/requirements-lock.txt（锁定传递依赖，请提交到版本库）"
+                    else
+                        warn "生成 requirements-lock.txt 失败，传递依赖仍未锁定"
+                    fi
+                fi
             else
                 warn "OCR Python wheels 下载失败 — 部署时需要联网安装"
                 rm -rf "$OCR_WHEELS_DIR"
@@ -1063,6 +1393,15 @@ if [[ -n "$WIN7_RUNTIME_DIR" ]] && [[ -d "$WIN7_RUNTIME_DIR" ]]; then
     if [[ -s "$CACHE_DIR/vc_redist.x64.exe" ]]; then
         cp "$CACHE_DIR/vc_redist.x64.exe" "$DIST_DIR/vc_redist.x64.exe"
         info "复制 VC++ 2015-2022 x64 运行库"
+    fi
+
+    # .NET Framework 4.8（WMF 5.1 的前置，纯净 Win7 SP1 只有 3.5.1）
+    if [[ -s "$CACHE_DIR/ndp48-x86-x64-allos-enu.exe" ]]; then
+        mkdir -p "$DIST_DIR/dotnet48"
+        cp "$CACHE_DIR/ndp48-x86-x64-allos-enu.exe" "$DIST_DIR/dotnet48/"
+        info "复制 .NET Framework 4.8 离线安装包"
+    else
+        warn "未找到 .NET 4.8 离线包，纯净 Win7 SP1 上装不了 WMF 5.1"
     fi
 
     # WMF 5.1（Win7 自带 PowerShell 2.0，装不了就跑不了安装脚本）
@@ -1347,6 +1686,15 @@ echo -e "    unzip -l $ARCHIVE_PATH"
 echo ""
 
 # 清理 dist 目录
-rm -rf "$DIST_DIR"
-info "已清理 dist/ 临时目录"
+#
+# --keep-dist 必须保留：build-installer.iss 的每一条 Source 都指向 deploy/dist/，
+# 删掉之后 Inno Setup Compiler 直接报找不到文件，等于 .exe 安装包根本编不出来。
+if [[ "$KEEP_DIST" == true ]]; then
+    info "保留 dist/ 目录（--keep-dist）：$DIST_DIR"
+    echo -e "  ${CYAN}下一步（编译 .exe 安装包）:${NC}"
+    echo -e "    用 Inno Setup Compiler 打开 deploy/build-installer.iss → Compile"
+else
+    rm -rf "$DIST_DIR"
+    info "已清理 dist/ 临时目录（编译 Inno 安装包请改用 --keep-dist）"
+fi
 echo ""

@@ -6,8 +6,13 @@
 
 ## ⚠️ 本分支为 Windows 7 专用版（win7/deploy-only）
 
-本分支面向 **Windows 7 SP1 x64** 目标机。**应用代码与 `master` 完全一致**
-（PHP 8.2 + Laravel 11），只有**部署层**做了适配。
+本分支面向 **Windows 7 SP1 x64** 目标机，技术栈与 `master` 相同
+（PHP 8.2 + Laravel 11），**部署层**做了 Win7 适配。
+
+> **注意**：本分支当前**不只有部署层改动**。除部署脚本外还带有三个业务提交
+> （患者满意度调查闭环、复诊率/患者来源报表导出、诊疗页划价 Tab 与排班复制跨度），
+> 合计影响约 61 个文件。计划将这三个提交拆到独立的 feature 分支后，
+> 本分支才恢复为纯部署分支。在此之前请勿把「本分支 == 部署层」当作前提。
 
 ### 为什么不需要降级 PHP / Laravel
 
@@ -44,9 +49,12 @@
 可用环境变量覆盖下载地址（内网镜像场景）：
 `PHP_DOWNLOAD_URL`、`MYSQL_DOWNLOAD_URL`、`NGINX_DOWNLOAD_URL`、
 `LARAGON_DOWNLOAD_URL`、`COMPOSER_DOWNLOAD_URL`、`PYTHON_DOWNLOAD_URL`、
-`VCREDIST_DOWNLOAD_URL`、`WMF_DOWNLOAD_URL`。
+`VCREDIST_DOWNLOAD_URL`、`WMF_DOWNLOAD_URL`、`DOTNET48_DOWNLOAD_URL`。
 
-### Win7 特有的两个前置组件（已随包提供）
+覆盖任一地址会**跳过该组件的 SHA256 校验**（换镜像换版本必然换指纹），
+构建时会打印警告。默认地址均带指纹校验，见 `build.sh` 的 `expected_sha256()`。
+
+### Win7 特有的三个前置组件（已随包提供）
 
 1. **VC++ 2015-2022 x64 运行库** —— PHP 的 VS16 构建依赖它。缺失时的典型症状
    是 `php.exe` 双击无反应或提示缺少 `VCRUNTIME140.dll`。安装包根目录附带
@@ -58,8 +66,18 @@
    `$PSVersionTable.PSVersion.Major`，低于 3 时提示并静默安装随包的
    `wmf51\*.msu`（KB3191566），**装完需重启**再重新运行安装程序。
 
-   > WMF 5.1 本身要求 .NET Framework 4.5+。若目标机连 .NET 4.5 都没有，
-   > 需先装 .NET 再装 WMF。
+3. **.NET Framework 4.8** —— WMF 5.1 的安装前提是 .NET Framework **4.5.2**
+   （不是 4.5），而纯净 Win7 SP1 只带 .NET 3.5.1。不随包提供的话，
+   离线目标机装不了 WMF，也就跑不了 `install-win.ps1` ——「离线安装」
+   在纯净 Win7 上根本不成立。安装包内附 `dotnet48\ndp48-x86-x64-allos-enu.exe`
+   （约 115 MB），`install-win.bat` 读注册表 `NDP\v4\Full` 的 `Release` 值
+   （< 379893 即低于 4.5.2）按需静默安装。
+
+   > **纯净 Win7 需要重启两次**：装 .NET 4.8 → 重启 → 装 WMF 5.1 → 重启 →
+   > 再运行 `install-win.bat` 完成配置。脚本每一步都会明确提示。
+   >
+   > .NET 4.8 要求系统已打 **SP1 + KB4474419（SHA-2 代码签名）+ KB4490628**。
+   > 缺失时安装器返回 5100，脚本会把这三个 KB 号打印出来。
 
 ### 构建机必须是 PHP 8.2.x
 
@@ -158,6 +176,9 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 # 跳过 OCR 和混淆（开发/测试用，构建更快）
 ./deploy/build.sh --target linux --skip-obfuscate --skip-ocr
 
+# 保留 dist/ 以便随后编译 Inno .exe 安装包
+./deploy/build.sh --target win --keep-dist
+
 # 指定版本号（覆盖 VERSION 文件）
 ./deploy/build.sh --target win --version 2.0.0
 ```
@@ -172,6 +193,7 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 | `--upgrade` | 生成升级包（不含 schema.sql、storage/、scripts/） |
 | `--skip-obfuscate` | 跳过 PHP 代码混淆 |
 | `--skip-ocr` | 跳过 OCR Python wheels 下载 |
+| `--keep-dist` | 保留 `deploy/dist/` 不删除 —— **编译 Inno `.exe` 安装包必须加** |
 | `--version <X.Y.Z>` | 覆盖 VERSION 文件中的版本号 |
 | `--laragon-url <url>` | ⚠️ **本分支请勿使用**：会跳过 Win7 自组装运行时，改打入要求 Windows 10 的 `laragon-wamp.exe` |
 
@@ -179,7 +201,8 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 
 | 环境变量 | 说明 |
 |----------|------|
-| `PYTHON_DOWNLOAD_URL` | Windows OCR 用 Python 安装器下载地址（默认官方 3.11.x） |
+| `PYTHON_DOWNLOAD_URL` | Windows OCR 用 Python 安装器下载地址（默认官方 **3.8.10**，Win7 上可用的最高版本；3.9 起要求 Windows 8.1） |
+| `DOTNET48_DOWNLOAD_URL` | .NET Framework 4.8 离线安装包下载地址（WMF 5.1 的前置） |
 
 ### 1.3.1 Windows：自组装运行时（本分支唯一正确方式）
 
@@ -217,7 +240,9 @@ build.sh 执行步骤:
   [7] 下载 OCR Python wheels（可选，--skip-ocr 跳过，按 --target 平台区分）
       │
   [8] 组装并复制 Win7 运行时到安装包（PHP 8.2/MySQL 5.7/Nginx/Composer
-      + VC++ 运行库 + WMF 5.1）
+      + VC++ 运行库 + WMF 5.1 + .NET 4.8）
+      ※ --upgrade 跳过本步：升级包不含运行时（否则平白多出约 1.3GB）
+      ※ 复用缓存前校验 .build-manifest 与各产物 SHA256，版本漂移即重建
       │
   [9] 生成升级包元数据（仅 --upgrade：env.patch + UPGRADE.md）
       │
@@ -231,22 +256,29 @@ build.sh 执行步骤:
 ```
 deploy/.cache/
 ├── win7-runtime/           ← 组装好的运行时（PHP/MySQL/Nginx/Composer）
+│   └── .build-manifest     ← 产出所依据的下载地址清单，复用前逐行比对
 ├── php82.zip               ← PHP 8.2.33 原始包
 ├── mysql57.zip             ← MySQL 5.7.44 原始包
 ├── nginx-win7.zip          ← Nginx 原始包
 ├── vc_redist.x64.exe       ← VC++ 2015-2022 运行库
-├── wmf51-extracted/        ← WMF 5.1（PowerShell 5.1 for Win7）
+├── wmf51.zip / wmf51-extracted/   ← WMF 5.1（PowerShell 5.1 for Win7）
+├── ndp48-x86-x64-allos-enu.exe    ← .NET Framework 4.8 离线包
 ├── python-3.8.10-amd64.exe ← OCR 用 Python 安装器
 └── ocr-wheels-win/         ← OCR 离线 wheel 包
 ```
 
-缓存以 PHP + MySQL + Composer 三者齐备为有效判据；任一缺失会重新组装，
-避免上次下载中断留下的残缺产物被反复复用。需强制刷新时删除 `win7-runtime/`。
+**缓存有效性判据**（三者全过才复用）：
 
-**缓存机制**：
-- 首次构建会下载 `laragon-wamp.exe`
-- 后续构建若缓存存在会直接复用
-- 需要强制更新时删除 `deploy/.cache/laragon-wamp.exe` 后重建
+1. **齐备**：PHP + MySQL + Composer 都在，避免上次中断留下的残缺产物被反复复用；
+2. **版本清单**：`win7-runtime/.build-manifest` 与当前锁定的下载地址逐行一致，
+   且 `bin/php/` 下存在锁定版本的目录名；
+3. **产物指纹**：各原始包的 SHA256 与 `build.sh` 的 `expected_sha256()` 一致。
+
+> 只查「有没有 `php.exe`」是不够的。本分支历史上出现过 PHP 7.4 的组装结果
+> （`.cache/php74-*`），文件名同样是 `php.exe`，存在性检查一律放行，
+> 于是错误版本的运行时被静默打进安装包。上面第 2、3 条就是为了堵这个洞。
+
+任一条不过 → 丢弃缓存重新组装。需强制刷新时直接删除 `win7-runtime/`。
 
 ### 1.6 产物结构
 
@@ -403,10 +435,12 @@ dental-clinic-1.0.0-win-upgrade/
 适合需要图形安装界面的场景。
 
 1. 在 Windows 上安装 [Inno Setup 6](https://jrsoftware.org/isdl.php)
-2. 运行 `build.sh --target win` 生成 `deploy/dist/`
-3. 将 Laragon Portable 放入 `deploy/laragon-portable/`
-4. 用 Inno Setup Compiler 打开 `build-installer.iss` → Compile
-5. 生成的 `.exe` 在 `deploy/output/` 目录
+2. 运行 **`build.sh --target win --keep-dist`** 生成并保留 `deploy/dist/`
+   > `--keep-dist` 不能省。不加的话 build.sh 在收尾时会删掉 `deploy/dist/`，
+   > 而 `build-installer.iss` 的每一条 `Source:` 都指向该目录，Inno 直接报找不到文件。
+   > 运行时（PHP/MySQL/Nginx）由 build.sh 自组装并放进 `dist/laragon/`，无需另外准备 Laragon。
+3. 用 Inno Setup Compiler 打开 `build-installer.iss` → Compile
+4. 生成的 `.exe` 在 `deploy/output/` 目录
 
 生成的 `.exe` 安装包特性：
 - 图形安装向导（中文界面）
@@ -664,9 +698,12 @@ deploy/
 ├── export-data.sh          # 数据导出（迁移机器用）
 │
 │  ── 构建产物 & 缓存 ──────────────────
-├── .cache/                 # Laragon 下载缓存（.gitignore）
-│   ├── laragon-portable.zip
-│   └── laragon/
+├── .cache/                 # 运行时与前置组件下载缓存（.gitignore）
+│   ├── php82.zip / mysql57.zip / nginx-win7.zip
+│   ├── wmf51.zip / vc_redist.x64.exe
+│   ├── ndp48-x86-x64-allos-enu.exe   # .NET 4.8 离线包
+│   ├── ocr-wheels-win/               # OCR wheels
+│   └── win7-runtime/                 # 自组装运行时（含 .build-manifest 版本清单）
 ├── dist/                   # 构建临时目录（.gitignore）
 └── output/                 # 最终产物（.gitignore）
     ├── dental-clinic-1.0.0-win.zip
@@ -719,9 +756,10 @@ C:\DentalClinic\
 | 项目代码（混淆后） | ~50 MB |
 | Composer vendor | ~80 MB |
 | OCR Python wheels | ~200 MB |
-| Laragon Portable（仅 Windows） | ~300 MB |
-| **完整 Windows 安装包（含 Laragon + OCR）** | **~400 MB** |
-| **完整 Windows 安装包（含 Laragon, 无 OCR）** | **~200 MB** |
+| 自组装运行时 PHP+MySQL+Nginx（仅 Windows） | ~300 MB |
+| 前置组件 VC++ / WMF 5.1 / .NET 4.8（仅 Windows） | ~210 MB |
+| **完整 Windows 安装包（含运行时 + 前置 + OCR）** | **~660 MB** |
+| **完整 Windows 安装包（含运行时 + 前置，无 OCR）** | **~460 MB** |
 | **Linux/macOS 安装包（含 OCR）** | **~330 MB** |
 | **Linux/macOS 安装包（无 OCR）** | **~130 MB** |
 | **升级包** | **~50 MB** |

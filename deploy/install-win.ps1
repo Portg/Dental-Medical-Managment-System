@@ -951,6 +951,12 @@ try {
         if ($ocrReady -and -not (Test-Path $OCR_SCRIPT)) {
             $ocrReady = $false
             Write-Host "        [警告] 缺少 scripts\ocr_server.py，OCR 已关闭。" -ForegroundColor Yellow
+            # 只改 $ocrReady 不够：上面那个 -not $ocrReady 的分支已经跑过了，
+            # 这里再降级就没人写 .env，配置里仍是模板里的 OCR_ENABLED=true，
+            # 结果是系统以为 OCR 可用、实际每次调用都失败。
+            if (Test-Path $ENV_TARGET) {
+                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false')
+            }
         }
 
         if ($ocrReady -and -not (Test-HttpEndpoint -Url $OCR_HEALTH_URL -TimeoutMs 3000)) {
