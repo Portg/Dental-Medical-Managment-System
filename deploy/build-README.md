@@ -4,7 +4,7 @@
 
 ---
 
-## ⚠️ 本分支为 Windows 7 专用版（win7/laravel-8）
+## ⚠️ 本分支为 Windows 7 专用版（win7/deploy-only）
 
 本分支面向 **Windows 7 SP1 x64** 目标机。**应用代码与 `master` 完全一致**
 （PHP 8.2 + Laravel 11），只有**部署层**做了适配。
