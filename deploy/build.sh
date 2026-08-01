@@ -802,6 +802,11 @@ RSYNC_EXCLUDES=(
     --exclude='storage/framework/sessions/*'
     --exclude='storage/framework/views/*'
     --exclude='.claude/'
+    # AI/编辑器工具目录：装到诊所机器上没有任何用途，而且带的是内部提示词与配置
+    --exclude='.gstack/'
+    --exclude='.superpowers/'
+    --exclude='.cursor/'
+    --exclude='.worktrees/'
     --exclude='ai-dev-template/'
     --exclude='.idea/'
     --exclude='.vscode/'
@@ -1050,10 +1055,14 @@ if [[ "$UPGRADE" == false ]] && [[ "$INIT_DB_FROM_LOCAL" == true ]]; then
     DUMP_INSERTS=$(grep -c '^INSERT INTO' "$SCHEMA_FILE" 2>/dev/null || true)
     [[ "${DUMP_TABLES:-0}" -lt 50 ]] && fatal "导出的 SQL 只有 ${DUMP_TABLES} 张表，明显不完整（本系统约 125 张）"
 
-    # users 必须有数据，否则装机脚本判定「库是空的」→ 跑 db:seed
-    # → MenuItemsSeeder truncate 掉随包的 menu_items / role_menu_items
+    # users 必须有数据：装机脚本据此判断库是否为空，空则跑 db:seed 重建基础数据，
+    # 且随包若无任何用户，装完将无账号可登录。
+    #
+    # 注：此处原先还有一层顾虑 —— db:seed 会让 MenuItemsSeeder truncate 掉随包的
+    # menu_items / role_menu_items。该 seeder 现已改为按 title_key 幂等 upsert
+    # （既有项就地更新、未定义项只报告不删除），不再有这个风险。
     if ! grep -qE '^INSERT INTO `users`' "$SCHEMA_FILE"; then
-        fatal "导出的 SQL 里 users 表没有数据 —— 装机时会触发 db:seed 并清掉随包的菜单数据。请确认本地库的 users 表非空"
+        fatal "导出的 SQL 里 users 表没有数据 —— 装机后将无账号可登录，且会被判定为空库而重跑 db:seed。请确认本地库的 users 表非空"
     fi
 
     SCHEMA_SIZE=$(du -h "$SCHEMA_FILE" | cut -f1)

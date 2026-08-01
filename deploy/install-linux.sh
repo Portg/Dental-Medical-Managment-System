@@ -786,6 +786,19 @@ else
         (cd "$INSTALL_DIR" && php artisan db:seed --force --no-interaction 2>&1)
         ok "系统数据初始化完成"
     fi
+
+    # 菜单同步无条件执行（不受上面的「已有数据」判断影响）：
+    # MenuItemsSeeder 不在 DatabaseSeeder 中，且它是侧边栏菜单的唯一定义。
+    # 按 title_key 幂等 upsert —— 既有项就地更新、未定义项只报告不删除，
+    # 因此对随包导入了菜单数据的库同样安全。
+    info "同步侧边栏菜单..."
+    if (cd "$INSTALL_DIR" && sudo -u "$WEB_USER" php artisan db:seed --class=MenuItemsSeeder --force --no-interaction 2>&1) || \
+       (cd "$INSTALL_DIR" && php artisan db:seed --class=MenuItemsSeeder --force --no-interaction 2>&1); then
+        ok "菜单同步完成"
+    else
+        warn "菜单同步失败，侧边栏可能不完整；请安装后手动执行："
+        warn "  php artisan db:seed --class=MenuItemsSeeder --force"
+    fi
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════

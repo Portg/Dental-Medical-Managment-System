@@ -467,6 +467,16 @@ do_restore() {
         php artisan migrate --force --no-interaction 2>&1 | tail -3
         ok "数据库迁移完成"
 
+        # 备份可能来自较旧的版本，其菜单树落后于当前代码。
+        # MenuItemsSeeder 按 title_key 幂等 upsert，可安全地把菜单收敛到当前定义，
+        # 且不会删除备份中存在、seeder 未定义的菜单项。
+        info "同步侧边栏菜单..."
+        if php artisan db:seed --class=MenuItemsSeeder --force --no-interaction 2>&1 | tail -3; then
+            ok "菜单同步完成"
+        else
+            warn "菜单同步失败，侧边栏沿用备份中的菜单数据"
+        fi
+
         # 清理并重建缓存
         info "重建缓存..."
         php artisan config:clear --no-interaction  2>/dev/null || true

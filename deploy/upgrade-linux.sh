@@ -603,6 +603,18 @@ if ! php artisan migrate --force --no-interaction 2>&1; then
 fi
 ok "数据库迁移完成"
 
+# MenuItemsSeeder 是侧边栏菜单的唯一定义，按 title_key 幂等 upsert：
+# 既有项就地更新（ID 不变）、未定义项只报告不删除、is_active 不覆盖。
+# 不跑它，本次版本新增或调整的菜单不会出现在侧边栏。
+# 失败不中断升级：菜单沿用旧数据，应用本身仍可用。
+info "同步侧边栏菜单..."
+if php artisan db:seed --class=MenuItemsSeeder --force --no-interaction 2>&1; then
+    ok "菜单同步完成"
+else
+    warn "菜单同步失败，侧边栏沿用升级前的菜单数据；请升级后手动执行："
+    warn "  php artisan db:seed --class=MenuItemsSeeder --force"
+fi
+
 # ═══════════════════════════════════════════════════════════════════
 #  Step 7: 缓存清理与重建
 # ═══════════════════════════════════════════════════════════════════

@@ -122,6 +122,14 @@ run_docker() {
     info "Seeding database ..."
     docker compose exec app php artisan db:seed --force || warn "Seeder had warnings (may be OK if already seeded)"
 
+    # MenuItemsSeeder is not part of DatabaseSeeder; it is the single source of
+    # truth for the sidebar. Idempotent upsert by title_key (existing rows are
+    # updated in place, unknown rows are reported but never deleted), so it is
+    # safe to run on every deploy.
+    info "Syncing sidebar menu ..."
+    docker compose exec app php artisan db:seed --class=MenuItemsSeeder --force \
+        || warn "Menu sync failed; sidebar may be incomplete"
+
     info "Setting storage permissions ..."
     docker compose exec app chmod -R 775 storage bootstrap/cache
     docker compose exec app chown -R www-data:www-data storage bootstrap/cache
@@ -184,6 +192,14 @@ run_native() {
 
     info "Seeding database ..."
     php artisan db:seed --force || warn "Seeder had warnings"
+
+    # MenuItemsSeeder is not part of DatabaseSeeder; it is the single source of
+    # truth for the sidebar. Idempotent upsert by title_key (existing rows are
+    # updated in place, unknown rows are reported but never deleted), so it is
+    # safe to run on every deploy.
+    info "Syncing sidebar menu ..."
+    php artisan db:seed --class=MenuItemsSeeder --force \
+        || warn "Menu sync failed; sidebar may be incomplete"
 
     info "Setting storage permissions ..."
     chmod -R 775 storage bootstrap/cache

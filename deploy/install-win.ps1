@@ -820,6 +820,13 @@ try {
         Write-Host "        Existing data found ...... skipped"
     }
 
+    # 菜单同步无条件执行（不受上面的「已有数据」判断影响）：
+    # MenuItemsSeeder 不在 DatabaseSeeder 中，且它是侧边栏菜单的唯一定义。
+    # 按 title_key 幂等 upsert —— 既有项就地更新、未定义项只报告不删除，
+    # 因此对随包导入了菜单数据的库同样安全。
+    Invoke-External -FilePath $PHP_EXE -Arguments @('artisan', 'db:seed', '--class=MenuItemsSeeder', '--force', '--no-interaction')
+    Write-Host "        Sidebar menu synced ...... OK"
+
     $script:Step++
     Write-Section "Create storage link"
     & $PHP_EXE artisan storage:link --force --no-interaction > $null 2>&1

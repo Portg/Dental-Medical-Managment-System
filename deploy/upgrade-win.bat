@@ -452,6 +452,20 @@ if !ERRORLEVEL! neq 0 (
 echo        数据库迁移完成
 echo.
 
+REM MenuItemsSeeder 是侧边栏菜单的唯一定义，按 title_key 幂等 upsert：
+REM 既有项就地更新（ID 不变）、未定义项只报告不删除、is_active 不覆盖。
+REM 不跑它，本次版本新增或调整的菜单不会出现在侧边栏。
+REM 失败不回滚：菜单沿用旧数据，应用本身仍可用。
+echo        同步侧边栏菜单...
+"!PHP!" artisan db:seed --class=MenuItemsSeeder --force --no-interaction
+if !ERRORLEVEL! neq 0 (
+    echo        [警告] 菜单同步失败，侧边栏沿用升级前的菜单数据
+    echo        [警告] 请升级后手动执行: php artisan db:seed --class=MenuItemsSeeder --force
+) else (
+    echo        菜单同步完成
+)
+echo.
+
 REM ═══════════════════════════════════════════════════════════════
 REM  Step 9: 缓存清理与重建
 REM ═══════════════════════════════════════════════════════════════

@@ -224,9 +224,13 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 > 构建时会打印数据源和一条警告。
 
 为什么带数据时必须包含 `users` 表：`install-win.ps1` 判断「要不要跑 `db:seed`」
-的依据是 `users` 表是否为空，而 `MenuItemsSeeder` 会 `truncate`
-`menu_items` 与 `role_menu_items` 再按代码重建。若 dump 不带 `users` 数据，
-装机时会触发 seed 并清掉随包的菜单配置。构建脚本对此有硬检查，缺 `users` 数据直接中止。
+的依据是 `users` 表是否为空。dump 不带 `users` 数据的话，装完既无账号可登录，
+又会被判定为空库而重跑 `db:seed`。构建脚本对此有硬检查，缺 `users` 数据直接中止。
+
+> `MenuItemsSeeder` 原先会 `truncate` `menu_items` 与 `role_menu_items` 再全量
+> 重建，因而存在「seed 清掉随包菜单配置」的风险。该 seeder 现已改为按
+> `title_key` 幂等 upsert —— 既有项就地更新（ID 不变）、未在 seeder 中定义的
+> 菜单项只报告不删除、`is_active` 不覆盖，该风险已消除。
 
 目标机是 **MySQL 5.7**，而开发库通常是 MySQL 8.x，因此导出后会校验：
 
@@ -445,6 +449,7 @@ dental-clinic-1.0.0-win-upgrade/
            └ 优先: 导入 schema.sql（快速）
            └ 回退: artisan migrate（逐个迁移）
   Step 10  数据库填充 (db:seed)（仅首次安装，已有数据则跳过）
+           └ 菜单同步 (db:seed --class=MenuItemsSeeder)（无条件执行，幂等）
   Step 11  创建 Storage 软链接
   Step 12  缓存优化 (config:cache + route:cache + view:cache)
   Step 13  配置日志清理计划任务（每周清理 30 天前日志）
@@ -537,7 +542,7 @@ sudo ./install.sh
   Step  3  复制项目文件到安装目录 (rsync)
   Step  4  创建数据库 & 用户
   Step  5  生成 .env 配置
-  Step  6  artisan key:generate + migrate + db:seed
+  Step  6  artisan key:generate + migrate + db:seed + MenuItemsSeeder
   Step  7  缓存优化 + storage:link
   Step  8  配置 Nginx 站点 + PHP-FPM
   Step  9  修复文件权限 (www-data / _www)

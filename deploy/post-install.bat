@@ -198,6 +198,17 @@ if !ERRORLEVEL! neq 0 (
     goto :error
 )
 echo        系统数据初始化完成
+
+REM 菜单同步：MenuItemsSeeder 不在 DatabaseSeeder 中，需单独执行。
+REM 它是侧边栏菜单的唯一定义，按 title_key 幂等 upsert —— 既有项就地更新、
+REM 未定义项只报告不删除，因此对随包导入了菜单数据的库同样安全。
+echo        正在同步侧边栏菜单...
+"!PHP!" artisan db:seed --class=MenuItemsSeeder --force --no-interaction
+if !ERRORLEVEL! neq 0 (
+    echo [错误] 菜单同步失败
+    goto :error
+)
+echo        菜单同步完成
 echo.
 
 REM ── Step 7: 前端资源 ─────────────────────────────────────────
