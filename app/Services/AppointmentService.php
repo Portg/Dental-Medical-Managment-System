@@ -97,6 +97,26 @@ class AppointmentService
     }
 
     /**
+     * 在职医生列表，供筛选下拉等处使用。
+     *
+     * 不按排班过滤：筛选历史预约时需要能选到当日无排班的医生。
+     */
+    public function getDoctorOptions(): Collection
+    {
+        return DB::table('users')
+            ->where('is_doctor', 1)
+            ->where('status', 'active')
+            ->whereNull('deleted_at')
+            ->select('id', 'surname', 'othername')
+            ->orderBy('surname')
+            ->get()
+            ->map(fn ($row) => (object) [
+                'id'   => $row->id,
+                'name' => NameHelper::join($row->surname, $row->othername),
+            ]);
+    }
+
+    /**
      * Get calendar events for FullCalendar.
      */
     public function getCalendarEvents(?string $start, ?string $end): array

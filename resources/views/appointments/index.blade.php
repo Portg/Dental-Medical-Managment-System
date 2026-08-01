@@ -97,6 +97,9 @@
                                                         <div class="filter-label">{{ __('appointment.doctor') }}</div>
                                                         <select class="form-control" id="filter_doctor">
                                                             <option value="">{{ __('common.all') }}</option>
+                                                            @foreach($filterDoctors ?? [] as $doctor)
+                                                                <option value="{{ $doctor->id }}">{{ $doctor->name }}</option>
+                                                            @endforeach
                                                         </select>
                                                     </div>
                                                     <div class="col-md-4">

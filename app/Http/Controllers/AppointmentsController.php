@@ -42,7 +42,11 @@ class AppointmentsController extends Controller
 
             return $this->appointmentService->buildIndexDataTable($data);
         }
-        return view('appointments.index');
+
+        // 高级查询的医生下拉此前只有「全部」一项，后端 filter_doctor 筛选虽已实现却无从选择
+        return view('appointments.index', [
+            'filterDoctors' => $this->appointmentService->getDoctorOptions(),
+        ]);
     }
 
     public function calendarEvents(Request $request)
@@ -281,16 +285,24 @@ class AppointmentsController extends Controller
 
         $scheduleMap = [];
         if ($date) {
+            // 排班时间优先取自关联班次，doctor_schedules 自身的 start_time/end_time
+            // 仅作回退（库中多数记录只填 shift_id，两列为 NULL）。
+            // 语义与 DoctorSchedule::getEffectiveStartTime() 保持一致。
             $schedules = DB::table('doctor_schedules')
-                ->whereNull('deleted_at')
-                ->where('schedule_date', $date)
-                ->select('doctor_id', 'start_time', 'end_time')
+                ->leftJoin('shifts', 'shifts.id', '=', 'doctor_schedules.shift_id')
+                ->whereNull('doctor_schedules.deleted_at')
+                ->where('doctor_schedules.schedule_date', $date)
+                ->select(
+                    'doctor_schedules.doctor_id',
+                    DB::raw('COALESCE(shifts.start_time, doctor_schedules.start_time) as start_time'),
+                    DB::raw('COALESCE(shifts.end_time, doctor_schedules.end_time) as end_time')
+                )
                 ->get();
 
             foreach ($schedules as $s) {
                 $scheduleMap[$s->doctor_id] = [
-                    'start_time' => substr($s->start_time, 0, 5),
-                    'end_time'   => substr($s->end_time, 0, 5),
+                    'start_time' => $s->start_time ? substr($s->start_time, 0, 5) : null,
+                    'end_time'   => $s->end_time ? substr($s->end_time, 0, 5) : null,
                 ];
             }
         }
