@@ -1,7 +1,5 @@
 /**
- * FDI Dental Chart Editor
- * Visual language aligned with medical_cases tooth selector.
- * Affordance via numbered steps + tool chip — no long instructional copy.
+ * FDI Dental Chart Editor — tool then paint
  */
 
 .dce-wrap {
@@ -61,7 +59,6 @@
     font-size: 12px;
     font-weight: 600;
     color: #1E40AF;
-    max-width: 55%;
 }
 
 .dce-tool-chip.is-empty {
@@ -78,60 +75,17 @@
     color: #374151;
 }
 
-.dce-status-btn.dce-clear.is-active {
-    border-color: #6B7280;
-    background: #F3F4F6;
-    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.25);
-}
-
-#dce-editor.dce-erase-mode .dce-tooth.marked {
-    cursor: pointer;
-    outline: 1px dashed #9CA3AF;
-}
-
-.dce-mark-chip {
+.dce-tool-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    margin: 2px 4px 2px 0;
-    padding: 2px 6px;
-    border-radius: 999px;
-    background: #F3F4F6;
-    border: 1px solid #E5E7EB;
-    color: #374151;
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-.dce-mark-remove {
-    border: 0;
-    background: transparent;
+    justify-content: center;
+    font-size: 9px;
     color: #6B7280;
-    font-size: 14px;
-    line-height: 1;
-    padding: 0 2px;
-    cursor: pointer;
-}
-
-.dce-mark-remove:hover {
-    color: #DC2626;
-}
-
-#dce-selection-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.dce-step#dce-status-step {
-    opacity: 0.55;
-    transition: opacity 0.15s, border-color 0.15s;
-}
-
-.dce-step#dce-status-step.dce-ready {
-    opacity: 1;
-    border-color: #93C5FD;
-    background: #F8FBFF;
+    flex-shrink: 0;
 }
 
 .dce-flow {
@@ -164,10 +118,16 @@
     background: #F8FAFC;
 }
 
-.dce-status-btn.just-applied {
+.dce-status-btn.is-active {
     border-color: #2563EB;
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
     background: #EFF6FF;
+}
+
+.dce-status-btn.dce-clear.is-active {
+    border-color: #6B7280;
+    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.25);
+    background: #F3F4F6;
 }
 
 .dce-status-swatch {
@@ -193,12 +153,6 @@
     font-size: 12px;
     color: #374151;
     font-weight: 600;
-}
-
-.dce-status-btn.dce-clear.just-applied {
-    border-color: #6B7280;
-    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.25);
-    background: #F3F4F6;
 }
 
 .dce-tabs {
@@ -289,16 +243,6 @@
     background: #F0F5FF;
 }
 
-.dce-tooth.selected {
-    box-shadow: 0 0 0 2px #2563EB;
-    border-color: #2563EB;
-    z-index: 1;
-}
-
-.dce-tooth.selected:not(.marked) {
-    background: #DBEAFE;
-}
-
 .dce-tooth.deciduous {
     background: #FFFBE6;
     border-color: #FFE58F;
@@ -353,6 +297,34 @@
 
 .dce-summary strong {
     color: #374151;
+}
+
+.dce-mark-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 2px 4px 2px 0;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #F3F4F6;
+    border: 1px solid #E5E7EB;
+    color: #374151;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.dce-mark-remove {
+    border: 0;
+    background: transparent;
+    color: #6B7280;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    cursor: pointer;
+}
+
+.dce-mark-remove:hover {
+    color: #DC2626;
 }
 
 @media (max-width: 767px) {
