@@ -254,10 +254,18 @@
             if (typeof TemplatePicker !== 'undefined') {
                 TemplatePicker.init({ baseUrl: '{{ url('/') }}' });
             }
-            // Initialize Quick Phrase Picker
-            if (typeof QuickPhrasePicker !== 'undefined') {
-                QuickPhrasePicker.init({ baseUrl: '{{ url('/') }}' });
-            }
+            {{-- 快捷短语浮层按权限初始化：QuickPhrasePicker.init() 内部会立即预取全部短语
+                 （GET /quick-phrases-search，需 edit-patients），而本布局是全局布局，
+                 此前每个页面都会发这个请求。库管不持有 edit-patients，于是每打开一个
+                 库存/薪酬页面就吃一个 403。无此权限的角色本来也进不了诊断、治疗计划、
+                 病程记录三个书写页，浮层对他们没有用武之地，不初始化不损失任何功能。
+                 TemplatePicker 只绑定按键事件、不预取，故不需要同样处理。 --}}
+            @can('edit-patients')
+                // Initialize Quick Phrase Picker
+                if (typeof QuickPhrasePicker !== 'undefined') {
+                    QuickPhrasePicker.init({ baseUrl: '{{ url('/') }}' });
+                }
+            @endcan
         });
     </script>
     @yield('js')
