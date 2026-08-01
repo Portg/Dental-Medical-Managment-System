@@ -4,9 +4,11 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class Expense extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
     protected $fillable = ['purchase_no', 'supplier_id', 'purchase_date', 'branch_id', '_who_added'];
 

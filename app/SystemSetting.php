@@ -4,9 +4,12 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class SystemSetting extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $table = 'system_settings';
 
     protected $fillable = ['key', 'value', 'type', 'group', 'description'];

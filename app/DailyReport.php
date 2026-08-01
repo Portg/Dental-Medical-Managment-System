@@ -3,9 +3,12 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class DailyReport extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = [
         'report_date',
         'branch_id',

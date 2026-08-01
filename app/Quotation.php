@@ -4,9 +4,11 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class Quotation extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
     protected $fillable = ['quotation_no', 'patient_id', '_who_added'];
 

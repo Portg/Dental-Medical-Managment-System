@@ -4,9 +4,11 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class Refund extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
 
     const APPROVAL_PENDING = 'pending';

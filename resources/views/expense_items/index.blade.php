@@ -7,7 +7,7 @@
     <p class="text-black-50"><a href="{{ url('expenses')}}" class="text-primary">{{ __('expense_items.view_expenses') }}</a>
         /@if(isset($purchase_details)) {{ $purchase_details->supplier_name }} / {{ __('expense_items.expense_no') }}
         : {{ $purchase_details->purchase_no }} {{ __('expense_items.payment_date') }}:
-        ({{ \Carbon\Carbon::parse($purchase_details->purchase_date)->format('d/m/Y')}}) @endif
+        ({{ \Carbon\Carbon::parse($purchase_details->purchase_date)->format('Y-m-d')}}) @endif
     </p>
 </div>
 <input type="hidden" value="{{ $expense_id }}" id="global_expense_id">

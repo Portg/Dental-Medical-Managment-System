@@ -40,7 +40,7 @@ class AppointmentService
                 'appointments.*',
                 'patients.surname', 'patients.othername', 'patients.phone_no',
                 'users.surname as d_surname', 'users.othername as d_othername',
-                DB::raw('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as start_date'),
+                DB::raw('DATE_FORMAT(appointments.start_date, "%Y-%m-%d") as start_date'),
                 'invoices.id as invoice_id',
                 DB::raw('CASE WHEN invoices.id IS NOT NULL THEN "invoiced" ELSE "pending" END as has_invoice_status')
             );
@@ -441,7 +441,7 @@ class AppointmentService
             ->where('appointments.id', $appointmentId)
             ->select('patients.surname', 'patients.othername', 'patients.phone_no',
                 'appointments.*', 'appointments.visit_information',
-                DB::raw('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as formatted_date'))
+                DB::raw('DATE_FORMAT(appointments.start_date, "%Y-%m-%d") as formatted_date'))
             ->first();
 
         if ($status == "Created" && $record->visit_information != Appointment::VISIT_WALK_IN) {

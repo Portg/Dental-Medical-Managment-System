@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 use Thomasjohnkane\Snooze\Traits\SnoozeNotifiable;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class Patient extends Model
 {
+    use SerializesDatesInAppTimezone;
     use EncryptsNin, Notifiable, SoftDeletes, SnoozeNotifiable;
 
     protected $fillable = [

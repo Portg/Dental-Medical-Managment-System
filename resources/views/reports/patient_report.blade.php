@@ -53,7 +53,7 @@
                                 <div class="source-card" style="background: linear-gradient(135deg, #1A237E 0%, #3949AB 100%); color: #fff;">
                                     <div class="source-name" style="color: rgba(255,255,255,0.8);">{{ __('report.total_new_patients') }}</div>
                                     <div class="source-count" style="color: #fff;">{{ $totalPatients }}</div>
-                                    <div class="source-meta" style="color: rgba(255,255,255,0.7);">{{ $startDate->format('Y/m/d') }} - {{ $endDate->format('Y/m/d') }}</div>
+                                    <div class="source-meta" style="color: rgba(255,255,255,0.7);">{{ $startDate->format('Y-m-d') }} - {{ $endDate->format('Y-m-d') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-3">

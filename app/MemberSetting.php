@@ -4,9 +4,12 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class MemberSetting extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = ['key', 'value', 'type', 'description'];
 
     private const CACHE_KEY = 'member_settings:all';

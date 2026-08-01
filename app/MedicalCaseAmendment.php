@@ -5,9 +5,11 @@ namespace App;
 use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use OwenIt\Auditing\Auditable;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class MedicalCaseAmendment extends Model implements AuditableContract
 {
+    use SerializesDatesInAppTimezone;
     use Auditable;
 
     const STATUS_PENDING = 'pending';

@@ -3,9 +3,12 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class ChartOfAccountCategory extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = ['name', 'description', 'accounting_equation_id', '_who_added'];
 
     public function accountingEquation()

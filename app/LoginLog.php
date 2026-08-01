@@ -3,9 +3,12 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class LoginLog extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = [
         'user_id',
         'username',

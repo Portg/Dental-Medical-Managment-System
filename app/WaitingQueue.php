@@ -5,9 +5,11 @@ namespace App;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class WaitingQueue extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
 
     protected $table = 'waiting_queues';

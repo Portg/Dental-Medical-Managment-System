@@ -4,9 +4,11 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class ExpenseCategory extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
     protected $fillable = ['name', 'chart_of_account_item_id', '_who_added'];
 

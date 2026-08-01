@@ -20,7 +20,7 @@ class InvoicingReportService
             ->whereNull('invoice_payments.deleted_at')
             ->select(
                 'invoice_payments.*',
-                DB::raw('DATE_FORMAT(invoice_payments.payment_date, "%d-%b-%Y") as payment_date'),
+                DB::raw('DATE_FORMAT(invoice_payments.payment_date, "%Y-%m-%d") as payment_date'),
                 'patients.surname',
                 'patients.othername'
             );
@@ -53,7 +53,7 @@ class InvoicingReportService
             ->select(
                 'invoice_payments.*',
                 'invoices.invoice_no',
-                DB::raw('DATE_FORMAT(invoice_payments.payment_date, "%d-%b-%Y") as payment_date'),
+                DB::raw('DATE_FORMAT(invoice_payments.payment_date, "%Y-%m-%d") as payment_date'),
                 'patients.surname',
                 'patients.othername',
                 'insurance_companies.name as insurance'

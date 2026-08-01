@@ -55,10 +55,10 @@ abstract class BaseBackupNotification extends Notification implements ShouldQueu
                 trans('backup::notifications.number_of_backups') => (string) $backupDestination->backups()->count(),
                 trans('backup::notifications.total_storage_used') => Format::humanReadableSize($backupDestination->backups()->size()),
                 trans('backup::notifications.newest_backup_date') => $newestBackup
-                    ? $newestBackup->date()->format('Y/m/d H:i:s')
+                    ? $newestBackup->date()->format('Y-m-d H:i:s')
                     : $noBackupsText,
                 trans('backup::notifications.oldest_backup_date') => $oldestBackup
-                    ? $oldestBackup->date()->format('Y/m/d H:i:s')
+                    ? $oldestBackup->date()->format('Y-m-d H:i:s')
                     : $noBackupsText,
             ]);
         } catch (\Throwable $e) {

@@ -4,9 +4,12 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class RolePermission extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = ['role_id', 'permission_id'];
 
     public function role(): BelongsTo

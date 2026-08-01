@@ -3,9 +3,12 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class CouponUsage extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = [
         'coupon_id',
         'patient_id',

@@ -4,9 +4,11 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class SalaryScale extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
     protected $fillable = ['employee_id', 'amount', '_who_added'];
 

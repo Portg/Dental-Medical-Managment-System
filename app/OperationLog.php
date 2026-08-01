@@ -4,9 +4,12 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class OperationLog extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = [
         'user_id',
         'operation_type',

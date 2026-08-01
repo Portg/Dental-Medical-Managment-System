@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class MenuItem extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = [
         'parent_id', 'title_key', 'url', 'icon',
         'permission_id', 'sort_order', 'is_active',

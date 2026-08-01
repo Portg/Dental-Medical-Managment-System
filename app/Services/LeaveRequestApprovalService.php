@@ -28,7 +28,7 @@ class LeaveRequestApprovalService
     public function approveRequest(int $id, int $approvedBy): bool
     {
         return (bool) leaveRequest::where('id', $id)->update([
-            'action_date' => date('yyy-mm-dd'),
+            'action_date' => date('Y-m-d'),
             'status' => leaveRequest::STATUS_APPROVED,
             '_approved_by' => $approvedBy,
         ]);
@@ -40,7 +40,7 @@ class LeaveRequestApprovalService
     public function rejectRequest(int $id, int $approvedBy): bool
     {
         return (bool) leaveRequest::where('id', $id)->update([
-            'action_date' => date('yyy-mm-dd'),
+            'action_date' => date('Y-m-d'),
             'status' => leaveRequest::STATUS_REJECTED,
             '_approved_by' => $approvedBy,
         ]);

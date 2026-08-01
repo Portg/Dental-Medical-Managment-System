@@ -4,9 +4,11 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class Holiday extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
     protected  $fillable=['name','holiday_date','repeat_date','_who_added'];
 

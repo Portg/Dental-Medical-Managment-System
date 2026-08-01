@@ -29,8 +29,8 @@ class OnlineBookingService
             ->whereNull('online_bookings.deleted_at')
             ->select(
                 'online_bookings.*',
-                DB::raw('DATE_FORMAT(online_bookings.start_date, "%d-%b-%Y") as start_date'),
-                DB::raw('DATE_FORMAT(online_bookings.created_at, "%d-%b-%Y") as booking_date')
+                DB::raw('DATE_FORMAT(online_bookings.start_date, "%Y-%m-%d") as start_date'),
+                DB::raw('DATE_FORMAT(online_bookings.created_at, "%Y-%m-%d") as booking_date')
             );
 
         if (!empty($filters['search'])) {

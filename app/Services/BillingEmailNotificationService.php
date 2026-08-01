@@ -15,7 +15,7 @@ class BillingEmailNotificationService
         $query = DB::table('billing_email_notifications')
             ->select(
                 'billing_email_notifications.*',
-                DB::raw('DATE_FORMAT(billing_email_notifications.created_at, "%d-%b-%Y") as created_at')
+                DB::raw('DATE_FORMAT(billing_email_notifications.created_at, "%Y-%m-%d") as created_at')
             );
 
         if (!empty($filters['search'])) {

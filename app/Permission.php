@@ -3,9 +3,12 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class Permission extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = ['name', 'slug', 'description', 'module'];
 
     public function rolePermissions()

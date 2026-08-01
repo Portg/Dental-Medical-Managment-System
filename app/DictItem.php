@@ -4,9 +4,12 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class DictItem extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = ['type', 'code', 'name', 'sort_order', 'is_active'];
 
     protected $casts = [

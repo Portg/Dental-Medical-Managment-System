@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 use OwenIt\Auditing\Auditable;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class ProgressNote extends Model implements AuditableContract
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes, Auditable;
 
     protected $auditExclude = ['updated_at', 'created_at'];

@@ -3,9 +3,12 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class DoctorPerformance extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $table = 'doctor_performance';
 
     protected $fillable = [

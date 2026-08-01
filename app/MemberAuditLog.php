@@ -4,9 +4,12 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class MemberAuditLog extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     public $timestamps = false;
 
     protected $fillable = [

@@ -34,7 +34,7 @@ class DebtorsReportService
         $selectColumns = [
             'invoices.id as invoice_id',
             'invoices.invoice_no',
-            DB::raw('DATE_FORMAT(invoices.created_at, "%d-%b-%Y") as invoice_date'),
+            DB::raw('DATE_FORMAT(invoices.created_at, "%Y-%m-%d") as invoice_date'),
             'patients.surname',
             'patients.othername',
             'patients.phone_no',

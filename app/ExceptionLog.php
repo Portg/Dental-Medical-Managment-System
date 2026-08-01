@@ -4,9 +4,12 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class ExceptionLog extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = [
         'exception_type',
         'message',

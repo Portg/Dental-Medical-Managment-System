@@ -5,9 +5,11 @@ namespace App;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class MedicalService extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
     protected $fillable = ['name', 'unit', 'price', 'category', 'description', 'is_active', 'is_prescription', '_who_added', 'category_id', 'is_discountable', 'is_favorite', 'sort_order'];
 

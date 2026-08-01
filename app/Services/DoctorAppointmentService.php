@@ -34,7 +34,7 @@ class DoctorAppointmentService
             ]);
             $query->select(
                 'appointments.*', 'patients.surname', 'patients.othername',
-                DB::raw('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as start_date')
+                DB::raw('DATE_FORMAT(appointments.start_date, "%Y-%m-%d") as start_date')
             );
         } else {
             $query->select('appointments.*', 'patients.surname', 'patients.othername');

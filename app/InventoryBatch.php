@@ -5,9 +5,11 @@ namespace App;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Concerns\SerializesDatesInAppTimezone;
 
 class InventoryBatch extends Model
 {
+    use SerializesDatesInAppTimezone;
     use SoftDeletes;
 
     protected $fillable = [

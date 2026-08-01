@@ -244,7 +244,7 @@ class AppointmentsController extends Controller
             ->whereNull('appointments.deleted_at')
             ->select('patients.othername', 'patients.phone_no',
                 'appointments.start_date', 'appointments.start_time',
-                DB::raw('DATE_FORMAT(appointments.start_date, "%d-%b-%Y") as formatted_date'))
+                DB::raw('DATE_FORMAT(appointments.start_date, "%Y-%m-%d") as formatted_date'))
             ->first();
 
         if (!$record || !$record->phone_no) {
