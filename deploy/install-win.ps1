@@ -810,6 +810,9 @@ try {
 
     $script:Step++
     Write-Section "Optimize caches"
+    # 注意：这里缓存的是本步骤之前的 .env。后面的「Configure OCR environment」
+    # 步骤可能把 OCR_ENABLED 改写为 false，那次改动要靠「Final validation」
+    # 步骤重跑一次 config:cache 才会生效 —— 删除那次重跑会让 OCR 降级开关静默失效。
     & $PHP_EXE artisan config:cache --no-interaction > $null 2>&1
     if ($LASTEXITCODE -ne 0) { & $PHP_EXE artisan config:clear --no-interaction > $null 2>&1 }
     & $PHP_EXE artisan route:cache --no-interaction > $null 2>&1
@@ -1041,6 +1044,8 @@ try {
 
     $script:Step++
     Write-Section "Final validation"
+    # 必须重跑：OCR 步骤若把 OCR_ENABLED 改为 false，只有这次 config:cache
+    # 能让它进入配置缓存。请勿删除（详见「Optimize caches」步骤的说明）。
     & $PHP_EXE artisan config:cache --no-interaction > $null 2>&1
     Invoke-External -FilePath $PHP_EXE -Arguments @('artisan', '--version')
 

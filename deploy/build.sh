@@ -303,15 +303,35 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
             PHP_VER_NAME="php-7.4.33-nts-Win32-vc15-x64"
             mkdir -p "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME"
             cp -r "$CACHE_DIR/php74-extracted/"* "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME/"
-            # php.ini：以 production 模板为基线，打开本系统必需的扩展
             PHP_TARGET="$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME"
+
+            # ── 补装 zip 扩展 ──
+            # PHP 7.4 的官方 Windows 包不含 php_zip.dll（PHP 8.x 才随包提供），
+            # 但 phpoffice/phpspreadsheet（Excel 导入导出）与 spatie/laravel-backup
+            # 都硬性要求 ext-zip，缺了会在运行时直接报错。从 PECL 取对应构建补进去。
+            PHP_ZIP_URL="${PHP_ZIP_DOWNLOAD_URL:-https://windows.php.net/downloads/pecl/releases/zip/1.22.8/php_zip-1.22.8-7.4-nts-vc15-x64.zip}"
+            if download_and_extract "$PHP_ZIP_URL" "$CACHE_DIR/php_zip.zip" "$CACHE_DIR/php_zip-extracted" "PHP zip 扩展"; then
+                if [[ -f "$CACHE_DIR/php_zip-extracted/php_zip.dll" ]]; then
+                    cp "$CACHE_DIR/php_zip-extracted/php_zip.dll" "$PHP_TARGET/ext/"
+                    info "已补装 php_zip.dll（PECL 1.22.8）"
+                else
+                    error "PECL 包中未找到 php_zip.dll"; ASSEMBLE_OK=false
+                fi
+            else
+                error "php_zip 扩展下载失败 —— Excel 导入导出与备份功能将不可用"; ASSEMBLE_OK=false
+            fi
+
+            # php.ini：以 production 模板为基线，打开本系统必需的扩展
             if [[ -f "$PHP_TARGET/php.ini-production" ]] && [[ ! -f "$PHP_TARGET/php.ini" ]]; then
                 cp "$PHP_TARGET/php.ini-production" "$PHP_TARGET/php.ini"
                 {
                     echo ""
                     echo "; ── 牙科诊所管理系统 Win7 版所需扩展 ──"
+                    echo "; 注意 gd 在 PHP 7.4 的 Windows 包中名为 gd2（php_gd2.dll），"
+                    echo "; PHP 8.0 起才改名为 gd —— 写成 gd 会加载失败。"
+                    echo "; bcmath / ctype / tokenizer / json / xml 已编译进核心，无需在此声明。"
                     echo "extension_dir = \"ext\""
-                    for _ext in mbstring openssl pdo_mysql mysqli fileinfo gd zip curl exif intl sodium; do
+                    for _ext in mbstring openssl pdo_mysql mysqli fileinfo gd2 zip curl exif intl sodium; do
                         echo "extension=$_ext"
                     done
                     echo "memory_limit = 512M"
@@ -851,7 +871,9 @@ if [[ -f "$OCR_REQUIREMENTS" ]]; then
         # Win7 版：Python 3.8.10 是官方最后一个提供 Windows 7 安装器的版本
         # （3.9 起最低要求 Windows 8.1），切勿升级。
         PYTHON_INSTALLER_URL="${PYTHON_DOWNLOAD_URL:-https://www.python.org/ftp/python/3.8.10/python-3.8.10-amd64.exe}"
-        PYTHON_INSTALLER_CACHE="$PROJECT_ROOT/deploy/.cache/python-installer.exe"
+        # 缓存文件名带上版本号：旧缓存是 Python 3.11.9（PHP 8 时期留下的），
+        # 若沿用固定文件名会把装不上 Win7 的 3.11 静默打进安装包。
+        PYTHON_INSTALLER_CACHE="$PROJECT_ROOT/deploy/.cache/$(basename "$PYTHON_INSTALLER_URL")"
         PYTHON_INSTALLER_DIST="$DIST_DIR/python-installer.exe"
 
         mkdir -p "$(dirname "$PYTHON_INSTALLER_CACHE")"
