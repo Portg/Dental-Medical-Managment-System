@@ -402,7 +402,7 @@ function Parse-Arguments {
     return $config
 }
 
-$script:TotalSteps = 18
+$script:TotalSteps = 19
 $script:Step = 0
 $script:ScriptRev = "20260322-ps1"
 $cfg = Parse-Arguments $args
@@ -471,6 +471,24 @@ try {
     }
 
     $script:Step++
+    Write-Section "Ensure Visual C++ runtime"
+    # PHP 的 VS16 构建依赖 VC++ 2015-2022 运行库。干净的 Win7 上通常没有，
+    # 缺失时 php.exe 会以「缺少 VCRUNTIME140.dll」直接失败，报错信息对现场
+    # 人员毫无指向性。这里无条件静默安装一次（已装则由安装器自行跳过）。
+    $vcRedist = Join-Path $INSTALL_DIR "vc_redist.x64.exe"
+    if (Test-Path $vcRedist) {
+        $vcProc = Start-Process -FilePath $vcRedist -ArgumentList @('/install', '/quiet', '/norestart') -Wait -PassThru
+        switch ($vcProc.ExitCode) {
+            0       { Write-Host "        VC++ runtime ............ 已安装" }
+            1638    { Write-Host "        VC++ runtime ............ 已是更新版本，跳过" }
+            3010    { Write-Host "        VC++ runtime ............ 已安装（重启后完全生效）" }
+            default { Write-Host ("        VC++ runtime ............ 警告：安装器返回 {0}" -f $vcProc.ExitCode) -ForegroundColor Yellow }
+        }
+    } else {
+        Write-Host "        VC++ runtime ............ 安装包内未附带，跳过" -ForegroundColor Yellow
+    }
+
+    $script:Step++
     Write-Section "Detect Laragon runtime"
     if (-not (Test-Path (Join-Path $LARAGON_DIR "bin"))) {
         if (Test-Path $LARAGON_INSTALLER) {
@@ -497,7 +515,7 @@ try {
     Write-Host ("        PHP ..................... {0}" -f $PHP_EXE)
 
     $mysqlBase = Join-Path $LARAGON_DIR "bin\mysql"
-    $mysqlDir = Get-FirstDirectoryMatch -BasePath $mysqlBase -Patterns @('mysql-8*', 'mysql-*', 'mysql*', '*') -CheckRelativePath 'bin\mysql.exe'
+    $mysqlDir = Get-FirstDirectoryMatch -BasePath $mysqlBase -Patterns @('mysql-5*', 'mysql-*', 'mysql*', '*') -CheckRelativePath 'bin\mysql.exe'
     if (-not $mysqlDir) { Fail-Step "MySQL not found under $mysqlBase" }
     $MYSQL_EXE = Join-Path $mysqlDir "bin\mysql.exe"
     $MYSQLD_EXE = Join-Path $mysqlDir "bin\mysqld.exe"
@@ -569,16 +587,18 @@ try {
         if ($phpVersionInfo.Output) {
             $runtimeHint += " PHP 启动输出: " + $phpVersionInfo.Output
         }
-        $runtimeHint += " 此安装包内置 PHP 7.4（VC15 x64）。若 php.exe 无法启动，通常是缺少 Visual C++ 2015-2019 (x64) 运行库，请先安装 vcredist_x64。"
+        $runtimeHint += " 此安装包内置 PHP 8.2（VS16 x64）。php.exe 无法启动最常见的原因是缺少 Visual C++ 2015-2022 (x64) 运行库；安装包根目录已附带 vc_redist.x64.exe，请先运行它。"
         Fail-Step $runtimeHint
     }
     $phpVersion = [Version]$script:PhpVer
-    # Win7 版锁定 PHP 7.4.x：低于 7.4 不满足 Laravel 8 要求，高于等于 8.0 则无法在 Win7 上运行。
-    if ($phpVersion -lt [Version]"7.4.0") {
-        Fail-Step "需要 PHP 7.4，当前为 $($script:PhpVer)。"
+    # Win7 版锁定 PHP 8.2.x：
+    #   下限 8.2 —— Laravel 11 的最低要求；
+    #   上限 8.3 —— PHP 8.3 起最低要求 Windows 8/Server 2012，装在 Win7 上跑不起来。
+    if ($phpVersion -lt [Version]"8.2.0") {
+        Fail-Step "需要 PHP 8.2，当前为 $($script:PhpVer)（Laravel 11 最低要求 8.2）。"
     }
-    if ($phpVersion -ge [Version]"8.0.0") {
-        Fail-Step "检测到 PHP $($script:PhpVer)。此为 Windows 7 专用安装包，运行时必须是 PHP 7.4.x（PHP 8.0 起不再支持 Windows 7）。请使用配套的 Win7 构建产物重新安装。"
+    if ($phpVersion -ge [Version]"8.3.0") {
+        Fail-Step "检测到 PHP $($script:PhpVer)。此为 Windows 7 专用安装包，运行时必须是 PHP 8.2.x —— PHP 8.3 起最低要求 Windows 8/Server 2012。请使用配套的 Win7 构建产物重新安装。"
     }
     Write-Host ("        PHP version ............. {0}" -f $script:PhpVer)
 

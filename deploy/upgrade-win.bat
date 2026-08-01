@@ -49,9 +49,9 @@ set "HELPER_DIR=%UPGRADE_PKG_DIR%\batch-helpers"
 REM 自动查找 PHP / MySQL（兼容不同 Laragon 版本的目录命名）
 set "PHP_DIR="
 set "MYSQL_DIR="
-REM PHP: php-7* → php7* → php* → 直接 php.exe → 任意子目录
-for /d %%D in ("%LARAGON_DIR%\bin\php\php-7*") do set "PHP_DIR=%%D"
-if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php7*") do set "PHP_DIR=%%D"
+REM PHP: php-8* → php8* → php* → 直接 php.exe → 任意子目录
+for /d %%D in ("%LARAGON_DIR%\bin\php\php-8*") do set "PHP_DIR=%%D"
+if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php8*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR if exist "%LARAGON_DIR%\bin\php\php.exe" set "PHP_DIR=%LARAGON_DIR%\bin\php"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\*") do if exist "%%D\php.exe" set "PHP_DIR=%%D"

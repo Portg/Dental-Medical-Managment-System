@@ -15,12 +15,9 @@ use Illuminate\Support\Facades\Validator;
  */
 class DoctorClaimController extends ApiController
 {
-    protected DoctorClaimService $service;
-
     public function __construct(
-        DoctorClaimService $service
+        protected DoctorClaimService $service
     ) {
-        $this->service = $service;
         $this->middleware('can:manage-doctor-claims');
     }
 

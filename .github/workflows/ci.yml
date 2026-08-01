@@ -2,18 +2,25 @@ name: CI
 
 on:
   push:
-    branches: [master, upgrade/laravel-10]
+    branches: [master, upgrade/laravel-10, 'win7/**']
   pull_request:
     branches: [master]
 
 jobs:
   test:
-    name: PHP Tests
+    # Win7 目标机运行 MySQL 5.7（8.0 不支持 Win7），因此必须同时在 5.7 上验证：
+    # 5.7 与 8.0 在默认排序规则、JSON 函数、CTE 支持上都有差异。
+    name: PHP Tests (MySQL ${{ matrix.mysql }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql: ['8.0', '5.7']
 
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:${{ matrix.mysql }}
         env:
           MYSQL_ROOT_PASSWORD: password
           MYSQL_DATABASE: dental_medical_test

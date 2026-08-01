@@ -14,12 +14,9 @@ use Illuminate\Support\Facades\Validator;
  */
 class InvoiceController extends ApiController
 {
-    protected InvoiceService $invoiceService;
-
     public function __construct(
-        InvoiceService $invoiceService
+        protected InvoiceService $invoiceService
     ) {
-        $this->invoiceService = $invoiceService;
         $this->middleware('can:view-invoices')->only(['index', 'show', 'search', 'amount', 'procedures']);
         $this->middleware('can:create-invoices')->only(['store']);
         $this->middleware('can:edit-invoices')->only(['approveDiscount', 'rejectDiscount', 'setCredit']);

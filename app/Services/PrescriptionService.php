@@ -445,7 +445,7 @@ class PrescriptionService
             $invoiceItems,
             [],                // no payments — unpaid
             100,               // no order discount
-            optional($prescription->prescription_date)->format('Y-m-d'),
+            $prescription->prescription_date?->format('Y-m-d'),
             'front_desk'       // pending payment
         );
     }

@@ -115,7 +115,7 @@ class WorkLogService
             $doctor = (clone $query)->where('surname', $name)->first();
         }
 
-        return optional($doctor)->id;
+        return $doctor?->id;
     }
 
     /**
@@ -332,7 +332,7 @@ class WorkLogService
             '_who_added'     => Auth::id(),
         ]);
 
-        return optional($case)->id;
+        return $case?->id;
     }
 
     private function normalizeDate($value, ?int $year): ?string

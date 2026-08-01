@@ -330,18 +330,13 @@ class TodayWorkService
         if ($queueStatus === null) {
             return 'not_arrived';
         }
-        switch ($queueStatus) {
-            case WaitingQueue::STATUS_WAITING:
-                return 'waiting';
-            case WaitingQueue::STATUS_CALLED:
-                return 'called';
-            case WaitingQueue::STATUS_IN_TREATMENT:
-                return 'in_treatment';
-            case WaitingQueue::STATUS_COMPLETED:
-                return 'completed';
-            default:
-                return 'not_arrived';
-        }
+        return match ($queueStatus) {
+            WaitingQueue::STATUS_WAITING      => 'waiting',
+            WaitingQueue::STATUS_CALLED        => 'called',
+            WaitingQueue::STATUS_IN_TREATMENT  => 'in_treatment',
+            WaitingQueue::STATUS_COMPLETED     => 'completed',
+            default                            => 'not_arrived',
+        };
     }
 
     private function renderStatusBadge(string $status): string

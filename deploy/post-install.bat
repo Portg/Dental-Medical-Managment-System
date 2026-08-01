@@ -20,8 +20,8 @@ set "HELPER_DIR=%INSTALL_DIR%\batch-helpers"
 
 REM 自动查找 PHP（兼容不同 Laragon 版本的目录命名）
 set "PHP_DIR="
-for /d %%D in ("%LARAGON_DIR%\bin\php\php-7*") do set "PHP_DIR=%%D"
-if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php7*") do set "PHP_DIR=%%D"
+for /d %%D in ("%LARAGON_DIR%\bin\php\php-8*") do set "PHP_DIR=%%D"
+if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php8*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR if exist "%LARAGON_DIR%\bin\php\php.exe" set "PHP_DIR=%LARAGON_DIR%\bin\php"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\*") do if exist "%%D\php.exe" set "PHP_DIR=%%D"
@@ -59,10 +59,11 @@ if not exist "!PHP!" (
     echo        期望路径: !PHP!
     goto :error
 )
-REM Win7 版运行时锁定 PHP 7.4（PHP 8.0 起不再支持 Windows 7）
-"!PHP!" -v 2>nul | findstr /i "PHP 7.4" >nul
+REM Win7 版运行时锁定 PHP 8.2：Laravel 11 要求 >= 8.2，
+REM 而 PHP 8.3 起最低要求 Windows 8/Server 2012，故 8.2 是 Win7 上的天花板。
+"!PHP!" -v 2>nul | findstr /i "PHP 8.2" >nul
 if !ERRORLEVEL! neq 0 (
-    echo [错误] Win7 版需要 PHP 7.4，检测到的版本不符
+    echo [错误] Win7 版需要 PHP 8.2，检测到的版本不符
     "!PHP!" -v 2>nul
     goto :error
 )

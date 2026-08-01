@@ -6,94 +6,97 @@
 
 ## ⚠️ 本分支为 Windows 7 专用版（win7/laravel-8）
 
-本分支面向 **Windows 7 SP1 x64** 目标机，整套技术栈已降级。功能与 `master` 一致，
-但**运行时版本被硬性锁死**，任何一项升上去都会让系统在 Win7 上无法运行。
+本分支面向 **Windows 7 SP1 x64** 目标机。**应用代码与 `master` 完全一致**
+（PHP 8.2 + Laravel 11），只有**部署层**做了适配。
 
-| 组件 | 本分支锁定 | 上限原因 |
+### 为什么不需要降级 PHP / Laravel
+
+一个常见误解是「PHP 8 不支持 Win7」。实际分界线在 **8.3**：
+
+> As of version 8.3.0, PHP requires Windows 8 or Windows Server 2012.
+> Versions after 7.2.0 required Windows 2008 R2 or **Windows 7**.
+> —— [php.net install.windows.manual](https://www.php.net/manual/en/install.windows.manual.php)
+
+也就是 **PHP 8.0 / 8.1 / 8.2 都支持 Win7**，因此 Laravel 11（要求 PHP ≥ 8.2）
+可以原样运行。本分支曾一度把整套栈降到 PHP 7.4 + Laravel 8，那是基于错误前提，
+已回退——降级会把 Laravel 8（2023-01 EOL）和一批 dompdf critical 漏洞带进来，
+没有任何必要。
+
+### 实际锁死的版本
+
+| 组件 | 锁定 | 上限原因 |
 | --- | --- | --- |
-| PHP | **7.4.33**（VC15 x64 NTS） | PHP 8.0 起不再支持 Win7 |
-| Laravel | **8.83** | 最后一个支持 PHP 7.4 的版本 |
-| MySQL | **5.7.44** | MySQL 8.0 不支持 Win7 |
-| Python（OCR） | **3.8.10** | 3.9 起最低要求 Win8.1 |
-| PaddleOCR | **2.7.3** | 3.x 依赖树要求 Python ≥ 3.9 |
+| PHP | **8.2.33**（VS16 x64 NTS） | 8.3 起最低要求 Windows 8 |
+| Laravel | 11.x（同 master） | 不需要改动 |
+| MySQL | **5.7.44** | MySQL 8.0 的支持平台只列到 Server 2016 / Windows 10 |
+| Python（OCR） | **3.8.10** | 3.9 起最低要求 Windows 8.1 |
+| PaddleOCR | **2.7.3** | 3.x 的依赖树要求 Python ≥ 3.9 |
 | Inno Setup `MinVersion` | **6.1sp1** | Windows 7 SP1 |
 
-目标机还需安装 **Visual C++ 2015-2019 x64 运行库**（PHP 7.4 的 VC15 依赖）。
+改动这些版本前，请先确认对应组件的 Win7 支持情况——不要凭印象。
 
-### 运行环境不再使用 Laragon 安装器
+### 运行环境不用 Laragon 安装器
 
-`laragon-wamp.exe` 的安装器要求 Windows 10，且内置 PHP 8.x，两条都过不了 Win7。
-本分支的 `build.sh --target win` 改为**自行组装运行时**：下载 laragon-core（纯文件包）
-再填入上表锁定的 PHP / MySQL / Nginx，产出目录结构与 Laragon 完全一致，
-`install-win.ps1` 无需改动即可识别。
+`laragon-wamp.exe` 的安装器自身要求 Windows 10。`build.sh --target win` 改为
+下载 laragon-core（纯文件包）再填入上表锁定的 PHP / MySQL / Nginx / Composer，
+产出目录结构与 Laragon 完全一致，`install-win.ps1` 无需改动即可识别。
 
 可用环境变量覆盖下载地址（内网镜像场景）：
 `PHP_DOWNLOAD_URL`、`MYSQL_DOWNLOAD_URL`、`NGINX_DOWNLOAD_URL`、
 `LARAGON_DOWNLOAD_URL`、`COMPOSER_DOWNLOAD_URL`、`PYTHON_DOWNLOAD_URL`、
-`PHP_ZIP_DOWNLOAD_URL`。
+`VCREDIST_DOWNLOAD_URL`、`WMF_DOWNLOAD_URL`。
 
-### PHP 7.4 的三个坑（改动 build.sh 前务必先读）
+### Win7 特有的两个前置组件（已随包提供）
 
-这三条都是实跑构建才暴露出来的，靠 grep 或经验都会漏：
+1. **VC++ 2015-2022 x64 运行库** —— PHP 的 VS16 构建依赖它。缺失时的典型症状
+   是 `php.exe` 双击无反应或提示缺少 `VCRUNTIME140.dll`。安装包根目录附带
+   `vc_redist.x64.exe`。
 
-1. **GD 扩展在 PHP 7.4 上叫 `gd2` 而不是 `gd`**
-   Windows 包里的 DLL 是 `php_gd2.dll`，PHP 8.0 起才改名 `php_gd.dll`。
-   php.ini 写成 `extension=gd` 会静默加载失败，患者照片等图像功能全挂。
+2. **WMF 5.1（PowerShell 5.1）** —— Windows 7 SP1 出厂自带 **PowerShell 2.0**，
+   而 `install-win.ps1` 用到了 `[Type]::new()`（需 PS5）与 `*>` 重定向（需 PS3），
+   在 PS2 上会在**解析阶段**就失败。`install-win.bat` 会先探测
+   `$PSVersionTable.PSVersion.Major`，低于 3 时提示并静默安装随包的
+   `wmf51\*.msu`（KB3191566），**装完需重启**再重新运行安装程序。
 
-2. **PHP 7.4 官方 Windows 包不含 `php_zip.dll`**
-   实测包内 40 个 ext 无 zip，`php7.dll` 里也没有 libzip 符号。
-   而 `phpoffice/phpspreadsheet`（Excel 导入导出）和 `spatie/laravel-backup`
-   都硬性要求 ext-zip。`build.sh` 会从 PECL 1.22.8 补装对应的
-   `7.4-nts-vc15-x64` 构建；`composer.json` 也显式声明了 `ext-zip`，
-   这样目标机执行 `composer install` 时缺扩展会立即报错。
+   > WMF 5.1 本身要求 .NET Framework 4.5+。若目标机连 .NET 4.5 都没有，
+   > 需先装 .NET 再装 WMF。
 
-3. **`bcmath` 无需声明**
-   它与 ctype / tokenizer / json / xml / simplexml / dom 一样已编译进
-   `php7.dll`（实测符号存在），在 php.ini 里写 `extension=bcmath` 反而会报错。
-   AG-005 要求的金额 `bc*()` 运算因此在 Win7 运行时上是可用的。
+### 构建机必须是 PHP 8.2.x
+
+`vendor/` 由构建机的 composer 产出。在 PHP 8.3+ 上构建可能拉进要求 8.3 的包，
+装到目标机（PHP 8.2）上就会崩。`build.sh` 会在组装运行时前校验构建机版本，
+不是 8.2.x 直接中止。
+
+### OCR 会在不支持的机器上自动降级
+
+PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年前的机器没有）。
+安装脚本执行 `import paddleocr` 自检，失败时不中止安装，而是：
+
+1. 打印警告说明原因；
+2. 把 `.env` 中的 `OCR_ENABLED` 就地改为 `false`；
+3. 继续完成其余安装。
+
+此时工作日志的图片识别关闭、提示改为手工录入（`work_log.ocr_disabled`），
+其余功能不受影响。三个 OCR 入口（`OcrService`、`WorkLogService`、`ocr:serve`）
+都会校验该开关。
+
+> `.env` 必须**就地替换**而非追加 —— Laravel 的 Env 使用不可变仓库，
+> 同一个键以文件中**首次**出现的值为准。改键请用 `batch-helpers/set_env_value.php`。
 
 ### OCR 依赖的版本交集很窄
 
 `paddleocr 2.7.3` 要求 `Pillow>=10.0.0`，而 Pillow 提供 `cp38/win_amd64`
 轮子的最高版本是 `10.4.0`（11.x 起要求 Python ≥3.9）——交集只有 10.0～10.4。
 锁到 9.x 会直接 `ResolutionImpossible`。修改 `scripts/requirements.txt` 后，
-请务必用下面的命令先验证能解析，再跑完整构建：
+请先用下面的命令验证能解析，再跑完整构建：
 
 ```bash
 pip3 download --platform win_amd64 --python-version 3.8 --only-binary=:all: \
     -d /tmp/wheeltest -r scripts/requirements.txt
 ```
 
-### OCR 会在不支持的机器上自动降级
-
-PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年前的机器没有）。
-安装脚本执行 `import paddleocr` 自检，失败时不再中止安装，而是：
-
-1. 打印警告说明原因；
-2. 把 `.env` 中的 `OCR_ENABLED` 就地改为 `false`；
-3. 继续完成其余安装。
-
-此时工作日志的图片识别关闭、提示改为手工录入（`work_log.ocr_disabled`），其余功能不受影响。
-
-> `.env` 必须**就地替换**而非追加 —— Laravel 的 Env 使用不可变仓库，
-> 同一个键以文件中**首次**出现的值为准。改键请用 `batch-helpers/set_env_value.php`。
-
-### 遗留安全公告（无法在本分支消除）
-
-`composer audit` 当前报告 **9 条**公告，均因技术栈锁死在 EOL 版本而无法升级。
-这是 Win7 部署的固有代价，交付前应让客户知情：
-
-| 包 | 条数 | 最高等级 | 说明 |
-| --- | --- | --- | --- |
-| `dompdf/dompdf` | 6 | medium | 修复版本 3.1.6+ 要求 PHP ^8.0 |
-| `laravel/framework` | 3 | **high** | Laravel 8 已 EOL；high 为 email 校验规则的 CRLF 注入，修复版本 12.60+ |
-
-> 已尽可能压低：`barryvdh/laravel-dompdf` 用的是 `^2.2`（不是历史 L8 时期的
-> `^1.0`），它同样兼容 Laravel 8 + PHP 7.4，但消除了 dompdf 1.x 的 3 条
-> critical（XXE、反序列化、URI 校验绕过）。**不要退回 `^1.0`。**
->
-> 由于 PHP 7.4 与 Laravel 8 都不再发安全补丁，建议：数据库只监听
-> `127.0.0.1`、系统不直接暴露到公网、定期离线备份。
+PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
+（`ocr()` vs `predict()`、返回结构不同），下游的表格重建与纠错逻辑无需改动。
 
 ---
 
@@ -119,7 +122,7 @@ PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年�
 
 | 形态 | 命令 | 适用场景 |
 |------|------|----------|
-| **Windows 全量安装包（Laragon 安装器模式）** | `build.sh --target win --laragon-url <laragon-wamp.exe直链>` | 首次部署 Windows；包内带 `laragon-wamp.exe`，目标机离线安装 |
+| **Windows 全量安装包（Win7 自组装运行时）** | `build.sh --target win` | 首次部署 Windows 7 SP1 x64；包内自带 PHP 8.2/MySQL 5.7/Nginx/Composer，目标机离线安装 |
 | **Linux/macOS 全量安装包** | `build.sh --target linux` | 首次部署 Linux/macOS（安装时联网装系统包） |
 | **升级包** | `build.sh --target win --upgrade` | 已有系统的版本升级 |
 
@@ -136,15 +139,15 @@ PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年�
 | Composer | 是 | PHP 包管理 |
 | zip | 是 | 打包归档 |
 | rsync | 是 | 文件同步 |
-| curl 或 wget | `--laragon-url` 时需要 | 下载 `laragon-wamp.exe` |
+| curl 或 wget | 是 | 下载 PHP/MySQL/Nginx/Python/VC++/WMF 等运行时组件 |
 | yakpro-po | 可选 | PHP 源码混淆（`composer global require nicoco007/yakpro-po`） |
 | pip3 | 可选 | 下载 OCR Python 离线包 |
 
 ### 1.2 构建命令
 
 ```bash
-# Windows（推荐）：下载 laragon-wamp.exe 并打进安装包
-./deploy/build.sh --target win --laragon-url https://github.com/leokhoa/laragon/releases/download/8.6.1/laragon-wamp.exe
+# Windows（推荐）：自动下载并组装 Win7 兼容运行时
+./deploy/build.sh --target win
 
 # Linux / macOS 安装包
 ./deploy/build.sh --target linux
@@ -156,7 +159,7 @@ PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年�
 ./deploy/build.sh --target linux --skip-obfuscate --skip-ocr
 
 # 指定版本号（覆盖 VERSION 文件）
-./deploy/build.sh --target win --version 2.0.0 --laragon-url https://github.com/leokhoa/laragon/releases/download/8.6.1/laragon-wamp.exe
+./deploy/build.sh --target win --version 2.0.0
 ```
 
 构建产物输出到 `deploy/output/` 目录。
@@ -170,7 +173,7 @@ PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年�
 | `--skip-obfuscate` | 跳过 PHP 代码混淆 |
 | `--skip-ocr` | 跳过 OCR Python wheels 下载 |
 | `--version <X.Y.Z>` | 覆盖 VERSION 文件中的版本号 |
-| `--laragon-url <url>` | Windows：指定 `laragon-wamp.exe` 下载地址并打入安装包 |
+| `--laragon-url <url>` | ⚠️ **本分支请勿使用**：会跳过 Win7 自组装运行时，改打入要求 Windows 10 的 `laragon-wamp.exe` |
 
 环境变量（均可选）:
 
@@ -178,19 +181,21 @@ PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年�
 |----------|------|
 | `PYTHON_DOWNLOAD_URL` | Windows OCR 用 Python 安装器下载地址（默认官方 3.11.x） |
 
-### 1.3.1 Windows 推荐：Laragon 安装器方式
-
-统一使用 `laragon-wamp.exe`：
+### 1.3.1 Windows：自组装运行时（本分支唯一正确方式）
 
 ```bash
-./deploy/build.sh --target win --laragon-url https://github.com/leokhoa/laragon/releases/download/8.6.1/laragon-wamp.exe
+./deploy/build.sh --target win
 ```
 
 说明：
-- 构建时下载并缓存到 `deploy/.cache/laragon-wamp.exe`
-- 打包时原样复制到安装包根目录
-- 目标 Windows 机安装阶段会静默安装 Laragon 到 `{安装目录}\laragon`
-- 适合“标准化交付 + 低环境差异”的部署场景
+- 构建时自动下载并组装 PHP 8.2 / MySQL 5.7 / Nginx / Composer 到
+  `deploy/.cache/win7-runtime`，目录结构与 Laragon 一致，后续构建复用缓存
+- 同时下载 VC++ 2015-2022 x64 运行库与 WMF 5.1，一并打进安装包
+- 打包时整体复制到安装包的 `laragon/` 目录，目标机无需联网
+
+> ⚠️ **不要用 `--laragon-url`。** 传入该参数会跳过上述自组装流程，
+> 转而打入 `laragon-wamp.exe` —— 那个安装器自身要求 Windows 10，
+> 在 Win7 上双击即失败。该参数仅为兼容旧的 Win10 交付流程而保留。
 
 ### 1.4 构建流程详解
 
@@ -211,21 +216,32 @@ build.sh 执行步骤:
       │
   [7] 下载 OCR Python wheels（可选，--skip-ocr 跳过，按 --target 平台区分）
       │
-  [8] 复制 `laragon-wamp.exe` 到安装包（仅 Windows 且提供 `--laragon-url`）
+  [8] 组装并复制 Win7 运行时到安装包（PHP 8.2/MySQL 5.7/Nginx/Composer
+      + VC++ 运行库 + WMF 5.1）
       │
   [9] 生成升级包元数据（仅 --upgrade：env.patch + UPGRADE.md）
       │
   [10] zip 压缩 → deploy/output/dental-clinic-X.Y.Z-{target}.zip
 ```
 
-### 1.5 Laragon 安装器缓存
+### 1.5 运行时构建缓存
 
-当使用 `--target win --laragon-url <.../laragon-wamp.exe>` 时：
+`--target win` 会在 `deploy/.cache/` 下建立缓存，后续构建直接复用：
 
 ```
 deploy/.cache/
-└── laragon-wamp.exe        ← 构建缓存（下次可复用）
+├── win7-runtime/           ← 组装好的运行时（PHP/MySQL/Nginx/Composer）
+├── php82.zip               ← PHP 8.2.33 原始包
+├── mysql57.zip             ← MySQL 5.7.44 原始包
+├── nginx-win7.zip          ← Nginx 原始包
+├── vc_redist.x64.exe       ← VC++ 2015-2022 运行库
+├── wmf51-extracted/        ← WMF 5.1（PowerShell 5.1 for Win7）
+├── python-3.8.10-amd64.exe ← OCR 用 Python 安装器
+└── ocr-wheels-win/         ← OCR 离线 wheel 包
 ```
+
+缓存以 PHP + MySQL + Composer 三者齐备为有效判据；任一缺失会重新组装，
+避免上次下载中断留下的残缺产物被反复复用。需强制刷新时删除 `win7-runtime/`。
 
 **缓存机制**：
 - 首次构建会下载 `laragon-wamp.exe`
@@ -248,7 +264,9 @@ dental-clinic-1.0.0-win/
 ├── check.sh / backup-restore.sh / export-data.sh  ← 运维工具
 ├── .env.deploy               ← 环境变量模板
 ├── VERSION                   ← 版本号
-├── laragon-wamp.exe          ← Laragon 安装器（由 --laragon-url 提供）
+├── laragon/                  ← 自组装运行时（PHP 8.2/MySQL 5.7/Nginx/Composer）
+├── vc_redist.x64.exe         ← VC++ 2015-2022 x64 运行库
+├── wmf51/                    ← WMF 5.1（PowerShell 2.0 的机器需先装）
 ├── python-installer.exe      ← OCR 用 Python 安装器（可选）
 ├── ocr-wheels/               ← OCR Python 离线包 (可选)
 │
@@ -296,11 +314,11 @@ dental-clinic-1.0.0-win-upgrade/
 5. 浏览器自动打开 http://localhost/dental
 ```
 
-#### 推荐标准流程（Laragon 安装器 + 还原基础数据 + 替换部署包）
+#### 推荐标准流程（自组装运行时 + 还原基础数据 + 替换部署包）
 
 ```
 开发机：
-1) ./deploy/build.sh --target win --laragon-url <laragon-wamp.exe 直链>
+1) ./deploy/build.sh --target win
 2) 交付 deploy/output/dental-clinic-X.Y.Z-win.zip
 
 目标 Windows 机：

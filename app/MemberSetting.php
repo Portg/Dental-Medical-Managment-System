@@ -76,16 +76,12 @@ class MemberSetting extends Model
             return null;
         }
 
-        switch ($type) {
-            case 'boolean':
-                return (bool) $value;
-            case 'integer':
-                return (int) $value;
-            case 'json':
-                return json_decode($value, true);
-            default:
-                return $value;
-        }
+        return match ($type) {
+            'boolean' => (bool) $value,
+            'integer' => (int) $value,
+            'json'    => json_decode($value, true),
+            default   => $value,
+        };
     }
 
     /**

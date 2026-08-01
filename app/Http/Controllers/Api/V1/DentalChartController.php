@@ -14,12 +14,9 @@ use Illuminate\Support\Facades\Validator;
  */
 class DentalChartController extends ApiController
 {
-    protected DentalChartService $service;
-
     public function __construct(
-        DentalChartService $service
+        protected DentalChartService $service
     ) {
-        $this->service = $service;
         $this->middleware('can:edit-patients');
     }
 

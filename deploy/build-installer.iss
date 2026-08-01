@@ -33,10 +33,11 @@ WizardStyle=modern
 PrivilegesRequired=admin
 DiskSpanning=no
 ; Win7 版：最低 Windows 7 SP1（NT 6.1 SP1）。
-; 注意运行时组件必须同步为 Win7 兼容版本——PHP 7.4.33(VC15)、MySQL 5.7.x、Python 3.8.x，
-; 任何一项升到 PHP 8 / MySQL 8 / Python 3.9+，安装包虽能启动，但装完必定无法运行。
+; 运行时组件必须同步保持 Win7 兼容——PHP 8.2.x(VS16)、MySQL 5.7.x、Python 3.8.x。
+; 各自的上限原因：PHP 8.3 起要求 Windows 8；MySQL 8.0 支持平台只到 Server 2016；
+; Python 3.9 起要求 Windows 8.1。任何一项越界，安装包能启动但装完跑不起来。
 MinVersion=6.1sp1
-; 仅支持 x64（PHP 7.4 x64 + MySQL 5.7 winx64）
+; 仅支持 x64（PHP 8.2 x64 + MySQL 5.7 winx64）
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 ; 中文界面
@@ -58,12 +59,18 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopShortcut}"; GroupDescription
 
 [Files]
 ; 项目代码（由 build.sh --target win 构建）
-; 排除 laragon —— 它是运行环境，须落到 {app}\laragon 而非项目目录内。
-Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels,laragon"
+; 排除 laragon / wmf51 / vc_redist —— 它们属于运行环境与前置安装包，
+; 各有独立的 DestDir，不该被复制进项目目录（否则白占 1.3GB+）。
+Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels,laragon,wmf51,vc_redist.x64.exe,python-installer.exe"
 
-; Win7 运行环境：PHP 7.4.33 / MySQL 5.7.44 / Nginx，由 build.sh 自组装。
+; Win7 运行环境：PHP 8.2.33 / MySQL 5.7.44 / Nginx / Composer，由 build.sh 自组装。
 ; install-win.ps1 从 {app}\laragon\bin\{php,mysql,nginx} 自动发现版本目录。
 Source: "dist\laragon\*"; DestDir: "{app}\laragon"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\laragon'))
+
+; VC++ 2015-2022 x64 运行库（PHP VS16 构建的依赖）
+Source: "dist\vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+; WMF 5.1：Win7 自带 PowerShell 2.0，install-win.bat 会按需静默安装
+Source: "dist\wmf51\*"; DestDir: "{app}\wmf51"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\wmf51'))
 
 ; OCR Python 离线包
 Source: "dist\ocr-wheels\*"; DestDir: "{app}\ocr-wheels"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\ocr-wheels'))

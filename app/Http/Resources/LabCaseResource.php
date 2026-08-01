@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class LabCaseResource extends JsonResource
 {
-    public function toArray($request): array
+    public function toArray(Request $request): array
     {
         return [
             'id'                    => $this->id,
@@ -18,9 +18,9 @@ class LabCaseResource extends JsonResource
             'teeth_positions'       => $this->teeth_positions,
             'special_requirements'  => $this->special_requirements,
             'status'                => $this->status,
-            'sent_date'             => optional($this->sent_date)->format('Y-m-d'),
-            'expected_return_date'  => optional($this->expected_return_date)->format('Y-m-d'),
-            'actual_return_date'    => optional($this->actual_return_date)->format('Y-m-d'),
+            'sent_date'             => $this->sent_date?->format('Y-m-d'),
+            'expected_return_date'  => $this->expected_return_date?->format('Y-m-d'),
+            'actual_return_date'    => $this->actual_return_date?->format('Y-m-d'),
             'lab_fee'               => (float) $this->lab_fee,
             'patient_charge'        => (float) $this->patient_charge,
             'profit'                => $this->profit,
@@ -47,8 +47,8 @@ class LabCaseResource extends JsonResource
             ]),
             'appointment_id'        => $this->appointment_id,
             'medical_case_id'       => $this->medical_case_id,
-            'created_at'            => optional($this->created_at)->toIso8601String(),
-            'updated_at'            => optional($this->updated_at)->toIso8601String(),
+            'created_at'            => $this->created_at?->toIso8601String(),
+            'updated_at'            => $this->updated_at?->toIso8601String(),
         ];
     }
 }

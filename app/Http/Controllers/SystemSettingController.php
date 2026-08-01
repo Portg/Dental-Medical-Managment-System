@@ -64,33 +64,30 @@ class SystemSettingController extends Controller
 
     private function validationRules(string $group): ?array
     {
-        switch ($group) {
-            case 'clinic':
-                return [
-                    'start_time'                    => 'required|date_format:H:i',
-                    'end_time'                      => 'required|date_format:H:i|after:start_time',
-                    'slot_interval'                 => 'required|integer|in:15,30,60',
-                    'default_duration'              => 'required|integer|min:15|max:240',
-                    'grid_start_hour'               => 'required|integer|min:0|max:23',
-                    'grid_end_hour'                 => 'required|integer|min:1|max:24',
-                    'hide_off_duty_doctors'         => 'required|boolean',
-                    'show_appointment_notes'        => 'required|boolean',
-                    'allow_overbooking'             => 'required|boolean',
-                    'max_advance_days'              => 'required|integer|min:0',
-                    'min_advance_hours'             => 'required|integer|min:0',
-                    'require_schedule_for_booking'  => 'required|boolean',
-                ];
-            case 'member':
-                return [
-                    'points_enabled'         => 'required|boolean',
-                    'points_expiry_days'     => 'required|integer|min:0',
-                    'card_number_mode'       => 'required|in:auto,phone,manual',
-                    'referral_bonus_enabled' => 'required|boolean',
-                    'points_exchange_rate'   => 'required|integer|min:1',
-                    'points_exchange_enabled'=> 'required|boolean',
-                ];
-            default:
-                return null;
-        }
+        return match ($group) {
+            'clinic' => [
+                'start_time'                    => 'required|date_format:H:i',
+                'end_time'                      => 'required|date_format:H:i|after:start_time',
+                'slot_interval'                 => 'required|integer|in:15,30,60',
+                'default_duration'              => 'required|integer|min:15|max:240',
+                'grid_start_hour'               => 'required|integer|min:0|max:23',
+                'grid_end_hour'                 => 'required|integer|min:1|max:24',
+                'hide_off_duty_doctors'         => 'required|boolean',
+                'show_appointment_notes'        => 'required|boolean',
+                'allow_overbooking'             => 'required|boolean',
+                'max_advance_days'              => 'required|integer|min:0',
+                'min_advance_hours'             => 'required|integer|min:0',
+                'require_schedule_for_booking'  => 'required|boolean',
+            ],
+            'member' => [
+                'points_enabled'         => 'required|boolean',
+                'points_expiry_days'     => 'required|integer|min:0',
+                'card_number_mode'       => 'required|in:auto,phone,manual',
+                'referral_bonus_enabled' => 'required|boolean',
+                'points_exchange_rate'   => 'required|integer|min:1',
+                'points_exchange_enabled'=> 'required|boolean',
+            ],
+            default => null,
+        };
     }
 }

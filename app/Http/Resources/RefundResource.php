@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class RefundResource extends JsonResource
 {
-    public function toArray($request): array
+    public function toArray(Request $request): array
     {
         return [
             'id'               => $this->id,
@@ -24,15 +24,15 @@ class RefundResource extends JsonResource
             ]),
             'refund_amount'    => $this->refund_amount,
             'refund_reason'    => $this->refund_reason,
-            'refund_date'      => optional($this->refund_date)->toIso8601String(),
+            'refund_date'      => $this->refund_date?->toIso8601String(),
             'refund_method'    => $this->refund_method,
             'approval_status'  => $this->approval_status,
             'approved_by'      => $this->approved_by,
-            'approved_at'      => optional($this->approved_at)->toIso8601String(),
+            'approved_at'      => $this->approved_at?->toIso8601String(),
             'rejection_reason' => $this->rejection_reason,
             'branch_id'        => $this->branch_id,
-            'created_at'       => optional($this->created_at)->toIso8601String(),
-            'updated_at'       => optional($this->updated_at)->toIso8601String(),
+            'created_at'       => $this->created_at?->toIso8601String(),
+            'updated_at'       => $this->updated_at?->toIso8601String(),
         ];
     }
 }

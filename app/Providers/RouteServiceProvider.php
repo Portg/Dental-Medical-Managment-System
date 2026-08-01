@@ -94,13 +94,9 @@ class RouteServiceProvider extends ServiceProvider
 
     protected function mapApiV1Routes()
     {
-        // 注意：routes/api/v1.php 全部使用 ::class 全限定类名，
-        // Laravel 8 的 Router 会给未以 \ 开头的类名再拼一次 group namespace，
-        // 因此这里不能设置 ->namespace()，否则会出现双重前缀。
-        // routes/web.php、routes/api.php 用的是 'Controller@method' 字符串式，
-        // 仍需保留各自的 ->namespace()。
         Route::prefix('api/v1')
              ->middleware(['api', 'auth:sanctum', 'api.version:v1'])
+             ->namespace($this->namespace . '\Api\V1')
              ->group(base_path('routes/api/v1.php'));
     }
 }

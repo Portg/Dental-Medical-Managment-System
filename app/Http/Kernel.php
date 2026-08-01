@@ -54,8 +54,7 @@ class Kernel extends HttpKernel
      *
      * @var array
      */
-    // 注意：Laravel 11 叫 $middlewareAliases，Laravel 8 只认 $routeMiddleware。
-    protected $routeMiddleware = [
+    protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,

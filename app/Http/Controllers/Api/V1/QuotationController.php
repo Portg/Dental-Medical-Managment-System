@@ -15,12 +15,9 @@ use Illuminate\Support\Facades\Validator;
  */
 class QuotationController extends ApiController
 {
-    protected QuotationService $service;
-
     public function __construct(
-        QuotationService $service
+        protected QuotationService $service
     ) {
-        $this->service = $service;
         $this->middleware('can:manage-quotations');
     }
 

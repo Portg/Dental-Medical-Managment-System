@@ -9,12 +9,9 @@ use Yajra\DataTables\DataTables;
 
 class LabController extends Controller
 {
-    private LabService $labService;
-
     public function __construct(
-        LabService $labService
+        private LabService $labService,
     ) {
-        $this->labService = $labService;
         $this->middleware('can:manage-labs');
     }
 

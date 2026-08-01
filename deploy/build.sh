@@ -244,43 +244,59 @@ fi
 # ════════════════════════════════════════════════════════════════════════
 #  组装 Windows 7 运行环境（本分支默认路径，替代 laragon-wamp.exe）
 #
-#  为什么不用 laragon-wamp.exe：它的安装器要求 Windows 10，且内置 PHP 8.x，
-#  两条都过不了 Win7。这里改为下载 laragon-core（纯文件，无安装器）再自行
-#  填入 Win7 兼容的 PHP / MySQL / Nginx，产出目录结构与 Laragon 完全一致，
-#  install-win.ps1 无需改动即可识别。
+#  为什么不用 laragon-wamp.exe：它的安装器要求 Windows 10。这里改为下载
+#  laragon-core（纯文件，无安装器）再自行填入运行时，产出目录结构与 Laragon
+#  完全一致，install-win.ps1 无需改动即可识别。
 #
-#  版本锁定原因（改动前务必确认 Win7 兼容性）：
-#    PHP   7.4.33 VC15 x64 NTS — PHP 8.0 起不再支持 Win7
-#    MySQL 5.7.44 winx64      — MySQL 8.0 不支持 Win7
-#    Nginx 1.24.0             — 保守选择，Win7 上验证充分
-#  另需目标机安装 VC++ 2015-2019 x64 运行库（PHP 7.4 VC15 依赖）。
+#  版本锁定原因（改动前务必逐条确认 Win7 兼容性）：
+#    PHP   8.2.33 VS16 x64 NTS — PHP 8.3 起最低要求 Windows 8/Server 2012，
+#                                8.2 仍支持 Win7/2008 R2，故 8.2 是天花板。
+#                                （见 php.net install.windows.manual）
+#    MySQL 5.7.44 winx64       — MySQL 8.0 的支持平台仅列到 Server 2016/Win10
+#    Nginx 1.24.0              — 保守选择，Win7 上验证充分
+#    Python 3.8.10（OCR）      — 3.9 起最低要求 Windows 8.1
+#
+#  另随包提供 VC++ 2015-2022 x64 运行库与 WMF 5.1：
+#    前者是 PHP VS16 构建的依赖，后者因为 Win7 自带 PowerShell 2.0，
+#    而 install-win.ps1 用到了 PS3+ 语法。
 # ════════════════════════════════════════════════════════════════════════
 WIN7_RUNTIME_DIR=""
 if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
     CACHE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.cache"
     ASSEMBLED_DIR="$CACHE_DIR/win7-runtime"
 
-    PHP_URL="${PHP_DOWNLOAD_URL:-https://windows.php.net/downloads/releases/archives/php-7.4.33-nts-Win32-vc15-x64.zip}"
+    PHP_URL="${PHP_DOWNLOAD_URL:-https://windows.php.net/downloads/releases/php-8.2.33-nts-Win32-vs16-x64.zip}"
     MYSQL_URL="${MYSQL_DOWNLOAD_URL:-https://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-5.7.44-winx64.zip}"
     NGINX_URL="${NGINX_DOWNLOAD_URL:-https://nginx.org/download/nginx-1.24.0.zip}"
     LARAGON_CORE_URL="${LARAGON_DOWNLOAD_URL:-https://github.com/leokhoa/laragon/archive/refs/tags/8.6.1.zip}"
-    COMPOSER_URL="${COMPOSER_DOWNLOAD_URL:-https://getcomposer.org/download/2.2.25/composer.phar}"
+    COMPOSER_URL="${COMPOSER_DOWNLOAD_URL:-https://getcomposer.org/download/latest-stable/composer.phar}"
 
-    # 缓存完整性检查：PHP 与 MySQL 都就位才算可复用
-    HAS_PHP=false; HAS_MYSQL=false
+    # 构建机 PHP 必须是 8.2.x —— vendor/ 由本机的 composer 产出，
+    # 在 8.3+ 上构建可能拉进要求 8.3 的包，装到 Win7 目标机上就会崩。
+    BUILD_PHP_VER="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo "")"
+    if [[ "$BUILD_PHP_VER" != "8.2" ]]; then
+        fatal "构建机 PHP 版本为 ${BUILD_PHP_VER:-未知}，Win7 包必须在 PHP 8.2.x 上构建（目标机运行时为 8.2，8.3+ 不支持 Win7）"
+    fi
+    info "构建机 PHP: $(php -r 'echo PHP_VERSION;') ✓"
+
+    # 缓存完整性检查：PHP / MySQL / Composer 三者齐备才算可复用。
+    # 只查 PHP+MySQL 会让上次 Composer 下载失败的残缺缓存被反复复用，
+    # 而安装脚本是强制要求 Composer 的。
+    HAS_PHP=false; HAS_MYSQL=false; HAS_COMPOSER=false
     for _d in "$ASSEMBLED_DIR"/bin/php/*/; do
         [[ -f "${_d}php.exe" ]] && HAS_PHP=true && break
     done
     for _d in "$ASSEMBLED_DIR"/bin/mysql/*/; do
         [[ -f "${_d}bin/mysqld.exe" ]] && HAS_MYSQL=true && break
     done
+    [[ -s "$ASSEMBLED_DIR/bin/composer/composer.phar" ]] && HAS_COMPOSER=true
 
-    if [[ "$HAS_PHP" == true ]] && [[ "$HAS_MYSQL" == true ]]; then
+    if [[ "$HAS_PHP" == true ]] && [[ "$HAS_MYSQL" == true ]] && [[ "$HAS_COMPOSER" == true ]]; then
         info "使用已组装的 Win7 运行环境缓存: $ASSEMBLED_DIR"
         WIN7_RUNTIME_DIR="$ASSEMBLED_DIR"
     else
         echo ""
-        echo -e "${BOLD}${CYAN}组装 Windows 7 运行环境 (PHP 7.4 + MySQL 5.7 + Nginx + Composer)${NC}"
+        echo -e "${BOLD}${CYAN}组装 Windows 7 运行环境 (PHP 8.2 + MySQL 5.7 + Nginx + Composer)${NC}"
         echo ""
 
         mkdir -p "$ASSEMBLED_DIR"/bin/{php,mysql,nginx,composer} \
@@ -298,28 +314,24 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
             warn "Laragon core 获取失败，将只使用自组装的 PHP/MySQL/Nginx"
         fi
 
-        # ── PHP 7.4.33（VC15 x64 NTS）
-        if download_and_extract "$PHP_URL" "$CACHE_DIR/php74.zip" "$CACHE_DIR/php74-extracted" "PHP 7.4"; then
-            PHP_VER_NAME="php-7.4.33-nts-Win32-vc15-x64"
+        # ── PHP 8.2.33（VS16 x64 NTS）—— Win7 上可用的最高 PHP 分支
+        if download_and_extract "$PHP_URL" "$CACHE_DIR/php82.zip" "$CACHE_DIR/php82-extracted" "PHP 8.2"; then
+            PHP_VER_NAME="$(basename "$PHP_URL" .zip)"
             mkdir -p "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME"
-            cp -r "$CACHE_DIR/php74-extracted/"* "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME/"
+            cp -r "$CACHE_DIR/php82-extracted/"* "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME/"
             PHP_TARGET="$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME"
 
-            # ── 补装 zip 扩展 ──
-            # PHP 7.4 的官方 Windows 包不含 php_zip.dll（PHP 8.x 才随包提供），
-            # 但 phpoffice/phpspreadsheet（Excel 导入导出）与 spatie/laravel-backup
-            # 都硬性要求 ext-zip，缺了会在运行时直接报错。从 PECL 取对应构建补进去。
-            PHP_ZIP_URL="${PHP_ZIP_DOWNLOAD_URL:-https://windows.php.net/downloads/pecl/releases/zip/1.22.8/php_zip-1.22.8-7.4-nts-vc15-x64.zip}"
-            if download_and_extract "$PHP_ZIP_URL" "$CACHE_DIR/php_zip.zip" "$CACHE_DIR/php_zip-extracted" "PHP zip 扩展"; then
-                if [[ -f "$CACHE_DIR/php_zip-extracted/php_zip.dll" ]]; then
-                    cp "$CACHE_DIR/php_zip-extracted/php_zip.dll" "$PHP_TARGET/ext/"
-                    info "已补装 php_zip.dll（PECL 1.22.8）"
-                else
-                    error "PECL 包中未找到 php_zip.dll"; ASSEMBLE_OK=false
+            # 必需扩展必须逐个确认 DLL 真的在包内 —— 不同 PHP 分支的扩展
+            # 集合与命名并不一致（例如 7.4 的 GD 叫 gd2 且不带 zip），
+            # 想当然写进 php.ini 只会在目标机上静默加载失败。
+            PHP_EXTS=(mbstring openssl pdo_mysql mysqli fileinfo gd zip curl exif intl sodium)
+            for _ext in "${PHP_EXTS[@]}"; do
+                if [[ ! -f "$PHP_TARGET/ext/php_${_ext}.dll" ]]; then
+                    error "PHP 包内缺少 ext/php_${_ext}.dll —— 该扩展是本系统必需项"
+                    ASSEMBLE_OK=false
                 fi
-            else
-                error "php_zip 扩展下载失败 —— Excel 导入导出与备份功能将不可用"; ASSEMBLE_OK=false
-            fi
+            done
+            [[ "$ASSEMBLE_OK" == true ]] && info "必需扩展 DLL 齐备（${#PHP_EXTS[@]} 项）"
 
             # php.ini：以 production 模板为基线，打开本系统必需的扩展
             if [[ -f "$PHP_TARGET/php.ini-production" ]] && [[ ! -f "$PHP_TARGET/php.ini" ]]; then
@@ -327,11 +339,10 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
                 {
                     echo ""
                     echo "; ── 牙科诊所管理系统 Win7 版所需扩展 ──"
-                    echo "; 注意 gd 在 PHP 7.4 的 Windows 包中名为 gd2（php_gd2.dll），"
-                    echo "; PHP 8.0 起才改名为 gd —— 写成 gd 会加载失败。"
+                    echo "; 扩展名与 ext/php_*.dll 的文件名一一对应，上面已逐个校验存在性。"
                     echo "; bcmath / ctype / tokenizer / json / xml 已编译进核心，无需在此声明。"
                     echo "extension_dir = \"ext\""
-                    for _ext in mbstring openssl pdo_mysql mysqli fileinfo gd2 zip curl exif intl sodium; do
+                    for _ext in "${PHP_EXTS[@]}"; do
                         echo "extension=$_ext"
                     done
                     echo "memory_limit = 512M"
@@ -344,7 +355,7 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
                 info "已生成 php.ini（含必需扩展）"
             fi
         else
-            error "PHP 7.4 下载失败"; ASSEMBLE_OK=false
+            error "PHP 8.2 下载失败"; ASSEMBLE_OK=false
         fi
 
         # ── MySQL 5.7.44
@@ -376,16 +387,47 @@ if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
                 cp -r "$CACHE_DIR/nginx-win7-extracted/"* "$ASSEMBLED_DIR/bin/nginx/nginx-1.24.0/"
             fi
         else
-            warn "Nginx 下载失败，目标机需自行提供"
+            error "Nginx 下载失败"; ASSEMBLE_OK=false
         fi
 
-        # ── Composer（2.2 LTS，兼容 PHP 7.4）
-        if [[ ! -f "$ASSEMBLED_DIR/bin/composer/composer.phar" ]]; then
-            if curl -fsSL --retry 2 -o "$ASSEMBLED_DIR/bin/composer/composer.phar" "$COMPOSER_URL"; then
-                info "Composer 2.2 LTS 已就位"
+        # ── Composer
+        # 安装脚本把 Composer 当作硬性前置（install-win.ps1 找不到就退出），
+        # 所以这里下载失败必须让整个组装失败，不能只 warn 后把残缺缓存留下。
+        if [[ ! -s "$ASSEMBLED_DIR/bin/composer/composer.phar" ]]; then
+            if curl -fsSL --retry 2 -o "$ASSEMBLED_DIR/bin/composer/composer.phar" "$COMPOSER_URL" \
+               && [[ -s "$ASSEMBLED_DIR/bin/composer/composer.phar" ]]; then
+                info "Composer 已就位"
             else
-                warn "Composer 下载失败"
+                rm -f "$ASSEMBLED_DIR/bin/composer/composer.phar"
+                error "Composer 下载失败 —— 安装脚本强制要求 Composer"; ASSEMBLE_OK=false
             fi
+        fi
+
+        # ── VC++ 2015-2022 x64 运行库
+        # PHP 的 VS16 构建依赖它；Win7 常见的「php.exe 双击无反应/缺少 VCRUNTIME140.dll」
+        # 就是缺这个。随包提供，避免要求现场联网。
+        VCREDIST_URL="${VCREDIST_DOWNLOAD_URL:-https://aka.ms/vs/17/release/vc_redist.x64.exe}"
+        VCREDIST_CACHE="$CACHE_DIR/vc_redist.x64.exe"
+        if [[ ! -s "$VCREDIST_CACHE" ]]; then
+            if curl -fsSL --retry 2 -o "$VCREDIST_CACHE" "$VCREDIST_URL" && [[ -s "$VCREDIST_CACHE" ]]; then
+                info "VC++ 2015-2022 x64 运行库已下载"
+            else
+                rm -f "$VCREDIST_CACHE"
+                error "VC++ 运行库下载失败 —— PHP 在目标机上将无法启动"; ASSEMBLE_OK=false
+            fi
+        else
+            info "VC++ 运行库: 使用缓存"
+        fi
+
+        # ── WMF 5.1（PowerShell 5.1 for Win7 SP1）
+        # Win7 自带 PowerShell 2.0，而 install-win.ps1 使用了 [T]::new()（PS5）
+        # 与 *> 重定向（PS3），在 PS2 上会直接解析失败。安装前按需静默安装。
+        # 注意 WMF 5.1 本身要求 .NET Framework 4.5+。
+        WMF_URL="${WMF_DOWNLOAD_URL:-https://download.microsoft.com/download/6/F/5/6F5FF66C-6775-42B0-86C4-47D41F2DA187/Win7AndW2K8R2-KB3191566-x64.zip}"
+        if download_and_extract "$WMF_URL" "$CACHE_DIR/wmf51.zip" "$CACHE_DIR/wmf51-extracted" "WMF 5.1 (PowerShell 5.1)"; then
+            info "WMF 5.1 已就位"
+        else
+            error "WMF 5.1 下载失败 —— Win7 自带的 PowerShell 2.0 无法运行安装脚本"; ASSEMBLE_OK=false
         fi
 
         if [[ "$ASSEMBLE_OK" == true ]]; then
@@ -804,20 +846,39 @@ taskkill /f /im php.exe      >nul 2>&1
 taskkill /f /im php-cgi.exe  >nul 2>&1
 timeout /t 2 /nobreak >nul 2>&1
 
-echo  [2/3] Copying application files...
-for %%D in (app bootstrap config database public resources routes storage vendor) do (
+echo  [2/3] Copying runtime and application files...
+
+REM 运行时（PHP/MySQL/Nginx/Composer）必须先落到 %INSTALL_DIR%\laragon，
+REM 否则 install-win.ps1 会因找不到 Laragon 目录而直接退出。
+if exist "%PKG_DIR%\laragon" (
+    echo         Copying runtime ^(about 1.3 GB, please wait^)...
+    xcopy "%PKG_DIR%\laragon" "%INSTALL_DIR%\laragon\" /E /I /H /Y /Q >nul 2>&1
+)
+
+for %%D in (app bootstrap config database public resources routes storage vendor scripts) do (
     if exist "%PKG_DIR%\%%D" (
         xcopy "%PKG_DIR%\%%D" "%INSTALL_DIR%\laragon\www\dental\%%D\" /E /I /H /Y /Q >nul 2>&1
     )
 )
-if exist "%PKG_DIR%\.env.deploy" copy "%PKG_DIR%\.env.deploy" "%INSTALL_DIR%\laragon\www\dental\.env.deploy" /Y >nul 2>&1
-if exist "%PKG_DIR%\VERSION"     copy "%PKG_DIR%\VERSION"     "%INSTALL_DIR%\laragon\www\dental\VERSION" /Y >nul 2>&1
+
+REM artisan 与 composer.json/lock 缺一不可：
+REM install-win.ps1 会显式校验 artisan 是否存在，缺了直接判定「项目不完整」。
+for %%F in (artisan composer.json composer.lock .env.deploy VERSION .htaccess) do (
+    if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\laragon\www\dental\%%F" /Y >nul 2>&1
+)
 
 for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
     if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>&1
 )
 if exist "%PKG_DIR%\batch-helpers" xcopy "%PKG_DIR%\batch-helpers" "%INSTALL_DIR%\batch-helpers\" /E /I /H /Y /Q >nul 2>&1
-echo         App files copied.
+
+REM OCR 离线资源与运行库安装器（安装脚本按需取用）
+if exist "%PKG_DIR%\ocr-wheels" xcopy "%PKG_DIR%\ocr-wheels" "%INSTALL_DIR%\ocr-wheels\" /E /I /H /Y /Q >nul 2>&1
+for %%F in (python-installer.exe vc_redist.x64.exe) do (
+    if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>&1
+)
+if exist "%PKG_DIR%\wmf51" xcopy "%PKG_DIR%\wmf51" "%INSTALL_DIR%\wmf51\" /E /I /H /Y /Q >nul 2>&1
+echo         Files copied.
 
 echo  [3/3] Running installer...
 echo.
@@ -991,12 +1052,31 @@ if [[ -n "$LARAGON_INSTALLER_EXE" ]]; then
     warn "注意：laragon-wamp.exe 需要 Windows 10，且内置 PHP 8.x，不能用于 Win7 目标机"
 fi
 
-# ── 复制自组装的 Win7 运行环境（PHP 7.4 / MySQL 5.7 / Nginx）
+# ── 复制自组装的 Win7 运行环境（PHP 8.2 / MySQL 5.7 / Nginx / Composer）
 # 目录名必须是 laragon —— install-win.ps1 以 {安装目录}\laragon 为根定位运行时。
 if [[ -n "$WIN7_RUNTIME_DIR" ]] && [[ -d "$WIN7_RUNTIME_DIR" ]]; then
     cp -r "$WIN7_RUNTIME_DIR" "$DIST_DIR/laragon"
     RUNTIME_SIZE=$(du -sh "$DIST_DIR/laragon" 2>/dev/null | cut -f1)
     info "复制 Win7 运行环境到安装包 ($RUNTIME_SIZE)"
+
+    # VC++ 运行库（PHP VS16 构建的依赖）
+    if [[ -s "$CACHE_DIR/vc_redist.x64.exe" ]]; then
+        cp "$CACHE_DIR/vc_redist.x64.exe" "$DIST_DIR/vc_redist.x64.exe"
+        info "复制 VC++ 2015-2022 x64 运行库"
+    fi
+
+    # WMF 5.1（Win7 自带 PowerShell 2.0，装不了就跑不了安装脚本）
+    if [[ -d "$CACHE_DIR/wmf51-extracted" ]]; then
+        mkdir -p "$DIST_DIR/wmf51"
+        find "$CACHE_DIR/wmf51-extracted" -name '*.msu' -exec cp {} "$DIST_DIR/wmf51/" \; 2>/dev/null || true
+        WMF_COUNT=$(find "$DIST_DIR/wmf51" -name '*.msu' | wc -l | tr -d ' ')
+        if [[ "$WMF_COUNT" -gt 0 ]]; then
+            info "复制 WMF 5.1 安装包（${WMF_COUNT} 个 .msu）"
+        else
+            rm -rf "$DIST_DIR/wmf51"
+            warn "WMF 5.1 压缩包内未找到 .msu，PowerShell 2.0 的机器需手动升级"
+        fi
+    fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════

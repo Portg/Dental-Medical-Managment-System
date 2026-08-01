@@ -14,12 +14,9 @@ use Illuminate\Support\Facades\Validator;
  */
 class TreatmentPlanController extends ApiController
 {
-    protected TreatmentPlanService $service;
-
     public function __construct(
-        TreatmentPlanService $service
+        protected TreatmentPlanService $service
     ) {
-        $this->service = $service;
         $this->middleware('can:manage-treatments');
     }
 

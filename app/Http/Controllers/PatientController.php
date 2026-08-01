@@ -233,7 +233,7 @@ class PatientController extends Controller
             'is_pregnant', 'is_breastfeeding',
         ]);
         $nameParts = $this->patientService->validateAndParseInput($patientFields);
-        $data = $this->patientService->buildPatientData($patientFields, $nameParts, true);
+        $data = $this->patientService->buildPatientData($patientFields, $nameParts, isUpdate: true);
 
         // Handle photo upload
         if ($request->hasFile('photo')) {

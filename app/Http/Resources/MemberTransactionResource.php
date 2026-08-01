@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class MemberTransactionResource extends JsonResource
 {
-    public function toArray($request): array
+    public function toArray(Request $request): array
     {
         return [
             'id'               => $this->id,
@@ -21,7 +21,7 @@ class MemberTransactionResource extends JsonResource
             'description'      => $this->description,
             'patient_id'       => $this->patient_id,
             'invoice_id'       => $this->invoice_id,
-            'created_at'       => optional($this->created_at)->toIso8601String(),
+            'created_at'       => $this->created_at?->toIso8601String(),
         ];
     }
 }

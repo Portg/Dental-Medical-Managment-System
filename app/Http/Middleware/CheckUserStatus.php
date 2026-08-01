@@ -19,7 +19,7 @@ class CheckUserStatus
         if ($user && !$user->isActive()) {
             if ($request->expectsJson()) {
                 // API: revoke current token and return 403
-                optional($user->currentAccessToken())->delete();
+                $user->currentAccessToken()?->delete();
                 return response()->json([
                     'success' => false,
                     'message' => __('auth.account_disabled'),
