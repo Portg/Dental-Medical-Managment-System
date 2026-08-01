@@ -179,9 +179,9 @@ return [
         'appointment_time' => [
             'required' => '预约时间是必填的。',
         ],
-        // 发票验证
+        // 账单验证
         'invoice_no' => [
-            'required' => '发票号码是必填的。',
+            'required' => '账单号码是必填的。',
         ],
         'payment_method' => [
             'required' => '请选择付款方式。',
@@ -343,9 +343,9 @@ return [
         // 保险相关
         'insurance_company_name' => '保险公司名称',
 
-        // 发票相关
-        'invoice_id' => '发票',
-        'invoice_no' => '发票号',
+        // 账单相关
+        'invoice_id' => '账单',
+        'invoice_no' => '账单号',
 
         // 预约相关
         'appointment_date' => '预约日期',

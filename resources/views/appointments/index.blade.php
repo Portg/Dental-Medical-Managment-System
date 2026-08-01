@@ -360,6 +360,7 @@
                     {data: 'patient', name: 'patient'},
                     {data: 'doctor', name: 'doctor'},
                     {data: 'visit_information', name: 'visit_information'},
+                    {data: 'status', name: 'status'},
                     {data: 'invoice_status', name: 'invoice_status'},
                     {data: 'action', name: 'action', orderable: false, searchable: false},
                 ]

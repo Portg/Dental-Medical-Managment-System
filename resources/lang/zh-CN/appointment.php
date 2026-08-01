@@ -196,7 +196,7 @@ return [
     'treatment_notes' => '治疗备注',
     'add_notes' => '添加备注',
     'general_notes' => '一般备注',
-    'generate_invoice' => '生成发票',
+    'generate_invoice' => '生成账单',
     'enter_tooth_number' => '输入牙齿编号',
     'enter_qty' => '输入数量',
     'enter_unit_price' => '输入单价',

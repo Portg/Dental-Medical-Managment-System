@@ -84,10 +84,11 @@ class DentalChartService
         }
 
         $today = now()->toDateString();
-        // 预约时间的业务粒度是分钟。此处若用 now()->format('H:i:s')，会把当前秒
-        // （如 14:49:08）一并写入 start_time / sort_by，与其余创建入口
-        // （均为 date('H:i:s', strtotime($input))，秒恒为 00）不一致。
-        $nowTime = now()->startOfMinute()->format('H:i:s');
+        // appointments.start_time 是 varchar，存什么显示什么，业务粒度为分钟，
+        // 故直接存 HH:MM，不要存 HH:MM:SS 再到展示层截断。
+        $nowTime = now()->format('H:i');
+        // sort_by 是 datetime 列，用于排序与区间筛选，补足秒位
+        $sortBy = $today . ' ' . $nowTime . ':00';
 
         return Appointment::create([
             'appointment_no'    => Appointment::AppointmentNo(),
@@ -104,7 +105,7 @@ class DentalChartService
             // 不写面向用户的备注：会污染「就诊记录」摘要；仅作图表数据载体即可
             'notes'             => null,
             'branch_id'         => $user->branch_id,
-            'sort_by'           => $today . ' ' . $nowTime,
+            'sort_by'           => $sortBy,
             '_who_added'        => $user->id,
         ]);
     }

@@ -15,13 +15,13 @@ return [
     'reset_password_line3' => '如果您没有请求重置密码,请忽略此邮件。',
 
     // 邮件标题
-    'invoice_subject' => '发票',
+    'invoice_subject' => '账单',
     'quotation_subject' => '报价单',
 
     // 邮件内容
     'dear_patient' => '尊敬的:surname:othername，',
     'thank_you_message' => '感谢您选择 :company_name 的服务，请查收附件中的:document_type；',
-    'invoice_attached' => '发票',
+    'invoice_attached' => '账单',
     'quotation_attached' => '报价单',
 
     // 联系信息
@@ -29,7 +29,7 @@ return [
     'company_team' => ':company_name 团队',
 
     // 控制器消息
-    'invoice_sent_successfully' => '发票发送成功',
+    'invoice_sent_successfully' => '账单发送成功',
     'quotation_sent_successfully' => '报价单分享成功',
 
     // 数据库备份邮件

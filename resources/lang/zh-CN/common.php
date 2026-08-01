@@ -314,7 +314,7 @@ return [
     'enter_unit_price' => '输入单价',
     'choose_patient' => '选择患者',
     'select_procedure' => '选择诊疗项目',
-    'share_invoice' => '分享发票',
+    'share_invoice' => '分享账单',
     'share_quotation' => '分享报价单',
     'operation_success' => '操作成功！',
     'operation_failed' => '操作失败！',

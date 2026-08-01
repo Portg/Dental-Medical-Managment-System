@@ -17,7 +17,7 @@ return [
     'type_appointment_status' => '预约状态',
     'type_appointment_visit_information' => '预约就诊类型',
     'type_appointment_type' => '预约类型',
-    'type_invoice_payment_status' => '发票付款状态',
+    'type_invoice_payment_status' => '账单付款状态',
     'type_invoice_discount_status' => '折扣审批状态',
     'type_waiting_queue_status' => '候诊队列状态',
     'type_medical_case_status' => '病历状态',

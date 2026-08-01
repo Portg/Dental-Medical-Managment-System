@@ -8,12 +8,12 @@ return [
      * The following language lines are used in invoice related modules.
      * You are free to modify these language lines according to your application's requirements.
      */
-    'invoice_form' => '发票表单',
-    'invoices' => '发票',
-    'invoice' => '发票',
-    'invoice_no' => '发票号',
-    'invoice_date' => '发票日期',
-    'invoice_amount' => '发票金额',
+    'invoice_form' => '账单表单',
+    'invoices' => '账单',
+    'invoice' => '账单',
+    'invoice_no' => '账单号',
+    'invoice_date' => '账单日期',
+    'invoice_amount' => '账单金额',
     'payment' => '付款',
     'payments' => '付款',
     'receipt' => '收据',
@@ -24,11 +24,11 @@ return [
     'qty' => '数量',
     'enter_qty' => '输入数量',
     'select_procedure' => '选择项目',
-    'add_invoice_item' => '添加发票项目',
+    'add_invoice_item' => '添加账单项目',
     'remove' => '移除',
-    'share_invoice' => '分享发票',
-    'print_invoice' => '打印发票',
-    'preview_invoice' => '预览发票',
+    'share_invoice' => '分享账单',
+    'print_invoice' => '打印账单',
+    'preview_invoice' => '预览账单',
     'edit_receipt' => '编辑收据',
     'receipt_print' => '打印收据',
 
@@ -39,28 +39,28 @@ return [
     'total_amount' => '总金额',
     'choose_doctor' => '选择医生',
     'add_more' => '添加更多',
-    'generate_invoice' => '生成发票',
-    'view_invoice' => '查看发票',
+    'generate_invoice' => '生成账单',
+    'view_invoice' => '查看账单',
 
     // 占位符文本
     'enter_tooth_no' => '输入牙位编号',
     'enter_quantity' => '输入数量',
     'enter_unit_price' => '输入单价',
 
-    // 其他发票相关
-    'invoice_list' => '发票列表',
-    'create_invoice' => '创建发票',
-    'edit_invoice' => '编辑发票',
-    'delete_invoice' => '删除发票',
-    'invoice_details' => '发票详情',
+    // 其他账单相关
+    'invoice_list' => '账单列表',
+    'create_invoice' => '创建账单',
+    'edit_invoice' => '编辑账单',
+    'delete_invoice' => '删除账单',
+    'invoice_details' => '账单详情',
     'payment_status' => '支付状态',
     'status' => '状态',
     'paid' => '已支付',
     'unpaid' => '未支付',
     'partially_paid' => '部分支付',
 
-    'title' => '发票管理/账单',
-    'filter_invoices' => '筛选发票',
+    'title' => '账单管理/账单',
+    'filter_invoices' => '筛选账单',
 
     // 表格列
     'hash' => '#',
@@ -73,12 +73,12 @@ return [
 
     // 操作按钮
     'view_procedures_done' => '查看已完成项目',
-    'view_invoice_details' => '查看发票详情',
+    'view_invoice_details' => '查看账单详情',
     'print' => '打印',
     'record_payment' => '记录支付',
 
     // 支付相关
-    'record_payment_for_invoice' => '为此发票记录支付',
+    'record_payment_for_invoice' => '为此账单记录支付',
     'payment_date' => '支付日期',
     'amount' => '金额',
     'enter_amount_here' => '在此输入金额',
@@ -96,11 +96,11 @@ return [
     'bank_name' => '银行名',
     'enter_bank_name_here' => '在此输入银行名',
     'insurance_company' => '保险公司',
-    'enter_invoice_no_here' => '在此输入发票号',
+    'enter_invoice_no_here' => '在此输入账单号',
     'enter_patient_name_here' => '在此输入患者姓名',
 
-    // 发票项目
-    'invoice_item_form' => '发票项目表单',
+    // 账单项目
+    'invoice_item_form' => '账单项目表单',
     'procedure_done_by' => '执行医生',
     'tooth_numbers_optional' => '牙位号(可选)',
     'enter_qty_here' => '在此输入数量',
@@ -108,8 +108,8 @@ return [
     'sub_total' => '小计',
     'total_price' => '总价',
 
-    // 分享发票
-    'share_invoice_on_email' => '通过邮件分享发票',
+    // 分享账单
+    'share_invoice_on_email' => '通过邮件分享账单',
     'patient_name' => '患者姓名',
     'phone_no' => '电话号码',
     'email_address' => '邮箱地址',
@@ -121,30 +121,30 @@ return [
     'total_paid_amount' => '已付总金额',
     'outstanding_balance' => '未付余额',
     'invoice_procedures' => [
-        'title' => '发票项目',
-        'no_procedures_found' => '未找到发票项目',
+        'title' => '账单项目',
+        'no_procedures_found' => '未找到账单项目',
     ],
 
     // 控制器消息
-    'invoice_sent_successfully' => '发票发送成功',
-    'invoice_created_successfully' => '发票创建成功',
-    'invoice_updated_successfully' => '发票更新成功',
-    'invoice_deleted_successfully' => '发票删除成功',
-    'invoice_item_updated_successfully' => '发票项目更新成功',
-    'invoice_item_deleted_successfully' => '发票项目删除成功',
+    'invoice_sent_successfully' => '账单发送成功',
+    'invoice_created_successfully' => '账单创建成功',
+    'invoice_updated_successfully' => '账单更新成功',
+    'invoice_deleted_successfully' => '账单删除成功',
+    'invoice_item_updated_successfully' => '账单项目更新成功',
+    'invoice_item_deleted_successfully' => '账单项目删除成功',
     'payment_recorded_successfully' => '支付记录成功',
     'payment_captured_successfully' => '支付获取成功',
     'payment_updated_successfully' => '支付更新成功',
     'payment_deleted_successfully' => '支付删除成功',
     'choose_self_account' => '选择自付账户...',
     'choose_insurance_company' => '选择保险公司...',
-    'delete_confirm_message' => '您将无法恢复此发票！',
-    'confirm_delete_invoice' => '确定要删除此发票吗？',
+    'delete_confirm_message' => '您将无法恢复此账单！',
+    'confirm_delete_invoice' => '确定要删除此账单吗？',
     'confirm_delete_payment' => '确定要删除此支付吗？',
-    'no_invoices_found' => '未找到发票',
+    'no_invoices_found' => '未找到账单',
 
-    'go_back_to_invoices' => '返回发票列表',
-    'record_payment_invoice' => '为此发票记录支付',
+    'go_back_to_invoices' => '返回账单列表',
+    'record_payment_invoice' => '为此账单记录支付',
     'procedure_doctor' => '诊疗医生',
     'receipts' => '收据',
     'save' => '保存',
@@ -170,8 +170,8 @@ return [
     'pending_approvals' => '待审批',
     'back_to_refunds' => '返回退费列表',
     'search_refund' => '搜索退费...',
-    'select_invoice' => '选择发票',
-    'search_invoice' => '搜索发票',
+    'select_invoice' => '选择账单',
+    'search_invoice' => '搜索账单',
     'refunded_amount' => '已退金额',
     'max_refundable' => '最大可退金额',
     'enter_refund_reason' => '输入退费原因...',
@@ -183,20 +183,20 @@ return [
     'refund_rules' => '退费规则',
     'rule_refund_100' => '退费≤100元可直接处理',
     'rule_refund_above_100' => '退费>100元需主管审批',
-    'rule_no_double_refund' => '每张发票只能退费一次',
+    'rule_no_double_refund' => '每张账单只能退费一次',
     'rule_stored_value_refund' => '储值卡退费退回储值余额',
     'refund_approval_info' => '退费超过:amount元需要主管审批',
     'refund_needs_approval' => '此退费需要主管审批',
     'amount_exceeds_max' => '金额超过最大可退金额',
-    'no_refundable_amount' => '此发票无可退金额',
+    'no_refundable_amount' => '此账单无可退金额',
 
     // 退费消息
-    'invoice_required' => '发票必填',
+    'invoice_required' => '账单必填',
     'refund_amount_required' => '退费金额必填',
     'refund_amount_min' => '退费金额最少为0.01',
     'refund_reason_required' => '退费原因必填',
     'refund_method_required' => '退费方式必填',
-    'refund_already_exists' => '此发票已有退费记录',
+    'refund_already_exists' => '此账单已有退费记录',
     'refund_exceeds_paid' => '退费金额不能超过已付金额。最大可退：:max',
     'refund_processed_successfully' => '退费处理成功',
     'refund_pending_approval' => '退费已提交，等待审批',
@@ -275,7 +275,7 @@ return [
     // 挂账/欠费
     'credit' => '挂账',
     'set_as_credit' => '设为挂账',
-    'credit_invoices' => '挂账发票',
+    'credit_invoices' => '挂账账单',
     'credit_approved' => '挂账已通过',
 
     // 划价收费
@@ -319,7 +319,7 @@ return [
     'payment_exceeds_outstanding' => '支付金额不能超过应付金额',
     'patient_required_for_stored_value' => '储值卡支付需要关联患者',
     'insufficient_stored_balance' => '储值余额不足',
-    'stored_value_payment' => '储值支付：发票 :invoice_no',
+    'stored_value_payment' => '储值支付：账单 :invoice_no',
 
     // ── 患者收费 Tab 面板 (3.4.7 / 3.4.9 / 3.4.11) ──
     'panel_invoice_detail'    => '账单详情',

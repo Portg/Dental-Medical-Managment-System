@@ -74,9 +74,9 @@ return [
     'member_levels' => '会员等级',
 
     // Invoicing Submenu
-    'invoices' => '发票',
-    'all_invoices' => '所有发票',
-    'create_invoice' => '创建发票',
+    'invoices' => '账单',
+    'all_invoices' => '所有账单',
+    'create_invoice' => '创建账单',
     'quotations' => '报价单',
     'refunds' => '退费',
     'pending_discount_approvals' => '待审批折扣',
@@ -215,7 +215,7 @@ return [
     // 通知
     'system_sent_notifications' => '系统发送的通知',
     'appointment_sms_reminders' => '预约短信提醒',
-    'email_sent_invoice_quotations' => '已发送邮件发票/报价',
+    'email_sent_invoice_quotations' => '已发送邮件账单/报价',
     'all' => '全部',
 
     // 分组标题 (Group Headers) - 三级菜单结构

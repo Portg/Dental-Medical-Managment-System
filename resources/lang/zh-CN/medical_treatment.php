@@ -55,7 +55,7 @@ return [
     'mg_ml' => '毫克/毫升',
 
     // Dental Billing
-    'create_invoice' => '创建发票',
+    'create_invoice' => '创建账单',
     'tooth_numbers' => '牙位号',
     'amount' => '金额',
 

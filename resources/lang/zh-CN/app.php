@@ -5,7 +5,7 @@ return [
     'dashboard' => '仪表板',
     'patients' => '患者',
     'appointments' => '预约',
-    'invoices' => '发票',
+    'invoices' => '账单',
     'reports' => '报告',
     'settings' => '设置',
     'logout' => '登出',

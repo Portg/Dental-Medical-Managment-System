@@ -14,7 +14,7 @@ return [
     'review_title'        => '识别结果校对（可编辑）',
     'year'                => '年份',
     'opt_link_patients'    => '关联已有患者',
-    'opt_generate_invoices' => '有金额行生成发票',
+    'opt_generate_invoices' => '有金额行生成账单',
     'opt_generate_cases'   => '生成草稿病历',
     'add_row'             => '添加一行',
     'save_all'            => '批量保存',
@@ -30,7 +30,7 @@ return [
     'col_prescription' => '处方',
     'col_doctor'       => '医师',
     'col_amount'       => '金额',
-    'col_invoice'      => '发票',
+    'col_invoice'      => '账单',
     'col_case'         => '病历',
 
     'visit_initial' => '初诊',
@@ -45,7 +45,7 @@ return [
     'no_rows'           => '没有可保存的记录',
     'row_name_required' => '第 :row 行：姓名为必填项',
     'case_from_worklog' => '工作日志补录',
-    'save_success'      => '保存成功：新增 :created 条，关联患者 :linked 条，生成发票 :invoiced 张，生成病历 :cased 份',
+    'save_success'      => '保存成功：新增 :created 条，关联患者 :linked 条，生成账单 :invoiced 张，生成病历 :cased 份',
     'save_failed'       => '保存失败',
     'ocr_disabled'      => '本机未启用图片识别功能，请手工录入工作日志内容',
 ];

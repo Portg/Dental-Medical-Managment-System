@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'invoice' => '发票',
+    'invoice' => '账单',
     'receipt' => '收据',
     'quotation' => '报价单',
     'patient_info' => '患者信息',

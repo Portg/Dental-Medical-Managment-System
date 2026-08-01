@@ -9,7 +9,7 @@ return [
     'expense_category' => '费用分类',
     'purchase_date' => '采购日期',
     'expense_no' => '费用号',
-    'invoice_no' => '发票号(可选)',
+    'invoice_no' => '账单号(可选)',
     'item' => '项目',
     'quantity' => '数量',
     'amount' => '金额',

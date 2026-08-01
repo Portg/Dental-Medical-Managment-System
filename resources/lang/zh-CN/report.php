@@ -30,8 +30,8 @@ return [
     'debtors_report' => '债务人报表',
     'doctor_performance_report' => '医生绩效报表',
     'procedures_income_report' => '项目收入报表',
-    'invoice_payments_report' => '发票支付报表',
-    'invoicing_report' => '发票报表',
+    'invoice_payments_report' => '账单支付报表',
+    'invoicing_report' => '账单报表',
     'patient_report' => '患者报表',
     'appointment_report' => '预约报表',
     'financial_report' => '财务报表',
@@ -100,8 +100,8 @@ return [
     // Debtors Report
     'debtors' => '债务人',
     'patient_name' => '患者姓名',
-    'invoice_number' => '发票号',
-    'invoice_date' => '发票日期',
+    'invoice_number' => '账单号',
+    'invoice_date' => '账单日期',
     'due_date' => '到期日期',
     'total_amount' => '总金额',
     'amount_paid' => '已付金额',
@@ -221,9 +221,9 @@ return [
 
     // Table Headers - General
     'patient_name' => '患者姓名',
-    'invoice_no' => '发票号',
-    'invoice_number' => '发票号码',
-    'invoice_date' => '发票日期',
+    'invoice_no' => '账单号',
+    'invoice_number' => '账单号码',
+    'invoice_date' => '账单日期',
     'payment_date' => '支付日期',
     'payment_method' => '付款方式',
     'added_by' => '添加者',
@@ -239,7 +239,7 @@ return [
     'receivables_report' => '应收款报表',
 
     // Daily Cash
-    'invoice_amount' => '发票金额',
+    'invoice_amount' => '账单金额',
     'paid_amount' => '已付金额',
 
     // Debtors Report
@@ -249,7 +249,7 @@ return [
     // Doctor Performance
     'choose_doctor' => '选择医生',
     'procedures_cost' => '项目费用',
-    'overall_invoice_amount' => '发票总金额',
+    'overall_invoice_amount' => '账单总金额',
     'outstanding_amount' => '未付金额',
 
     // Procedures Income Report
@@ -262,7 +262,7 @@ return [
     // Filters
     'period' => '期间',
     'filter_report' => '筛选报表',
-    'filter_invoices' => '筛选发票',
+    'filter_invoices' => '筛选账单',
     'all' => '全部',
     'insurance' => '保险',
     'credit' => '信用',
@@ -399,7 +399,7 @@ return [
     'unknown' => '未知',
     'gender_col' => '性别',
     'total_spent' => '总消费',
-    'invoice_count' => '发票数',
+    'invoice_count' => '账单数',
     'last_invoice_date' => '最后消费日期',
 
     // Doctor Workload Report
@@ -489,7 +489,7 @@ return [
 
     // Unpaid Invoices Report
     'unpaid_invoices_report'   => '未收款报表',
-    'unpaid_invoice_count'     => '未收款发票数',
+    'unpaid_invoice_count'     => '未收款账单数',
 
     // Date range validation
     'date_range_too_large'     => '日期范围不能超过 12 个月',

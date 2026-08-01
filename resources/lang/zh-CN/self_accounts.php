@@ -44,7 +44,7 @@ return [
     'opening_balance' => '期初余额',
     'closing_balance' => '期末余额',
     'credit_limit' => '信用额度',
-    'invoice_no' => '发票号',
+    'invoice_no' => '账单号',
     'patient' => '患者',
     'added_by' => '录入人',
 

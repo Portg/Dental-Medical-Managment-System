@@ -618,12 +618,8 @@ class AppointmentService
             ->editColumn('sort_by', function ($row) {
                 return $row->sort_by ? \Carbon\Carbon::parse($row->sort_by)->format('Y-m-d H:i') : '-';
             })
-            // start_time 是 MySQL time 列，取值恒为 HH:MM:SS，即便秒为 0 也会带出
-            // 「:00」。预约的业务粒度是分钟，故展示时截到分。
-            // 写入侧的秒由各创建入口保证为 0（见 DentalChartService 与
-            // 2026_08_01_000005 数据订正迁移），此处只负责呈现。
             ->editColumn('start_time', function ($row) {
-                return $row->start_time ? substr($row->start_time, 0, 5) : '-';
+                return $row->start_time ?: '-';
             })
             ->editColumn('status', function ($row) {
                 return DictItem::nameByCode('appointment_status', $row->status) ?? $row->status;

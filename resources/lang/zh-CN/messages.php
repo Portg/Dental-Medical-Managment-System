@@ -40,10 +40,10 @@ return [
     'appointment_status_updated' => '预约已保存为 :status',
 
     // Invoice Messages
-    'invoice_created_successfully' => '发票创建成功！',
-    'invoice_updated_successfully' => '发票更新成功！',
-    'invoice_deleted_successfully' => '发票删除成功！',
-    'invoice_sent_successfully' => '发票发送成功！',
+    'invoice_created_successfully' => '账单创建成功！',
+    'invoice_updated_successfully' => '账单更新成功！',
+    'invoice_deleted_successfully' => '账单删除成功！',
+    'invoice_sent_successfully' => '账单发送成功！',
 
     // Payment Messages
     'payment_recorded_successfully' => '付款记录成功！',
@@ -97,7 +97,7 @@ return [
     // Specific Error Messages
     'patient_not_found' => '未找到患者。',
     'appointment_not_found' => '未找到预约。',
-    'invoice_not_found' => '未找到发票。',
+    'invoice_not_found' => '未找到账单。',
     'user_not_found' => '未找到用户。',
     'record_has_dependencies' => '此记录有关联数据，无法删除。',
     'cannot_delete_record' => '无法删除记录。',
