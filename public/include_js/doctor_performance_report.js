@@ -62,7 +62,6 @@ $(function () {
             { data: 'created_at',              name: 'created_at' },
             { data: 'patient',                 name: 'patient' },
             { data: 'done_procedures_amount',  name: 'done_procedures_amount' },
-            { data: 'invoice_amount',          name: 'invoice_amount' },
             { data: 'paid_amount',             name: 'paid_amount' },
             { data: 'outstanding',             name: 'outstanding' }
         ]

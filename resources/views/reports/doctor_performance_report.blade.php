@@ -75,7 +75,6 @@
     <th>{{ __('common.date') }}</th>
     <th>{{ __('report.patient_name') }}</th>
     <th>{{ __('report.procedures_cost') }}</th>
-    <th>{{ __('report.overall_invoice_amount') }}</th>
     <th>{{ __('report.paid_amount') }}</th>
     <th>{{ __('report.outstanding_amount') }}</th>
 @endsection

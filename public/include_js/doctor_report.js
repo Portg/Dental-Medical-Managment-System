@@ -20,7 +20,6 @@ $(document).ready(function() {
             { data: 'created_at' },
             { data: 'patient' },
             { data: 'done_procedures_amount' },
-            { data: 'invoice_amount' },
             { data: 'paid_amount' },
             { data: 'outstanding' }
         ]

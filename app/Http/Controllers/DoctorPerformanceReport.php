@@ -45,9 +45,6 @@ class DoctorPerformanceReport extends Controller
                 ->addColumn('done_procedures_amount', function ($row) {
                     return number_format($row->amount);
                 })
-                ->addColumn('invoice_amount', function ($row) {
-                    return number_format($row->invoice_total_amount);
-                })
                 ->addColumn('paid_amount', function ($row) {
                     return number_format($row->invoice_paid_amount);
                 })

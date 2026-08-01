@@ -62,7 +62,6 @@ class DoctorReportController extends Controller
                 ->addColumn('created_at', fn($row) => $row->created_at ? date('Y-m-d', strtotime($row->created_at)) : '-')
                 ->addColumn('patient', fn($row) => \App\Http\Helper\NameHelper::join($row->surname, $row->othername))
                 ->addColumn('done_procedures_amount', fn($row) => number_format($row->amount))
-                ->addColumn('invoice_amount', fn($row) => number_format($row->invoice_total_amount))
                 ->addColumn('paid_amount', fn($row) => number_format($row->invoice_paid_amount))
                 ->addColumn('outstanding', fn($row) => number_format($row->invoice_total_amount - $row->invoice_paid_amount))
                 ->make(true);
