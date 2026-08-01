@@ -1,8 +1,7 @@
 /**
  * FDI Dental Chart Editor
  * =======================
- * Same visual language as medical_cases tooth selector.
- * Flow: pick a status → click teeth to apply; "清除" clears a tooth.
+ * Flow: select teeth first → apply a status to the selection.
  *
  * Depends: jQuery, LanguageManager, csrf meta, #global_appointment_id
  */
@@ -29,11 +28,10 @@
         '11': 'impacted'
     };
 
-    // Prefer whole-tooth statuses when aggregating legacy multi-surface rows
     var STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'crown', 'rct', 'filled', 'caries'];
 
-    var selectedStatus = 'caries';
-    var marks = {}; // toothNumber -> statusKey
+    var marks = {};          // toothNumber -> statusKey
+    var selectedTeeth = {};  // toothNumber -> true
 
     function t(key, fallback) {
         if (typeof LanguageManager !== 'undefined' && LanguageManager.trans) {
@@ -57,17 +55,52 @@
         return ($('#global_appointment_id').val() || '').trim();
     }
 
+    function selectedCount() {
+        return Object.keys(selectedTeeth).length;
+    }
+
     function applyToothStyle($el, status) {
+        var tooth = String($el.data('tooth'));
+        var isSelected = !!selectedTeeth[tooth];
+        $el.toggleClass('selected', isSelected);
         $el.removeClass('marked');
         $el.css({ background: '', borderColor: '', color: '' });
         $el.find('.dce-mark').text('');
-        if (!status || !STATUS_MAP[status]) return;
-        var meta = STATUS_MAP[status];
-        $el.addClass('marked').css({
-            background: meta.bg,
-            borderColor: meta.bg
+
+        if (status && STATUS_MAP[status]) {
+            var meta = STATUS_MAP[status];
+            $el.addClass('marked').css({
+                background: meta.bg,
+                borderColor: meta.bg
+            });
+            $el.find('.dce-mark').text(shortLabel(status));
+        }
+    }
+
+    function refreshTooth($el) {
+        var tooth = String($el.data('tooth'));
+        applyToothStyle($el, marks[tooth] || null);
+    }
+
+    function refreshAllTeeth() {
+        $('.dce-tooth').each(function () {
+            refreshTooth($(this));
         });
-        $el.find('.dce-mark').text(shortLabel(status));
+    }
+
+    function refreshSelectionChip() {
+        var n = selectedCount();
+        var $chip = $('#dce-selection-chip');
+        var $label = $('#dce-selection-label');
+        if (!n) {
+            $chip.addClass('is-empty');
+            $label.text(t('no_teeth_selected', '未选牙位'));
+        } else {
+            $chip.removeClass('is-empty');
+            var nums = Object.keys(selectedTeeth).sort(function (a, b) { return Number(a) - Number(b); });
+            $label.text(t('selected_teeth', '已选') + ' ' + nums.join('、'));
+        }
+        $('#dce-status-step').toggleClass('dce-ready', n > 0);
     }
 
     function refreshSummary() {
@@ -83,40 +116,43 @@
         }
     }
 
-    function setActiveStatus(status) {
-        selectedStatus = status;
-        var $btn = $('.dce-status-btn[data-status="' + status + '"]');
-        $('.dce-status-btn').removeClass('active');
-        $btn.addClass('active');
-
-        var label = $btn.data('label') || status;
-        var bg = $btn.data('bg');
-        var $chip = $('#dce-tool-chip');
-        var $swatch = $('#dce-tool-swatch');
-        $('#dce-tool-label').text(label);
-        if (status === 'clear') {
-            $chip.addClass('is-clear');
-            $swatch.css('background', 'transparent');
-        } else {
-            $chip.removeClass('is-clear');
-            $swatch.css('background', bg || '#EAB308');
-        }
-    }
-
     function onToothClick() {
         var tooth = String($(this).data('tooth'));
-        if (selectedStatus === 'clear') {
-            delete marks[tooth];
-            applyToothStyle($(this), null);
-        } else if (marks[tooth] === selectedStatus) {
-            // Toggle off if clicking same status again
-            delete marks[tooth];
-            applyToothStyle($(this), null);
+        if (selectedTeeth[tooth]) {
+            delete selectedTeeth[tooth];
         } else {
-            marks[tooth] = selectedStatus;
-            applyToothStyle($(this), selectedStatus);
+            selectedTeeth[tooth] = true;
         }
+        refreshTooth($(this));
+        refreshSelectionChip();
+    }
+
+    function applyStatusToSelection(status) {
+        var teeth = Object.keys(selectedTeeth);
+        if (!teeth.length) {
+            if (typeof toastr !== 'undefined') {
+                toastr.warning(t('select_teeth_first', '请先选择牙位'));
+            }
+            return;
+        }
+
+        teeth.forEach(function (tooth) {
+            if (status === 'clear') {
+                delete marks[tooth];
+            } else {
+                marks[tooth] = status;
+            }
+        });
+
+        // Keep selection so user can re-apply another status if needed
+        refreshAllTeeth();
         refreshSummary();
+        refreshSelectionChip();
+
+        // Brief flash on status button
+        var $btn = $('.dce-status-btn[data-status="' + status + '"]');
+        $btn.addClass('just-applied');
+        setTimeout(function () { $btn.removeClass('just-applied'); }, 350);
     }
 
     function pickPrimaryStatus(rows) {
@@ -140,6 +176,7 @@
         if (!id) return;
         $.getJSON('/dental-charting/' + id, function (rows) {
             marks = {};
+            selectedTeeth = {};
             var byTooth = {};
             (rows || []).forEach(function (row) {
                 var tooth = String(row.tooth_number || row.tooth || '');
@@ -151,11 +188,9 @@
                 var status = pickPrimaryStatus(byTooth[tooth]);
                 if (status) marks[tooth] = status;
             });
-            $('.dce-tooth').each(function () {
-                var tooth = String($(this).data('tooth'));
-                applyToothStyle($(this), marks[tooth] || null);
-            });
+            refreshAllTeeth();
             refreshSummary();
+            refreshSelectionChip();
         }).fail(function () {
             if (typeof toastr !== 'undefined') {
                 toastr.error(t('load_failed', '加载牙位图失败'));
@@ -229,7 +264,7 @@
 
     function bind() {
         $(document).on('click', '.dce-status-btn', function () {
-            setActiveStatus($(this).data('status'));
+            applyStatusToSelection($(this).data('status'));
         });
         $(document).on('click', '.dce-tab', function () {
             var target = $(this).data('target');
@@ -245,8 +280,8 @@
     window.initDentalChartEditor = function () {
         if (!$('#dce-editor').length) return;
         bind();
-        setActiveStatus(selectedStatus);
         refreshSummary();
+        refreshSelectionChip();
         loadChart();
     };
 

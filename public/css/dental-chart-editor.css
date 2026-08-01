@@ -61,25 +61,31 @@
     font-size: 12px;
     font-weight: 600;
     color: #1E40AF;
+    max-width: 55%;
 }
 
-.dce-tool-swatch {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;
-}
-
-.dce-tool-chip.is-clear {
+.dce-tool-chip.is-empty {
     background: #F3F4F6;
     border-color: #D1D5DB;
-    color: #4B5563;
+    color: #6B7280;
+    font-weight: 500;
 }
 
-.dce-tool-chip.is-clear .dce-tool-swatch {
-    background: transparent;
-    border-style: dashed;
+#dce-selection-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dce-step#dce-status-step {
+    opacity: 0.55;
+    transition: opacity 0.15s, border-color 0.15s;
+}
+
+.dce-step#dce-status-step.dce-ready {
+    opacity: 1;
+    border-color: #93C5FD;
+    background: #F8FBFF;
 }
 
 .dce-flow {
@@ -112,9 +118,9 @@
     background: #F8FAFC;
 }
 
-.dce-status-btn.active {
+.dce-status-btn.just-applied {
     border-color: #2563EB;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
     background: #EFF6FF;
 }
 
@@ -143,9 +149,9 @@
     font-weight: 600;
 }
 
-.dce-status-btn.dce-clear.active {
+.dce-status-btn.dce-clear.just-applied {
     border-color: #6B7280;
-    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.2);
+    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.25);
     background: #F3F4F6;
 }
 
@@ -235,6 +241,16 @@
 .dce-tooth:hover {
     border-color: #4472C4;
     background: #F0F5FF;
+}
+
+.dce-tooth.selected {
+    box-shadow: 0 0 0 2px #2563EB;
+    border-color: #2563EB;
+    z-index: 1;
+}
+
+.dce-tooth.selected:not(.marked) {
+    background: #DBEAFE;
 }
 
 .dce-tooth.deciduous {

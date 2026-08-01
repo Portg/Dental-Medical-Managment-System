@@ -1,4 +1,4 @@
-{{-- FDI dental chart editor — aligned with medical_cases tooth selector --}}
+{{-- FDI dental chart editor — select teeth first, then apply status --}}
 @php
     $dceDefaultTab = 'permanent';
     if (isset($patient)) {
@@ -17,61 +17,14 @@
 @endphp
 
 <div id="dce-editor" class="dce-wrap">
-    {{-- Step 1: tool / status --}}
-    <section class="dce-step" aria-labelledby="dce-step-status-title">
-        <header class="dce-step-head">
-            <span class="dce-step-num">1</span>
-            <h3 id="dce-step-status-title" class="dce-step-title">{{ __('odontogram.step_status') }}</h3>
-            <span class="dce-tool-chip" id="dce-tool-chip">
-                <span class="dce-tool-swatch" id="dce-tool-swatch" style="background:#EAB308"></span>
-                <span id="dce-tool-label">{{ __('odontogram.caries') }}</span>
-            </span>
-        </header>
-        <div class="dce-status-bar" role="toolbar" aria-label="{{ __('odontogram.select_status') }}">
-            <button type="button" class="dce-status-btn active" data-status="caries" data-bg="#EAB308" data-label="{{ __('odontogram.caries') }}">
-                <span class="dce-status-swatch" style="background:#EAB308"></span>
-                <span class="dce-status-label">{{ __('odontogram.caries') }}</span>
-            </button>
-            <button type="button" class="dce-status-btn" data-status="filled" data-bg="#EF4444" data-label="{{ __('odontogram.filling') }}">
-                <span class="dce-status-swatch" style="background:#EF4444"></span>
-                <span class="dce-status-label">{{ __('odontogram.filling') }}</span>
-            </button>
-            <button type="button" class="dce-status-btn" data-status="rct" data-bg="#F97316" data-label="{{ __('odontogram.endodontics') }}">
-                <span class="dce-status-swatch" style="background:#F97316"></span>
-                <span class="dce-status-label">{{ __('odontogram.endodontics') }}</span>
-            </button>
-            <button type="button" class="dce-status-btn" data-status="crown" data-bg="#2563EB" data-label="{{ __('odontogram.crown') }}">
-                <span class="dce-status-swatch" style="background:#2563EB"></span>
-                <span class="dce-status-label">{{ __('odontogram.crown') }}</span>
-            </button>
-            <button type="button" class="dce-status-btn" data-status="missing" data-bg="#F43F5E" data-label="{{ __('odontogram.absent') }}">
-                <span class="dce-status-swatch" style="background:#F43F5E"></span>
-                <span class="dce-status-label">{{ __('odontogram.absent') }}</span>
-            </button>
-            <button type="button" class="dce-status-btn" data-status="implant" data-bg="#A855F7" data-label="{{ __('odontogram.implant') }}">
-                <span class="dce-status-swatch" style="background:#A855F7"></span>
-                <span class="dce-status-label">{{ __('odontogram.implant') }}</span>
-            </button>
-            <button type="button" class="dce-status-btn" data-status="impacted" data-bg="#14B8A6" data-label="{{ __('odontogram.impacted_teeth') }}">
-                <span class="dce-status-swatch" style="background:#14B8A6"></span>
-                <span class="dce-status-label">{{ __('odontogram.impacted_teeth') }}</span>
-            </button>
-            <button type="button" class="dce-status-btn dce-clear" data-status="clear" data-bg="transparent" data-label="{{ __('odontogram.clear_mark') }}">
-                <span class="dce-status-swatch dce-eraser"><i class="fa fa-eraser"></i></span>
-                <span class="dce-status-label">{{ __('odontogram.clear_mark') }}</span>
-            </button>
-        </div>
-    </section>
-
-    <div class="dce-flow" aria-hidden="true">
-        <i class="fa fa-arrow-down"></i>
-    </div>
-
-    {{-- Step 2: teeth grid --}}
+    {{-- Step 1: pick teeth --}}
     <section class="dce-step dce-step-teeth" aria-labelledby="dce-step-teeth-title">
         <header class="dce-step-head">
-            <span class="dce-step-num">2</span>
+            <span class="dce-step-num">1</span>
             <h3 id="dce-step-teeth-title" class="dce-step-title">{{ __('odontogram.step_teeth') }}</h3>
+            <span class="dce-tool-chip is-empty" id="dce-selection-chip">
+                <span id="dce-selection-label">{{ __('odontogram.no_teeth_selected') }}</span>
+            </span>
             <div class="dce-tabs">
                 <button type="button" class="dce-tab {{ $dceDefaultTab === 'permanent' ? 'active' : '' }}" data-target="dce-panel-permanent">
                     {{ __('odontogram.permanent') }}
@@ -132,6 +85,52 @@
                 </div>
                 <div class="dce-quadrant-label">{{ __('odontogram.lower_right') }} | {{ __('odontogram.lower_left') }}</div>
             </div>
+        </div>
+    </section>
+
+    <div class="dce-flow" aria-hidden="true">
+        <i class="fa fa-arrow-down"></i>
+    </div>
+
+    {{-- Step 2: apply status to selection --}}
+    <section class="dce-step" id="dce-status-step" aria-labelledby="dce-step-status-title">
+        <header class="dce-step-head">
+            <span class="dce-step-num">2</span>
+            <h3 id="dce-step-status-title" class="dce-step-title">{{ __('odontogram.step_status') }}</h3>
+        </header>
+        <div class="dce-status-bar" role="toolbar" aria-label="{{ __('odontogram.select_status') }}">
+            <button type="button" class="dce-status-btn" data-status="caries" data-bg="#EAB308" data-label="{{ __('odontogram.caries') }}">
+                <span class="dce-status-swatch" style="background:#EAB308"></span>
+                <span class="dce-status-label">{{ __('odontogram.caries') }}</span>
+            </button>
+            <button type="button" class="dce-status-btn" data-status="filled" data-bg="#EF4444" data-label="{{ __('odontogram.filling') }}">
+                <span class="dce-status-swatch" style="background:#EF4444"></span>
+                <span class="dce-status-label">{{ __('odontogram.filling') }}</span>
+            </button>
+            <button type="button" class="dce-status-btn" data-status="rct" data-bg="#F97316" data-label="{{ __('odontogram.endodontics') }}">
+                <span class="dce-status-swatch" style="background:#F97316"></span>
+                <span class="dce-status-label">{{ __('odontogram.endodontics') }}</span>
+            </button>
+            <button type="button" class="dce-status-btn" data-status="crown" data-bg="#2563EB" data-label="{{ __('odontogram.crown') }}">
+                <span class="dce-status-swatch" style="background:#2563EB"></span>
+                <span class="dce-status-label">{{ __('odontogram.crown') }}</span>
+            </button>
+            <button type="button" class="dce-status-btn" data-status="missing" data-bg="#F43F5E" data-label="{{ __('odontogram.absent') }}">
+                <span class="dce-status-swatch" style="background:#F43F5E"></span>
+                <span class="dce-status-label">{{ __('odontogram.absent') }}</span>
+            </button>
+            <button type="button" class="dce-status-btn" data-status="implant" data-bg="#A855F7" data-label="{{ __('odontogram.implant') }}">
+                <span class="dce-status-swatch" style="background:#A855F7"></span>
+                <span class="dce-status-label">{{ __('odontogram.implant') }}</span>
+            </button>
+            <button type="button" class="dce-status-btn" data-status="impacted" data-bg="#14B8A6" data-label="{{ __('odontogram.impacted_teeth') }}">
+                <span class="dce-status-swatch" style="background:#14B8A6"></span>
+                <span class="dce-status-label">{{ __('odontogram.impacted_teeth') }}</span>
+            </button>
+            <button type="button" class="dce-status-btn dce-clear" data-status="clear" data-bg="transparent" data-label="{{ __('odontogram.clear_mark') }}">
+                <span class="dce-status-swatch dce-eraser"><i class="fa fa-eraser"></i></span>
+                <span class="dce-status-label">{{ __('odontogram.clear_mark') }}</span>
+            </button>
         </div>
     </section>
 
