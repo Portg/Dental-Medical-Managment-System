@@ -169,11 +169,16 @@
         }
 
         if (selectedTeeth[tooth]) {
+            // 第二次点击：取消选中；若已有标注则一并取消
             delete selectedTeeth[tooth];
+            if (marks[tooth]) {
+                delete marks[tooth];
+            }
         } else {
             selectedTeeth[tooth] = true;
         }
         refreshTooth($(this));
+        refreshSummary();
         refreshSelectionChip();
     }
 
@@ -196,7 +201,7 @@
             marks[tooth] = status;
         });
 
-        clearSelection();
+        // 保持选中：再点该牙即可取消选中并去掉标注
         setEraseMode(false);
         refreshAllTeeth();
         refreshSummary();
