@@ -24,3 +24,8 @@ deploy/output/
 .worktrees/
 .gstack/
 .claude/worktrees/
+.superpowers/
+.cursor/
+.vscode/
+.DS_Store
+.claude/

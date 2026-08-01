@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\MedicalService;
+use App\ServiceCategory;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,12 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
                             {--dry-run : 仅输出统计，不落库}
                             {--only-active : 仅更新 is_active=1 的项目}
                             {--exact : 仅使用精确名称匹配（不做规范化匹配）}
-                            {--create-missing : 若未匹配到则创建新项目（仅在非 dry-run 时生效）}';
+                            {--create-missing : 若未匹配到则创建新项目（仅在非 dry-run 时生效）}
+                            {--fill-missing-fields : 对已存在项目补齐 unit/category_id（仅当原字段为空时）}
+                            {--sync-fields : 强制同步 unit/category_id（覆盖已有值）}
+                            {--report : 输出分类/单位对照报告}
+                            {--report-limit=50 : 报告最多输出多少条}
+                            {--who-added=1 : 创建新项目时写入 _who_added（用户ID）}';
 
     protected $description = '根据 Excel 中的项目名称/市场价格更新 medical_services.price（按名称精确匹配）';
 
@@ -29,6 +35,11 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
         $onlyActive = (bool) $this->option('only-active');
         $exact = (bool) $this->option('exact');
         $createMissing = (bool) $this->option('create-missing');
+        $fillMissingFields = (bool) $this->option('fill-missing-fields');
+        $syncFields = (bool) $this->option('sync-fields');
+        $report = (bool) $this->option('report');
+        $reportLimit = (int) $this->option('report-limit');
+        $whoAdded = (int) $this->option('who-added');
 
         if (!is_file($path)) {
             $this->error("文件不存在：{$path}");
@@ -42,13 +53,13 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
             return self::FAILURE;
         }
 
-        [$nameCols, $priceCols] = $this->detectNamePriceColumns($sheet);
-        if (!$nameCols || !$priceCols || count($nameCols) !== count($priceCols)) {
+        [$blocks, $headerRow] = $this->detectBlocks($sheet);
+        if (!$blocks) {
             $this->error('无法识别表头列（需要包含“项目名称”“市场价格”）。');
             return self::FAILURE;
         }
 
-        $items = $this->readItems($sheet, $nameCols, $priceCols);
+        $items = $this->readItems($sheet, $blocks, $headerRow);
         if (!$items) {
             $this->warn('未读取到任何项目（可能是空表或表头行不正确）。');
             return self::SUCCESS;
@@ -59,6 +70,8 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
             'services_indexed' => 0,
             'updated' => 0,
             'created' => 0,
+            'fields_filled' => 0,
+            'fields_synced' => 0,
             'skipped_invalid_price' => 0,
             'not_found' => 0,
             'multiple_matched' => 0,
@@ -73,8 +86,31 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
             $summary['services_indexed'] = array_sum(array_map('count', $index));
         }
 
-        $run = function () use (&$summary, &$notFound, &$multiMatched, &$matched, $items, $dryRun, $onlyActive, $exact, $index, $createMissing) {
-            foreach ($items as $name => $price) {
+        $run = function () use (
+            &$summary,
+            &$notFound,
+            &$multiMatched,
+            &$matched,
+            $items,
+            $dryRun,
+            $onlyActive,
+            $exact,
+            $index,
+            $createMissing,
+            $fillMissingFields,
+            $syncFields,
+            $report,
+            $reportLimit,
+            $whoAdded
+        ) {
+            $reportRows = [];
+            $reportMismatch = 0;
+
+            foreach ($items as $name => $payload) {
+                $price = $payload['price'];
+                $unit = $payload['unit'] ?? null;
+                $categoryName = $payload['category'] ?? null;
+
                 if ($exact) {
                     $query = MedicalService::whereNull('deleted_at')->where('name', $name);
                     if ($onlyActive) {
@@ -89,11 +125,23 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
                 $count = count($ids);
                 if ($count === 0) {
                     if (!$dryRun && $createMissing) {
-                        $svc = MedicalService::create([
+                        $categoryId = null;
+                        if ($categoryName) {
+                            $cat = ServiceCategory::firstOrCreate(
+                                ['name' => $categoryName],
+                                ['sort_order' => 0, 'is_active' => true, '_who_added' => $whoAdded]
+                            );
+                            $categoryId = (int) $cat->id;
+                        }
+
+                        MedicalService::create([
                             'name' => $name,
+                            'unit' => $unit,
                             'price' => $price,
+                            'category' => $categoryName,
+                            'category_id' => $categoryId,
                             'is_active' => true,
-                            '_who_added' => 1,
+                            '_who_added' => $whoAdded,
                         ]);
                         $summary['created']++;
                         $matched[] = $name . ' (created)';
@@ -113,11 +161,85 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
                 }
 
                 if (!$dryRun) {
+                    // 先统一更新价格
                     MedicalService::whereIn('id', $ids)->update(['price' => $price]);
+
+                    // 再补齐缺失字段（仅当目标字段为空/NULL）
+                    if (($fillMissingFields || $syncFields) && ($unit || $categoryName)) {
+                        $fill = [];
+                        if ($unit) {
+                            $fill['unit'] = $unit;
+                        }
+
+                        if ($categoryName) {
+                            $cat = ServiceCategory::firstOrCreate(
+                                ['name' => $categoryName],
+                                ['sort_order' => 0, 'is_active' => true, '_who_added' => $whoAdded]
+                            );
+                            $fill['category'] = $categoryName;
+                            $fill['category_id'] = (int) $cat->id;
+                        }
+
+                        if ($fill) {
+                            if ($syncFields) {
+                                $summary['fields_synced'] += MedicalService::whereIn('id', $ids)->update($fill);
+                            } else {
+                                $affected = MedicalService::whereIn('id', $ids)->where(function ($q) use ($fill) {
+                                    foreach (array_keys($fill) as $field) {
+                                        $q->orWhereNull($field)->orWhere($field, '');
+                                    }
+                                })->update($fill);
+                                $summary['fields_filled'] += $affected;
+                            }
+                        }
+                    }
                 }
                 $summary['updated']++;
                 if (count($matched) < 100) {
                     $matched[] = $name;
+                }
+
+                if ($report && count($reportRows) < max(0, $reportLimit)) {
+                    $id = (int) $ids[0];
+                    $svc = MedicalService::where('id', $id)->first(['id', 'name', 'unit', 'category', 'category_id']);
+                    $dbCategoryId = $svc?->category_id;
+                    $dbCategoryName = $dbCategoryId ? (ServiceCategory::where('id', $dbCategoryId)->value('name') ?? null) : null;
+                    $dbCategoryLegacy = $svc?->category;
+
+                    $expectedCategoryId = null;
+                    if ($categoryName) {
+                        $expectedCategoryId = (int) ServiceCategory::firstOrCreate(
+                            ['name' => $categoryName],
+                            ['sort_order' => 0, 'is_active' => true, '_who_added' => $whoAdded]
+                        )->id;
+                    }
+
+                    $ok = ($expectedCategoryId === null || (int) $dbCategoryId === (int) $expectedCategoryId);
+                    if (!$ok) {
+                        $reportMismatch++;
+                    }
+
+                    $reportRows[] = [
+                        'name' => $name,
+                        'excel_category' => $categoryName,
+                        'excel_unit' => $unit,
+                        'expected_category_id' => $expectedCategoryId,
+                        'db_category_id' => $dbCategoryId,
+                        'db_category_name' => $dbCategoryName,
+                        'db_category_legacy' => $dbCategoryLegacy,
+                        'db_unit' => $svc?->unit,
+                        'ok' => $ok ? 'Y' : 'N',
+                    ];
+                }
+            }
+
+            if ($report) {
+                $this->line('');
+                $this->info("报告（最多 {$reportLimit} 条；category_id 不一致计数={$reportMismatch}）：");
+                foreach ($reportRows as $r) {
+                    $this->line(
+                        "- {$r['ok']} {$r['name']} | Excel: [{$r['excel_category']}] unit={$r['excel_unit']} -> expect_cat_id={$r['expected_category_id']} | DB: cat_id={$r['db_category_id']} cat_name={$r['db_category_name']} legacy_cat={$r['db_category_legacy']} unit={$r['db_unit']}"
+                    );
                 }
             }
         };
@@ -175,70 +297,79 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
     }
 
     /**
-     * 识别表头行（包含“项目名称”“市场价格”）并返回对应列号（1-based）。
+     * 识别表头所在行，并按“块”返回列映射：每个块 = {categoryCol, nameCol, unitCol, priceCol}
      *
-     * @return array{0: int[], 1: int[]}
+     * @return array{0: array<int, array{categoryCol:int|null,nameCol:int,unitCol:int|null,priceCol:int}>, 1: int}
      */
-    private function detectNamePriceColumns(Worksheet $sheet): array
+    private function detectBlocks(Worksheet $sheet): array
     {
-        // 优先扫前 10 行作为表头候选（该表第 2 行是表头）
         for ($row = 1; $row <= 10; $row++) {
             $cells = $this->readRowStrings($sheet, $row, 1, 50);
-            $nameCols = [];
-            $priceCols = [];
 
+            $blocks = [];
             foreach ($cells as $col => $value) {
-                if ($value === '项目名称') {
-                    // 常见格式：项目名称、单位、市场价格
-                    $nameCols[] = $col;
+                if ($value !== '项目名称') {
+                    continue;
+                }
+                $unitCol = null;
+                $priceCol = null;
+                for ($offset = 1; $offset <= 4; $offset++) {
+                    $v = $cells[$col + $offset] ?? '';
+                    if ($v === '单位') {
+                        $unitCol = $col + $offset;
+                    }
+                    if ($v === '市场价格') {
+                        $priceCol = $col + $offset;
+                    }
+                }
+                if ($priceCol) {
+                    // 分类列通常在该块的 nameCol 前 1 列
+                    $categoryCol = ($col - 1) >= 1 ? ($col - 1) : null;
+                    $blocks[] = [
+                        'categoryCol' => $categoryCol,
+                        'nameCol' => $col,
+                        'unitCol' => $unitCol,
+                        'priceCol' => $priceCol,
+                    ];
                 }
             }
 
-            if ($nameCols) {
-                foreach ($nameCols as $nameCol) {
-                    $priceCol = null;
-                    for ($offset = 1; $offset <= 4; $offset++) {
-                        $v = $cells[$nameCol + $offset] ?? '';
-                        if ($v === '市场价格') {
-                            $priceCol = $nameCol + $offset;
-                            break;
-                        }
-                    }
-                    if ($priceCol) {
-                        $priceCols[] = $priceCol;
-                    }
-                }
-            }
-
-            if ($nameCols && $priceCols && count($nameCols) === count($priceCols)) {
-                return [$nameCols, $priceCols];
+            if ($blocks) {
+                return [$blocks, $row];
             }
         }
 
-        return [[], []];
+        return [[], 0];
     }
 
     /**
-     * @param int[] $nameCols
-     * @param int[] $priceCols
-     * @return array<string, string> name => price(2dp)
+     * @param array<int, array{categoryCol:int|null,nameCol:int,unitCol:int|null,priceCol:int}> $blocks
+     * @return array<string, array{price: string, unit?: string|null, category?: string|null}>
      */
-    private function readItems(Worksheet $sheet, array $nameCols, array $priceCols): array
+    private function readItems(Worksheet $sheet, array $blocks, int $headerRow): array
     {
         $highestRow = (int) $sheet->getHighestRow();
         $result = [];
+        $lastCategoryByBlock = [];
 
-        // 数据通常从第 3 行开始
-        for ($row = 3; $row <= $highestRow; $row++) {
+        $startRow = max($headerRow + 1, 2);
+        for ($row = $startRow; $row <= $highestRow; $row++) {
             $allEmpty = true;
-            foreach ($nameCols as $i => $nameCol) {
-                $priceCol = $priceCols[$i] ?? null;
-                if (!$priceCol) {
-                    continue;
-                }
+            foreach ($blocks as $blockIndex => $block) {
+                $nameCol = $block['nameCol'];
+                $unitCol = $block['unitCol'];
+                $priceCol = $block['priceCol'];
+                $categoryCol = $block['categoryCol'];
 
                 $name = $this->normalizeName((string) ($sheet->getCellByColumnAndRow($nameCol, $row)->getValue() ?? ''));
                 $priceRaw = $sheet->getCellByColumnAndRow($priceCol, $row)->getCalculatedValue();
+                $unit = $unitCol ? $this->normalizeName((string) ($sheet->getCellByColumnAndRow($unitCol, $row)->getValue() ?? '')) : null;
+                $category = $categoryCol ? $this->normalizeName((string) ($sheet->getCellByColumnAndRow($categoryCol, $row)->getValue() ?? '')) : null;
+                if ($category === '' || $category === null) {
+                    $category = $lastCategoryByBlock[$blockIndex] ?? null;
+                } else {
+                    $lastCategoryByBlock[$blockIndex] = $category;
+                }
 
                 if ($name !== '') {
                     $allEmpty = false;
@@ -253,8 +384,11 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
                     continue;
                 }
 
-                // 同名以最后一次出现为准（后续会在输出里统计多条匹配 DB 的情况）
-                $result[$name] = $price;
+                $result[$name] = [
+                    'price' => $price,
+                    'unit' => $unit ?: null,
+                    'category' => $category ?: null,
+                ];
             }
 
             // 连续空行就提前退出（避免扫到很下面）
