@@ -21,7 +21,12 @@ class RoleController extends Controller
     {
         $this->roleService = $roleService;
 
-        $this->middleware('can:manage-roles');
+        // filterRoles 不在此列：它按关键词返回角色的 id、名称与 slug，供用户新增与
+        // 编辑弹窗的角色下拉查找使用，属于名录查询而非角色管理。管理员持有
+        // create-users / edit-users 却不持有 manage-roles，在 users 页面新建用户时
+        // 角色下拉恒为空。角色名称本就在用户列表中逐行显示，用 manage-roles 挡住
+        // 这个查找不产生任何保护。
+        $this->middleware('can:manage-roles')->except(['filterRoles']);
     }
 
     /**

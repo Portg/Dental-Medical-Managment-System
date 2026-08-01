@@ -38,6 +38,7 @@
                     </ul>
                 </li>
                 {{-- Notifications --}}
+                @canany(['view-appointments', 'view-invoices'])
                 <li class="dropdown dropdown-extended dropdown-notification">
                     <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
                         <i class="icon-bell"></i>
@@ -48,28 +49,49 @@
                         </li>
                         <li>
                             <ul class="dropdown-menu-list scroller" style="height: 150px;" data-always-visible="1" data-rail-visible="1">
+                                @can('view-appointments')
                                 <li>
                                     <a href="{{ url('outbox-sms') }}">
                                         <i class="icon-envelope"></i> {{ __('menu.appointment_sms_reminders') }}
                                     </a>
                                 </li>
+                                @endcan
+                                @can('view-invoices')
                                 <li>
                                     <a href="{{ url('billing-notifications') }}">
                                         <i class="icon-paper-plane"></i> {{ __('menu.email_sent_invoice_quotations') }}
                                     </a>
                                 </li>
+                                @endcan
                             </ul>
                         </li>
                     </ul>
                 </li>
+                @endcanany
                 {{-- Language Switch --}}
+                @php
+                    $currentLocale = app()->getLocale();
+                    $localeLabels = config('app.available_locales', ['zh-CN' => '简体中文', 'en' => 'English']);
+                    $currentLocaleLabel = $localeLabels[$currentLocale] ?? $currentLocale;
+                @endphp
                 <li class="dropdown dropdown-extended dropdown-language">
                     <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
                         <i class="icon-globe"></i>
+                        <span class="username username-hide-on-mobile">{{ $currentLocaleLabel }}</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-right">
-                        <li><a href="{{ route('language.switch', 'en') }}"><i class="icon-flag"></i> English</a></li>
-                        <li><a href="{{ route('language.switch', 'zh-CN') }}"><i class="icon-flag"></i> 中文</a></li>
+                        <li class="{{ $currentLocale === 'zh-CN' ? 'active' : '' }}">
+                            <a href="{{ route('language.switch', 'zh-CN') }}">
+                                <i class="icon-flag"></i> 中文
+                                @if($currentLocale === 'zh-CN') <i class="fa fa-check pull-right"></i> @endif
+                            </a>
+                        </li>
+                        <li class="{{ $currentLocale === 'en' ? 'active' : '' }}">
+                            <a href="{{ route('language.switch', 'en') }}">
+                                <i class="icon-flag"></i> English
+                                @if($currentLocale === 'en') <i class="fa fa-check pull-right"></i> @endif
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 {{-- User Profile --}}

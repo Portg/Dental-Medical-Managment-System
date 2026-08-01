@@ -15,7 +15,11 @@ class MedicalServiceController extends Controller
     public function __construct(MedicalServiceService $medicalServiceService)
     {
         $this->medicalServiceService = $medicalServiceService;
-        $this->middleware('can:manage-medical-services')->except(['import']);
+        // filterServices 与 import 一同排除：它按关键词返回项目的 id、名称与价格，
+        // 供预约、开单、报价单页面的项目下拉查找使用，属于价目查询而非项目维护。
+        // 医生、护士、前台均不持有 manage-medical-services，却是开单与报价的主力；
+        // 项目价格本就在账单与报价单中对这些角色逐行显示。
+        $this->middleware('can:manage-medical-services')->except(['import', 'filterServices']);
     }
 
     /**

@@ -151,9 +151,8 @@
     font-size: 11px;
 }
 
-/* Collapsed card (only shows name row) */
-.kanban-card.collapsed .kanban-card-body,
-.kanban-card.collapsed .kanban-card-actions {
+/* Collapsed card: hide body details but keep action buttons (check-in / no-show) */
+.kanban-card.collapsed .kanban-card-body {
     display: none;
 }
 

@@ -141,7 +141,7 @@
         LanguageManager.init({
             availableLocales: @json(config('app.available_locales')),
             currentLocale: '{{ app()->getLocale() }}',
-            defaultLocale: '{{ config('app.fallback_locale', 'en') }}'
+            defaultLocale: '{{ config('app.locale', 'zh-CN') }}'
         });
 
         // Load common translations used across all pages

@@ -16,7 +16,12 @@ class MedicalTemplateController extends Controller
     public function __construct(MedicalTemplateService $medicalTemplateService)
     {
         $this->medicalTemplateService = $medicalTemplateService;
-        $this->middleware('can:manage-medical-services');
+        // store / search / incrementUsage 改由 manage-medical-cases 单独把关，必须从
+        // manage-medical-services 中排除：两条 middleware 原先是叠加而非分流，这三个
+        // 方法要求同时持有两个权限，与下一行注释声明的意图相反——医生持有
+        // manage-medical-cases 却无 manage-medical-services，仍被第一条挡死，
+        // 病历模板浮层因此在近 40 个页面上取不到数据。
+        $this->middleware('can:manage-medical-services')->except(['store', 'search', 'incrementUsage']);
         // Allow doctors (manage-medical-cases) to create personal templates and search
         $this->middleware('can:manage-medical-cases')->only(['store', 'search', 'incrementUsage']);
     }

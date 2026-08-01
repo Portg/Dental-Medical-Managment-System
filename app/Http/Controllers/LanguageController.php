@@ -14,7 +14,8 @@ class LanguageController extends Controller
     public function __construct(LanguageService $languageService)
     {
         $this->languageService = $languageService;
-        $this->middleware('can:manage-settings');
+        // Language preference is per-user UX; do not require manage-settings.
+        // (Previously this middleware caused 403 for doctors/receptionists.)
     }
 
     /**

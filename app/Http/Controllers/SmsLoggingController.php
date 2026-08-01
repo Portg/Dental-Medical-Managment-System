@@ -17,7 +17,9 @@ class SmsLoggingController extends Controller
     public function __construct(SmsLoggingService $smsLoggingService)
     {
         $this->smsLoggingService = $smsLoggingService;
-        $this->middleware('can:manage-sms');
+        // Outbox is operational (reminders log); allow clinic staff who view appointments,
+        // not only roles with SMS credit/settings (manage-sms).
+        $this->middleware('can:view-appointments');
     }
 
     /**

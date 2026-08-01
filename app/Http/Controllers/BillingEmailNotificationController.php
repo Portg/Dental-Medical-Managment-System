@@ -14,7 +14,9 @@ class BillingEmailNotificationController extends Controller
     public function __construct(BillingEmailNotificationService $billingEmailNotificationService)
     {
         $this->billingEmailNotificationService = $billingEmailNotificationService;
-        $this->middleware('can:manage-settings');
+        // Sent invoice/quotation emails — readable by staff who handle billing,
+        // not only system-settings admins.
+        $this->middleware('can:view-invoices');
     }
 
     /**

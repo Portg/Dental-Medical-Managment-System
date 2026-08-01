@@ -14,7 +14,9 @@ class SupplierController extends Controller
     public function __construct(SupplierService $supplierService)
     {
         $this->supplierService = $supplierService;
-        $this->middleware('can:manage-inventory');
+        // filterSuppliers 不在此列：它只返回供应商名称数组，供支出登记页的供应商下拉
+        // 使用。前台不持有 manage-inventory，却需要在登记支出时选择供应商。
+        $this->middleware('can:manage-inventory')->except(['filterSuppliers']);
     }
 
     public function index(Request $request)

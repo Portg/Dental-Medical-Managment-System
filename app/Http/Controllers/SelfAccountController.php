@@ -15,7 +15,10 @@ class SelfAccountController extends Controller
     public function __construct(SelfAccountService $service)
     {
         $this->service = $service;
-        $this->middleware('can:manage-accounting');
+        // filterAccounts 不在此列：它按关键词只返回账户的 id 与户名，不含余额、账号
+        // 等任何金额与凭证信息，供账单收款弹窗的收款账户下拉使用。医生与前台不持有
+        // manage-accounting，而前台正是收款的主力。
+        $this->middleware('can:manage-accounting')->except(['filterAccounts']);
     }
 
     /**

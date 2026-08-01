@@ -14,7 +14,9 @@ class PatientSourceController extends Controller
     public function __construct(PatientSourceService $service)
     {
         $this->service = $service;
-        $this->middleware('can:manage-patient-settings');
+        // list 不在此列：它只返回启用状态来源的 id 与名称，供患者建档页的「来源」
+        // 下拉使用。医生、护士、前台不持有 manage-patient-settings，却是建档主力。
+        $this->middleware('can:manage-patient-settings')->except(['list']);
     }
 
     /**

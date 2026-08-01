@@ -9,7 +9,10 @@ class DictItemController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('can:manage-patient-settings');
+        // list 不在此列：它按 type 返回字典项的 code 与名称，供患者建档、今日工作等
+        // 页面的 Select2 下拉使用（见方法上的注释）。医生、护士、前台不持有
+        // manage-patient-settings，却是建档与接诊的主力，下拉恒为空。
+        $this->middleware('can:manage-patient-settings')->except(['list']);
     }
 
     /**

@@ -81,15 +81,23 @@
             <li id="mergeMenuItem" class="disabled"><a href="javascript:;" onclick="mergePatients()">{{ __('patient.merge_patients') }}</a></li>
         </ul>
     </div>
-    <button type="button" class="btn btn-default" onclick="exportPatients()">
-        {{ __('common.export') }}
-    </button>
-    <button type="button" class="btn btn-default" onclick="$('#importModal').modal('show')">
-        <i class="fa fa-upload"></i> {{ __('patient.import') }}
-    </button>
-    <button type="button" class="btn btn-primary" onclick="createRecord()">
-        {{ __('patient.add_new_patient') }}
-    </button>
+    {{-- 按钮按权限显示：能进本页只需 view-patients（超管、管理员、医生、护士、前台），
+         但导出要 export-patients（仅超管、管理员）、导入与新增要 create-patients
+         （超管、管理员、前台）。此前按钮对所有人可见，医生与护士点下去只会拿到 403。
+         服务端权限不变，这里只是不再展示点了必然失败的入口。 --}}
+    @can('export-patients')
+        <button type="button" class="btn btn-default" onclick="exportPatients()">
+            {{ __('common.export') }}
+        </button>
+    @endcan
+    @can('create-patients')
+        <button type="button" class="btn btn-default" onclick="$('#importModal').modal('show')">
+            <i class="fa fa-upload"></i> {{ __('patient.import') }}
+        </button>
+        <button type="button" class="btn btn-primary" onclick="createRecord()">
+            {{ __('patient.add_new_patient') }}
+        </button>
+    @endcan
 @endsection
 
 {{-- ========================================================================

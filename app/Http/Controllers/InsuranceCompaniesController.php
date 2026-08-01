@@ -14,7 +14,10 @@ class InsuranceCompaniesController extends Controller
     public function __construct(InsuranceCompanyService $insuranceCompanyService)
     {
         $this->insuranceCompanyService = $insuranceCompanyService;
-        $this->middleware('can:manage-insurance');
+        // filterCompanies 不在此列：它按关键词只返回保险公司的 id 与名称，供患者建档、
+        // 在线预约、开单页面的保险公司下拉查找使用。医生、护士、前台不持有
+        // manage-insurance，但建档与开单时都需要选择保险公司。
+        $this->middleware('can:manage-insurance')->except(['filterCompanies']);
     }
 
     /**
