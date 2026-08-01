@@ -1,8 +1,10 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 
+@section('page_title', __('odontogram.dental_charting'))
+
 @section('css')
     @include('layouts.page_loader')
-    <link href="{{ asset('odontogram/css/estilosOdontograma.css') }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('css/dental-chart-editor.css') }}?v={{ filemtime(public_path('css/dental-chart-editor.css')) }}" rel="stylesheet" type="text/css"/>
 @endsection
 
 @section('content')
@@ -25,7 +27,7 @@
 </div>
 
 <input type="hidden" value="{{ $appointment_id }}" id="global_appointment_id">
-<input type="hidden" value="@if(isset($patient)) {{ $patient->id }} @endif" id="global_patient_id">
+<input type="hidden" value="{{ $patient->id ?? '' }}" id="global_patient_id">
 
 <div class="row">
     <div class="col-md-12">
@@ -37,28 +39,17 @@
                 </div>
             </div>
             <div class="portlet-body">
-                <div ng-app="app">
-                    <odontogramageneral></odontogramageneral>
-                </div>
+                @include('dental_chart.partials.fdi_editor')
             </div>
         </div>
     </div>
 </div>
-
-<div class="loading">
-    <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
-    <span>{{ __('common.loading') }}</span>
-</div>
 @endsection
 
 @section('js')
+<script>
+    LanguageManager.loadFromPHP(@json(__('odontogram')), 'odontogram');
+</script>
 <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-{{-- Dental charting plugins --}}
-<script src="{{ asset('odontogram/scripts/angular.js') }}"></script>
-<script type="text/javascript" src="{{ asset('odontogram/scripts/modulos/app.js') }}"></script>
-<script type="text/javascript" src="{{ asset('odontogram/scripts/controladores/controller.js') }}"></script>
-<script type="text/javascript" src="{{ asset('odontogram/scripts/jquery-odontograma.js') }}"></script>
-<script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/canvasodontograma.js') }}"></script>
-<script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/opcionescanvas.js') }}"></script>
-<script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/odontogramaGeneral.js') }}"></script>
+<script src="{{ asset('include_js/dental_chart_editor.js') }}?v={{ filemtime(public_path('include_js/dental_chart_editor.js')) }}"></script>
 @endsection

@@ -156,11 +156,24 @@ class DentalChartService
             ->delete();
 
         foreach ($chartData as $value) {
+            $tooth = $value['tooth_number'] ?? $value['tooth'] ?? null;
+            if ($tooth === null || $tooth === '') {
+                continue;
+            }
+            $tooth = (int) $tooth;
+            // Legacy Angular payload used "position"; new editor uses section/null
+            $section = $value['section'] ?? $value['position'] ?? null;
+
             DentalChart::create([
-                'tooth' => $value['tooth'],
-                'section' => $value['section'] ?? null,
+                'tooth' => $tooth,
+                'tooth_number' => $tooth,
+                'tooth_type' => $value['tooth_type'] ?? ($tooth >= 51 ? 'primary' : 'permanent'),
+                'tooth_status' => $value['tooth_status'] ?? null,
+                'section' => $section,
                 'color' => $value['color'] ?? null,
+                'surface' => $value['surface'] ?? null,
                 'appointment_id' => $appointmentId,
+                'doctor_id' => Auth::id(),
                 '_who_added' => Auth::id(),
             ]);
         }

@@ -3,9 +3,8 @@
 @section('content')
 @section('css')
     @include('layouts.page_loader')
+    <link href="{{ asset('css/dental-chart-editor.css') }}?v={{ filemtime(public_path('css/dental-chart-editor.css')) }}" rel="stylesheet" type="text/css"/>
 @endsection
-
-<link href="{{ asset('odontogram/css/estilosOdontograma.css') }}" rel="stylesheet" type="text/css"/>
 
 <div class="note note-success">
     <div class="row">
@@ -83,19 +82,11 @@
                                 </ul>
                                 <div class="tab-content">
                                     <div class="tab-pane active" id="dental_charting_tab">
-                                        <div class="row">
-                                            <div class="portlet light">
-                                                <div class="portlet-title">
-
-                                                </div>
-                                                <div class="portlet-body">
-                                                    <div ng-app="app">
-                                                        <odontogramageneral></odontogramageneral>
-                                                    </div>
-                                                </div>
+                                        <div class="portlet light">
+                                            <div class="portlet-body">
+                                                @include('dental_chart.partials.fdi_editor')
                                             </div>
                                         </div>
-
                                     </div>
                                     <div class="tab-pane" id="dental_notes_tab">
                                         <div class="row">
@@ -325,18 +316,7 @@
 
     {{--    //dental invoicing--}}
     <script src="{{ asset('include_js/invoicing.js') }}"></script>
-    {{--dental charting plugins--}}
-    <script src="{{ asset('odontogram/scripts/angular.js') }}"></script>
-    <!-- Angular Modulos-->
-    <script type="text/javascript" src="{{ asset('odontogram/scripts/modulos/app.js') }}"></script>
-    <!-- Angular Controsideres-->
-    <script type="text/javascript" src="{{ asset('odontogram/scripts/controladores/controller.js') }}"></script>
-
-    <script type="text/javascript" src="{{ asset('odontogram/scripts/jquery-odontograma.js') }}"></script>
-    <!--Angular Directives-->
-    <script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/canvasodontograma.js') }}"></script>
-    <script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/opcionescanvas.js') }}"></script>
-    <script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/odontogramaGeneral.js') }}"></script>
+    <script src="{{ asset('include_js/dental_chart_editor.js') }}?v={{ filemtime(public_path('include_js/dental_chart_editor.js')) }}"></script>
 
     <script type="text/javascript">
         //save appointment status

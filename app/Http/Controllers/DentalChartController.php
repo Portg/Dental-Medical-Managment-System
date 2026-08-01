@@ -79,6 +79,9 @@ class DentalChartController extends Controller
         return view('dental_chart.create', [
             'patient' => $patient,
             'appointment_id' => (int) $appointmentId,
+            'breadcrumb_parent' => __('odontogram.dental_charting'),
+            'breadcrumb_parent_url' => url('dental-charting'),
+            'breadcrumb_current' => $patient->full_name ?? __('odontogram.dental_charting'),
         ]);
     }
 
@@ -104,7 +107,8 @@ class DentalChartController extends Controller
     public function store(Request $request)
     {
         $appointmentId = (int) $request->appointment_id;
-        if ($appointmentId <= 0 || !is_array($request->data)) {
+        // data 可为 []：表示清空该患者全部牙位标记
+        if ($appointmentId <= 0 || !$request->has('data') || !is_array($request->data)) {
             return response()->json(['message' => __('odontogram.patient_not_found'), 'success' => false], 422);
         }
 
