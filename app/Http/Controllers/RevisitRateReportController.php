@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\RevisitRateExport;
 use App\Services\RevisitRateReportService;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class RevisitRateReportController extends Controller
 {
@@ -33,9 +35,17 @@ class RevisitRateReportController extends Controller
      */
     public function export(Request $request)
     {
+        $startDate = $request->input('start_date', date('Y-m-01'));
+        $endDate   = $request->input('end_date', date('Y-m-d'));
+
+        $data = $this->revisitRateReportService->getReportData($startDate, $endDate);
+
         \App\OperationLog::log('export', '回访报表', 'RevisitRate');
         \App\OperationLog::checkExportFrequency();
 
-        // TODO: Implement Excel export
+        return Excel::download(
+            new RevisitRateExport($data, $startDate, $endDate),
+            'revisit-rate-report-' . date('Y-m-d') . '.xlsx'
+        );
     }
 }

@@ -499,4 +499,21 @@ return [
     'filter_source'            => '患者来源',
     'filter_tags'              => '患者标签',
 
+
+    // ── 报表导出补充键（复诊率 / 患者来源）──────────────────────────
+    'overview'                      => '概览',
+    'metric'                        => '指标',
+    'value'                         => '数值',
+    'current_period_patients'       => '本期就诊患者',
+    'month'                         => '月份',
+    'doctor_revisit_stats'          => '医生复诊统计',
+    'avg_visits_per_patient'        => '人均就诊次数',
+    'revisit_interval_distribution' => '复诊间隔分布',
+    'interval'                      => '间隔区间',
+    'days'                          => '天数',
+    'patient_no'                    => '患者编号',
+    'last_visit_date'               => '最后就诊日期',
+    'days_since_last_visit'         => '距今天数',
+    'source_analysis'               => '来源分析',
+    'source'                        => '来源',
 ];

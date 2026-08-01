@@ -484,4 +484,21 @@ return [
     'all_sources'              => 'All Sources',
     'filter_source'            => 'Patient Source',
     'filter_tags'              => 'Patient Tags',
+
+    // ── Export keys (revisit rate / patient source) ────────────────
+    'overview'                      => 'Overview',
+    'metric'                        => 'Metric',
+    'value'                         => 'Value',
+    'current_period_patients'       => 'Patients in Period',
+    'month'                         => 'Month',
+    'doctor_revisit_stats'          => 'Doctor Revisit Stats',
+    'avg_visits_per_patient'        => 'Avg Visits per Patient',
+    'revisit_interval_distribution' => 'Revisit Interval Distribution',
+    'interval'                      => 'Interval',
+    'days'                          => 'Days',
+    'patient_no'                    => 'Patient No.',
+    'last_visit_date'               => 'Last Visit Date',
+    'days_since_last_visit'         => 'Days Since Last Visit',
+    'source_analysis'               => 'Source Analysis',
+    'source'                        => 'Source',
 ];

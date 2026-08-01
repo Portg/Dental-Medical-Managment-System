@@ -22,6 +22,13 @@
                                value="{{ $endDate->format('Y-m-d') }}" placeholder="{{ __('datetime.date_range.end_date') }}">
                         <button type="submit" class="btn btn-sm btn-primary"><i class="icon-magnifier"></i> {{ __('common.search') }}</button>
                     </form>
+                    {{-- 目前仅来源分析 Tab 有导出实现；人口学 Tab 暂无对应 Export 类 --}}
+                    @if($activeTab === 'source')
+                        <a href="{{ url('export-patient-source') }}?start_date={{ $startDate->format('Y-m-d') }}&end_date={{ $endDate->format('Y-m-d') }}"
+                           class="btn btn-sm btn-default">
+                            <i class="icon-cloud-download"></i> {{ __('common.export') }}
+                        </a>
+                    @endif
                 </div>
             </div>
             <div class="portlet-body">

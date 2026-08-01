@@ -21,6 +21,10 @@
                                value="{{ $endDate->format('Y-m-d') }}" placeholder="{{ __('datetime.date_range.end_date') }}">
                         <button type="submit" class="btn btn-sm btn-primary"><i class="icon-magnifier"></i> {{ __('common.search') }}</button>
                     </form>
+                    <a href="{{ url('export-revisit-rate') }}?start_date={{ $startDate->format('Y-m-d') }}&end_date={{ $endDate->format('Y-m-d') }}"
+                       class="btn btn-sm btn-default">
+                        <i class="icon-cloud-download"></i> {{ __('common.export') }}
+                    </a>
                 </div>
             </div>
             <div class="portlet-body">

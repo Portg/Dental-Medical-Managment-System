@@ -567,6 +567,11 @@ Route::group(['middleware' => ['auth']], function () {
 
     // Revisit Rate Statistics Report
     Route::get('revisit-rate-report', 'RevisitRateReportController@index');
+    Route::get('export-revisit-rate', 'RevisitRateReportController@export');
+
+    // 患者来源报表的展示页已合并进 patient-report?tab=source（见上方 301 重定向），
+    // 但导出仍由原控制器提供，合并页的「导出」按钮指向这里。
+    Route::get('export-patient-source', 'PatientSourceReportController@export');
 
     // Appointment Analytics Report
     Route::get('appointment-analytics-report', 'AppointmentAnalyticsReportController@index');
