@@ -63,6 +63,9 @@ return [
     'view_full_detail'    => 'View Full Detail',
     'years_old'           => ' yrs',
     'no_records'          => 'No records',
+    'no_clinical_summary' => 'No chief complaint / diagnosis summary',
+    'open_treatment'      => 'Open treatment',
+    'open_medical_case'   => 'View medical case',
     'total'               => 'Total',
     'paid'                => 'Paid',
 

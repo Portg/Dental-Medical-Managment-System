@@ -451,6 +451,72 @@
 .pd-record-date { font-size: 11px; color: #9CA3AF; }
 .pd-record-detail { font-size: 13px; color: #374151; margin-top: 1px; }
 .pd-empty { text-align: center; color: #9CA3AF; padding: 30px 10px; font-size: 13px; }
+
+/* Visit cards — clinical-first layout */
+.pd-visit-item { padding: 10px 0; }
+.pd-visit-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+.pd-visit-link:hover { text-decoration: none; }
+.pd-visit-link:hover .pd-visit-summary { color: #2563EB; }
+.pd-visit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.pd-visit-date {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+.pd-visit-badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+}
+.pd-badge {
+    display: inline-block;
+    font-size: 10px;
+    line-height: 1.4;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: #F3F4F6;
+    color: #6B7280;
+    white-space: nowrap;
+}
+.pd-badge-type { background: #EFF6FF; color: #2563EB; }
+.pd-badge-status.status-completed,
+.pd-badge-status.status-treatment-complete { background: #ECFDF5; color: #059669; }
+.pd-badge-status.status-cancelled,
+.pd-badge-status.status-rejected { background: #FEF2F2; color: #DC2626; }
+.pd-badge-status.status-no_show,
+.pd-badge-status.status-no-show { background: #FFF7ED; color: #EA580C; }
+.pd-badge-status.status-in_progress,
+.pd-badge-status.status-in-progress,
+.pd-badge-status.status-checked_in,
+.pd-badge-status.status-waiting { background: #EEF2FF; color: #4F46E5; }
+.pd-visit-summary {
+    font-size: 13px;
+    color: #111827;
+    line-height: 1.4;
+    margin-top: 2px;
+}
+.pd-visit-meta {
+    font-size: 11px;
+    color: #9CA3AF;
+    margin-top: 3px;
+}
+.pd-visit-case-link {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #2563EB;
+}
 .pd-footer {
     padding: 10px 20px;
     border-top: 1px solid #F3F4F6;

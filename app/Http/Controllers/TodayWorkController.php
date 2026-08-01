@@ -78,43 +78,7 @@ class TodayWorkController extends Controller
      */
     public function getPatientSummary($patientId)
     {
-        $patient = \App\Patient::with(['appointments' => function ($q) {
-            $q->orderByDesc('start_date')->limit(10);
-        }, 'appointments.doctor', 'appointments.service', 'invoices' => function ($q) {
-            $q->orderByDesc('created_at')->limit(10);
-        }])->findOrFail($patientId);
-
-        return response()->json([
-            'id'            => $patient->id,
-            'full_name'     => $patient->full_name,
-            'patient_no'    => $patient->patient_no,
-            'gender'        => $patient->gender,
-            'dob'           => $patient->dob,
-            'phone_no'      => $patient->phone_no ? substr($patient->phone_no, 0, 3) . '****' . substr($patient->phone_no, -4) : '',
-            'member_status' => $patient->member_status,
-            'allergies'     => $patient->allergies,
-            'appointments'  => $patient->appointments->map(function ($a) {
-                return [
-                    'id'      => $a->id,
-                    // start_date 经 getAttribute() 返回 Carbon 本体，直接进 json_encode
-                    // 会输出带 00:00:00 的完整时间戳；此处日期与时间分列显示，需只取日期
-                    'date'    => optional($a->start_date)->format('Y-m-d') ?? '',
-                    'time'    => $a->start_time ? date('H:i', strtotime($a->start_time)) : '',
-                    'doctor'  => $a->doctor ? ($a->doctor->surname . $a->doctor->othername) : '',
-                    'service' => $a->service->name ?? '',
-                    'status'  => $a->status,
-                ];
-            }),
-            'invoices' => $patient->invoices->map(function ($inv) {
-                return [
-                    'id'           => $inv->id,
-                    'invoice_no'   => $inv->invoice_no ?? '',
-                    'total_amount' => $inv->total_amount,
-                    'paid_amount'  => $inv->paid_amount ?? 0,
-                    'created_at'   => $inv->created_at ? $inv->created_at->format('Y-m-d') : '',
-                ];
-            }),
-        ]);
+        return response()->json($this->service->getPatientSummary((int) $patientId));
     }
 
     /**

@@ -5,9 +5,12 @@ namespace App\Services;
 use App\Appointment;
 use App\DictItem;
 use App\Http\Helper\NameHelper;
+use App\MedicalCase;
+use App\Patient;
 use App\WaitingQueue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Yajra\DataTables\DataTables;
 
 class TodayWorkService
@@ -1018,5 +1021,152 @@ class TodayWorkService
             ->where('id', $appointmentId)
             ->whereNull('deleted_at')
             ->update(['status' => Appointment::STATUS_NO_SHOW]);
+    }
+
+    /**
+     * Patient summary for the today-work right drawer.
+     *
+     * Visit cards emphasize clinical meaning (type / status / complaint or diagnosis),
+     * not just appointment time + doctor.
+     */
+    public function getPatientSummary(int $patientId): array
+    {
+        $patient = Patient::with([
+            'appointments' => function ($q) {
+                $q->orderByDesc('start_date')->orderByDesc('id')->limit(10);
+            },
+            'appointments.doctor',
+            'appointments.service',
+            'invoices' => function ($q) {
+                $q->orderByDesc('created_at')->limit(10);
+            },
+        ])->findOrFail($patientId);
+
+        $appointments = $patient->appointments;
+        $dates = $appointments
+            ->map(fn ($a) => optional($a->start_date)->format('Y-m-d'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $casesByDate = collect();
+        if ($dates) {
+            $casesByDate = MedicalCase::where('patient_id', $patientId)
+                ->whereIn('case_date', $dates)
+                ->whereNull('deleted_at')
+                ->orderByDesc('id')
+                ->get(['id', 'case_date', 'title', 'chief_complaint', 'diagnosis'])
+                ->groupBy(fn ($c) => optional($c->case_date)->format('Y-m-d'));
+        }
+
+        return [
+            'id'            => $patient->id,
+            'full_name'     => $patient->full_name,
+            'patient_no'    => $patient->patient_no,
+            'gender'        => $patient->gender,
+            'dob'           => $patient->dob,
+            'phone_no'      => $patient->phone_no
+                ? substr($patient->phone_no, 0, 3) . '****' . substr($patient->phone_no, -4)
+                : '',
+            'member_status' => $patient->member_status,
+            'allergies'     => $patient->allergies_display ?: null,
+            'appointments'  => $appointments->map(function ($a) use ($casesByDate) {
+                $date = optional($a->start_date)->format('Y-m-d') ?? '';
+                $case = $date && $casesByDate->has($date) ? $casesByDate->get($date)->first() : null;
+                $summary = $this->buildVisitSummary($case, $a);
+
+                return [
+                    'id'                     => $a->id,
+                    'date'                   => $date,
+                    'time'                   => $a->start_time ? date('H:i', strtotime($a->start_time)) : '',
+                    'doctor'                 => $a->doctor
+                        ? NameHelper::join($a->doctor->surname, $a->doctor->othername)
+                        : '',
+                    'service'                => $a->service->name ?? '',
+                    'appointment_type'       => $a->appointment_type ?? '',
+                    'appointment_type_label' => $this->appointmentTypeLabel($a->appointment_type),
+                    'status'                 => $a->status ?? '',
+                    'status_label'           => $this->appointmentStatusLabel($a->status),
+                    'summary'                => $summary,
+                    'medical_case_id'        => $case?->id,
+                    'treatment_url'          => url('medical-treatment/' . $a->id),
+                    'medical_case_url'       => $case ? url('medical-cases/' . $case->id . '/edit') : null,
+                ];
+            })->values()->all(),
+            'invoices' => $patient->invoices->map(function ($inv) {
+                return [
+                    'id'           => $inv->id,
+                    'invoice_no'   => $inv->invoice_no ?? '',
+                    'total_amount' => $inv->total_amount,
+                    'paid_amount'  => $inv->paid_amount ?? 0,
+                    'created_at'   => $inv->created_at ? $inv->created_at->format('Y-m-d') : '',
+                ];
+            })->values()->all(),
+        ];
+    }
+
+    private function buildVisitSummary(?MedicalCase $case, Appointment $appointment): string
+    {
+        if ($case) {
+            $parts = array_filter([
+                $case->title ? trim((string) $case->title) : null,
+                $case->chief_complaint ? trim((string) $case->chief_complaint) : null,
+                $case->diagnosis ? trim((string) $case->diagnosis) : null,
+            ]);
+            if ($parts) {
+                // Prefer title · complaint; fall back through diagnosis
+                $primary = $case->title ?: ($case->chief_complaint ?: $case->diagnosis);
+                $secondary = null;
+                if ($case->title && $case->chief_complaint) {
+                    $secondary = $case->chief_complaint;
+                } elseif (($case->title || $case->chief_complaint) && $case->diagnosis) {
+                    $secondary = $case->diagnosis;
+                }
+                $text = $secondary
+                    ? $primary . ' · ' . $secondary
+                    : $primary;
+
+                return Str::limit(preg_replace('/\s+/u', ' ', $text), 80);
+            }
+        }
+
+        if (!empty($appointment->service?->name)) {
+            return (string) $appointment->service->name;
+        }
+
+        // 预约 notes 常含内部建单说明（如图表载体），不当作临床摘要展示
+        return __('today_work.no_clinical_summary');
+    }
+
+    private function appointmentTypeLabel(?string $type): string
+    {
+        if (!$type) {
+            return '';
+        }
+
+        // Prefer today_work keys for first/revisit, then appointment.*
+        $todayKey = 'today_work.' . $type;
+        $translated = __($todayKey);
+        if ($translated !== $todayKey) {
+            return $translated;
+        }
+
+        $aptKey = 'appointment.' . $type;
+        $translated = __($aptKey);
+
+        return $translated !== $aptKey ? $translated : $type;
+    }
+
+    private function appointmentStatusLabel(?string $status): string
+    {
+        if (!$status) {
+            return '';
+        }
+
+        $key = 'appointment.' . str_replace(' ', '_', $status);
+        $translated = __($key);
+
+        return $translated !== $key ? $translated : $status;
     }
 }

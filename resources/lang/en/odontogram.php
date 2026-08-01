@@ -41,7 +41,6 @@ return [
     'create_new' => 'Create New',
     'go_to_appointment' => 'Go to appointment to record chart',
     'new_appointment_for_chart' => 'New appointment & record chart',
-    'auto_appointment_note' => 'Auto-created visit for dental chart recording',
     'no_doctor_for_chart' => 'No active doctor available to open the chart',
     'patient_not_found' => 'Patient not found',
 

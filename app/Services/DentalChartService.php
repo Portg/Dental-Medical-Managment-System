@@ -98,7 +98,8 @@ class DentalChartService
             'source'            => 'walk_in',
             'visit_information' => Appointment::VISIT_WALK_IN,
             'status'            => Appointment::STATUS_SCHEDULED,
-            'notes'             => __('odontogram.auto_appointment_note'),
+            // 不写面向用户的备注：会污染「就诊记录」摘要；仅作图表数据载体即可
+            'notes'             => null,
             'branch_id'         => $user->branch_id,
             'sort_by'           => $today . ' ' . $nowTime,
             '_who_added'        => $user->id,

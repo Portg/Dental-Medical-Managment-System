@@ -1,8 +1,8 @@
 /**
  * Today Work - Patient Detail Drawer
  * ====================================
- * Right-side drawer showing patient summary with 4 tabs:
- *   1. Basic Info  2. Billing  3. Visits  4. Follow-ups
+ * Right-side drawer showing patient summary with 2 tabs:
+ *   1. Visits (clinical visit cards)  2. Billing
  *
  * Depends on: jQuery, LanguageManager
  */
@@ -27,7 +27,11 @@
             $('#patient-drawer-content').show();
         }).fail(function () {
             $('#patient-drawer-loading').hide();
-            $('#patient-drawer-content').html('<div class="text-center text-danger" style="padding:40px;">' + LanguageManager.trans('common.error_message') + '</div>').show();
+            $('#patient-drawer-content').html(
+                '<div class="text-center text-danger" style="padding:40px;">' +
+                LanguageManager.trans('common.error_message') +
+                '</div>'
+            ).show();
         });
     };
 
@@ -44,62 +48,100 @@
      * Render all drawer content.
      */
     function renderPatientDrawer(data) {
-        // Header
-        var genderIcon = data.gender === 'Male' ? '<i class="fa fa-mars" style="color:#2196F3"></i>' : '<i class="fa fa-venus" style="color:#E91E63"></i>';
+        var genderIcon = data.gender === 'Male'
+            ? '<i class="fa fa-mars" style="color:#2196F3"></i>'
+            : '<i class="fa fa-venus" style="color:#E91E63"></i>';
         var age = data.dob ? calcAge(data.dob) : '';
         var ageText = age ? ' · ' + age + LanguageManager.trans('today_work.years_old') : '';
-        var memberBadge = data.member_status === 'Active' ? ' <span class="label label-warning" style="font-size:10px;">VIP</span>' : '';
+        var memberBadge = data.member_status === 'Active'
+            ? ' <span class="label label-warning" style="font-size:10px;">VIP</span>'
+            : '';
 
         $('#pd-name').html(escHtml(data.full_name) + memberBadge);
         $('#pd-meta').html(genderIcon + ageText + ' · ' + escHtml(data.patient_no));
         $('#pd-phone').text(data.phone_no || '-');
 
-        // Allergy warning
         if (data.allergies) {
             $('#pd-allergy').html('<i class="fa fa-exclamation-triangle"></i> ' + escHtml(data.allergies)).show();
         } else {
             $('#pd-allergy').hide();
         }
 
-        // Detail link
         $('#pd-detail-link').attr('href', '/patients/' + data.id);
 
-        // Tab: Visits
-        var visitsHtml = '';
-        if (data.appointments && data.appointments.length > 0) {
-            data.appointments.forEach(function (a) {
-                visitsHtml += '<div class="pd-record-item">';
-                visitsHtml += '<div class="pd-record-date">' + escHtml(a.date) + ' ' + escHtml(a.time) + '</div>';
-                visitsHtml += '<div class="pd-record-detail">' + escHtml(a.doctor) + ' · ' + escHtml(a.service) + '</div>';
-                visitsHtml += '</div>';
-            });
-        } else {
-            visitsHtml = '<div class="pd-empty">' + LanguageManager.trans('today_work.no_records') + '</div>';
-        }
-        $('#pd-tab-visits').html(visitsHtml);
-
-        // Tab: Billing
-        var billingHtml = '';
-        if (data.invoices && data.invoices.length > 0) {
-            data.invoices.forEach(function (inv) {
-                var paidClass = inv.paid_amount >= inv.total_amount ? 'text-success' : 'text-warning';
-                billingHtml += '<div class="pd-record-item">';
-                billingHtml += '<div class="pd-record-date">' + escHtml(inv.created_at) + ' <span class="text-muted">#' + escHtml(inv.invoice_no) + '</span></div>';
-                billingHtml += '<div class="pd-record-detail">';
-                billingHtml += LanguageManager.trans('today_work.total') + ': ¥' + Number(inv.total_amount).toFixed(2);
-                billingHtml += ' <span class="' + paidClass + '">' + LanguageManager.trans('today_work.paid') + ': ¥' + Number(inv.paid_amount).toFixed(2) + '</span>';
-                billingHtml += '</div>';
-                billingHtml += '</div>';
-            });
-        } else {
-            billingHtml = '<div class="pd-empty">' + LanguageManager.trans('today_work.no_records') + '</div>';
-        }
-        $('#pd-tab-billing').html(billingHtml);
+        $('#pd-tab-visits').html(renderVisits(data.appointments || []));
+        $('#pd-tab-billing').html(renderBilling(data.invoices || []));
     }
 
-    /**
-     * Calculate age from date of birth.
-     */
+    function renderVisits(appointments) {
+        if (!appointments.length) {
+            return '<div class="pd-empty">' + LanguageManager.trans('today_work.no_records') + '</div>';
+        }
+
+        var html = '';
+        appointments.forEach(function (a) {
+            var typeLabel = a.appointment_type_label || '';
+            var statusLabel = a.status_label || '';
+            var summary = a.summary || LanguageManager.trans('today_work.no_clinical_summary');
+            var metaParts = [];
+            if (a.doctor) metaParts.push(a.doctor);
+            if (a.service) metaParts.push(a.service);
+            var meta = metaParts.join(' · ');
+
+            html += '<div class="pd-record-item pd-visit-item">';
+            html += '<a class="pd-visit-link" href="' + escAttr(a.treatment_url || ('/medical-treatment/' + a.id)) + '">';
+            html += '<div class="pd-visit-header">';
+            html += '<span class="pd-visit-date">' + escHtml(a.date || '') + '</span>';
+            html += '<span class="pd-visit-badges">';
+            if (typeLabel) {
+                html += '<span class="pd-badge pd-badge-type">' + escHtml(typeLabel) + '</span>';
+            }
+            if (statusLabel) {
+                html += '<span class="pd-badge pd-badge-status status-' + escAttr(statusClass(a.status)) + '">' +
+                    escHtml(statusLabel) + '</span>';
+            }
+            html += '</span>';
+            html += '</div>';
+            html += '<div class="pd-visit-summary">' + escHtml(summary) + '</div>';
+            if (meta) {
+                html += '<div class="pd-visit-meta">' + escHtml(meta) + '</div>';
+            }
+            html += '</a>';
+            if (a.medical_case_url) {
+                html += '<a class="pd-visit-case-link" href="' + escAttr(a.medical_case_url) + '">' +
+                    LanguageManager.trans('today_work.open_medical_case') + '</a>';
+            }
+            html += '</div>';
+        });
+        return html;
+    }
+
+    function renderBilling(invoices) {
+        if (!invoices.length) {
+            return '<div class="pd-empty">' + LanguageManager.trans('today_work.no_records') + '</div>';
+        }
+
+        var html = '';
+        invoices.forEach(function (inv) {
+            var paidClass = inv.paid_amount >= inv.total_amount ? 'text-success' : 'text-warning';
+            html += '<div class="pd-record-item">';
+            html += '<div class="pd-record-date">' + escHtml(inv.created_at) +
+                ' <span class="text-muted">#' + escHtml(inv.invoice_no) + '</span></div>';
+            html += '<div class="pd-record-detail">';
+            html += LanguageManager.trans('today_work.total') + ': ¥' + Number(inv.total_amount).toFixed(2);
+            html += ' <span class="' + paidClass + '">' + LanguageManager.trans('today_work.paid') +
+                ': ¥' + Number(inv.paid_amount).toFixed(2) + '</span>';
+            html += '</div>';
+            html += '</div>';
+        });
+        return html;
+    }
+
+    function statusClass(status) {
+        if (!status) return 'default';
+        return String(status).toLowerCase().replace(/\s+/g, '-');
+    }
+
     function calcAge(dob) {
         var birth = new Date(dob);
         var today = new Date();
@@ -109,9 +151,6 @@
         return age;
     }
 
-    /**
-     * HTML escape.
-     */
     function escHtml(str) {
         if (!str) return '';
         var div = document.createElement('div');
@@ -119,12 +158,14 @@
         return div.innerHTML;
     }
 
-    // Close on overlay click
+    function escAttr(str) {
+        return escHtml(str).replace(/"/g, '&quot;');
+    }
+
     $(document).on('click', '#patient-drawer-overlay', function () {
         closePatientDrawer();
     });
 
-    // Close on Escape key
     $(document).on('keydown', function (e) {
         if (e.key === 'Escape' && $('#patient-drawer').hasClass('open')) {
             closePatientDrawer();

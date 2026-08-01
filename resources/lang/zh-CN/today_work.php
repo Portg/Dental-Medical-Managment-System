@@ -63,6 +63,9 @@ return [
     'view_full_detail'    => '查看完整详情',
     'years_old'           => '岁',
     'no_records'          => '暂无记录',
+    'no_clinical_summary' => '暂无主诉/诊断摘要',
+    'open_treatment'      => '进入诊疗',
+    'open_medical_case'   => '查看病历',
     'total'               => '应收',
     'paid'                => '已收',
 
