@@ -1,6 +1,7 @@
 /**
  * FDI Dental Chart Editor
  * Visual language aligned with medical_cases tooth selector.
+ * Affordance via numbered steps + tool chip — no long instructional copy.
  */
 
 .dce-wrap {
@@ -8,22 +9,91 @@
     margin: 0 auto;
 }
 
-.dce-hint {
+.dce-step {
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 14px 16px 16px;
+}
+
+.dce-step-teeth {
+    background: #fff;
+}
+
+.dce-step-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.dce-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #2563EB;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.dce-step-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.dce-tool-chip {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
     background: #EFF6FF;
     border: 1px solid #BFDBFE;
+    font-size: 12px;
+    font-weight: 600;
     color: #1E40AF;
-    border-radius: 6px;
-    padding: 10px 14px;
-    font-size: 13px;
-    margin-bottom: 14px;
+}
+
+.dce-tool-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.dce-tool-chip.is-clear {
+    background: #F3F4F6;
+    border-color: #D1D5DB;
+    color: #4B5563;
+}
+
+.dce-tool-chip.is-clear .dce-tool-swatch {
+    background: transparent;
+    border-style: dashed;
+}
+
+.dce-flow {
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 16px;
+    margin: 8px 0;
+    line-height: 1;
 }
 
 .dce-status-bar {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 16px;
-    justify-content: center;
 }
 
 .dce-status-btn {
@@ -54,6 +124,16 @@
     border-radius: 4px;
     margin: 0 auto 4px;
     border: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dce-status-swatch.dce-eraser {
+    background: #F3F4F6;
+    border-style: dashed;
+    color: #6B7280;
+    font-size: 11px;
 }
 
 .dce-status-label {
@@ -63,24 +143,24 @@
     font-weight: 600;
 }
 
-.dce-status-btn.dce-clear .dce-status-swatch {
-    background: #fff;
-    border: 1px dashed #9CA3AF;
+.dce-status-btn.dce-clear.active {
+    border-color: #6B7280;
+    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.2);
+    background: #F3F4F6;
 }
 
 .dce-tabs {
     display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-left: auto;
 }
 
 .dce-tab {
     border: 1px solid #D1D5DB;
     background: #fff;
     border-radius: 20px;
-    padding: 6px 16px;
-    font-size: 13px;
+    padding: 4px 12px;
+    font-size: 12px;
     cursor: pointer;
     color: #4B5563;
 }
@@ -103,7 +183,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px 0 16px;
+    padding: 4px 0 8px;
 }
 
 .dce-quadrant-label {
@@ -191,21 +271,37 @@
     color: #fff;
 }
 
-.dce-actions {
-    text-align: center;
-    margin-top: 8px;
+.dce-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
     padding-top: 12px;
     border-top: 1px solid #E5E7EB;
+    flex-wrap: wrap;
 }
 
 .dce-summary {
-    margin-top: 14px;
     font-size: 12px;
     color: #6B7280;
-    text-align: center;
+    flex: 1;
     min-height: 18px;
 }
 
 .dce-summary strong {
     color: #374151;
+}
+
+@media (max-width: 767px) {
+    .dce-tool-chip,
+    .dce-tabs {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .dce-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }

@@ -85,8 +85,22 @@
 
     function setActiveStatus(status) {
         selectedStatus = status;
+        var $btn = $('.dce-status-btn[data-status="' + status + '"]');
         $('.dce-status-btn').removeClass('active');
-        $('.dce-status-btn[data-status="' + status + '"]').addClass('active');
+        $btn.addClass('active');
+
+        var label = $btn.data('label') || status;
+        var bg = $btn.data('bg');
+        var $chip = $('#dce-tool-chip');
+        var $swatch = $('#dce-tool-swatch');
+        $('#dce-tool-label').text(label);
+        if (status === 'clear') {
+            $chip.addClass('is-clear');
+            $swatch.css('background', 'transparent');
+        } else {
+            $chip.removeClass('is-clear');
+            $swatch.css('background', bg || '#EAB308');
+        }
     }
 
     function onToothClick() {
