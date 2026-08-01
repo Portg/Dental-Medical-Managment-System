@@ -76,21 +76,27 @@ class MedicalTemplate extends Model
     }
 
     /**
-     * Get templates available to a user (system + department + personal)
+     * 用户可见的模板：全院模板（system）+ 科室模板（department）+ 自己的个人模板。
+     *
+     * 原先本作用域有第三个参数 $department，用于把 department 类模板按科室过滤，
+     * 但它结构上无从填充：users 表没有科室字段（只有 branch_id），系统里也不存在
+     * 用户与科室的映射，因此唯一调用方 MedicalTemplateService::searchTemplates()
+     * 从来不传它，该过滤分支恒不执行。留着会让人误以为科室隔离已经生效——尤其在
+     * 本查询已放开给所有能进病历书写页的角色之后。故移除该参数，让「department 类
+     * 模板对全院可见」这一实际行为显式化。
+     *
+     * 若将来引入 users.department，科室过滤应加在下面标注的分支上，并同步收紧
+     * MedicalTemplateController@search 的权限。
      */
-    public function scopeAvailableToUser($query, $userId, $department = null)
+    public function scopeAvailableToUser($query, $userId)
     {
-        return $query->where(function ($q) use ($userId, $department) {
+        return $query->where(function ($q) use ($userId) {
             $q->where('category', 'system')
                 ->orWhere(function ($q2) use ($userId) {
                     $q2->where('category', 'personal')->where('created_by', $userId);
                 })
-                ->orWhere(function ($q3) use ($department) {
-                    $q3->where('category', 'department');
-                    if ($department) {
-                        $q3->where('department', $department);
-                    }
-                });
+                // 科室模板：目前无用户↔科室映射，对全院可见
+                ->orWhere('category', 'department');
         });
     }
 
