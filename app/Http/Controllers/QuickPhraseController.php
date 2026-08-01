@@ -14,10 +14,13 @@ class QuickPhraseController extends Controller
     public function __construct(QuickPhraseService $service)
     {
         $this->service = $service;
-        // search 不在此列：它按关键词与分类返回快捷短语，供病历书写浮层调用，遍布
-        // 全院近 40 个页面。manage-settings 仅超管与管理员持有，而快捷短语的使用者
-        // 恰恰是医生、护士、前台与库管——写入口（增删改）仍受 manage-settings 保护。
+        // search 改用 edit-patients 把关：快捷短语浮层绑定在 .phrase-enabled 输入框上
+        // （template_picker.js 中的 QuickPhrasePicker），该 class 只出现在诊断、治疗计划、
+        // 病程记录三个书写页，其准入正是 edit-patients。manage-settings 仅超管与管理员
+        // 持有，医生、护士、前台在书写页敲字时一律拿不到短语。
+        // 写入口（增删改）仍由 manage-settings 把关。
         $this->middleware('can:manage-settings')->except(['search']);
+        $this->middleware('can:edit-patients')->only(['search']);
     }
 
     /**

@@ -16,14 +16,22 @@ class MedicalTemplateController extends Controller
     public function __construct(MedicalTemplateService $medicalTemplateService)
     {
         $this->medicalTemplateService = $medicalTemplateService;
-        // store / search / incrementUsage 改由 manage-medical-cases 单独把关，必须从
-        // manage-medical-services 中排除：两条 middleware 原先是叠加而非分流，这三个
-        // 方法要求同时持有两个权限，与下一行注释声明的意图相反——医生持有
-        // manage-medical-cases 却无 manage-medical-services，仍被第一条挡死，
-        // 病历模板浮层因此在近 40 个页面上取不到数据。
+        // 这三个方法必须从 manage-medical-services 中排除：两条 middleware 原先是叠加
+        // 而非分流，导致它们要求同时持有两个权限，与下方注释声明的意图相反——医生持有
+        // manage-medical-cases 却无 manage-medical-services，仍被第一条挡死，病历模板
+        // 浮层因此取不到数据。
         $this->middleware('can:manage-medical-services')->except(['store', 'search', 'incrementUsage']);
-        // Allow doctors (manage-medical-cases) to create personal templates and search
-        $this->middleware('can:manage-medical-cases')->only(['store', 'search', 'incrementUsage']);
+
+        // search 与 incrementUsage 用 edit-patients 而非 manage-medical-cases：模板浮层
+        // 绑定在 .template-enabled 输入框上（template_picker.js），该 class 只出现在诊断、
+        // 治疗计划、病程记录三个书写页，而这些页面的准入正是 edit-patients（超管、管理员、
+        // 医生、护士、前台）。用 manage-medical-cases 把关会漏掉前台——前台能进书写页，
+        // 却在敲字时拿不到模板；选用模板后回写用量的 incrementUsage 同理。
+        $this->middleware('can:edit-patients')->only(['search', 'incrementUsage']);
+
+        // store（把当前病历存为个人模板）仍限 manage-medical-cases：沉淀模板内容与使用
+        // 模板是两回事，保持原有的医生/护士边界。
+        $this->middleware('can:manage-medical-cases')->only(['store']);
     }
 
     /**
