@@ -71,6 +71,52 @@
     font-weight: 500;
 }
 
+.dce-tool-chip.is-erase {
+    background: #F3F4F6;
+    border-color: #9CA3AF;
+    border-style: dashed;
+    color: #374151;
+}
+
+.dce-status-btn.dce-clear.is-active {
+    border-color: #6B7280;
+    background: #F3F4F6;
+    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.25);
+}
+
+#dce-editor.dce-erase-mode .dce-tooth.marked {
+    cursor: pointer;
+    outline: 1px dashed #9CA3AF;
+}
+
+.dce-mark-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 2px 4px 2px 0;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #F3F4F6;
+    border: 1px solid #E5E7EB;
+    color: #374151;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.dce-mark-remove {
+    border: 0;
+    background: transparent;
+    color: #6B7280;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    cursor: pointer;
+}
+
+.dce-mark-remove:hover {
+    color: #DC2626;
+}
+
 #dce-selection-label {
     overflow: hidden;
     text-overflow: ellipsis;

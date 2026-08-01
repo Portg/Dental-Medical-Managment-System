@@ -26,6 +26,7 @@ return [
     'selected_teeth' => 'Selected',
     'no_teeth_selected' => 'No teeth selected',
     'select_teeth_first' => 'Select teeth first',
+    'erase_mode_hint' => 'Erase mode: click a tooth to unmark',
     'marked_teeth' => 'Marked',
     'no_marks_yet' => 'No teeth marked yet',
     'please_mark_before_save' => 'Please mark teeth before saving',

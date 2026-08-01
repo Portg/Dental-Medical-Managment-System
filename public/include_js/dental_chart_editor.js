@@ -1,7 +1,8 @@
 /**
  * FDI Dental Chart Editor
  * =======================
- * Flow: select teeth first → apply a status to the selection.
+ * Flow: select teeth → apply status.
+ * Clear: apply to selection, or (with no selection) enter erase mode and click teeth.
  *
  * Depends: jQuery, LanguageManager, csrf meta, #global_appointment_id
  */
@@ -32,6 +33,8 @@
 
     var marks = {};          // toothNumber -> statusKey
     var selectedTeeth = {};  // toothNumber -> true
+    var eraseMode = false;
+    var bound = false;
 
     function t(key, fallback) {
         if (typeof LanguageManager !== 'undefined' && LanguageManager.trans) {
@@ -59,6 +62,16 @@
         return Object.keys(selectedTeeth).length;
     }
 
+    function clearSelection() {
+        selectedTeeth = {};
+    }
+
+    function setEraseMode(on) {
+        eraseMode = !!on;
+        $('.dce-status-btn.dce-clear').toggleClass('is-active', eraseMode);
+        $('#dce-editor').toggleClass('dce-erase-mode', eraseMode);
+    }
+
     function applyToothStyle($el, status) {
         var tooth = String($el.data('tooth'));
         var isSelected = !!selectedTeeth[tooth];
@@ -71,7 +84,7 @@
             var meta = STATUS_MAP[status];
             $el.addClass('marked').css({
                 background: meta.bg,
-                borderColor: meta.bg
+                borderColor: isSelected ? '#1D4ED8' : meta.bg
             });
             $el.find('.dce-mark').text(shortLabel(status));
         }
@@ -89,9 +102,18 @@
     }
 
     function refreshSelectionChip() {
-        var n = selectedCount();
         var $chip = $('#dce-selection-chip');
         var $label = $('#dce-selection-label');
+
+        if (eraseMode) {
+            $chip.removeClass('is-empty').addClass('is-erase');
+            $label.text(t('erase_mode_hint', '清除中：点击牙位取消标注'));
+            $('#dce-status-step').addClass('dce-ready');
+            return;
+        }
+
+        $chip.removeClass('is-erase');
+        var n = selectedCount();
         if (!n) {
             $chip.addClass('is-empty');
             $label.text(t('no_teeth_selected', '未选牙位'));
@@ -104,20 +126,48 @@
     }
 
     function refreshSummary() {
-        var parts = [];
-        Object.keys(marks).sort(function (a, b) { return Number(a) - Number(b); }).forEach(function (tooth) {
-            parts.push(tooth + ' ' + shortLabel(marks[tooth]));
-        });
         var $sum = $('#dce-summary');
-        if (!parts.length) {
+        var teeth = Object.keys(marks).sort(function (a, b) { return Number(a) - Number(b); });
+        if (!teeth.length) {
             $sum.html(t('no_marks_yet', '尚未标记牙位'));
-        } else {
-            $sum.html('<strong>' + t('marked_teeth', '已标记') + '：</strong>' + parts.join('、'));
+            return;
         }
+
+        var html = '<strong>' + t('marked_teeth', '已标记') + '：</strong>';
+        teeth.forEach(function (tooth) {
+            html += '<span class="dce-mark-chip" data-tooth="' + tooth + '" title="' +
+                t('unmark_tooth', '取消标记') + '">' +
+                tooth + ' ' + shortLabel(marks[tooth]) +
+                '<button type="button" class="dce-mark-remove" data-tooth="' + tooth +
+                '" aria-label="' + t('unmark_tooth', '取消标记') + '">&times;</button></span>';
+        });
+        $sum.html(html);
+    }
+
+    function unmarkTooth(tooth) {
+        tooth = String(tooth);
+        if (!marks[tooth]) return;
+        delete marks[tooth];
+        delete selectedTeeth[tooth];
+        var $el = $('.dce-tooth[data-tooth="' + tooth + '"]');
+        if ($el.length) refreshTooth($el);
+        refreshSummary();
+        refreshSelectionChip();
     }
 
     function onToothClick() {
         var tooth = String($(this).data('tooth'));
+
+        // Erase mode: each click cancels that tooth's mark
+        if (eraseMode) {
+            if (marks[tooth]) {
+                delete marks[tooth];
+                refreshTooth($(this));
+                refreshSummary();
+            }
+            return;
+        }
+
         if (selectedTeeth[tooth]) {
             delete selectedTeeth[tooth];
         } else {
@@ -125,6 +175,12 @@
         }
         refreshTooth($(this));
         refreshSelectionChip();
+    }
+
+    function flashStatusBtn(status) {
+        var $btn = $('.dce-status-btn[data-status="' + status + '"]');
+        $btn.addClass('just-applied');
+        setTimeout(function () { $btn.removeClass('just-applied'); }, 350);
     }
 
     function applyStatusToSelection(status) {
@@ -137,22 +193,50 @@
         }
 
         teeth.forEach(function (tooth) {
-            if (status === 'clear') {
-                delete marks[tooth];
-            } else {
-                marks[tooth] = status;
-            }
+            marks[tooth] = status;
         });
 
-        // Keep selection so user can re-apply another status if needed
+        clearSelection();
+        setEraseMode(false);
         refreshAllTeeth();
         refreshSummary();
         refreshSelectionChip();
+        flashStatusBtn(status);
+    }
 
-        // Brief flash on status button
-        var $btn = $('.dce-status-btn[data-status="' + status + '"]');
-        $btn.addClass('just-applied');
-        setTimeout(function () { $btn.removeClass('just-applied'); }, 350);
+    function onClearClick() {
+        var teeth = Object.keys(selectedTeeth);
+
+        // With selection: clear those marks and finish the action
+        if (teeth.length) {
+            teeth.forEach(function (tooth) {
+                delete marks[tooth];
+            });
+            clearSelection();
+            setEraseMode(false);
+            refreshAllTeeth();
+            refreshSummary();
+            refreshSelectionChip();
+            flashStatusBtn('clear');
+            return;
+        }
+
+        // No selection: toggle erase mode (click teeth to unmark one by one)
+        setEraseMode(!eraseMode);
+        refreshSelectionChip();
+        if (eraseMode) {
+            flashStatusBtn('clear');
+        }
+    }
+
+    function onStatusClick() {
+        var status = $(this).data('status');
+        if (status === 'clear') {
+            onClearClick();
+            return;
+        }
+        setEraseMode(false);
+        applyStatusToSelection(status);
     }
 
     function pickPrimaryStatus(rows) {
@@ -176,7 +260,8 @@
         if (!id) return;
         $.getJSON('/dental-charting/' + id, function (rows) {
             marks = {};
-            selectedTeeth = {};
+            clearSelection();
+            setEraseMode(false);
             var byTooth = {};
             (rows || []).forEach(function (row) {
                 var tooth = String(row.tooth_number || row.tooth || '');
@@ -226,14 +311,17 @@
             ? t('confirm_save_chart', '确认保存牙位图标记？')
             : t('confirm_clear_chart', '当前无标记，确认清空该患者牙位图？');
         var doSave = function () {
+            // JSON keeps empty data:[] so "clear all marks" can persist
             $.ajax({
                 type: 'POST',
                 url: '/dental-charting',
-                data: {
-                    _token: csrfToken(),
-                    appointment_id: id,
+                contentType: 'application/json',
+                dataType: 'json',
+                headers: { 'X-CSRF-TOKEN': csrfToken() },
+                data: JSON.stringify({
+                    appointment_id: Number(id),
                     data: data
-                },
+                }),
                 success: function (res) {
                     var msg = (res && res.message) || t('chart_saved_success', '保存成功');
                     if (typeof toastr !== 'undefined') toastr.success(msg);
@@ -263,18 +351,23 @@
     }
 
     function bind() {
-        $(document).on('click', '.dce-status-btn', function () {
-            applyStatusToSelection($(this).data('status'));
-        });
-        $(document).on('click', '.dce-tab', function () {
+        if (bound) return;
+        bound = true;
+        $(document).on('click.dce', '.dce-status-btn', onStatusClick);
+        $(document).on('click.dce', '.dce-tab', function () {
             var target = $(this).data('target');
             $('.dce-tab').removeClass('active');
             $(this).addClass('active');
             $('.dce-panel').removeClass('active');
             $('#' + target).addClass('active');
         });
-        $(document).on('click', '.dce-tooth', onToothClick);
-        $(document).on('click', '#dce-save-btn', saveChart);
+        $(document).on('click.dce', '.dce-tooth', onToothClick);
+        $(document).on('click.dce', '#dce-save-btn', saveChart);
+        $(document).on('click.dce', '.dce-mark-remove', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            unmarkTooth($(this).data('tooth'));
+        });
     }
 
     window.initDentalChartEditor = function () {

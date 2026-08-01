@@ -26,6 +26,7 @@ return [
     'selected_teeth' => '已选',
     'no_teeth_selected' => '未选牙位',
     'select_teeth_first' => '请先选择牙位',
+    'erase_mode_hint' => '清除中：点击牙位取消标注',
     'marked_teeth' => '已标记',
     'no_marks_yet' => '尚未标记牙位',
     'please_mark_before_save' => '请先标记牙位再保存',
