@@ -6,7 +6,6 @@ use App\Services\StockOutService;
 use App\StockOut;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -17,22 +16,23 @@ class StockOutController extends Controller
     public function __construct(StockOutService $service)
     {
         $this->service = $service;
-        // 提交报损/退货审批应比「管理库存」更宽松：由能领用库存的人发起，由能管库存的人审批。
+
+        // 全控制器统一要求 manage-inventory。
         //
-        // 原写法为 can:operate-inventory|manage-inventory，有两处问题：
-        //   1. operate-inventory 这个权限从未在 permissions 表中存在过；
-        //   2. Laravel 核心的 can 中间件不支持 `|` 作 OR（那是 spatie/laravel-permission 的语法），
-        //      can:a|b 会去匹配名为 "a|b" 的 ability。
-        // 两者叠加的结果是：该方法此前对超管以外的所有人都返回 403。
-        // 此处以现存的 request-inventory 承接原 operate-inventory 的语义。
-        $this->middleware(function ($request, $next) {
-            if (Gate::allows('request-inventory') || Gate::allows('manage-inventory')) {
-                return $next($request);
-            }
-            abort(403);
-        })->only(['submitApproval']);
-        // 管理库存权限才可审批通过/驳回
-        $this->middleware('can:manage-inventory')->except(['submitApproval']);
+        // submitApproval 此前被单独放宽为 can:operate-inventory|manage-inventory，
+        // 意在「能操作库存的人提交、能管库存的人审批」。该设计从未落成：
+        //   1. operate-inventory 权限从未在 permissions 表中存在过；
+        //   2. Laravel 核心的 can 中间件不支持 `|` 作 OR（那是 spatie/laravel-permission
+        //      的语法），can:a|b 会去匹配一个名为 "a|b" 的 ability。
+        // 两者叠加的结果是该方法对超管以外的所有人都返回 403。
+        //
+        // 修正语法后放宽权限同样没有意义：StockOutService::submitDamageOrReturn 要求
+        // 调用者必须是出库单的创建者（_who_added），而创建出库单、以及列表与详情，
+        // 本就要求 manage-inventory —— 提交者必然落在该权限群体内。
+        //
+        // 「审批人 ≠ 提交人」的职责分离由 StockOutService::approveDamageOrReturn 中
+        // _who_added == approverId 的校验保证（AG-053），不依赖权限层面的区分。
+        $this->middleware('can:manage-inventory');
     }
 
     /**
