@@ -96,7 +96,9 @@ class TodayWorkController extends Controller
             'appointments'  => $patient->appointments->map(function ($a) {
                 return [
                     'id'      => $a->id,
-                    'date'    => $a->start_date,
+                    // start_date 经 getAttribute() 返回 Carbon 本体，直接进 json_encode
+                    // 会输出带 00:00:00 的完整时间戳；此处日期与时间分列显示，需只取日期
+                    'date'    => optional($a->start_date)->format('Y-m-d') ?? '',
                     'time'    => $a->start_time ? date('H:i', strtotime($a->start_time)) : '',
                     'doctor'  => $a->doctor ? ($a->doctor->surname . $a->doctor->othername) : '',
                     'service' => $a->service->name ?? '',
