@@ -11,6 +11,8 @@ class SuperAdminDashboardController extends Controller
     public function __construct(SuperAdminDashboardService $service)
     {
         $this->service = $service;
+        // 该页展示全院现金流、应收账款总额与月度营收/支出图表，按报表权限保护
+        $this->middleware('can:view-reports');
     }
 
     public function index()

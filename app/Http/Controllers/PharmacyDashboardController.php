@@ -11,6 +11,8 @@ class PharmacyDashboardController extends Controller
     public function __construct(PharmacyDashboardService $service)
     {
         $this->service = $service;
+        // 该页展示低库存物品与待发处方，按库存权限保护（其中最敏感的一项）
+        $this->middleware('can:manage-inventory');
     }
 
     public function index()

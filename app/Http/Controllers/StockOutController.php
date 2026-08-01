@@ -6,6 +6,7 @@ use App\Services\StockOutService;
 use App\StockOut;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -16,8 +17,20 @@ class StockOutController extends Controller
     public function __construct(StockOutService $service)
     {
         $this->service = $service;
-        // 操作库存权限可以提交报损/退货审批
-        $this->middleware('can:operate-inventory|manage-inventory')->only(['submitApproval']);
+        // 提交报损/退货审批应比「管理库存」更宽松：由能领用库存的人发起，由能管库存的人审批。
+        //
+        // 原写法为 can:operate-inventory|manage-inventory，有两处问题：
+        //   1. operate-inventory 这个权限从未在 permissions 表中存在过；
+        //   2. Laravel 核心的 can 中间件不支持 `|` 作 OR（那是 spatie/laravel-permission 的语法），
+        //      can:a|b 会去匹配名为 "a|b" 的 ability。
+        // 两者叠加的结果是：该方法此前对超管以外的所有人都返回 403。
+        // 此处以现存的 request-inventory 承接原 operate-inventory 的语义。
+        $this->middleware(function ($request, $next) {
+            if (Gate::allows('request-inventory') || Gate::allows('manage-inventory')) {
+                return $next($request);
+            }
+            abort(403);
+        })->only(['submitApproval']);
         // 管理库存权限才可审批通过/驳回
         $this->middleware('can:manage-inventory')->except(['submitApproval']);
     }

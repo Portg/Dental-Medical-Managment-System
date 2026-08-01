@@ -15,7 +15,8 @@ class BirthDayMessageController extends Controller
     public function __construct(BirthDayMessageService $birthDayMessageService)
     {
         $this->birthDayMessageService = $birthDayMessageService;
-        $this->middleware('can:manage-settings');
+        // 生日祝福属于患者关怀日常运营（护士/前台为主力），不是系统设置
+        $this->middleware('can:view-patients');
     }
 
     /**

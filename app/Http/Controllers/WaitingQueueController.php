@@ -13,7 +13,9 @@ class WaitingQueueController extends Controller
     public function __construct(WaitingQueueService $waitingQueueService)
     {
         $this->waitingQueueService = $waitingQueueService;
-        $this->middleware('can:manage-schedules');
+        // 候诊/叫号是医生、护士、前台的日常接诊流程，按「查看预约」授权；
+        // manage-schedules 是排班配置权限，与此无关（医生、护士都没有）。
+        $this->middleware('can:view-appointments');
     }
 
     /**

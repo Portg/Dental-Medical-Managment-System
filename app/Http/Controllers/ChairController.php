@@ -20,8 +20,8 @@ class ChairController extends Controller
         $this->chairService = $chairService;
         $this->branchService = $branchService;
 
-        $this->middleware('can:view-chairs')->only(['index']);
-        $this->middleware('can:create-chairs')->only(['store']);
+        $this->middleware('can:view-chairs')->only(['index', 'show']);
+        $this->middleware('can:create-chairs')->only(['create', 'store']);
         $this->middleware('can:edit-chairs')->only(['edit', 'update']);
         $this->middleware('can:delete-chairs')->only(['destroy']);
     }

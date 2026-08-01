@@ -17,7 +17,9 @@ class PaySlipController extends Controller
     public function __construct(PaySlipService $service)
     {
         $this->service = $service;
-        $this->middleware('can:manage-payroll');
+        // individualPaySlip 是「查看自己的工资单」的全员自助页（已按 Auth::id() 限定），
+        // 不应要求 manage-payroll —— 那是管理他人薪资的权限。
+        $this->middleware('can:manage-payroll')->except(['individualPaySlip']);
     }
 
     /**

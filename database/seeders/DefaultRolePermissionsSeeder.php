@@ -47,6 +47,10 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'manage-schedules', 'manage-insurance', 'manage-members',
                 'manage-patient-settings', 'manage-sms', 'manage-settings',
                 'manage-system-maintenance',
+                'manage-shifts', 'request-inventory',
+                'view-sterilization', 'manage-sterilization',
+                // 绩效/工作量报表菜单以此权限为准（见 2026_08_01_000001 迁移）
+                'view-own-doctor-report',
             ])->get();
 
             foreach ($adminPermissions as $permission) {
@@ -66,6 +70,12 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'manage-medical-cases', 'manage-treatments',
                 'view-sensitive-data',
                 'view-own-doctor-report',
+                // 医生制定治疗方案后需出报价单
+                'manage-quotations',
+                // DoctorScheduleController 据此放行「只看自己的排班」
+                'view-own-schedule',
+                'request-inventory',
+                'view-sterilization', 'manage-sterilization',
             ])->get();
 
             foreach ($doctorPermissions as $permission) {
@@ -80,7 +90,11 @@ class DefaultRolePermissionsSeeder extends Seeder
         if ($nurse) {
             $nursePermissions = Permission::whereIn('slug', [
                 'view-patients', 'edit-patients',
-                'view-appointments'
+                'view-appointments',
+                // 护士需录入护理记录（该权限目前含病历完整读写，暂无更细粒度）
+                'manage-medical-cases',
+                'request-inventory',
+                'view-sterilization', 'manage-sterilization',
             ])->get();
 
             foreach ($nursePermissions as $permission) {
@@ -97,7 +111,9 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'view-patients', 'create-patients', 'edit-patients',
                 'view-appointments', 'create-appointments', 'edit-appointments',
                 'view-invoices', 'create-invoices',
-                'manage-quotations', 'manage-schedules',
+                'manage-quotations', 'manage-schedules', 'manage-shifts',
+                // 前台是办卡/储值/核销优惠券与日常杂费录入的第一线
+                'manage-members', 'manage-expenses',
             ])->get();
 
             foreach ($receptionistPermissions as $permission) {

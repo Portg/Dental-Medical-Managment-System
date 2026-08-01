@@ -13,7 +13,8 @@ class SatisfactionSurveyController extends Controller
     public function __construct(SatisfactionSurveyService $service)
     {
         $this->service = $service;
-        $this->middleware('can:manage-settings');
+        // 满意度调查属于患者关怀日常运营（前台为主力），不是系统设置
+        $this->middleware('can:view-patients');
     }
 
     /**

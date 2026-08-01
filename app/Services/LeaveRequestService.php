@@ -25,11 +25,12 @@ class LeaveRequestService
     /**
      * Get a single leave request for editing.
      */
-    public function getLeaveRequestForEdit(int $id): ?object
+    public function getLeaveRequestForEdit(int $id, int $userId): ?object
     {
         return DB::table('leave_requests')
             ->leftJoin('leave_types', 'leave_types.id', 'leave_requests.leave_type_id')
             ->where('leave_requests.id', '=', $id)
+            ->where('leave_requests._who_added', '=', $userId)
             ->select(['leave_requests.*', 'leave_types.name'])
             ->orderBy('leave_requests.id', 'desc')
             ->first();
@@ -53,19 +54,24 @@ class LeaveRequestService
      */
     public function updateLeaveRequest(int $id, array $data, int $userId): bool
     {
-        return (bool) leaveRequest::where('id', $id)->update([
-            'leave_type_id' => $data['leave_type'],
-            'start_date' => $data['start_date'],
-            'duration' => $data['duration'],
-            '_who_added' => $userId,
-        ]);
+        // 只允许本人修改自己的请假单；_who_added 不随更新改写，避免单据被他人接管
+        return (bool) leaveRequest::where('id', $id)
+            ->where('_who_added', $userId)
+            ->update([
+                'leave_type_id' => $data['leave_type'],
+                'start_date' => $data['start_date'],
+                'duration' => $data['duration'],
+            ]);
     }
 
     /**
      * Delete a leave request.
      */
-    public function deleteLeaveRequest(int $id): bool
+    public function deleteLeaveRequest(int $id, int $userId): bool
     {
-        return (bool) leaveRequest::where('id', $id)->delete();
+        // 只允许本人删除自己的请假单
+        return (bool) leaveRequest::where('id', $id)
+            ->where('_who_added', $userId)
+            ->delete();
     }
 }

@@ -11,6 +11,8 @@ class NurseDashboardController extends Controller
     public function __construct(NurseDashboardService $service)
     {
         $this->service = $service;
+        // 该页展示候诊、今日预约与逾期回访，按预约权限保护
+        $this->middleware('can:view-appointments');
     }
 
     public function index()

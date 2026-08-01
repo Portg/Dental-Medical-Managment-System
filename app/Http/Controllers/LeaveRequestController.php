@@ -16,7 +16,8 @@ class LeaveRequestController extends Controller
     public function __construct(LeaveRequestService $service)
     {
         $this->service = $service;
-        $this->middleware('can:manage-leave');
+        // 请假申请是全员自助功能（index/edit/update/destroy 均按 _who_added 限定本人），
+        // 不要求 manage-leave —— 那是审批他人请假的权限，对应 leave-requests-approval。
     }
 
     /**
@@ -92,7 +93,7 @@ class LeaveRequestController extends Controller
      */
     public function edit($id)
     {
-        return response()->json($this->service->getLeaveRequestForEdit((int) $id));
+        return response()->json($this->service->getLeaveRequestForEdit((int) $id, Auth::User()->id));
     }
 
     /**
@@ -126,7 +127,7 @@ class LeaveRequestController extends Controller
      */
     public function destroy($id)
     {
-        $success = $this->service->deleteLeaveRequest((int) $id);
+        $success = $this->service->deleteLeaveRequest((int) $id, Auth::User()->id);
         return FunctionsHelper::messageResponse(__('leaves.leave_request.deleted_successfully'), $success);
     }
 }

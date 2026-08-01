@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class MenuItemsSeeder extends Seeder
 {
     /**
-     * 角色缩写：S=super-admin, A=admin, D=doctor, N=nurse, R=receptionist
+     * 角色缩写：S=super-admin, A=admin, D=doctor, N=nurse, R=receptionist, I=inventory-manager
      */
     private array $roleIds = [];
     private array $permIds = [];
@@ -36,7 +36,8 @@ class MenuItemsSeeder extends Seeder
     {
         // ── Level 1: Top-level sections ────────────────────────────────
 
-        $todayWork = $this->item(null, 'menu.today_work', 'today-work', 'icon-energy', null, 10, 'SADNR');
+        // 权限须与 TodayWorkController 的 can:view-appointments 一致，否则库管落地页 403
+        $todayWork = $this->item(null, 'menu.today_work', 'today-work', 'icon-energy', 'view-appointments', 10, 'SADNR');
 
         $patientCenter = $this->item(null, 'menu.patient_center', null, 'icon-users', null, 20, 'SADNR');
         $this->seedPatientCenter($patientCenter);
@@ -65,6 +66,9 @@ class MenuItemsSeeder extends Seeder
         $pfGroup = $this->item($parentId, 'menu.group_patient_management', null, 'icon-list', 'view-patients', 10, 'SADNR');
         $this->item($pfGroup, 'menu.patients_list', 'patients', null, 'view-patients', 10, 'SADNR');
         $this->item($pfGroup, 'menu.ocr_recognize', 'ocr-recognize', null, 'create-patients', 15, 'SAR');
+        // originally added by 2026_05_17_000002 / 000004 migrations
+        $this->item($pfGroup, 'menu.work_log_recognize', 'work-log-ocr', null, 'create-patients', 16, 'SAR');
+        $this->item($pfGroup, 'menu.work_log', 'work-logs', null, 'create-patients', 17, 'SAR');
         $this->item($pfGroup, 'menu.patient_tags', 'patient-tags', null, 'manage-patient-settings', 20, 'SA');
         $this->item($pfGroup, 'menu.patient_sources', 'patient-sources', null, 'manage-patient-settings', 30, 'SA');
 
@@ -121,7 +125,8 @@ class MenuItemsSeeder extends Seeder
         $this->item($billGroup, 'menu.invoices', 'invoices', null, 'view-invoices', 10, 'SADNR');
         $this->item($billGroup, 'menu.quotations', 'quotations', null, 'manage-quotations', 20, 'SADNR');
         $this->item($billGroup, 'menu.refunds', 'refunds', null, 'manage-refunds', 30, 'SADNR');
-        $this->item($billGroup, 'menu.pending_discount_approvals', 'invoices/pending-discount-approvals', null, 'view-invoices', 40, 'SADNR');
+        // 审批折扣属于改单据，须与 InvoiceController 的 can:edit-invoices 一致
+        $this->item($billGroup, 'menu.pending_discount_approvals', 'invoices/pending-discount-approvals', null, 'edit-invoices', 40, 'SADNR');
 
         // 4.2 Insurance Claims — GROUP for S, DIRECT for A and D
         // S sees group with children, A sees direct link to insurance-companies, D sees doctor-claims (via url_override)
@@ -137,12 +142,20 @@ class MenuItemsSeeder extends Seeder
         $this->item($accGroup, 'menu.sms_credit', 'sms-transactions', null, 'manage-sms', 30, 'SA');
 
         // 4.4 Consumables — GROUP for SAN (Nurse has fewer items)
-        $conGroup = $this->item($parentId, 'menu.group_consumables', null, 'icon-layers', null, 40, 'SAN');
+        $conGroup = $this->item($parentId, 'menu.group_consumables', null, 'icon-layers', null, 40, 'SANI');
+        // originally added by 2026_03_16_100008 migration（父级经 100015 修正为 group_consumables）
+        $this->item($conGroup, 'inventory.inventory_query', 'inventory-query', null, 'manage-inventory', 8, 'SAI');
         $this->item($conGroup, 'inventory.stock_in', 'stock-ins', null, 'manage-inventory', 10, 'SAN');
         $this->item($conGroup, 'inventory.stock_out', 'stock-outs', null, 'manage-inventory', 20, 'SAN');
-        $this->item($conGroup, 'inventory.service_consumables', 'service-consumables', null, 'manage-inventory', 30, 'SAN');
+        // 须与 ServiceConsumableController 的 can:manage-medical-services 一致
+        $this->item($conGroup, 'inventory.service_consumables', 'service-consumables', null, 'manage-medical-services', 30, 'SAN');
         $this->item($conGroup, 'inventory.categories', 'inventory-categories', null, 'manage-inventory', 40, 'SA');
         $this->item($conGroup, 'inventory.items', 'inventory-items', null, 'manage-inventory', 50, 'SA');
+        // originally added by 2026_03_16_100011 / 100013 / 100014 migrations（父级经 100015 修正）
+        // 申领管理需 request-inventory（医生/护士/库管均持有），审批环节在 Controller 内另按 manage-inventory 区分
+        $this->item($conGroup, 'menu.requisition_management', 'requisitions', 'fa fa-file-text-o', 'request-inventory', 90, 'SADNI');
+        $this->item($conGroup, 'menu.inventory_check_management', 'inventory-checks', 'fa fa-check-square-o', 'manage-inventory', 95, 'SAI');
+        $this->item($conGroup, 'inventory.bulk_import', 'inventory-import', 'fa fa-file-excel-o', 'manage-inventory', 98, 'SAI');
 
         // 4.5 Suppliers — DIRECT for SA
         $this->item($parentId, 'menu.group_supplier', 'suppliers', 'icon-handbag', 'manage-inventory', 50, 'SA');
@@ -162,9 +175,11 @@ class MenuItemsSeeder extends Seeder
         $this->item($parentId, 'menu.individual_payslip', 'individual-payslips', 'icon-briefcase', null, 71, 'DNR');
 
         // 4.8 Performance — SA sees group with children, D sees direct link
-        $perfGroup = $this->item($parentId, 'menu.group_performance', 'doctor-performance-report', 'icon-calculator', 'view-reports', 80, 'SAD');
+        // DoctorReportController 放行 view-reports 或 view-own-doctor-report；菜单取后者，
+        // 医生才看得到自己的绩效报表（管理员/超管已由迁移补齐该权限）。
+        $perfGroup = $this->item($parentId, 'menu.group_performance', 'doctor-performance-report', 'icon-calculator', 'view-own-doctor-report', 80, 'SAD');
         $this->item($perfGroup, 'menu.commission_rules', 'commission-rules', null, 'manage-doctor-claims', 10, 'SA');
-        $this->item($perfGroup, 'menu.doctor_performance_report', 'doctor-performance-report', null, 'view-reports', 20, 'SA');
+        $this->item($perfGroup, 'menu.doctor_performance_report', 'doctor-performance-report', null, 'view-own-doctor-report', 20, 'SA');
 
         // 4.9 Attendance & Leave — GROUP for SA, DIRECT leave-requests for DNR
         $leaveGroup = $this->item($parentId, 'menu.group_attendance_leave', null, 'icon-calendar', null, 90, 'SA');
@@ -195,7 +210,7 @@ class MenuItemsSeeder extends Seeder
         $this->item($bizGroup, 'menu.treatment_plan_completion_report', 'treatment-plan-completion-report', null, 'view-reports', 50, 'SA');
         $this->item($bizGroup, 'menu.monthly_business_summary_report', 'monthly-business-summary-report', null, 'view-reports', 60, 'SA');
         $this->item($bizGroup, 'menu.patient_demographics_report', 'patient-demographics-report', null, 'view-reports', 70, 'SA');
-        $this->item($bizGroup, 'menu.doctor_workload_report', 'doctor-workload-report', null, 'view-reports', 80, 'SA');
+        $this->item($bizGroup, 'menu.doctor_workload_report', 'doctor-workload-report', null, 'view-own-doctor-report', 80, 'SA');
         $this->item($bizGroup, 'menu.quotation_conversion_report', 'quotation-conversion-report', null, 'view-reports', 90, 'SA');
 
         // 5.3 Expense Analysis — GROUP for SAR
@@ -287,6 +302,7 @@ class MenuItemsSeeder extends Seeder
             'D' => 'doctor',
             'N' => 'nurse',
             'R' => 'receptionist',
+            'I' => 'inventory-manager',
         ];
 
         $pivotRows = [];

@@ -6,6 +6,7 @@ use App\StockOut;
 use App\Services\StockOutService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -24,10 +25,17 @@ class RequisitionController extends Controller
     {
         $this->service = $service;
 
-        // 申领或管理库存权限均可访问列表/详情
-        $this->middleware('can:request-inventory|manage-inventory')->only(['index', 'show']);
+        // 申领或管理库存权限均可访问列表/详情。
+        // 注意：Laravel 核心的 can 中间件不支持 `|` 作 OR（那是 spatie/laravel-permission 的语法），
+        // 写成 can:a|b 会去匹配一个名为 "a|b" 的 ability，结果对超管以外的所有人 403。
+        $this->middleware(function ($request, $next) {
+            if (Gate::allows('request-inventory') || Gate::allows('manage-inventory')) {
+                return $next($request);
+            }
+            abort(403);
+        })->only(['index', 'show']);
         // 仅申领权限（医生）
-        $this->middleware('can:request-inventory')->only(['create', 'store', 'update', 'submit', 'clone']);
+        $this->middleware('can:request-inventory')->only(['create', 'store', 'edit', 'update', 'submit', 'clone']);
         // 仅管理库存权限（管理员/库管）
         $this->middleware('can:manage-inventory')->only(['approve', 'reject']);
     }

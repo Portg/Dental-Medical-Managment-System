@@ -15,7 +15,9 @@ class LeaveTypeController extends Controller
     public function __construct(LeaveTypeService $leaveTypeService)
     {
         $this->leaveTypeService = $leaveTypeService;
-        $this->middleware('can:manage-leave');
+        // 假期类型 CRUD 需 manage-leave；下拉/搜索接口供请假申请表使用，
+        // 请假申请是全员自助（见 LeaveRequestController），不能卡在审批权限上。
+        $this->middleware('can:manage-leave')->except(['getAll', 'filter']);
     }
 
     /**
