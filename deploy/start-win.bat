@@ -32,14 +32,14 @@ set "LARAGON_EXE=%LARAGON_DIR%\laragon.exe"
 set "OCR_VENV=%PROJECT_DIR%\scripts\venv\Scripts\python.exe"
 set "OCR_SCRIPT=%PROJECT_DIR%\scripts\ocr_server.py"
 
-REM PHP: php-8* → php8* → php* → 任意子目录
-for /d %%D in ("%LARAGON_DIR%\bin\php\php-8*") do set "PHP_DIR=%%D"
-if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php8*") do set "PHP_DIR=%%D"
+REM PHP: php-7* → php7* → php* → 任意子目录
+for /d %%D in ("%LARAGON_DIR%\bin\php\php-7*") do set "PHP_DIR=%%D"
+if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php7*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR if exist "%LARAGON_DIR%\bin\php\php.exe" set "PHP_DIR=%LARAGON_DIR%\bin\php"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\*") do if exist "%%D\php.exe" set "PHP_DIR=%%D"
-REM MySQL: mysql-8* → mysql-* → mysql* → 任意子目录
-for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-8*") do set "MYSQL_DIR=%%D"
+REM MySQL: mysql-5* → mysql-* → mysql* → 任意子目录
+for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-5*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do if exist "%%D\bin\mysql.exe" set "MYSQL_DIR=%%D"
@@ -111,7 +111,7 @@ if not exist "%PROJECT_DIR%\artisan" (
 )
 
 if not defined PHP_EXE (
-    echo  [错误] 未找到 PHP，请安装 PHP 8.2+ 或 Laragon
+    echo  [错误] 未找到 PHP，请安装 PHP 7.4（Win7 版）或 Laragon
     goto :error
 )
 

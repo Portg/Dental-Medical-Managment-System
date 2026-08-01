@@ -47,4 +47,5 @@ return [
     'case_from_worklog' => '工作日志补录',
     'save_success'      => '保存成功：新增 :created 条，关联患者 :linked 条，生成发票 :invoiced 张，生成病历 :cased 份',
     'save_failed'       => '保存失败',
+    'ocr_disabled'      => '本机未启用图片识别功能，请手工录入工作日志内容',
 ];

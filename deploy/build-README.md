@@ -4,6 +4,49 @@
 
 ---
 
+## ⚠️ 本分支为 Windows 7 专用版（win7/laravel-8）
+
+本分支面向 **Windows 7 SP1 x64** 目标机，整套技术栈已降级。功能与 `master` 一致，
+但**运行时版本被硬性锁死**，任何一项升上去都会让系统在 Win7 上无法运行。
+
+| 组件 | 本分支锁定 | 上限原因 |
+| --- | --- | --- |
+| PHP | **7.4.33**（VC15 x64 NTS） | PHP 8.0 起不再支持 Win7 |
+| Laravel | **8.83** | 最后一个支持 PHP 7.4 的版本 |
+| MySQL | **5.7.44** | MySQL 8.0 不支持 Win7 |
+| Python（OCR） | **3.8.10** | 3.9 起最低要求 Win8.1 |
+| PaddleOCR | **2.7.3** | 3.x 依赖树要求 Python ≥ 3.9 |
+| Inno Setup `MinVersion` | **6.1sp1** | Windows 7 SP1 |
+
+目标机还需安装 **Visual C++ 2015-2019 x64 运行库**（PHP 7.4 的 VC15 依赖）。
+
+### 运行环境不再使用 Laragon 安装器
+
+`laragon-wamp.exe` 的安装器要求 Windows 10，且内置 PHP 8.x，两条都过不了 Win7。
+本分支的 `build.sh --target win` 改为**自行组装运行时**：下载 laragon-core（纯文件包）
+再填入上表锁定的 PHP / MySQL / Nginx，产出目录结构与 Laragon 完全一致，
+`install-win.ps1` 无需改动即可识别。
+
+可用环境变量覆盖下载地址（内网镜像场景）：
+`PHP_DOWNLOAD_URL`、`MYSQL_DOWNLOAD_URL`、`NGINX_DOWNLOAD_URL`、
+`LARAGON_DOWNLOAD_URL`、`COMPOSER_DOWNLOAD_URL`、`PYTHON_DOWNLOAD_URL`。
+
+### OCR 会在不支持的机器上自动降级
+
+PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年前的机器没有）。
+安装脚本执行 `import paddleocr` 自检，失败时不再中止安装，而是：
+
+1. 打印警告说明原因；
+2. 把 `.env` 中的 `OCR_ENABLED` 就地改为 `false`；
+3. 继续完成其余安装。
+
+此时工作日志的图片识别关闭、提示改为手工录入（`work_log.ocr_disabled`），其余功能不受影响。
+
+> `.env` 必须**就地替换**而非追加 —— Laravel 的 Env 使用不可变仓库，
+> 同一个键以文件中**首次**出现的值为准。改键请用 `batch-helpers/set_env_value.php`。
+
+---
+
 ## 整体流程
 
 ```

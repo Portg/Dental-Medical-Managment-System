@@ -20,6 +20,10 @@ class OcrService
      */
     public function recognize(string $imagePath): array
     {
+        if (!config('services.ocr.enabled', true)) {
+            throw new \RuntimeException(__('work_log.ocr_disabled'));
+        }
+
         if (!file_exists($imagePath)) {
             throw new \RuntimeException("Image file not found: {$imagePath}");
         }

@@ -47,4 +47,5 @@ return [
     'case_from_worklog' => 'Work log import',
     'save_success'      => 'Saved: :created added, :linked patient-linked, :invoiced invoiced, :cased draft cases created',
     'save_failed'       => 'Save failed',
+    'ocr_disabled'      => 'Image recognition is not available on this machine. Please enter the work log manually.',
 ];

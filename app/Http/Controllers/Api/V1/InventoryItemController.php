@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class InventoryItemController extends ApiController
 {
+    protected InventoryItemService $service;
+
     public function __construct(
-        protected InventoryItemService $service
+        InventoryItemService $service
     ) {
+        $this->service = $service;
         $this->middleware('can:manage-inventory');
     }
 

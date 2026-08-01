@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\Validator;
 
 class ServicePackageController extends Controller
 {
-    public function __construct(private ServicePackageService $service)
+    private ServicePackageService $service;
+
+    public function __construct(ServicePackageService $service)
     {
+        $this->service = $service;
         $this->middleware('can:manage-service-packages');
     }
 

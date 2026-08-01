@@ -202,9 +202,9 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
                 if ($report && count($reportRows) < max(0, $reportLimit)) {
                     $id = (int) $ids[0];
                     $svc = MedicalService::where('id', $id)->first(['id', 'name', 'unit', 'category', 'category_id']);
-                    $dbCategoryId = $svc?->category_id;
+                    $dbCategoryId = optional($svc)->category_id;
                     $dbCategoryName = $dbCategoryId ? (ServiceCategory::where('id', $dbCategoryId)->value('name') ?? null) : null;
-                    $dbCategoryLegacy = $svc?->category;
+                    $dbCategoryLegacy = optional($svc)->category;
 
                     $expectedCategoryId = null;
                     if ($categoryName) {
@@ -227,7 +227,7 @@ class UpdateMedicalServicesPriceFromXlsx extends Command
                         'db_category_id' => $dbCategoryId,
                         'db_category_name' => $dbCategoryName,
                         'db_category_legacy' => $dbCategoryLegacy,
-                        'db_unit' => $svc?->unit,
+                        'db_unit' => optional($svc)->unit,
                         'ok' => $ok ? 'Y' : 'N',
                     ];
                 }

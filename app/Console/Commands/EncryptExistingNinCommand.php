@@ -76,7 +76,7 @@ class EncryptExistingNinCommand extends Command
         try {
             Crypt::decryptString($value);
             return true;
-        } catch (DecryptException) {
+        } catch (DecryptException $e) {
             return false;
         }
     }

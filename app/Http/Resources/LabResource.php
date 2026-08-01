@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class LabResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'id'                   => $this->id,
@@ -19,8 +19,8 @@ class LabResource extends JsonResource
             'avg_turnaround_days'  => $this->avg_turnaround_days,
             'notes'                => $this->notes,
             'is_active'            => (bool) $this->is_active,
-            'created_at'           => $this->created_at?->toIso8601String(),
-            'updated_at'           => $this->updated_at?->toIso8601String(),
+            'created_at'           => optional($this->created_at)->toIso8601String(),
+            'updated_at'           => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

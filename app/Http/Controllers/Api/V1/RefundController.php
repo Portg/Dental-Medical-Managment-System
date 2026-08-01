@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class RefundController extends ApiController
 {
+    protected RefundService $service;
+
     public function __construct(
-        protected RefundService $service
+        RefundService $service
     ) {
+        $this->service = $service;
         $this->middleware('can:manage-refunds');
     }
 

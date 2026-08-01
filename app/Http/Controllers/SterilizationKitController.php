@@ -10,8 +10,11 @@ use Yajra\DataTables\DataTables;
 
 class SterilizationKitController extends Controller
 {
-    public function __construct(private SterilizationKitService $service)
+    private SterilizationKitService $service;
+
+    public function __construct(SterilizationKitService $service)
     {
+        $this->service = $service;
         $this->middleware('can:view-sterilization');
         $this->middleware('can:manage-sterilization')->only(['store', 'update', 'destroy']);
     }

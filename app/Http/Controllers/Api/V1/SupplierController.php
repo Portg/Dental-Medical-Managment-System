@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class SupplierController extends ApiController
 {
+    protected SupplierService $service;
+
     public function __construct(
-        protected SupplierService $service
+        SupplierService $service
     ) {
+        $this->service = $service;
         $this->middleware('can:manage-inventory');
     }
 

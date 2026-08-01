@@ -13,14 +13,19 @@ class CashSummaryReportService
      */
     public function getData(string $tab, string $startDate, string $endDate): array
     {
-        return match ($tab) {
-            'payment_method'   => $this->byPaymentMethod($startDate, $endDate),
-            'collector'        => $this->byCollector($startDate, $endDate),
-            'date'             => $this->byDate($startDate, $endDate),
-            'doctor'           => $this->byDoctor($startDate, $endDate),
-            'service_category' => $this->byServiceCategory($startDate, $endDate),
-            default            => $this->byPaymentMethod($startDate, $endDate),
-        };
+        switch ($tab) {
+            case 'collector':
+                return $this->byCollector($startDate, $endDate);
+            case 'date':
+                return $this->byDate($startDate, $endDate);
+            case 'doctor':
+                return $this->byDoctor($startDate, $endDate);
+            case 'service_category':
+                return $this->byServiceCategory($startDate, $endDate);
+            case 'payment_method':
+            default:
+                return $this->byPaymentMethod($startDate, $endDate);
+        }
     }
 
     /** 按支付方式汇总 */

@@ -266,7 +266,7 @@ def main():
         sys.exit(1)
 
     try:
-        from paddleocr import PaddleOCR
+        from paddle_compat import build_ocr, run_ocr
     except ImportError:
         print("Error: PaddleOCR not installed. Run: pip3 install paddleocr", file=sys.stderr)
         sys.exit(1)
@@ -274,12 +274,8 @@ def main():
     work_path, cleanup = resize_image(image_path)
 
     try:
-        ocr = PaddleOCR(
-            use_textline_orientation=False,
-            lang='ch',
-            ocr_version='PP-OCRv4',
-        )
-        result = ocr.predict(work_path)
+        ocr = build_ocr(lang='ch', ocr_version='PP-OCRv4', use_orientation=False)
+        result = run_ocr(ocr, work_path)
     except Exception as e:
         print(f"Error: OCR processing failed: {e}", file=sys.stderr)
         sys.exit(1)

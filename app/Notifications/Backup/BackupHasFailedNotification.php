@@ -15,7 +15,7 @@ class BackupHasFailedNotification extends BaseBackupNotification
         $this->applicationName = static::resolveApplicationName();
         $this->exceptionMessage = $event->exception->getMessage();
         $this->exceptionTrace = mb_substr($event->exception->getTraceAsString(), 0, 4000);
-        $this->diskName = $event->backupDestination?->diskName() ?? '';
+        $this->diskName = optional($event->backupDestination)->diskName() ?? '';
         $this->destinationProperties = static::resolveDestinationProperties($event->backupDestination);
     }
 

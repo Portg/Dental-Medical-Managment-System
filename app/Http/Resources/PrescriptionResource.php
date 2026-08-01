@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class PrescriptionResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'id'                => $this->id,
@@ -16,8 +16,8 @@ class PrescriptionResource extends JsonResource
             'qty'               => $this->qty,
             'directions'        => $this->directions,
             'status'            => $this->status,
-            'prescription_date' => $this->prescription_date?->toIso8601String(),
-            'expiry_date'       => $this->expiry_date?->toIso8601String(),
+            'prescription_date' => optional($this->prescription_date)->toIso8601String(),
+            'expiry_date'       => optional($this->expiry_date)->toIso8601String(),
             'refills_allowed'   => $this->refills_allowed,
             'refills_used'      => $this->refills_used,
             'can_refill'        => $this->can_refill,
@@ -37,8 +37,8 @@ class PrescriptionResource extends JsonResource
                 'full_name' => $this->doctor->full_name,
             ]),
             'items'             => $this->whenLoaded('items'),
-            'created_at'        => $this->created_at?->toIso8601String(),
-            'updated_at'        => $this->updated_at?->toIso8601String(),
+            'created_at'        => optional($this->created_at)->toIso8601String(),
+            'updated_at'        => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

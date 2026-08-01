@@ -43,8 +43,9 @@ class MixedPaymentTest extends TestCase
         // Authenticate for service methods that use Auth::id()
         Auth::login($this->admin);
 
-        // Extend payment_method enum to support all InvoicePaymentService methods
-        DB::statement("ALTER TABLE invoice_payments MODIFY payment_method VARCHAR(50) NULL");
+        // payment_method 已由迁移 2026_04_12_220200 改为 VARCHAR(50)，此处无需再改表。
+        // 注意：不要在 setUp 里执行 DDL —— MySQL 的 DDL 会隐式提交事务，
+        // 导致 RefreshDatabase 的外层事务失效、测试数据残留并污染后续用例。
 
         $this->patient = Patient::create([
             'patient_no' => '20260001',

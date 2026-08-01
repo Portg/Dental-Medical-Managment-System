@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class DoctorClaimResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'id'               => $this->id,
@@ -19,8 +19,8 @@ class DoctorClaimResource extends JsonResource
             'status'           => $this->status ?? null,
             'total_claims'     => $this->total_claims ?? null,
             'payment_balance'  => $this->payment_balance ?? null,
-            'created_at'       => $this->created_at?->toIso8601String(),
-            'updated_at'       => $this->updated_at?->toIso8601String(),
+            'created_at'       => optional($this->created_at)->toIso8601String(),
+            'updated_at'       => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

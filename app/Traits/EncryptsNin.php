@@ -19,7 +19,7 @@ trait EncryptsNin
 
         try {
             return Crypt::decryptString($value);
-        } catch (DecryptException) {
+        } catch (DecryptException $e) {
             // Not yet encrypted — return as-is
             return $value;
         }

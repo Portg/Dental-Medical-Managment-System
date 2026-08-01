@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class InvoicePaymentController extends ApiController
 {
+    protected InvoicePaymentService $service;
+
     public function __construct(
-        protected InvoicePaymentService $service
+        InvoicePaymentService $service
     ) {
+        $this->service = $service;
         $this->middleware('can:edit-invoices');
     }
 

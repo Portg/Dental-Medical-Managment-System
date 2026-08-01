@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class MemberLevelController extends ApiController
 {
+    protected MemberService $service;
+
     public function __construct(
-        protected MemberService $service
+        MemberService $service
     ) {
+        $this->service = $service;
         $this->middleware('can:manage-members');
     }
 

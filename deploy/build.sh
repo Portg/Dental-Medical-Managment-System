@@ -241,6 +241,143 @@ if [[ "$TARGET" == "win" ]] && [[ -n "${LARAGON_URL_OVERRIDE:-}" ]]; then
     LARAGON_INSTALLER_EXE="$LARAGON_INSTALLER_CACHE"
 fi
 
+# ════════════════════════════════════════════════════════════════════════
+#  组装 Windows 7 运行环境（本分支默认路径，替代 laragon-wamp.exe）
+#
+#  为什么不用 laragon-wamp.exe：它的安装器要求 Windows 10，且内置 PHP 8.x，
+#  两条都过不了 Win7。这里改为下载 laragon-core（纯文件，无安装器）再自行
+#  填入 Win7 兼容的 PHP / MySQL / Nginx，产出目录结构与 Laragon 完全一致，
+#  install-win.ps1 无需改动即可识别。
+#
+#  版本锁定原因（改动前务必确认 Win7 兼容性）：
+#    PHP   7.4.33 VC15 x64 NTS — PHP 8.0 起不再支持 Win7
+#    MySQL 5.7.44 winx64      — MySQL 8.0 不支持 Win7
+#    Nginx 1.24.0             — 保守选择，Win7 上验证充分
+#  另需目标机安装 VC++ 2015-2019 x64 运行库（PHP 7.4 VC15 依赖）。
+# ════════════════════════════════════════════════════════════════════════
+WIN7_RUNTIME_DIR=""
+if [[ "$TARGET" == "win" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
+    CACHE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.cache"
+    ASSEMBLED_DIR="$CACHE_DIR/win7-runtime"
+
+    PHP_URL="${PHP_DOWNLOAD_URL:-https://windows.php.net/downloads/releases/archives/php-7.4.33-nts-Win32-vc15-x64.zip}"
+    MYSQL_URL="${MYSQL_DOWNLOAD_URL:-https://dev.mysql.com/get/Downloads/MySQL-5.7/mysql-5.7.44-winx64.zip}"
+    NGINX_URL="${NGINX_DOWNLOAD_URL:-https://nginx.org/download/nginx-1.24.0.zip}"
+    LARAGON_CORE_URL="${LARAGON_DOWNLOAD_URL:-https://github.com/leokhoa/laragon/archive/refs/tags/8.6.1.zip}"
+    COMPOSER_URL="${COMPOSER_DOWNLOAD_URL:-https://getcomposer.org/download/2.2.25/composer.phar}"
+
+    # 缓存完整性检查：PHP 与 MySQL 都就位才算可复用
+    HAS_PHP=false; HAS_MYSQL=false
+    for _d in "$ASSEMBLED_DIR"/bin/php/*/; do
+        [[ -f "${_d}php.exe" ]] && HAS_PHP=true && break
+    done
+    for _d in "$ASSEMBLED_DIR"/bin/mysql/*/; do
+        [[ -f "${_d}bin/mysqld.exe" ]] && HAS_MYSQL=true && break
+    done
+
+    if [[ "$HAS_PHP" == true ]] && [[ "$HAS_MYSQL" == true ]]; then
+        info "使用已组装的 Win7 运行环境缓存: $ASSEMBLED_DIR"
+        WIN7_RUNTIME_DIR="$ASSEMBLED_DIR"
+    else
+        echo ""
+        echo -e "${BOLD}${CYAN}组装 Windows 7 运行环境 (PHP 7.4 + MySQL 5.7 + Nginx + Composer)${NC}"
+        echo ""
+
+        mkdir -p "$ASSEMBLED_DIR"/bin/{php,mysql,nginx,composer} \
+                 "$ASSEMBLED_DIR"/etc/{mysql,nginx/sites-enabled} \
+                 "$ASSEMBLED_DIR"/{www,data}
+
+        ASSEMBLE_OK=true
+
+        # ── laragon-core：只取目录骨架与 laragon.exe，不含任何 PHP/MySQL 二进制
+        if download_and_extract "$LARAGON_CORE_URL" "$CACHE_DIR/laragon-core.zip" "$CACHE_DIR/laragon-core" "Laragon core"; then
+            [[ -f "$CACHE_DIR/laragon-core/laragon.exe" ]] && cp "$CACHE_DIR/laragon-core/laragon.exe" "$ASSEMBLED_DIR/"
+            [[ -d "$CACHE_DIR/laragon-core/bin/laragon" ]] && cp -r "$CACHE_DIR/laragon-core/bin/laragon" "$ASSEMBLED_DIR/bin/"
+            [[ -d "$CACHE_DIR/laragon-core/etc" ]] && cp -rn "$CACHE_DIR/laragon-core/etc/"* "$ASSEMBLED_DIR/etc/" 2>/dev/null || true
+        else
+            warn "Laragon core 获取失败，将只使用自组装的 PHP/MySQL/Nginx"
+        fi
+
+        # ── PHP 7.4.33（VC15 x64 NTS）
+        if download_and_extract "$PHP_URL" "$CACHE_DIR/php74.zip" "$CACHE_DIR/php74-extracted" "PHP 7.4"; then
+            PHP_VER_NAME="php-7.4.33-nts-Win32-vc15-x64"
+            mkdir -p "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME"
+            cp -r "$CACHE_DIR/php74-extracted/"* "$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME/"
+            # php.ini：以 production 模板为基线，打开本系统必需的扩展
+            PHP_TARGET="$ASSEMBLED_DIR/bin/php/$PHP_VER_NAME"
+            if [[ -f "$PHP_TARGET/php.ini-production" ]] && [[ ! -f "$PHP_TARGET/php.ini" ]]; then
+                cp "$PHP_TARGET/php.ini-production" "$PHP_TARGET/php.ini"
+                {
+                    echo ""
+                    echo "; ── 牙科诊所管理系统 Win7 版所需扩展 ──"
+                    echo "extension_dir = \"ext\""
+                    for _ext in mbstring openssl pdo_mysql mysqli fileinfo gd zip curl exif intl sodium; do
+                        echo "extension=$_ext"
+                    done
+                    echo "memory_limit = 512M"
+                    echo "upload_max_filesize = 32M"
+                    echo "post_max_size = 32M"
+                    echo "max_execution_time = 300"
+                    echo "date.timezone = Asia/Shanghai"
+                    echo "cgi.fix_pathinfo = 0"
+                } >> "$PHP_TARGET/php.ini"
+                info "已生成 php.ini（含必需扩展）"
+            fi
+        else
+            error "PHP 7.4 下载失败"; ASSEMBLE_OK=false
+        fi
+
+        # ── MySQL 5.7.44
+        if download_and_extract "$MYSQL_URL" "$CACHE_DIR/mysql57.zip" "$CACHE_DIR/mysql57-extracted" "MySQL 5.7"; then
+            for _d in "$CACHE_DIR/mysql57-extracted"/*/; do
+                if [[ -f "${_d}bin/mysqld.exe" ]]; then
+                    cp -r "$_d" "$ASSEMBLED_DIR/bin/mysql/$(basename "$_d")"
+                    break
+                fi
+            done
+            if [[ -f "$CACHE_DIR/mysql57-extracted/bin/mysqld.exe" ]]; then
+                mkdir -p "$ASSEMBLED_DIR/bin/mysql/mysql-5.7.44-winx64"
+                cp -r "$CACHE_DIR/mysql57-extracted/"* "$ASSEMBLED_DIR/bin/mysql/mysql-5.7.44-winx64/"
+            fi
+        else
+            error "MySQL 5.7 下载失败"; ASSEMBLE_OK=false
+        fi
+
+        # ── Nginx
+        if download_and_extract "$NGINX_URL" "$CACHE_DIR/nginx-win7.zip" "$CACHE_DIR/nginx-win7-extracted" "Nginx"; then
+            for _d in "$CACHE_DIR/nginx-win7-extracted"/*/; do
+                if [[ -f "${_d}nginx.exe" ]]; then
+                    cp -r "$_d" "$ASSEMBLED_DIR/bin/nginx/$(basename "$_d")"
+                    break
+                fi
+            done
+            if [[ -f "$CACHE_DIR/nginx-win7-extracted/nginx.exe" ]]; then
+                mkdir -p "$ASSEMBLED_DIR/bin/nginx/nginx-1.24.0"
+                cp -r "$CACHE_DIR/nginx-win7-extracted/"* "$ASSEMBLED_DIR/bin/nginx/nginx-1.24.0/"
+            fi
+        else
+            warn "Nginx 下载失败，目标机需自行提供"
+        fi
+
+        # ── Composer（2.2 LTS，兼容 PHP 7.4）
+        if [[ ! -f "$ASSEMBLED_DIR/bin/composer/composer.phar" ]]; then
+            if curl -fsSL --retry 2 -o "$ASSEMBLED_DIR/bin/composer/composer.phar" "$COMPOSER_URL"; then
+                info "Composer 2.2 LTS 已就位"
+            else
+                warn "Composer 下载失败"
+            fi
+        fi
+
+        if [[ "$ASSEMBLE_OK" == true ]]; then
+            WIN7_RUNTIME_DIR="$ASSEMBLED_DIR"
+            info "Win7 运行环境组装完成: $ASSEMBLED_DIR"
+        else
+            rm -rf "$ASSEMBLED_DIR"
+            fatal "Win7 运行环境组装失败（PHP 或 MySQL 缺失），请检查网络或用 PHP_DOWNLOAD_URL/MYSQL_DOWNLOAD_URL 指定镜像"
+        fi
+    fi
+fi
+
 # ── 项目根目录定位 ─────────────────────────────────────────────────────
 # 支持从项目根目录或 deploy/ 子目录执行
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -711,7 +848,9 @@ if [[ -f "$OCR_REQUIREMENTS" ]]; then
     info "复制 OCR 服务脚本"
 
     if [[ "$TARGET" == "win" ]] && [[ "$SKIP_OCR" == false ]]; then
-        PYTHON_INSTALLER_URL="${PYTHON_DOWNLOAD_URL:-https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe}"
+        # Win7 版：Python 3.8.10 是官方最后一个提供 Windows 7 安装器的版本
+        # （3.9 起最低要求 Windows 8.1），切勿升级。
+        PYTHON_INSTALLER_URL="${PYTHON_DOWNLOAD_URL:-https://www.python.org/ftp/python/3.8.10/python-3.8.10-amd64.exe}"
         PYTHON_INSTALLER_CACHE="$PROJECT_ROOT/deploy/.cache/python-installer.exe"
         PYTHON_INSTALLER_DIST="$DIST_DIR/python-installer.exe"
 
@@ -764,9 +903,10 @@ if [[ -f "$OCR_REQUIREMENTS" ]]; then
             PIP_DOWNLOAD_ARGS=()
             case "$TARGET" in
                 win)
+                    # 与 Win7 目标机上的 Python 3.8.10 保持一致
                     PIP_DOWNLOAD_ARGS=(
                         --platform win_amd64
-                        --python-version 3.11
+                        --python-version 3.8
                         --only-binary=:all:
                     )
                     ;;
@@ -826,6 +966,15 @@ fi
 if [[ -n "$LARAGON_INSTALLER_EXE" ]]; then
     cp "$LARAGON_INSTALLER_EXE" "$DIST_DIR/laragon-wamp.exe"
     info "复制 Laragon Windows 安装器"
+    warn "注意：laragon-wamp.exe 需要 Windows 10，且内置 PHP 8.x，不能用于 Win7 目标机"
+fi
+
+# ── 复制自组装的 Win7 运行环境（PHP 7.4 / MySQL 5.7 / Nginx）
+# 目录名必须是 laragon —— install-win.ps1 以 {安装目录}\laragon 为根定位运行时。
+if [[ -n "$WIN7_RUNTIME_DIR" ]] && [[ -d "$WIN7_RUNTIME_DIR" ]]; then
+    cp -r "$WIN7_RUNTIME_DIR" "$DIST_DIR/laragon"
+    RUNTIME_SIZE=$(du -sh "$DIST_DIR/laragon" 2>/dev/null | cut -f1)
+    info "复制 Win7 运行环境到安装包 ($RUNTIME_SIZE)"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════

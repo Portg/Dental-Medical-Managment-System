@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class TreatmentPlanResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'id'                       => $this->id,
@@ -23,9 +23,9 @@ class TreatmentPlanResource extends JsonResource
             'status'                   => $this->status,
             'approval_status'          => $this->approval_status,
             'priority'                 => $this->priority,
-            'start_date'               => $this->start_date?->toIso8601String(),
-            'target_completion_date'    => $this->target_completion_date?->toIso8601String(),
-            'actual_completion_date'    => $this->actual_completion_date?->toIso8601String(),
+            'start_date'               => optional($this->start_date)->toIso8601String(),
+            'target_completion_date'    => optional($this->target_completion_date)->toIso8601String(),
+            'actual_completion_date'    => optional($this->actual_completion_date)->toIso8601String(),
             'completion_notes'         => $this->completion_notes,
             'completion_percentage'    => $this->completion_percentage,
             'medical_case_id'          => $this->medical_case_id,
@@ -36,8 +36,8 @@ class TreatmentPlanResource extends JsonResource
             ]),
             'items'                    => $this->whenLoaded('items'),
             'stages'                   => $this->whenLoaded('stages'),
-            'created_at'               => $this->created_at?->toIso8601String(),
-            'updated_at'               => $this->updated_at?->toIso8601String(),
+            'created_at'               => optional($this->created_at)->toIso8601String(),
+            'updated_at'               => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

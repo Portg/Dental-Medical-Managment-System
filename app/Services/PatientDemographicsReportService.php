@@ -80,11 +80,18 @@ class PatientDemographicsReportService
             ->groupBy('gender')
             ->get()
             ->map(function ($row) {
-                $label = match (strtolower($row->gender ?? '')) {
-                    'male', 'm' => __('report.male'),
-                    'female', 'f' => __('report.female'),
-                    default => __('report.unknown'),
-                };
+                switch (strtolower($row->gender ?? '')) {
+                    case 'male':
+                    case 'm':
+                        $label = __('report.male');
+                        break;
+                    case 'female':
+                    case 'f':
+                        $label = __('report.female');
+                        break;
+                    default:
+                        $label = __('report.unknown');
+                }
                 return ['label' => $label, 'count' => $row->count];
             })
             ->toArray();

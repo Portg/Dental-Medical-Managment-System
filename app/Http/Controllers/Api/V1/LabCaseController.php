@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class LabCaseController extends ApiController
 {
+    protected LabCaseService $service;
+
     public function __construct(
-        protected LabCaseService $service
+        LabCaseService $service
     ) {
+        $this->service = $service;
         $this->middleware('can:manage-labs');
     }
 

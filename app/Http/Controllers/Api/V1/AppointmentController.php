@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class AppointmentController extends ApiController
 {
+    protected AppointmentService $appointmentService;
+
     public function __construct(
-        protected AppointmentService $appointmentService
+        AppointmentService $appointmentService
     ) {
+        $this->appointmentService = $appointmentService;
         $this->middleware('can:view-appointments')->only(['index', 'show', 'calendarEvents', 'chairs', 'doctorTimeSlots']);
         $this->middleware('can:create-appointments')->only(['store']);
         $this->middleware('can:edit-appointments')->only(['update', 'reschedule']);

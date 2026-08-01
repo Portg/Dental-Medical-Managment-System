@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class QuotationResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'id'           => $this->id,
@@ -18,10 +18,10 @@ class QuotationResource extends JsonResource
                 'qty'                => $item->qty,
                 'amount'             => $item->amount,
                 'medical_service_id' => $item->medical_service_id,
-                'service_name'       => $item->medical_service?->name,
+                'service_name'       => optional($item->medical_service)->name,
             ])),
-            'created_at'   => $this->created_at?->toIso8601String(),
-            'updated_at'   => $this->updated_at?->toIso8601String(),
+            'created_at'   => optional($this->created_at)->toIso8601String(),
+            'updated_at'   => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

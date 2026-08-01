@@ -31,6 +31,10 @@ return [
     ],
 
     'ocr' => [
+        // Win7 部署时，若目标机无法运行 paddlepaddle（常见于不支持 AVX 指令集的
+        // 老 CPU），install-win.ps1 会写入 OCR_ENABLED=false，此时识别功能整体
+        // 关闭，工作日志回落为手工录入。
+        'enabled' => filter_var(env('OCR_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
         'python_path' => env('OCR_PYTHON_PATH', 'python3'),
         'script_path' => env('OCR_SCRIPT_PATH', base_path('scripts/ocr_service.py')),
         'worklog_script_path' => env('OCR_WORKLOG_SCRIPT_PATH', base_path('scripts/worklog_ocr.py')),

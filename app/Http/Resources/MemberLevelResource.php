@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class MemberLevelResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'id'              => $this->id,
@@ -21,8 +21,8 @@ class MemberLevelResource extends JsonResource
             'sort_order'      => $this->sort_order,
             'is_default'      => $this->is_default,
             'is_active'       => $this->is_active,
-            'created_at'      => $this->created_at?->toIso8601String(),
-            'updated_at'      => $this->updated_at?->toIso8601String(),
+            'created_at'      => optional($this->created_at)->toIso8601String(),
+            'updated_at'      => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

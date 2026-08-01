@@ -20,15 +20,15 @@ set "HELPER_DIR=%INSTALL_DIR%\batch-helpers"
 
 REM 自动查找 PHP（兼容不同 Laragon 版本的目录命名）
 set "PHP_DIR="
-for /d %%D in ("%LARAGON_DIR%\bin\php\php-8*") do set "PHP_DIR=%%D"
-if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php8*") do set "PHP_DIR=%%D"
+for /d %%D in ("%LARAGON_DIR%\bin\php\php-7*") do set "PHP_DIR=%%D"
+if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php7*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR if exist "%LARAGON_DIR%\bin\php\php.exe" set "PHP_DIR=%LARAGON_DIR%\bin\php"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\*") do if exist "%%D\php.exe" set "PHP_DIR=%%D"
 
 REM 自动查找 MySQL
 set "MYSQL_DIR="
-for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-8*") do set "MYSQL_DIR=%%D"
+for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-5*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do if exist "%%D\bin\mysql.exe" set "MYSQL_DIR=%%D"
@@ -59,9 +59,11 @@ if not exist "!PHP!" (
     echo        期望路径: !PHP!
     goto :error
 )
-"!PHP!" -v 2>nul | findstr /i "PHP 8" >nul
+REM Win7 版运行时锁定 PHP 7.4（PHP 8.0 起不再支持 Windows 7）
+"!PHP!" -v 2>nul | findstr /i "PHP 7.4" >nul
 if !ERRORLEVEL! neq 0 (
-    echo [错误] PHP 版本需要 8.2+
+    echo [错误] Win7 版需要 PHP 7.4，检测到的版本不符
+    "!PHP!" -v 2>nul
     goto :error
 )
 echo        PHP .............. OK

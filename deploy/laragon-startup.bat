@@ -26,7 +26,7 @@ echo.
 
 REM 等待 MySQL 就绪
 set "MYSQL_DIR="
-for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-8*") do set "MYSQL_DIR=%%D"
+for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-5*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do if exist "%%D\bin\mysql.exe" set "MYSQL_DIR=%%D"
@@ -59,14 +59,14 @@ echo  [提示] 未找到 laragon.exe，尝试手动启动服务...
 set "PHP_DIR="
 set "MYSQL_DIR="
 set "NGINX_DIR="
-REM PHP: php-8* → php8* → php* → 直接 php.exe → 任意子目录
-for /d %%D in ("%LARAGON_DIR%\bin\php\php-8*") do set "PHP_DIR=%%D"
-if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php8*") do set "PHP_DIR=%%D"
+REM PHP: php-7* → php7* → php* → 直接 php.exe → 任意子目录
+for /d %%D in ("%LARAGON_DIR%\bin\php\php-7*") do set "PHP_DIR=%%D"
+if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php7*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\php*") do set "PHP_DIR=%%D"
 if not defined PHP_DIR if exist "%LARAGON_DIR%\bin\php\php.exe" set "PHP_DIR=%LARAGON_DIR%\bin\php"
 if not defined PHP_DIR for /d %%D in ("%LARAGON_DIR%\bin\php\*") do if exist "%%D\php.exe" set "PHP_DIR=%%D"
-REM MySQL: mysql-8* → mysql-* → mysql* → 任意子目录
-for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-8*") do set "MYSQL_DIR=%%D"
+REM MySQL: mysql-5* → mysql-* → mysql* → 任意子目录
+for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-5*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do if exist "%%D\bin\mysql.exe" set "MYSQL_DIR=%%D"

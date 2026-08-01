@@ -1,3 +1,17 @@
-paddleocr
-Pillow
-flask
+# ═══════════════════════════════════════════════════════════════════
+#  OCR 依赖 — Windows 7 版（win7/laravel-8 分支）
+#
+#  目标机运行 Python 3.8.10：这是官方最后一个提供 Windows 7 安装器的版本
+#  （3.9 起最低要求 Windows 8.1）。
+#
+#  因此不能使用 PaddleOCR 3.x —— 它的依赖树（anyio、httpx、
+#  huggingface_hub 等）已全部要求 Python >= 3.9，在 3.8 上无法安装。
+#  这里锁定 2.x 分支，接口差异由 scripts/paddle_compat.py 抹平。
+#
+#  升级前请先确认目标 Windows 版本；Win10+ 请用 master 分支的配置。
+# ═══════════════════════════════════════════════════════════════════
+paddleocr==2.7.3
+paddlepaddle==2.6.2
+Pillow==9.5.0
+flask==2.3.3
+numpy==1.24.4

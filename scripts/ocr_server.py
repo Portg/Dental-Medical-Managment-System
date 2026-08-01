@@ -87,9 +87,9 @@ def main():
 
     # ── Load model ONCE at startup ────────────────────────────────────
     print("[OCR Server] Loading PaddleOCR model...", flush=True)
-    from paddleocr import PaddleOCR
-    ocr = PaddleOCR(use_textline_orientation=False, lang='ch', ocr_version='PP-OCRv4')
-    print("[OCR Server] Model loaded. Starting server...", flush=True)
+    from paddle_compat import build_ocr, run_ocr, paddleocr_major
+    ocr = build_ocr(lang='ch', ocr_version='PP-OCRv4', use_orientation=False)
+    print("[OCR Server] Model loaded (PaddleOCR %s.x). Starting server..." % paddleocr_major(), flush=True)
 
     # ── Flask app ─────────────────────────────────────────────────────
     from flask import Flask, request, jsonify
@@ -120,7 +120,7 @@ def main():
             t1 = time.time()
 
             try:
-                result = ocr.predict(work_path)
+                result = run_ocr(ocr, work_path)
             finally:
                 if cleanup and os.path.exists(work_path):
                     os.remove(work_path)

@@ -542,10 +542,12 @@ try {
             }
 
             if ($bundledPythonInstaller) {
-                if (-not (Install-BundledPython -InstallerPath $bundledPythonInstaller)) {
-                    Fail-Step "Bundled Python installation failed. OCR cannot be initialized."
+                # Win7 上 Python 3.8.10 安装失败不应中止整个部署 —— OCR 是增强功能。
+                if (Install-BundledPython -InstallerPath $bundledPythonInstaller) {
+                    $pythonRuntime = Find-PythonRuntime
+                } else {
+                    Write-Host "        [警告] 内置 Python 安装失败，OCR 将被关闭。" -ForegroundColor Yellow
                 }
-                $pythonRuntime = Find-PythonRuntime
             }
         }
 
@@ -554,27 +556,30 @@ try {
             $PYTHON_ARGS = $pythonRuntime.Args
             Write-Host ("        Python .................. {0}" -f $pythonRuntime.Display)
         } else {
-            Fail-Step "Python 3 runtime is required for OCR, but no Python installation was found and no bundled installer is available. Rebuild the package with OCR dependencies or use --no-ocr."
+            Write-Host "        [警告] 未找到 Python 3 运行时，OCR 已关闭，工作日志改为手工录入。" -ForegroundColor Yellow
+            Write-Host "                （Win7 目标机需要 Python 3.8.x；3.9+ 无法在 Win7 上安装）" -ForegroundColor Yellow
+            $SKIP_OCR = $true
         }
     }
 
     $phpVersionInfo = Get-PhpVersionInfo -PhpExe $PHP_EXE
     $script:PhpVer = $phpVersionInfo.Version
     if (-not $script:PhpVer) {
-        $osVersion = [Environment]::OSVersion.Version
-        $runtimeHint = "Unable to determine PHP version."
+        $runtimeHint = "无法获取 PHP 版本。"
         if ($phpVersionInfo.Output) {
-            $runtimeHint += " PHP startup output: " + $phpVersionInfo.Output
+            $runtimeHint += " PHP 启动输出: " + $phpVersionInfo.Output
         }
-        if ($osVersion.Major -lt 6 -or ($osVersion.Major -eq 6 -and $osVersion.Minor -le 1)) {
-            $runtimeHint += " Windows 7 / Server 2008 R2 is not a supported target for the bundled PHP 8.2 runtime. Use Windows 10+ / Server 2016+, or rebuild the package with an older supported PHP stack."
-        } else {
-            $runtimeHint += " The bundled PHP runtime may be missing a compatible Visual C++ redistributable."
-        }
+        $runtimeHint += " 此安装包内置 PHP 7.4（VC15 x64）。若 php.exe 无法启动，通常是缺少 Visual C++ 2015-2019 (x64) 运行库，请先安装 vcredist_x64。"
         Fail-Step $runtimeHint
     }
     $phpVersion = [Version]$script:PhpVer
-    if ($phpVersion -lt [Version]"8.2.0") { Fail-Step "PHP 8.2+ is required. Current: $($script:PhpVer)" }
+    # Win7 版锁定 PHP 7.4.x：低于 7.4 不满足 Laravel 8 要求，高于等于 8.0 则无法在 Win7 上运行。
+    if ($phpVersion -lt [Version]"7.4.0") {
+        Fail-Step "需要 PHP 7.4，当前为 $($script:PhpVer)。"
+    }
+    if ($phpVersion -ge [Version]"8.0.0") {
+        Fail-Step "检测到 PHP $($script:PhpVer)。此为 Windows 7 专用安装包，运行时必须是 PHP 7.4.x（PHP 8.0 起不再支持 Windows 7）。请使用配套的 Win7 构建产物重新安装。"
+    }
     Write-Host ("        PHP version ............. {0}" -f $script:PhpVer)
 
     if (-not (Test-Path (Join-Path $PROJECT_DIR "artisan"))) {
@@ -825,7 +830,10 @@ try {
     $script:Step++
     Write-Section "Configure OCR environment"
     if ($SKIP_OCR) {
-        Write-Host "        OCR ..................... skipped (--no-ocr)"
+        Write-Host "        OCR ..................... skipped（工作日志改为手工录入）"
+        if (Test-Path $ENV_TARGET) {
+            Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false')
+        }
     } else {
         $OCR_VENV = Join-Path $PROJECT_DIR "scripts\venv"
         $OCR_REQUIREMENTS = Join-Path $PROJECT_DIR "scripts\requirements.txt"
@@ -843,49 +851,69 @@ try {
             New-Item -ItemType Directory -Path $OCR_LOG_DIR -Force | Out-Null
         }
 
+        # ── Win7 版策略：OCR 属于增强功能，任何一步失败都不中止安装，
+        #    而是关闭 OCR、让工作日志回落到手工录入。
+        #    最常见的失败原因是 CPU 不支持 AVX 指令集（2011 年前的机器），
+        #    paddlepaddle 会在 import 阶段直接以非法指令退出。
         $ocrReady = $true
+        $ocrDegradeReason = ""
+
         if (-not (Test-Path (Join-Path $OCR_VENV "Scripts\python.exe"))) {
             & $PYTHON_EXE @PYTHON_ARGS -m venv $OCR_VENV
             if ($LASTEXITCODE -ne 0) {
-                Fail-Step "OCR virtual environment creation failed."
+                $ocrReady = $false
+                $ocrDegradeReason = "OCR 虚拟环境创建失败。"
             }
         }
 
-        if ($ocrReady -and (Test-Path $OCR_REQUIREMENTS)) {
-            $pipExe = Join-Path $OCR_VENV "Scripts\pip.exe"
-            if (Test-Path $OCR_WHEELS_DIR) {
-                & $pipExe install --no-index --find-links=$OCR_WHEELS_DIR -r $OCR_REQUIREMENTS -q *> $OCR_INSTALL_LOG
-                if ($LASTEXITCODE -ne 0) {
+        if ($ocrReady) {
+            if (Test-Path $OCR_REQUIREMENTS) {
+                $pipExe = Join-Path $OCR_VENV "Scripts\pip.exe"
+                if (Test-Path $OCR_WHEELS_DIR) {
+                    & $pipExe install --no-index --find-links=$OCR_WHEELS_DIR -r $OCR_REQUIREMENTS -q *> $OCR_INSTALL_LOG
+                    if ($LASTEXITCODE -ne 0) {
+                        & $pipExe install --upgrade pip -q *> $OCR_INSTALL_LOG
+                        & $pipExe install -r $OCR_REQUIREMENTS -q *> $OCR_INSTALL_LOG
+                    }
+                } else {
                     & $pipExe install --upgrade pip -q *> $OCR_INSTALL_LOG
                     & $pipExe install -r $OCR_REQUIREMENTS -q *> $OCR_INSTALL_LOG
                 }
-            } else {
-                & $pipExe install --upgrade pip -q *> $OCR_INSTALL_LOG
-                & $pipExe install -r $OCR_REQUIREMENTS -q *> $OCR_INSTALL_LOG
-            }
 
-            if ($LASTEXITCODE -ne 0) {
-                $ocrInstallLog = Get-LastLogLines -Paths @($OCR_INSTALL_LOG)
-                if ($ocrInstallLog) {
-                    Fail-Step ("OCR dependency installation failed." + [Environment]::NewLine + $ocrInstallLog)
+                if ($LASTEXITCODE -ne 0) {
+                    $ocrReady = $false
+                    $ocrDegradeReason = "OCR 依赖安装失败，详见 $OCR_INSTALL_LOG。"
                 }
-                Fail-Step "OCR dependency installation failed."
+            } else {
+                $ocrReady = $false
+                $ocrDegradeReason = "缺少 scripts\requirements.txt。"
             }
-        } else {
-            Fail-Step "OCR requirements.txt is missing."
         }
 
         $ocrPythonExe = Join-Path $OCR_VENV "Scripts\python.exe"
-        & $ocrPythonExe -c "import paddleocr, flask, PIL; print('OCR_IMPORTS_OK')" *> $OCR_VERIFY_LOG
-        if ($LASTEXITCODE -ne 0) {
-            $ocrVerifyLog = Get-LastLogLines -Paths @($OCR_VERIFY_LOG)
-            if ($ocrVerifyLog) {
-                Fail-Step ("OCR dependency verification failed." + [Environment]::NewLine + $ocrVerifyLog)
+        if ($ocrReady) {
+            # 这一步同时充当 AVX 探测：无 AVX 的 CPU 上 import paddle 会异常退出。
+            & $ocrPythonExe -c "import paddleocr, flask, PIL; print('OCR_IMPORTS_OK')" *> $OCR_VERIFY_LOG
+            if ($LASTEXITCODE -ne 0) {
+                $ocrReady = $false
+                $ocrDegradeReason = "OCR 依赖自检失败（常见原因：CPU 不支持 AVX 指令集，paddlepaddle 无法加载），详见 $OCR_VERIFY_LOG。"
             }
-            Fail-Step "OCR dependency verification failed."
         }
 
-        if (Test-Path $ENV_TARGET) {
+        if (-not $ocrReady) {
+            Write-Host ""
+            Write-Host "        [警告] OCR 不可用，已自动关闭该功能，安装继续。" -ForegroundColor Yellow
+            Write-Host ("        原因: {0}" -f $ocrDegradeReason) -ForegroundColor Yellow
+            Write-Host "        影响: 工作日志的图片识别不可用，需手工录入；其余功能不受影响。" -ForegroundColor Yellow
+            Write-Host ""
+            if (Test-Path $ENV_TARGET) {
+                # 必须就地替换：.env 模板里已有 OCR_ENABLED=true，
+                # 而 Laravel 的 Env 取首次出现的值，追加无效。
+                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false')
+            }
+        }
+
+        if ($ocrReady -and (Test-Path $ENV_TARGET)) {
             if (Select-String -Path $ENV_TARGET -Pattern '^OCR_PYTHON_PATH=' -Quiet -ErrorAction SilentlyContinue) {
                 Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'update_ocr_env_path.php'), $ENV_TARGET, $ocrPythonExe)
             } else {
@@ -897,11 +925,12 @@ try {
             }
         }
 
-        if (-not (Test-Path $OCR_SCRIPT)) {
-            Fail-Step "OCR server script is missing."
+        if ($ocrReady -and -not (Test-Path $OCR_SCRIPT)) {
+            $ocrReady = $false
+            Write-Host "        [警告] 缺少 scripts\ocr_server.py，OCR 已关闭。" -ForegroundColor Yellow
         }
 
-        if (-not (Test-HttpEndpoint -Url $OCR_HEALTH_URL -TimeoutMs 3000)) {
+        if ($ocrReady -and -not (Test-HttpEndpoint -Url $OCR_HEALTH_URL -TimeoutMs 3000)) {
             if (Test-Path $OCR_SERVER_OUT_LOG) { Remove-Item $OCR_SERVER_OUT_LOG -Force -ErrorAction SilentlyContinue }
             if (Test-Path $OCR_SERVER_ERR_LOG) { Remove-Item $OCR_SERVER_ERR_LOG -Force -ErrorAction SilentlyContinue }
 
@@ -919,15 +948,21 @@ try {
                     Stop-Process -Id $ocrProc.Id -Force -ErrorAction SilentlyContinue
                 }
 
+                $ocrReady = $false
                 $ocrServerLog = Get-LastLogLines -Paths @($OCR_SERVER_OUT_LOG, $OCR_SERVER_ERR_LOG)
-                if ($ocrServerLog) {
-                    Fail-Step ("OCR server health check failed." + [Environment]::NewLine + $ocrServerLog)
+                Write-Host "        [警告] OCR 服务健康检查未通过，已关闭 OCR，安装继续。" -ForegroundColor Yellow
+                if ($ocrServerLog) { Write-Host $ocrServerLog -ForegroundColor DarkYellow }
+                if (Test-Path $ENV_TARGET) {
+                    Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false')
                 }
-                Fail-Step "OCR server health check failed."
             }
         }
 
-        Write-Host "        OCR setup ............... OK"
+        if ($ocrReady) {
+            Write-Host "        OCR setup ............... OK"
+        } else {
+            Write-Host "        OCR setup ............... 已跳过（功能降级为手工录入）"
+        }
     }
 
     $script:Step++

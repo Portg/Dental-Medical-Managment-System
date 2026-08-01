@@ -69,8 +69,8 @@ class PatientAnalytics extends Model
             ['patient_id' => $patientId],
             [
                 'source_channel' => $patient->source_channel ?? null,
-                'first_visit_date' => $firstVisit?->appointment_date,
-                'last_visit_date' => $lastVisit?->appointment_date,
+                'first_visit_date' => optional($firstVisit)->appointment_date,
+                'last_visit_date' => optional($lastVisit)->appointment_date,
                 'visit_count' => $visitCount,
                 'days_since_last_visit' => $lastVisit ? now()->diffInDays($lastVisit->appointment_date) : 0,
                 'is_repeat_patient' => $visitCount > 1,

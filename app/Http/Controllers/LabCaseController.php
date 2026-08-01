@@ -11,10 +11,15 @@ use PDF;
 
 class LabCaseController extends Controller
 {
+    private LabCaseService $labCaseService;
+    private LabService $labService;
+
     public function __construct(
-        private LabCaseService $labCaseService,
-        private LabService $labService,
+        LabCaseService $labCaseService,
+        LabService $labService
     ) {
+        $this->labCaseService = $labCaseService;
+        $this->labService = $labService;
         $this->middleware('can:manage-labs');
     }
 

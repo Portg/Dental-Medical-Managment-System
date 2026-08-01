@@ -21,7 +21,7 @@ class UnhealthyBackupWasFoundNotification extends BaseBackupNotification
         $this->destinationProperties = static::resolveDestinationProperties($backupDestination);
 
         $failure = $event->backupDestinationStatus->getHealthCheckFailure();
-        $this->wasUnexpected = $failure?->wasUnexpected() ?? false;
+        $this->wasUnexpected = optional($failure)->wasUnexpected() ?? false;
 
         if ($this->wasUnexpected) {
             $this->problemDescription = trans('backup::notifications.unhealthy_backup_found_unknown');
@@ -29,7 +29,7 @@ class UnhealthyBackupWasFoundNotification extends BaseBackupNotification
             $this->exceptionMessage = $failure->exception()->getMessage();
             $this->exceptionTrace = mb_substr($failure->exception()->getTraceAsString(), 0, 4000);
         } else {
-            $this->problemDescription = $failure?->exception()?->getMessage() ?? '';
+            $this->problemDescription = optional(optional($failure)->exception())->getMessage() ?? '';
             $this->healthCheckName = '';
             $this->exceptionMessage = '';
             $this->exceptionTrace = '';

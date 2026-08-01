@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
  */
 class MedicalServiceController extends ApiController
 {
+    protected MedicalServiceService $service;
+
     public function __construct(
-        protected MedicalServiceService $service
+        MedicalServiceService $service
     ) {
+        $this->service = $service;
         $this->middleware('can:manage-medical-services');
     }
 

@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\Validator;
 
 class ServiceCategoryController extends Controller
 {
-    public function __construct(private ServiceCategoryService $service)
+    private ServiceCategoryService $service;
+
+    public function __construct(ServiceCategoryService $service)
     {
+        $this->service = $service;
         $this->middleware('can:manage-service-categories');
     }
 

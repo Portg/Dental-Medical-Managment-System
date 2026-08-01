@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class InvoicePaymentResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'id'                   => $this->id,
@@ -21,9 +21,9 @@ class InvoicePaymentResource extends JsonResource
             'insurance_company_id' => $this->insurance_company_id,
             'self_account_id'      => $this->self_account_id,
             'branch_id'            => $this->branch_id,
-            'added_by'             => $this->whenLoaded('addedBy', fn () => $this->addedBy?->full_name),
-            'created_at'           => $this->created_at?->toIso8601String(),
-            'updated_at'           => $this->updated_at?->toIso8601String(),
+            'added_by'             => $this->whenLoaded('addedBy', fn () => optional($this->addedBy)->full_name),
+            'created_at'           => optional($this->created_at)->toIso8601String(),
+            'updated_at'           => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

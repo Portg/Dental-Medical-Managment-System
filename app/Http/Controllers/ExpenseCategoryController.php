@@ -34,10 +34,10 @@ class ExpenseCategoryController extends Controller
                 ->filter(function ($instance) use ($request) {
                 })
                 ->addColumn('addedBy', function ($row) {
-                    return $row->addedBy?->othername ?? '-';
+                    return optional($row->addedBy)->othername ?? '-';
                 })
                 ->addColumn('expense_account', function ($row) {
-                    return $row->ExpenseAccount?->name ?? '-';
+                    return optional($row->ExpenseAccount)->name ?? '-';
                 })
                 ->addColumn('editBtn', function ($row) {
                     $btn = '<a href="#" onclick="editRecord(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';

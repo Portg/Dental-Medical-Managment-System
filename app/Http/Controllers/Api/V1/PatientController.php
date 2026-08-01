@@ -14,9 +14,12 @@ use Illuminate\Validation\ValidationException;
  */
 class PatientController extends ApiController
 {
+    protected PatientService $patientService;
+
     public function __construct(
-        protected PatientService $patientService
+        PatientService $patientService
     ) {
+        $this->patientService = $patientService;
         $this->middleware('can:view-patients')->only(['index', 'show', 'search', 'medicalHistory']);
         $this->middleware('can:create-patients')->only(['store']);
         $this->middleware('can:edit-patients')->only(['update']);

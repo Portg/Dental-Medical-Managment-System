@@ -9,9 +9,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class PatientResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
-        $reveal = $request->boolean('unmask') && $request->user()?->can('view-sensitive-data');
+        $reveal = $request->boolean('unmask') && optional($request->user())->can('view-sensitive-data');
 
         if ($reveal) {
             AccessLog::log('Patient:api_unmask', 'Patient', $this->id);
@@ -46,7 +46,7 @@ class PatientResource extends JsonResource
             // Insurance
             'has_insurance'        => $this->has_insurance,
             'insurance_company_id' => $this->insurance_company_id,
-            'insurance_company'    => $this->whenLoaded('insureanceCompany', fn () => $this->insureanceCompany?->name),
+            'insurance_company'    => $this->whenLoaded('insureanceCompany', fn () => optional($this->insureanceCompany)->name),
 
             // Health info
             'drug_allergies'         => $this->drug_allergies,
@@ -73,8 +73,8 @@ class PatientResource extends JsonResource
             'member_expiry'   => $this->member_expiry ? $this->member_expiry->toIso8601String() : null,
 
             'source_id'  => $this->source_id,
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'created_at' => optional($this->created_at)->toIso8601String(),
+            'updated_at' => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

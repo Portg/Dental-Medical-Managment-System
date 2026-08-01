@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class DentalChartResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'id'              => $this->id,
@@ -27,9 +27,9 @@ class DentalChartResource extends JsonResource
                 'id'        => $this->doctor->id,
                 'full_name' => $this->doctor->full_name,
             ]),
-            'changed_at'      => $this->changed_at?->toIso8601String(),
-            'created_at'      => $this->created_at?->toIso8601String(),
-            'updated_at'      => $this->updated_at?->toIso8601String(),
+            'changed_at'      => optional($this->changed_at)->toIso8601String(),
+            'created_at'      => optional($this->created_at)->toIso8601String(),
+            'updated_at'      => optional($this->updated_at)->toIso8601String(),
         ];
     }
 }

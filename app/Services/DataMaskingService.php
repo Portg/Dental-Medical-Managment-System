@@ -126,14 +126,27 @@ class DataMaskingService
             return $value;
         }
 
-        return match ($fieldName) {
-            'phone_no', 'alternative_no', 'next_of_kin_no', 'phone_number' => static::maskPhone($value),
-            'nin' => static::maskNin($value),
-            'email' => static::maskEmail($value),
-            'address', 'next_of_kin_address' => static::maskAddress($value),
-            'surname', 'othername', 'full_name', 'next_of_kin' => static::maskName($value),
-            default => $value,
-        };
+        switch ($fieldName) {
+            case 'phone_no':
+            case 'alternative_no':
+            case 'next_of_kin_no':
+            case 'phone_number':
+                return static::maskPhone($value);
+            case 'nin':
+                return static::maskNin($value);
+            case 'email':
+                return static::maskEmail($value);
+            case 'address':
+            case 'next_of_kin_address':
+                return static::maskAddress($value);
+            case 'surname':
+            case 'othername':
+            case 'full_name':
+            case 'next_of_kin':
+                return static::maskName($value);
+            default:
+                return $value;
+        }
     }
 
     /**

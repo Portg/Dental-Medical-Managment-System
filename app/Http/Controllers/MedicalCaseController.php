@@ -220,7 +220,7 @@ class MedicalCaseController extends Controller
             'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
             'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
             'visit_type', 'doctor_id',
-        ]), isUpdate: true);
+        ]), true);
         $result = $this->medicalCaseService->updateCase(
             (int) $id,
             $data,
