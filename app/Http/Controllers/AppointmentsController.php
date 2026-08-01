@@ -37,7 +37,7 @@ class AppointmentsController extends Controller
 
             $data = $this->appointmentService->getAppointmentList($request->only([
                 'quick_search', 'appointment_no', 'start_date', 'end_date',
-                'filter_doctor', 'filter_invoice_status', 'search',
+                'filter_doctor', 'filter_invoice_status', 'search', 'patient_id',
             ]));
 
             return $this->appointmentService->buildIndexDataTable($data);

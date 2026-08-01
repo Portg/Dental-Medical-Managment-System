@@ -73,6 +73,11 @@ class AppointmentService
             $query->where('appointments.doctor_id', $filters['filter_doctor']);
         }
 
+        // Patient filter (患者详情「预约」Tab 传入)
+        if (!empty($filters['patient_id'])) {
+            $query->where('appointments.patient_id', (int) $filters['patient_id']);
+        }
+
         // Invoice status filter
         if (!empty($filters['filter_invoice_status'])) {
             if ($filters['filter_invoice_status'] == 'invoiced') {
