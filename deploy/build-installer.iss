@@ -84,6 +84,7 @@ Source: "dist\install-win.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\upgrade-win.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\start-win.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\stop-win.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\uninstall-win.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\laragon-startup.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\batch-helpers\*"; DestDir: "{app}\batch-helpers"; Flags: ignoreversion recursesubdirs createallsubdirs
 
@@ -109,6 +110,15 @@ Filename: "{app}\start-win.bat"; Parameters: """{app}"""; Description: "{cm:Laun
 [UninstallRun]
 ; 卸载前停止所有服务
 Filename: "{app}\stop-win.bat"; Parameters: """{app}"""; Flags: runhidden waituntilterminated
+
+; 清理 Inno 不知道的运行时产物：MySQL 数据库、Windows 服务注册、三个计划任务。
+; 这些都是 install-win.ps1 在安装后创建的，不在 Inno 的文件清单里，
+; 只靠 {uninstallexe} 卸载会把 DentalClinicMySQL 服务和
+; DentalClinic-Scheduler/QueueWorker/LogCleanup 计划任务留在系统里。
+; 用 --yes 跳过脚本自身的交互确认（InitializeUninstall 已经确认过一次了）。
+; 不传安装目录：该脚本用 %~dp0 自己定位，多传的位置参数只会被解析循环 shift 掉。
+Filename: "{app}\uninstall-win.bat"; Parameters: "--yes"; Flags: runhidden waituntilterminated; Check: FileExists(ExpandConstant('{app}\uninstall-win.bat'))
+
 ; 兜底：强杀残留进程
 Filename: "{cmd}"; Parameters: "/c taskkill /f /im mysqld.exe 2>nul & taskkill /f /im nginx.exe 2>nul & taskkill /f /im python.exe 2>nul"; Flags: runhidden
 
