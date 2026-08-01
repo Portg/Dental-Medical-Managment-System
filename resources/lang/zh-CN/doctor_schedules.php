@@ -91,4 +91,5 @@ return [
 
     // Shift settings
     'shift_settings' => '班次设置',
+    'copy_range_exceeded' => '复制跨度不能超过 :months 个月，请调整目标周或在系统设置中修改上限',
 ];

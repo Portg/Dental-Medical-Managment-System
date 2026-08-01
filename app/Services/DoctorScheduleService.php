@@ -384,6 +384,23 @@ class DoctorScheduleService
         $targetStartDate = Carbon::parse($targetStart)->startOfWeek(Carbon::MONDAY);
         $sourceEndDate = $sourceStartDate->copy()->endOfWeek(Carbon::SUNDAY);
 
+        // 复制跨度上限：schedule.copy_max_range_months 此前只有 seed，
+        // 业务层从未读取，等于该配置改了也不起作用（违反 AG-020：
+        // 业务阈值不允许硬编码，必须走系统设置）。
+        // 注意 copyMonth 固定从上一个月复制，跨度恒为 1 月，无需此校验。
+        $maxMonths = (int) \App\SystemSetting::get('schedule.copy_max_range_months', 3);
+        if ($maxMonths > 0) {
+            // Carbon 3 的 diffInMonths 返回带符号浮点数（向前复制为负），
+            // 不取绝对值的话「往前复制一年」会因 -12 < 3 而被放行。
+            $spanMonths = abs($sourceStartDate->diffInMonths($targetStartDate));
+            if ($spanMonths > $maxMonths) {
+                return [
+                    'success' => false,
+                    'message' => __('doctor_schedules.copy_range_exceeded', ['months' => $maxMonths]),
+                ];
+            }
+        }
+
         $sourceSchedules = DoctorSchedule::whereBetween('schedule_date', [
             $sourceStartDate->format('Y-m-d'),
             $sourceEndDate->format('Y-m-d'),

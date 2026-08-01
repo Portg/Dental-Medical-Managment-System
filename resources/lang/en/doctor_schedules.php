@@ -91,4 +91,5 @@ return [
 
     // Shift settings
     'shift_settings' => 'Shift Settings',
+    'copy_range_exceeded' => 'Copy range cannot exceed :months month(s). Adjust the target week or raise the limit in system settings.',
 ];

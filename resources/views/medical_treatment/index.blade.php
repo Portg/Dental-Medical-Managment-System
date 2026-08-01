@@ -67,9 +67,16 @@
                                         <a href="#prescriptions_tab" data-toggle="tab" aria-expanded="false">{{ __('medical_treatment.prescriptions') }}
                                         </a>
                                     </li>
-                                    <li class=" hidden" id="dental_billing_tab_link">
-                                        <a href="#dental_billing_tab" data-toggle="tab" aria-expanded="false">{{ __('medical_treatment.dental_billing') }}</a>
-                                    </li>
+                                    {{-- 划价 Tab 自首次提交起就带 hidden，属遗留状态而非有意关闭：
+                                         其 DataTable（/appointment-invoice-items/{id}）与开单表单都已实现，
+                                         且提交到 /invoices，与预约页开单走同一条 InvoiceService 主流程，
+                                         折扣审批与库存扣减规则一致，不存在旁路。
+                                         这里按 view-invoices 权限开放，避免对无账单权限的角色暴露后必然 403。 --}}
+                                    @can('view-invoices')
+                                        <li class="" id="dental_billing_tab_link">
+                                            <a href="#dental_billing_tab" data-toggle="tab" aria-expanded="false">{{ __('medical_treatment.dental_billing') }}</a>
+                                        </li>
+                                    @endcan
 
 
                                 </ul>
@@ -171,10 +178,14 @@
                                             <div class="portlet light">
                                                 <div class="portlet-title">
 
-                                                    <button type="button" class="btn blue btn-outline btn-circle btn-sm"
-                                                       onclick="AddInvoice({{ $appointment_id  }})">
-                                                        {{ __('medical_treatment.create_invoice') }}
-                                                    </button>
+                                                    {{-- 开单提交到 /invoices，后端要求 create-invoices；
+                                                         无该权限的角色（如只读医生）不应看到按钮。 --}}
+                                                    @can('create-invoices')
+                                                        <button type="button" class="btn blue btn-outline btn-circle btn-sm"
+                                                           onclick="AddInvoice({{ $appointment_id  }})">
+                                                            {{ __('medical_treatment.create_invoice') }}
+                                                        </button>
+                                                    @endcan
                                                 </div>
                                                 <div class="portlet-body">
                                                     <table class="table table-striped table-bordered table-hover table-checkable order-column"
