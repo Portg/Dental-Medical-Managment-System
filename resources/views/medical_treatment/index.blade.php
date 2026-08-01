@@ -310,12 +310,12 @@
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/chronic_diseases.js') }}"></script>
     <script src="{{ asset('include_js/allergies.js') }}"></script>
-    <script src="{{ asset('include_js/prescriptions.js') }}"></script>
+    <script src="{{ asset('include_js/prescriptions.js') }}?v={{ filemtime(public_path('include_js/prescriptions.js')) }}"></script>
     {{--    //dental treatment--}}
-    <script src="{{ asset('include_js/treatment.js') }}"></script>
+    <script src="{{ asset('include_js/treatment.js') }}?v={{ filemtime(public_path('include_js/treatment.js')) }}"></script>
 
     {{--    //dental invoicing--}}
-    <script src="{{ asset('include_js/invoicing.js') }}"></script>
+    <script src="{{ asset('include_js/invoicing.js') }}?v={{ filemtime(public_path('include_js/invoicing.js')) }}"></script>
     <script src="{{ asset('include_js/dental_chart_editor.js') }}?v={{ filemtime(public_path('include_js/dental_chart_editor.js')) }}"></script>
 
     <script type="text/javascript">

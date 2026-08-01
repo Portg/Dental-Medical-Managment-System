@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\InvoiceItemService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\DataTables;
 
@@ -15,7 +16,10 @@ class InvoiceItemController extends Controller
     {
         $this->invoiceItemService = $invoiceItemService;
 
-        $this->middleware('can:edit-invoices');
+        // 诊疗页「牙科账单」Tab 按 view-invoices 展示；列表接口若仍要求
+        // edit-invoices，医生等只读角色会 DataTables Ajax 403。
+        $this->middleware('can:view-invoices')->only(['index', 'appointmentInvoiceItems', 'show']);
+        $this->middleware('can:edit-invoices')->only(['create', 'store', 'edit', 'update', 'destroy']);
     }
 
     /**
@@ -51,12 +55,16 @@ class InvoiceItemController extends Controller
                     return $row->procedure_doctor->surname;
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editItem(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
-                    return $btn;
+                    if (!Gate::allows('edit-invoices')) {
+                        return '';
+                    }
+                    return '<a href="#" onclick="editItem(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    $btn = '<a href="#" onclick="deleteItem(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
-                    return $btn;
+                    if (!Gate::allows('edit-invoices')) {
+                        return '';
+                    }
+                    return '<a href="#" onclick="deleteItem(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
                 ->make(true);
@@ -80,16 +88,22 @@ class InvoiceItemController extends Controller
                     return number_format($row->amount);
                 })
                 ->addColumn('editBtn', function ($row) {
-                    $btn = '<a href="#" onclick="editItem(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
-                    return $btn;
+                    if (!Gate::allows('edit-invoices')) {
+                        return '';
+                    }
+                    return '<a href="#" onclick="editItem(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';
                 })
                 ->addColumn('deleteBtn', function ($row) {
-                    $btn = '<a href="#" onclick="deleteItem(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
-                    return $btn;
+                    if (!Gate::allows('edit-invoices')) {
+                        return '';
+                    }
+                    return '<a href="#" onclick="deleteItem(' . $row->id . ')" class="btn btn-danger">' . __('common.delete') . '</a>';
                 })
                 ->rawColumns(['status', 'editBtn', 'deleteBtn'])
                 ->make(true);
         }
+
+        return response()->json(['draw' => 0, 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => []]);
     }
 
     /**

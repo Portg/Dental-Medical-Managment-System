@@ -10,7 +10,8 @@ function load_prescriptions() {
         processing: true,
         serverSide: true,
         ajax: {
-            url: "/prescriptions/" + appointment_id,
+            // appointment-scoped list (NOT /prescriptions/{id} which is show/detail)
+            url: "/prescriptions/appointment/" + appointment_id,
             data: function (d) {
                 // d.email = $('.searchEmail').val(),
                 //     d.search = $('input[type="search"]').val()
