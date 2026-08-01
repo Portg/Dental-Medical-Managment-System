@@ -944,7 +944,8 @@ if [[ "$SKIP_OBFUSCATE" == false ]]; then
         # 只是 stderr 上的一行 Warning，然后**照常执行**并回退到它自带的
         # 默认配置 —— 那份会混淆类名和命名空间，产出连 artisan 都起不来的包。
         # 这行 Warning 恰好是输出的第一行，之前的 `| tail -3` 正好把它丢掉了。
-        YAKPRO_OUT="$DIST_DIR/_yakpro.log"
+        # 放 dist 之外：写在 dist 里会被一起打进安装包，泄露构建机路径
+        YAKPRO_OUT="$(mktemp -t yakpro-po.XXXXXX)"
         $YAKPRO_CMD "$APP_SRC" \
             -o "$APP_OBFUSCATED" \
             --config-file "$YAKPRO_CNF" \
@@ -963,6 +964,7 @@ if [[ "$SKIP_OBFUSCATE" == false ]]; then
             grep -oE 'dynamic property Config::\$[a-z_]+' "$YAKPRO_OUT" | sort -u | sed 's/^/    /'
             fatal "请对照 yakpro-po 的 include/classes/config.php 修正选项名后重新构建"
         fi
+        rm -f "$YAKPRO_OUT"
 
         APP_OBFUSCATED_REAL="$APP_OBFUSCATED"
         if [[ -d "$APP_OBFUSCATED/yakpro-po/obfuscated" ]]; then
