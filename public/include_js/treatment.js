@@ -76,7 +76,7 @@ function AddTreatment(id) {
     $("#treatment-form")[0].reset();
     $('#treatment_id').val(''); ///always reset hidden form fields
     $('#btn-treatment').attr('disabled', false);
-    $('#btn-treatment').text('save Changes');
+    $('#btn-treatment').text(LanguageManager.trans('common.save'));
 
     $('#treatment_appointment_id').val(id);
     $('#treatment-modal').modal('show');
@@ -97,7 +97,7 @@ function save_treatment() {
 function save_treatment_record() {
     $('.loading').show();
     $('#btn-treatment').attr('disabled', true);
-    $('#btn-treatment').text('processing...');
+    $('#btn-treatment').text(LanguageManager.trans('common.processing'));
     $.ajax({
         type: 'POST',
         data: $('#treatment-form').serialize(),
@@ -114,7 +114,7 @@ function save_treatment_record() {
         error: function (request, status, error) {
             $('.loading').hide();
             $('#btn-treatment').attr('disabled', false);
-            $('#btn-treatment').text('Save changes');
+            $('#btn-treatment').text(LanguageManager.trans('common.save'));
             json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
                 $('.treatment_alert').show();
@@ -140,7 +140,7 @@ function editTreatment(id) {
             $('[name="treatment"]').val(data.treatment);
 
             $('.loading').hide();
-            $('#btn-treatment').text('Update Record')
+            $('#btn-treatment').text(LanguageManager.trans('common.update_record'))
             $('#treatment-modal').modal('show');
         },
         error: function (request, status, error) {
@@ -153,7 +153,7 @@ function update_treatment_record() {
     $('.loading').show();
 
     $('#btn-treatment').attr('disabled', true);
-    $('#btn-treatment').text('Updating...');
+    $('#btn-treatment').text(LanguageManager.trans('common.processing'));
     $.ajax({
         type: 'PUT',
         data: $('#treatment-form').serialize(),
@@ -170,7 +170,7 @@ function update_treatment_record() {
         error: function (request, status, error) {
             $('.loading').hide();
             $('#btn-treatment').attr('disabled', false);
-            $('#btn-treatment').text('Update Record');
+            $('#btn-treatment').text(LanguageManager.trans('common.update_record'));
             json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
                 $('.treatment_alert').show();

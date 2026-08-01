@@ -37,7 +37,7 @@ function AddIllness(id) {
     $("#chronic-form")[0].reset();
     $('#illness_id').val(''); ///always reset hidden form fields
     $('#btn-chronic').attr('disabled', false);
-    $('#btn-chronic').text('Save Changes');
+    $('#btn-chronic').text(LanguageManager.trans('common.save'));
 
     $('#chronic_patient_id').val(id);
     $('#chronic-modal').modal('show');
@@ -57,7 +57,7 @@ function save_illness() {
 function save_illness_record() {
     $('.loading').show();
     $('#btn-chronic').attr('disabled', true);
-    $('#btn-chronic').text('processing...');
+    $('#btn-chronic').text(LanguageManager.trans('common.processing'));
     $.ajax({
         type: 'POST',
         data: $('#chronic-form').serialize(),
@@ -74,7 +74,7 @@ function save_illness_record() {
         error: function (request, status, error) {
             $('.loading').hide();
             $('#btn-chronic').attr('disabled', false);
-            $('#btn-chronic').text('Save Record');
+            $('#btn-chronic').text(LanguageManager.trans('common.save'));
             json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
                 $('.alert-danger').show();
@@ -98,7 +98,7 @@ function editIllness(id) {
             $('input[name^="status"][value="' + data.status + '"').prop('checked', true);
 
             $('.loading').hide();
-            $('#btn-chronic').text('Update Record')
+            $('#btn-chronic').text(LanguageManager.trans('common.update_record'))
             $('#chronic-modal').modal('show');
 
         },
@@ -112,7 +112,7 @@ function update_illness_record() {
     $('.loading').show();
 
     $('#btn-chronic').attr('disabled', true);
-    $('#btn-chronic').text('Updating...');
+    $('#btn-chronic').text(LanguageManager.trans('common.processing'));
     $.ajax({
         type: 'PUT',
         data: $('#chronic-form').serialize(),
@@ -129,7 +129,7 @@ function update_illness_record() {
         error: function (request, status, error) {
             $('.loading').hide();
             $('#btn-chronic').attr('disabled', false);
-            $('#btn-chronic').text('Update Record');
+            $('#btn-chronic').text(LanguageManager.trans('common.update_record'));
             json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
                 $('.alert-danger').show();

@@ -26,6 +26,12 @@ class MedicalTreatmentController extends Controller
     {
         $data = $this->service->getTreatmentDataForAppointment((int) $appointment_id);
 
+        // medical-treatment/{id} 不在侧栏菜单中，breadcrumb-auto 匹配不到时
+        // 布局会落到硬编码的「今日工作」——此处显式设置面包屑。
+        $data['breadcrumb_parent'] = __('menu.group_appointment_management');
+        $data['breadcrumb_parent_url'] = url('appointments');
+        $data['breadcrumb_current'] = __('medical_treatment.page_title');
+
         return view('medical_treatment.index')->with($data);
     }
 

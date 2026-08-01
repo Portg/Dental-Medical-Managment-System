@@ -2,7 +2,7 @@
 
 return [
     // Page titles and navigation
-    'page_title' => '医疗治疗',
+    'page_title' => '诊疗',
     'view_appointments' => '查看预约',
     'select_appointment_action' => '选择预约操作',
     'treatment_complete' => '治疗完成',

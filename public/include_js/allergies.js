@@ -37,7 +37,7 @@ function AddAllergy(id) {
     $("#Allergy-form")[0].reset();
     $('#allergy_id').val(''); ///always reset hidden form fields
     $('#btn-allergy').attr('disabled', false);
-    $('#btn-allergy').text('Save Changes');
+    $('#btn-allergy').text(LanguageManager.trans('common.save'));
 
     $('#allergy_patient_id').val(id);
     $('#Allergy-modal').modal('show');
@@ -57,7 +57,7 @@ function save_allergy() {
 function save_allergy_record() {
     $('.loading').show();
     $('#btn-allergy').attr('disabled', true);
-    $('#btn-allergy').text('processing...');
+    $('#btn-allergy').text(LanguageManager.trans('common.processing'));
     $.ajax({
         type: 'POST',
         data: $('#Allergy-form').serialize(),
@@ -74,7 +74,7 @@ function save_allergy_record() {
         error: function (request, status, error) {
             $('.loading').hide();
             $('#btn-allergy').attr('disabled', false);
-            $('#btn-allergy').text('Save Record');
+            $('#btn-allergy').text(LanguageManager.trans('common.save'));
             $('#Allergy-modal').modal('show');
             json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
@@ -98,7 +98,7 @@ function editAllergy(id) {
             $('[name="body_reaction"]').val(data.body_reaction);
 
             $('.loading').hide();
-            $('#btn-allergy').text('Update Record')
+            $('#btn-allergy').text(LanguageManager.trans('common.update_record'))
             $('#Allergy-modal').modal('show');
 
         },
@@ -111,7 +111,7 @@ function editAllergy(id) {
 function update_allergy_record() {
     $('.loading').show();
     $('#btn-allergy').attr('disabled', true);
-    $('#btn-allergy').text('Updating...');
+    $('#btn-allergy').text(LanguageManager.trans('common.processing'));
     $.ajax({
         type: 'PUT',
         data: $('#Allergy-form').serialize(),
@@ -128,7 +128,7 @@ function update_allergy_record() {
         error: function (request, status, error) {
             $('.loading').hide();
             $('#btn-allergy').attr('disabled', false);
-            $('#btn-allergy').text('Update Record');
+            $('#btn-allergy').text(LanguageManager.trans('common.update_record'));
             $('#Allergy-modal').modal('show');
             json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {

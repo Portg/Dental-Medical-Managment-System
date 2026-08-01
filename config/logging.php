@@ -38,7 +38,8 @@ return [
         'stack' => [
             'driver' => 'stack',
             'channels' => array_filter(['daily', env('LOG_SLACK_WEBHOOK_URL') ? 'slack' : null]),
-            'ignore_exceptions' => false,
+            // Slack 不可达时不应把二次异常抛给用户（本地/内网常见）
+            'ignore_exceptions' => true,
         ],
 
         'single' => [

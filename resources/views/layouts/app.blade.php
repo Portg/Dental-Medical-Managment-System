@@ -50,8 +50,8 @@
                             @endif
                             @if(isset($breadcrumb_current))
                                 <li class="current">{{ $breadcrumb_current }}</li>
-                            @else
-                                <li class="current">{{ __('menu.today_work') }}</li>
+                            @elseif (!empty(trim($__env->yieldContent('page_title'))))
+                                <li class="current">@yield('page_title')</li>
                             @endif
                         </ul>
                     </div>

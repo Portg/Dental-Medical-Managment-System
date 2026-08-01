@@ -1,4 +1,5 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
+@section('page_title', __('medical_treatment.page_title'))
 @section('content')
 @section('css')
     @include('layouts.page_loader')
@@ -34,7 +35,7 @@
 </div>
 
 <input type="hidden" value="{{ $appointment_id }}" id="global_appointment_id">
-<input type="hidden" value="@if(isset($patient)) {{ $patient->id }} @endif" id="global_patient_id">
+<input type="hidden" value="{{ $patient->id ?? '' }}" id="global_patient_id">
 <div class="row">
     <div class="col-md-12">
         <div class="portlet light bordered">
@@ -311,7 +312,9 @@
 @endsection
 @section('js')
     <script>
-        let global_patient_id = $('#global_patient_id').val();
+        LanguageManager.loadFromPHP(@json(__('odontogram')), 'odontogram');
+        LanguageManager.loadFromPHP(@json(__('medical_treatment')), 'medical_treatment');
+        let global_patient_id = ($('#global_patient_id').val() || '').trim();
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/chronic_diseases.js') }}"></script>

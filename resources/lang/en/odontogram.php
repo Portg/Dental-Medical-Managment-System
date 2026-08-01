@@ -17,6 +17,8 @@ return [
     'view' => 'View',
     'add' => 'Add',
     'clean' => 'Clean',
+    'save_changes' => 'Save Changes',
+    'unmark_tooth' => 'Unmark Tooth',
 
     // Controller messages
     'chart_saved_success' => 'Dental chart changes have been captured successfully',

@@ -17,6 +17,8 @@ return [
     'view' => '查看',
     'add' => '添加',
     'clean' => '清除',
+    'save_changes' => '保存更改',
+    'unmark_tooth' => '取消标记',
 
     // 控制器消息
     'chart_saved_success' => '牙科图变更已成功保存',
