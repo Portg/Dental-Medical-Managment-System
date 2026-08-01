@@ -299,6 +299,15 @@ if !ERRORLEVEL! equ 0 (
     goto :ocr_done
 )
 
+REM 安装时若检测到本机无法运行 PaddleOCR（常见于不支持 AVX 的老 CPU），
+REM 会把 .env 的 OCR_ENABLED 置为 false。此时 venv 仍然存在（pip 装成功了，
+REM 只是 import paddleocr 崩溃），必须按开关跳过，否则每次启动都会白等 30 秒。
+findstr /I /R /C:"^OCR_ENABLED=false" "%PROJECT_DIR%\.env" >nul 2>&1
+if !ERRORLEVEL! equ 0 (
+    echo        OCR 已在安装时关闭（手工录入）              [跳过]
+    goto :ocr_done
+)
+
 if not exist "%OCR_VENV%" (
     echo        Python venv 不存在，跳过 OCR                  [跳过]
     goto :ocr_done

@@ -25,6 +25,13 @@ class WorkLogService
      */
     public function recognize(string $imagePath): array
     {
+        // 本方法直接调起 Python 子进程，不经过 OcrService，
+        // 因此必须自行校验总开关，否则 Win7 上关闭 OCR 后仍会去执行
+        // paddlepaddle 并把底层崩溃信息抛给用户。
+        if (!config('services.ocr.enabled', true)) {
+            throw new \RuntimeException(__('work_log.ocr_disabled'));
+        }
+
         if (!file_exists($imagePath)) {
             throw new \RuntimeException("Image file not found: {$imagePath}");
         }

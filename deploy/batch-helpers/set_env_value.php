@@ -32,7 +32,16 @@ $line = $key . '=' . $value;
 $pattern = '/^' . preg_quote($key, '/') . '=.*$/m';
 
 if (preg_match($pattern, $env)) {
-    $env = preg_replace($pattern, $line, $env, 1);
+    // 用回调而非字符串替换：值里的 $1 / \1 / ${x} 会被 preg_replace
+    // 当成反向引用吞掉（例如密码 p@ss$1word 会变成 p@ssword）。
+    $env = preg_replace_callback(
+        $pattern,
+        function () use ($line) {
+            return $line;
+        },
+        $env,
+        1
+    );
 } else {
     if ($env !== '' && substr($env, -1) !== "\n") {
         $env .= "\n";

@@ -15,6 +15,13 @@ class OcrServeCommand extends Command
 
     public function handle(): int
     {
+        // 与 OcrService / WorkLogService 共用同一开关：本机不支持 OCR 时
+        // （例如 CPU 无 AVX 指令集）直接退出，不去启动注定崩溃的 Python 进程。
+        if (!config('services.ocr.enabled', true)) {
+            $this->warn(__('work_log.ocr_disabled'));
+            return self::SUCCESS;
+        }
+
         $pythonPath = config('services.ocr.python_path', 'python3');
         $scriptPath = base_path('scripts/ocr_server.py');
 

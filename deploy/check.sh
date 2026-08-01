@@ -363,14 +363,23 @@ fi
 step "检查 OCR 服务..."
 
 OCR_URL="http://127.0.0.1:5000"
+OCR_ENABLED="true"
 if [[ -f "$INSTALL_DIR/.env" ]]; then
     ENV_OCR_URL=$(grep -E '^OCR_SERVER_URL=' "$INSTALL_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '[:space:]' || echo "")
     if [[ -n "$ENV_OCR_URL" ]]; then
         OCR_URL="$ENV_OCR_URL"
     fi
+    ENV_OCR_ENABLED=$(grep -E '^OCR_ENABLED=' "$INSTALL_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '[:space:]' || echo "")
+    if [[ -n "$ENV_OCR_ENABLED" ]]; then
+        OCR_ENABLED="$ENV_OCR_ENABLED"
+    fi
 fi
 
-if command -v curl &>/dev/null; then
+# OCR 被有意关闭时（例如 Win7 目标机 CPU 不支持 AVX，安装时自动降级），
+# 服务本就不该运行，此处报「未响应」会误导运维，故按正常情况计。
+if [[ "$OCR_ENABLED" == "false" ]]; then
+    count_ok "OCR 已按本机能力关闭（工作日志走手工录入）"
+elif command -v curl &>/dev/null; then
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 --max-time 5 "${OCR_URL}/health" 2>/dev/null || echo "000")
     if [[ "$HTTP_CODE" == "200" ]]; then
         count_ok "OCR 服务运行中 (${OCR_URL})"
