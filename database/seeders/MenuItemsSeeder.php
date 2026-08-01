@@ -195,6 +195,11 @@ class MenuItemsSeeder extends Seeder
         $this->item($ccGroup, 'menu.service_items', 'clinic-services', null, 'manage-medical-services', 10, 'SA');
         $this->item($ccGroup, 'menu.medical_templates', 'medical-templates', null, 'manage-medical-services', 20, 'SAD');
         $this->item($ccGroup, 'menu.quick_phrases', 'quick-phrases', null, 'manage-medical-services', 30, 'SAD');
+
+        // 3.5 我的绩效 — 医生查看本人绩效的专属入口（originally added by 2026_03_16_100023）
+        // DoctorReportController 按 is_doctor 将数据限定为本人；管理员看全院绩效走
+        // 运营中心 › 绩效管理，两者以权限区分，不互相覆盖。
+        $this->item($parentId, 'menu.my_performance', 'doctor-report', 'icon-graph', 'view-own-doctor-report', 90, 'SD');
     }
 
     // ── 4. Operations Center ───────────────────────────────────────────
@@ -256,11 +261,11 @@ class MenuItemsSeeder extends Seeder
         $this->item($parentId, 'menu.individual_payslip', 'individual-payslips', 'icon-briefcase', null, 71, 'DNR');
 
         // 4.8 Performance — SA sees group with children, D sees direct link
-        // DoctorReportController 放行 view-reports 或 view-own-doctor-report；菜单取后者，
-        // 医生才看得到自己的绩效报表（管理员/超管已由迁移补齐该权限）。
-        $perfGroup = $this->item($parentId, 'menu.group_performance', 'doctor-performance-report', 'icon-calculator', 'view-own-doctor-report', 80, 'SAD');
+        // 全院绩效，管理员视角。医生查看本人绩效走「诊疗中心 › 我的绩效」，
+        // 两个入口以权限区分，不要把这里改成 view-own-doctor-report 而造成重复。
+        $perfGroup = $this->item($parentId, 'menu.group_performance', 'doctor-performance-report', 'icon-calculator', 'view-reports', 80, 'SA');
         $this->item($perfGroup, 'menu.commission_rules', 'commission-rules', null, 'manage-doctor-claims', 10, 'SA');
-        $this->item($perfGroup, 'menu.doctor_performance_report', 'doctor-performance-report', null, 'view-own-doctor-report', 20, 'SA');
+        $this->item($perfGroup, 'menu.doctor_performance_report', 'doctor-performance-report', null, 'view-reports', 20, 'SA');
 
         // 4.9 Attendance & Leave — GROUP for SA, DIRECT leave-requests for DNR
         $leaveGroup = $this->item($parentId, 'menu.group_attendance_leave', null, 'icon-calendar', null, 90, 'SA');
@@ -279,19 +284,27 @@ class MenuItemsSeeder extends Seeder
 
         // 5.1 Revenue Analysis — GROUP for SA
         $revGroup = $this->item($parentId, 'menu.group_revenue_analysis', null, 'icon-bar-chart', null, 10, 'SA');
+        // originally added by 2026_03_16_100003 migration
+        $this->item($revGroup, 'menu.financial_calendar', 'financial-calendar', null, 'view-reports', 5, 'SA');
         $this->item($revGroup, 'menu.general_income_report', 'invoice-payments-report', null, 'view-reports', 10, 'SA');
         $this->item($revGroup, 'menu.procedures_income_report', 'procedure-income-report', null, 'view-reports', 20, 'SA');
+        $this->item($revGroup, 'menu.cash_summary_report', 'cash-summary-report', null, 'view-reports', 25, 'SA');
         $this->item($revGroup, 'menu.aged_receivable_report', 'debtors', null, 'view-reports', 30, 'SA');
+        $this->item($revGroup, 'menu.financial_detail_report', 'financial-detail-report', null, 'view-reports', 35, 'SA');
+        // originally added by 2026_03_16_100007 migration
+        $this->item($revGroup, 'menu.unpaid_invoices_report', 'unpaid-invoices', null, 'view-reports', 40, 'SA');
 
         // 5.2 Business Analysis — GROUP for SA
         $bizGroup = $this->item($parentId, 'menu.group_business_analysis', null, 'icon-pie-chart', null, 20, 'SA');
         $this->item($bizGroup, 'menu.revisit_rate_report', 'revisit-rate-report', null, 'view-reports', 10, 'SA');
         $this->item($bizGroup, 'menu.patient_source_report', 'patient-source-report', null, 'view-reports', 20, 'SA');
         $this->item($bizGroup, 'menu.appointment_analytics_report', 'appointment-analytics-report', null, 'view-reports', 30, 'SA');
+        // originally added by 2026_03_16_100003 migration
+        $this->item($bizGroup, 'menu.lab_statistics_report', 'lab-statistics-report', null, 'view-reports', 45, 'SA');
         $this->item($bizGroup, 'menu.treatment_plan_completion_report', 'treatment-plan-completion-report', null, 'view-reports', 50, 'SA');
         $this->item($bizGroup, 'menu.monthly_business_summary_report', 'monthly-business-summary-report', null, 'view-reports', 60, 'SA');
         $this->item($bizGroup, 'menu.patient_demographics_report', 'patient-demographics-report', null, 'view-reports', 70, 'SA');
-        $this->item($bizGroup, 'menu.doctor_workload_report', 'doctor-workload-report', null, 'view-own-doctor-report', 80, 'SA');
+        $this->item($bizGroup, 'menu.doctor_workload_report', 'doctor-workload-report', null, 'view-reports', 80, 'SA');
         $this->item($bizGroup, 'menu.quotation_conversion_report', 'quotation-conversion-report', null, 'view-reports', 90, 'SA');
 
         // 5.3 Expense Analysis — GROUP for SAR
