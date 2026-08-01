@@ -281,6 +281,8 @@ return [
     'open_in_treatment' => '在诊疗页打开',
     'dental_chart_empty' => '暂无牙位标记，可点击「编辑牙位图」开始记录',
     'dental_chart_marked_count' => '已标记 :count 颗牙',
+    'dental_chart_start_hint' => '该患者尚无就诊记录。开始后可在本页直接标记牙位。',
+    'start_dental_chart' => '开始记录牙位图',
 
     // Patient Tags and Sources
     'source' => '患者来源',

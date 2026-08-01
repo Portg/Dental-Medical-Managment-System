@@ -356,13 +356,18 @@ class PatientService
             ->map(fn($d) => ['id' => $d->id, 'name' => $d->full_name])
             ->values();
 
-        $dentalChartSummary = app(DentalChartService::class)->getChartSummaryForPatient($id);
+        $dentalChartService = app(DentalChartService::class);
+        $dentalChartSummary = $dentalChartService->getChartSummaryForPatient($id);
+        // 复用已有就诊承载图表，绝不在「打开患者详情」时静默建预约
+        $dentalChartAppointment = $dentalChartService->getLatestAppointment($id)
+            ?? Appointment::where('patient_id', $id)->orderByDesc('id')->first();
+        $dentalChartAppointmentId = $dentalChartAppointment?->id;
 
         return compact(
             'patient', 'appointmentsCount', 'medicalCasesCount',
             'imagesCount', 'followupsCount', 'labCasesCount', 'prescriptionsCount', 'invoicesCount',
             'firstVisit', 'latestVisit', 'totalSpending', 'allTags', 'allGroups', 'doctors',
-            'dentalChartSummary'
+            'dentalChartSummary', 'dentalChartAppointmentId'
         );
     }
 

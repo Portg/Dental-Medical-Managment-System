@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="{{ asset('css/patient-image-modal.css') }}?v={{ filemtime(public_path('css/patient-image-modal.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/patient-billing.css') }}?v={{ filemtime(public_path('css/patient-billing.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/patient-detail.css') }}?v={{ filemtime(public_path('css/patient-detail.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/dental-chart-editor.css') }}?v={{ filemtime(public_path('css/dental-chart-editor.css')) }}">
     <style>
         /* ── Patient Detail Three-Zone Layout ── */
         .patient-summary-bar {
@@ -289,7 +290,12 @@
                             <a href="#basic_info_tab" data-toggle="tab">{{ __('patient.basic_info') }}</a>
                         </li>
                         <li>
-                            <a href="#dental_chart_tab" data-toggle="tab">{{ __('patient.dental_chart') }}</a>
+                            <a href="#dental_chart_tab" data-toggle="tab">
+                                {{ __('patient.dental_chart') }}
+                                @if(!empty($dentalChartSummary['tooth_count']))
+                                    <span class="badge">{{ $dentalChartSummary['tooth_count'] }}</span>
+                                @endif
+                            </a>
                         </li>
                         <li>
                             <a href="#appointments_tab" data-toggle="tab">{{ __('patient.appointments') }} <span class="badge">{{ $appointmentsCount }}</span></a>
@@ -507,39 +513,17 @@
                             </div>
                         </div>
 
-                        <!-- Dental Chart Tab -->
+                        <!-- Dental Chart Tab：与诊疗页同一套 FDI 编辑器，页内直接改 -->
                         <div class="tab-pane" id="dental_chart_tab">
-                            <div class="table-toolbar patient-dental-chart-toolbar">
-                                <a href="{{ url('dental-charting/for-patient/' . $patient->id) }}" class="btn blue btn-outline sbold btn-sm">
-                                    <i class="fa fa-edit"></i> {{ __('patient.edit_dental_chart') }}
-                                </a>
-                                @if(!empty($latestVisit))
-                                    <a href="{{ url('medical-treatment/' . $latestVisit->id) }}" class="btn default btn-sm">
-                                        <i class="fa fa-stethoscope"></i> {{ __('patient.open_in_treatment') }}
-                                    </a>
-                                @endif
-                            </div>
-
-                            @php $chartSummary = $dentalChartSummary ?? ['tooth_count' => 0, 'marks' => [], 'last_updated' => null]; @endphp
-                            @if(($chartSummary['tooth_count'] ?? 0) > 0)
-                                <div class="patient-dental-chart-meta">
-                                    <span>{{ __('patient.dental_chart_marked_count', ['count' => $chartSummary['tooth_count']]) }}</span>
-                                    @if(!empty($chartSummary['last_updated']))
-                                        <span class="text-muted">
-                                            {{ __('odontogram.last_updated') }}：{{ \Carbon\Carbon::parse($chartSummary['last_updated'])->format('Y-m-d H:i') }}
-                                        </span>
-                                    @endif
-                                </div>
-                                <div class="patient-dental-chart-marks">
-                                    @foreach($chartSummary['marks'] as $mark)
-                                        <span class="patient-dental-mark-chip" data-status="{{ $mark['status'] }}">
-                                            {{ $mark['tooth'] }} {{ $mark['label'] }}
-                                        </span>
-                                    @endforeach
-                                </div>
+                            @if(!empty($dentalChartAppointmentId))
+                                <input type="hidden" id="global_appointment_id" value="{{ $dentalChartAppointmentId }}">
+                                @include('dental_chart.partials.fdi_editor')
                             @else
                                 <div class="patient-dental-chart-empty">
-                                    <p class="text-muted">{{ __('patient.dental_chart_empty') }}</p>
+                                    <p class="text-muted">{{ __('patient.dental_chart_start_hint') }}</p>
+                                    <a href="{{ url('dental-charting/for-patient/' . $patient->id . '?return=patient') }}" class="btn blue btn-sm">
+                                        <i class="fa fa-edit"></i> {{ __('patient.start_dental_chart') }}
+                                    </a>
                                 </div>
                             @endif
                         </div>
@@ -682,17 +666,29 @@
             'appointment': @json(__('appointment')),
             'invoices': @json(__('invoices')),
             'messages': @json(__('messages')),
-            'data_security': @json(__('data_security'))
+            'data_security': @json(__('data_security')),
+            'odontogram': @json(__('odontogram'))
         });
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/patient_detail.js') }}"></script>
     <script src="{{ asset('include_js/patient_billing.js') }}?v={{ filemtime(public_path('include_js/patient_billing.js')) }}"></script>
+    @if(!empty($dentalChartAppointmentId))
+        <script src="{{ asset('include_js/dental_chart_editor.js') }}?v={{ filemtime(public_path('include_js/dental_chart_editor.js')) }}"></script>
+    @endif
     <script>
         // Initialize billing module on billing tab click
         $('a[href="#billing_tab"]').on('shown.bs.tab', function () {
             if (typeof BillingModule !== 'undefined') {
                 BillingModule.init({{ $patient->id }}, {!! json_encode($doctors ?? []) !!});
+            }
+        });
+
+        // 支持 #dental_chart_tab 等 hash 直达对应 Tab（如「开始记录」后回跳）
+        $(function () {
+            var hash = window.location.hash;
+            if (hash && $('a[href="' + hash + '"][data-toggle="tab"]').length) {
+                $('a[href="' + hash + '"][data-toggle="tab"]').tab('show');
             }
         });
     </script>

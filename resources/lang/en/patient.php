@@ -119,6 +119,8 @@ return [
     'open_in_treatment' => 'Open in treatment',
     'dental_chart_empty' => 'No marks yet. Click “Edit dental chart” to start.',
     'dental_chart_marked_count' => ':count teeth marked',
+    'dental_chart_start_hint' => 'This patient has no visit yet. Start here to chart teeth on this page.',
+    'start_dental_chart' => 'Start dental chart',
     'patient_no_history_treatment' => 'No treatment history found for this patient',
 
     // Patient Tags and Sources

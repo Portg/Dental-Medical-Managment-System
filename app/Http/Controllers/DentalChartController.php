@@ -53,7 +53,7 @@ class DentalChartController extends Controller
     /**
      * Open chart editor for a patient (resolve/create appointment behind the scenes).
      */
-    public function openForPatient($patientId)
+    public function openForPatient(Request $request, $patientId)
     {
         try {
             $appointment = $this->service->resolveAppointmentForChart((int) $patientId);
@@ -61,6 +61,11 @@ class DentalChartController extends Controller
             return redirect('dental-charting')->with('error', $e->getMessage());
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect('dental-charting')->with('error', __('odontogram.patient_not_found'));
+        }
+
+        // 从患者详情发起：建好承载后回到详情牙位图 Tab，页内编辑
+        if ($request->query('return') === 'patient') {
+            return redirect(url('patients/' . (int) $patientId) . '#dental_chart_tab');
         }
 
         return redirect('dental-charting/open/' . $appointment->id);
