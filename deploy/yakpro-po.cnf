@@ -1,76 +1,54 @@
 <?php
-// ═══════════════════════════════════════════════════════════════
+// YAK Pro - Php Obfuscator: Config File
+// ↑↑↑ 以上两行是 yakpro-po 的魔法头，check_config_file() 会逐字比对文件的
+//     前两行。缺失或改动会让整个配置被**静默拒绝** —— 它只往 stderr 打一行
+//     Warning，然后回退到 yakpro 自带的默认配置。那份默认配置连类名和
+//     命名空间一起混淆，会把
+//         use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+//     改写成不存在的类名（vendor/ 不参与混淆），产物连 php artisan 都起不来。
+//     不要在这两行之前或之间插入任何内容，包括空行和注释。
+//
+// ═══════════════════════════════════════════════════════════════════
 //  yakpro-po 混淆配置 — 牙科诊所管理系统
+//  https://github.com/pk-fr/yakpro-po
+//  由 build.sh 自动调用：
+//    yakpro-po dist/app -o ... --config-file deploy/yakpro-po.cnf
 //
-//  yakpro-po 是免费的 PHP 混淆工具：
-//    https://github.com/nicoco007/yakpro-po
-//
-//  用法（由 build.sh 自动调用）：
-//    yakpro-po app/ -o dist/app/ --config-file deploy/yakpro-po.cnf
-// ═══════════════════════════════════════════════════════════════
+//  选项名以 include/classes/config.php 的属性定义为准。写错名字不会报错，
+//  PHP 只会创建一个动态属性，yakpro 从不读它 —— 设置静默失效。
+// ═══════════════════════════════════════════════════════════════════
 
-// ── 基础配置 ────────────────────────────────────────────────────
-
-// 混淆变量名
-$conf->obfuscate_variable_name        = true;
-
-// 混淆函数名（关闭 — Laravel 大量使用反射和魔术方法调用）
-$conf->obfuscate_function_name        = false;
-
-// 混淆类名（关闭 — Laravel 服务容器、IoC 和 Eloquent 依赖类名解析）
-$conf->obfuscate_class_name           = false;
-
-// 混淆接口名（关闭）
-$conf->obfuscate_interface_name       = false;
-
-// 混淆 trait 名（关闭）
-$conf->obfuscate_trait_name           = false;
-
-// 混淆类常量名（关闭 — Blade 模板和配置引用常量名）
-$conf->obfuscate_class_constant_name  = false;
-
-// 混淆属性名（关闭 — Eloquent 模型属性映射数据库字段）
-$conf->obfuscate_property_name        = false;
-
-// 混淆方法名（关闭 — Laravel 约定方法名如 boot/register/handle 等）
-$conf->obfuscate_method_name          = false;
-
-// 混淆命名空间（关闭 — autoload PSR-4 映射和服务提供者依赖命名空间）
-$conf->obfuscate_namespace_name       = false;
-
-// 混淆 label 名
+// ── 实际生效的混淆 ──────────────────────────────────────────────
+// 字符串转十六进制转义：值不变、行为不变，是这里唯一既安全又有效果的一项
+$conf->obfuscate_string_literal       = true;
 $conf->obfuscate_label_name           = true;
-
-// ── 代码变换 ────────────────────────────────────────────────────
-
-// 去除注释
-$conf->strip_comment                  = true;
-
-// 去除缩进
 $conf->strip_indentation              = true;
 
-// 随机打乱语句顺序（关闭 — 可能破坏依赖顺序的代码）
+// ── 关闭的混淆，每条都有具体原因 ────────────────────────────────
+
+// 变量名：app/ 下有 58 处 compact()。compact('patients') 按**字面量名字**
+// 查找变量，变量一旦改名就找不到 —— 实测返回 array(0)，视图收到空数据，
+// 页面空白或报未定义变量，且不抛异常、不留日志。
+// 靠白名单列举不可行：任何新增的 compact() 都会静默失效，没有机制能提醒。
+$conf->obfuscate_variable_name        = false;
+
+// 以下均因 Laravel 依赖反射、服务容器、PSR-4 自动加载与 Eloquent 属性映射；
+// 且 vendor/ 不参与混淆，跨边界的 use Vendor\Class as Alias 会指向不存在的类
+$conf->obfuscate_function_name        = false;
+$conf->obfuscate_class_name           = false;
+$conf->obfuscate_interface_name       = false;
+$conf->obfuscate_trait_name           = false;
+$conf->obfuscate_class_constant_name  = false;
+$conf->obfuscate_constant_name        = false;
+$conf->obfuscate_property_name        = false;
+$conf->obfuscate_method_name          = false;
+$conf->obfuscate_namespace_name       = false;
+
+// 语句打散会生成 goto 迷宫，线上排障代价极高而收益有限
 $conf->shuffle_stmts                  = false;
+$conf->obfuscate_if_statement         = false;
+$conf->obfuscate_loop_statement       = false;
 
-// 混淆字符串字面量
-$conf->obfuscate_string_literal       = true;
-
-// ── 排除列表 ────────────────────────────────────────────────────
-
-// 不混淆的变量名（框架和超全局）
-$conf->obfuscate_variable_name_ignore = [
-    // PHP 超全局
-    '$this', '$_SERVER', '$_GET', '$_POST', '$_FILES',
-    '$_COOKIE', '$_SESSION', '$_REQUEST', '$_ENV', '$GLOBALS',
-    // Laravel 常用
-    '$app', '$request', '$response', '$query', '$builder',
-    '$model', '$table', '$validator', '$rules', '$data',
-    '$user', '$patient', '$appointment', '$invoice',
-];
-
-// 不处理的目录（相对于源根目录 app/）
-// 注意：t_ignore 仅支持目录名，不支持单文件路径
-$conf->t_ignore = [
-    'Console/Commands',   // Artisan 命令签名依赖字符串
-    'Http',               // Kernel.php 和 Middleware 中 use X as Y 别名被混淆后类找不到
-];
+// 出错立即中止，不要产出半成品
+$conf->abort_on_error                 = true;
+$conf->confirm                        = false;

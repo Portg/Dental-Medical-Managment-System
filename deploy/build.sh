@@ -940,10 +940,29 @@ if [[ "$SKIP_OBFUSCATE" == false ]]; then
         fi
         APP_OBFUSCATED="$DIST_DIR/_app_obfuscated"
 
+        # 输出必须留存并检查，不能只 tail 掉。yakpro-po 对配置文件的拒绝
+        # 只是 stderr 上的一行 Warning，然后**照常执行**并回退到它自带的
+        # 默认配置 —— 那份会混淆类名和命名空间，产出连 artisan 都起不来的包。
+        # 这行 Warning 恰好是输出的第一行，之前的 `| tail -3` 正好把它丢掉了。
+        YAKPRO_OUT="$DIST_DIR/_yakpro.log"
         $YAKPRO_CMD "$APP_SRC" \
             -o "$APP_OBFUSCATED" \
             --config-file "$YAKPRO_CNF" \
-            2>&1 | tail -3
+            > "$YAKPRO_OUT" 2>&1 || true
+        tail -3 "$YAKPRO_OUT"
+
+        if grep -q 'is not a valid yakpro-po config file' "$YAKPRO_OUT"; then
+            fatal "yakpro-po 拒绝了 deploy/yakpro-po.cnf（前两行必须是 '<?php' 和 '// YAK Pro - Php Obfuscator: Config File'），已回退到默认配置。默认配置会混淆类名与命名空间，产物无法启动。详见 $YAKPRO_OUT"
+        fi
+        if ! grep -q "Using \[$YAKPRO_CNF\] Config File" "$YAKPRO_OUT"; then
+            fatal "yakpro-po 没有使用项目配置 deploy/yakpro-po.cnf，详见 $YAKPRO_OUT"
+        fi
+        # 写错的选项名不会报错，只会变成动态属性并被忽略 —— 设置静默失效
+        if grep -q 'dynamic property Config::' "$YAKPRO_OUT"; then
+            warn "yakpro-po 配置里有无效选项名（已被忽略）:"
+            grep -oE 'dynamic property Config::\$[a-z_]+' "$YAKPRO_OUT" | sort -u | sed 's/^/    /'
+            fatal "请对照 yakpro-po 的 include/classes/config.php 修正选项名后重新构建"
+        fi
 
         APP_OBFUSCATED_REAL="$APP_OBFUSCATED"
         if [[ -d "$APP_OBFUSCATED/yakpro-po/obfuscated" ]]; then
