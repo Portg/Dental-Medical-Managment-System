@@ -356,10 +356,13 @@ class PatientService
             ->map(fn($d) => ['id' => $d->id, 'name' => $d->full_name])
             ->values();
 
+        $dentalChartSummary = app(DentalChartService::class)->getChartSummaryForPatient($id);
+
         return compact(
             'patient', 'appointmentsCount', 'medicalCasesCount',
             'imagesCount', 'followupsCount', 'labCasesCount', 'prescriptionsCount', 'invoicesCount',
-            'firstVisit', 'latestVisit', 'totalSpending', 'allTags', 'allGroups', 'doctors'
+            'firstVisit', 'latestVisit', 'totalSpending', 'allTags', 'allGroups', 'doctors',
+            'dentalChartSummary'
         );
     }
 

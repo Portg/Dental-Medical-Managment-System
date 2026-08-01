@@ -198,4 +198,88 @@ class DentalChartService
             ->select('dental_charts.*')
             ->get();
     }
+
+    /**
+     * Current dental-chart summary for patient detail page.
+     *
+     * Chart rows are stored per appointment but scoped by patient on load/save;
+     * there is no versioned history — only the latest mark set.
+     */
+    public function getChartSummaryForPatient(int $patientId): array
+    {
+        $COLOR_TO_STATUS = [
+            '1' => 'filled', '2' => 'caries', '3' => 'rct', '4' => 'missing',
+            '6' => 'implant', '8' => 'crown', '11' => 'impacted',
+        ];
+        $STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'crown', 'rct', 'filled', 'caries'];
+        $SHORT_KEYS = [
+            'caries' => 'short_caries', 'filled' => 'short_filled', 'rct' => 'short_rct',
+            'crown' => 'short_crown', 'missing' => 'short_missing', 'implant' => 'short_implant',
+            'impacted' => 'short_impacted',
+        ];
+
+        $rows = DB::table('dental_charts')
+            ->join('appointments', 'appointments.id', '=', 'dental_charts.appointment_id')
+            ->whereNull('dental_charts.deleted_at')
+            ->whereNull('appointments.deleted_at')
+            ->where('appointments.patient_id', $patientId)
+            ->select(
+                'dental_charts.tooth_number',
+                'dental_charts.tooth',
+                'dental_charts.tooth_status',
+                'dental_charts.color',
+                'dental_charts.updated_at'
+            )
+            ->orderBy('dental_charts.tooth_number')
+            ->get();
+
+        $byTooth = [];
+        $lastUpdated = null;
+        foreach ($rows as $row) {
+            $tooth = (string) ($row->tooth_number ?: $row->tooth);
+            if ($tooth === '' || $tooth === '0') {
+                continue;
+            }
+            if (!isset($byTooth[$tooth])) {
+                $byTooth[$tooth] = [];
+            }
+            $st = $row->tooth_status ?: ($COLOR_TO_STATUS[(string) $row->color] ?? null);
+            if ($st) {
+                $byTooth[$tooth][] = $st;
+            }
+            if ($row->updated_at && ($lastUpdated === null || $row->updated_at > $lastUpdated)) {
+                $lastUpdated = $row->updated_at;
+            }
+        }
+
+        $marks = [];
+        foreach ($byTooth as $tooth => $statuses) {
+            $statuses = array_values(array_unique($statuses));
+            $primary = null;
+            foreach ($STATUS_PRIORITY as $candidate) {
+                if (in_array($candidate, $statuses, true)) {
+                    $primary = $candidate;
+                    break;
+                }
+            }
+            $primary = $primary ?: ($statuses[0] ?? null);
+            if (!$primary) {
+                continue;
+            }
+            $shortKey = $SHORT_KEYS[$primary] ?? $primary;
+            $marks[] = [
+                'tooth' => $tooth,
+                'status' => $primary,
+                'label' => __('odontogram.' . $shortKey),
+            ];
+        }
+
+        usort($marks, fn ($a, $b) => (int) $a['tooth'] <=> (int) $b['tooth']);
+
+        return [
+            'tooth_count' => count($marks),
+            'last_updated' => $lastUpdated,
+            'marks' => $marks,
+        ];
+    }
 }

@@ -5,6 +5,7 @@
     <link rel="stylesheet" href="{{ asset('css/form-modal.css') }}?v={{ filemtime(public_path('css/form-modal.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/patient-image-modal.css') }}?v={{ filemtime(public_path('css/patient-image-modal.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/patient-billing.css') }}?v={{ filemtime(public_path('css/patient-billing.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/patient-detail.css') }}?v={{ filemtime(public_path('css/patient-detail.css')) }}">
     <style>
         /* ── Patient Detail Three-Zone Layout ── */
         .patient-summary-bar {
@@ -508,15 +509,39 @@
 
                         <!-- Dental Chart Tab -->
                         <div class="tab-pane" id="dental_chart_tab">
-                            <div class="text-center" style="padding: 20px;">
-                                <p>{{ __('patient.dental_chart_description') }}</p>
-                                <a href="{{ url('dental-charting/for-patient/' . $patient->id) }}" class="btn btn-primary">
-                                    <i class="fa fa-edit"></i> {{ __('odontogram.open_chart') }}
+                            <div class="table-toolbar patient-dental-chart-toolbar">
+                                <a href="{{ url('dental-charting/for-patient/' . $patient->id) }}" class="btn blue btn-outline sbold btn-sm">
+                                    <i class="fa fa-edit"></i> {{ __('patient.edit_dental_chart') }}
                                 </a>
-                                <a href="{{ url('medical-history/' . $patient->id) }}" class="btn btn-default">
-                                    {{ __('patient.view_dental_history') }}
-                                </a>
+                                @if(!empty($latestVisit))
+                                    <a href="{{ url('medical-treatment/' . $latestVisit->id) }}" class="btn default btn-sm">
+                                        <i class="fa fa-stethoscope"></i> {{ __('patient.open_in_treatment') }}
+                                    </a>
+                                @endif
                             </div>
+
+                            @php $chartSummary = $dentalChartSummary ?? ['tooth_count' => 0, 'marks' => [], 'last_updated' => null]; @endphp
+                            @if(($chartSummary['tooth_count'] ?? 0) > 0)
+                                <div class="patient-dental-chart-meta">
+                                    <span>{{ __('patient.dental_chart_marked_count', ['count' => $chartSummary['tooth_count']]) }}</span>
+                                    @if(!empty($chartSummary['last_updated']))
+                                        <span class="text-muted">
+                                            {{ __('odontogram.last_updated') }}：{{ \Carbon\Carbon::parse($chartSummary['last_updated'])->format('Y-m-d H:i') }}
+                                        </span>
+                                    @endif
+                                </div>
+                                <div class="patient-dental-chart-marks">
+                                    @foreach($chartSummary['marks'] as $mark)
+                                        <span class="patient-dental-mark-chip" data-status="{{ $mark['status'] }}">
+                                            {{ $mark['tooth'] }} {{ $mark['label'] }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="patient-dental-chart-empty">
+                                    <p class="text-muted">{{ __('patient.dental_chart_empty') }}</p>
+                                </div>
+                            @endif
                         </div>
 
                         <!-- Appointments Tab -->

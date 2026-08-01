@@ -277,6 +277,10 @@ return [
     // Other
     'dental_chart_description' => '查看患者牙位图和历史记录',
     'view_dental_history' => '查看牙科历史',
+    'edit_dental_chart' => '编辑牙位图',
+    'open_in_treatment' => '在诊疗页打开',
+    'dental_chart_empty' => '暂无牙位标记，可点击「编辑牙位图」开始记录',
+    'dental_chart_marked_count' => '已标记 :count 颗牙',
 
     // Patient Tags and Sources
     'source' => '患者来源',

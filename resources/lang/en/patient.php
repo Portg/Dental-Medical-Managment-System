@@ -115,6 +115,10 @@ return [
     // Other
     'dental_chart_description' => 'View patient dental chart and history',
     'view_dental_history' => 'View Dental History',
+    'edit_dental_chart' => 'Edit dental chart',
+    'open_in_treatment' => 'Open in treatment',
+    'dental_chart_empty' => 'No marks yet. Click “Edit dental chart” to start.',
+    'dental_chart_marked_count' => ':count teeth marked',
     'patient_no_history_treatment' => 'No treatment history found for this patient',
 
     // Patient Tags and Sources
