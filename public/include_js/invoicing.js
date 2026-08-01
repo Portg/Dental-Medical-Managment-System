@@ -50,14 +50,17 @@ $("#addInvoiceItem").click(function () {
     $("#InvoicesTable").append('<tr>' +
         '<td><select id="service_append' + i + '" name="addmore[' + i + '][medical_service_id]" class="form-control"\n' +
         '                                        style="width: 100%;border: 1px solid #a29e9e;"></select></td>' +
-        '<td> <input type="text" name="addmore[' + i + '][tooth_no]" placeholder="Enter tooth number"\n' +
+        '<td> <input type="text" name="addmore[' + i + '][tooth_no]" placeholder="' +
+            LanguageManager.trans('medical_treatment.enter_tooth_number') + '"\n' +
         '                                       class="form-control"/></td>' +
-        '<td> <input type="number"  id="procedure_price' + i + '" name="addmore[' + i + '][amount]" placeholder="Enter amount"\n' +
+        '<td> <input type="number"  id="procedure_price' + i + '" name="addmore[' + i + '][amount]" placeholder="' +
+            LanguageManager.trans('medical_treatment.enter_amount') + '"\n' +
         '                                       class="form-control"/></td>' +
-        '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td></tr>');
+        '<td><button type="button" class="btn btn-danger remove-tr">' +
+            LanguageManager.trans('common.remove') + '</button></td></tr>');
 
     $('#service_append' + i).select2({
-        placeholder: "select procedure",
+        placeholder: LanguageManager.trans('medical_treatment.select_procedure'),
         minimumInputLength: 2,
         ajax: {
             url: '/search-medical-service',
@@ -89,7 +92,7 @@ $("#addInvoiceItem").click(function () {
 function save_invoice() {
     $('.loading').show();
     $('#btnSave').attr('disabled', true);
-    $('#btnSave').text('processing...');
+    $('#btnSave').text(LanguageManager.trans('medical_treatment.processing'));
     $.ajax({
         type: 'POST',
         data: $('#New-invoice-form').serialize(),
@@ -133,7 +136,7 @@ function editItem(id) {
             $('#medical_service_id').append(newOption2).trigger('change');
 
             $('.loading').hide();
-            $('#btn-save').text('Update Record')
+            $('#btn-save').text(LanguageManager.trans('common.update_record'));
             $('#invoice-modal').modal('show');
         },
         error: function (request, status, error) {
@@ -197,7 +200,7 @@ function save_invoice_update() {
     $('.loading').show();
 
     $('#btnSave').attr('disabled', true);
-    $('#btnSave').text('Updating...');
+    $('#btnSave').text(LanguageManager.trans('common.updating'));
     $.ajax({
         type: 'PUT',
         data: $('#invoice-form').serialize(),
@@ -224,12 +227,12 @@ function save_invoice_update() {
 
 function deleteItem(id) {
     swal({
-            title: "Are you sure?",
-            text: "Your will not be able to recover this Invoice Item!",
+            title: LanguageManager.trans('medical_treatment.are_you_sure'),
+            text: LanguageManager.trans('medical_treatment.cannot_recover_invoice_item'),
             type: "warning",
             showCancelButton: true,
             confirmButtonClass: "btn-danger",
-            confirmButtonText: "Yes, delete it!",
+            confirmButtonText: LanguageManager.trans('medical_treatment.yes_delete_it'),
             closeOnConfirm: false
         },
         function () {
@@ -261,7 +264,7 @@ function deleteItem(id) {
 }
 
 function alert_dental_billing(message, status) {
-    swal("Alert!", message, status);
+    swal(LanguageManager.trans('medical_treatment.alert'), message, status);
 
     let oTable = $('#dental_billing_table').dataTable();
     oTable.fnDraw(true);

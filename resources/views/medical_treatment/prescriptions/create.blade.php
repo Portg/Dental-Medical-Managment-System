@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title"> {{ __('medical.prescription') }} </h4>
+                <h4 class="modal-title"> {{ __('medical_treatment.prescription') }} </h4>
             </div>
             <div class="modal-body">
 
@@ -13,19 +13,19 @@
                     <input type="hidden" name="appointment_id" id="prescription_appointment_id">
                     <table class="table table-bordered" id="prescriptionsTable">
                         <tr>
-                            <th class="text-primary">{{ __('medical.drug_name') }}</th>
-                            <th class="text-primary">{{ __('medical.dosage') }}</th>
-                            <th class="text-primary">{{ __('medical.instructions') }}</th>
+                            <th class="text-primary">{{ __('medical_treatment.drug') }}</th>
+                            <th class="text-primary">{{ __('medical_treatment.qty') }}</th>
+                            <th class="text-primary">{{ __('medical_treatment.directions') }}</th>
                             <th class="text-primary">{{ __('common.action') }}</th>
                         </tr>
                         <tr>
                             <td>
                                 <input type="text" id="drug_name" class="form-control" name="addmore[0][drug]"
-                                       placeholder="{{ __('medical.drug_name') }}"/>
+                                       placeholder="{{ __('medical_treatment.enter_drug') }}"/>
                             </td>
                             <td>
                                 <input type="text" class="form-control" name="addmore[0][qty]"
-                                       placeholder="ml/mg"/>
+                                       placeholder="{{ __('medical_treatment.enter_qty_unit') }}"/>
                             </td>
                             <td>
                                 <textarea class="form-control" name="addmore[0][directions]"></textarea>
@@ -44,7 +44,7 @@
             <div class="modal-footer">
 
                 <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.close') }}</button>
-                <button type="button" class="btn btn-success" id="btn-save" onclick="save_prescription()">{{ __('common.save') }} {{ __('medical.prescription') }}
+                <button type="button" class="btn btn-success" id="btn-save" onclick="save_prescription()">{{ __('medical_treatment.save_prescription') }}
                 </button>
             </div>
         </div>

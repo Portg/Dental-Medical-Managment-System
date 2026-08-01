@@ -42,12 +42,15 @@ return [
     'add_prescription' => 'Add Prescription',
     'print_prescription' => 'Print Prescription',
     'prescriptions_form' => 'Prescriptions Form',
+    'save_prescription' => 'Save Prescription',
     'drug' => 'Drug',
     'enter_drug' => 'Enter drug',
     'quantity' => 'Quantity',
     'qty' => 'qty',
     'enter_qty' => 'Enter qty',
+    'enter_qty_unit' => 'Enter ml/mg',
     'directions' => 'Directions',
+    'cannot_recover_prescription' => 'You will not be able to recover this prescription!',
 
     // Prescription Print
     'prescribed_by' => 'Prescribed By',
@@ -77,12 +80,21 @@ return [
 
     // JavaScript messages
     'are_you_sure_save' => 'Are you sure,you want to save this action?',
+    'are_you_sure' => 'Are you sure?',
     'yes_save' => 'Yes, save !',
+    'yes_delete_it' => 'Yes, delete it!',
     'alert' => 'Alert!',
     'processing' => 'processing...',
     'treatment_captured_successfully' => 'Treatment captured successfully',
     'treatment_updated_successfully' => 'Treatment updated successfully',
     'treatment_deleted_successfully' => 'Treatment deleted successfully',
+    'cannot_recover_treatment' => 'You will not be able to recover this treatment!',
+    'cannot_recover_allergy' => 'You will not be able to recover this allergy!',
+    'cannot_recover_illness' => 'You will not be able to recover this illness!',
+    'cannot_recover_invoice_item' => 'You will not be able to recover this invoice item!',
+    'enter_tooth_number' => 'Enter tooth number',
+    'enter_amount' => 'Enter amount',
+    'select_procedure' => 'Select procedure',
 
     // Additional
     'treatment_history' => 'Treatment History',

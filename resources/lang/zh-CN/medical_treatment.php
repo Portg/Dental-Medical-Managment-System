@@ -42,12 +42,15 @@ return [
     'add_prescription' => '添加处方',
     'print_prescription' => '打印处方',
     'prescriptions_form' => '处方表单',
+    'save_prescription' => '保存处方',
     'drug' => '药物',
     'enter_drug' => '输入药物',
     'quantity' => '数量',
     'qty' => '数量',
     'enter_qty' => '输入数量',
+    'enter_qty_unit' => '输入毫升/毫克',
     'directions' => '用法',
+    'cannot_recover_prescription' => '删除后将无法恢复该处方！',
 
     // Prescription Print
     'prescribed_by' => '处方医生',
@@ -77,12 +80,21 @@ return [
 
     // JavaScript messages
     'are_you_sure_save' => '您确定要保存此操作吗？',
+    'are_you_sure' => '您确定吗？',
     'yes_save' => '是的，保存！',
+    'yes_delete_it' => '是的，删除！',
     'alert' => '提示！',
     'processing' => '处理中...',
     'treatment_captured_successfully' => '治疗捕获成功',
     'treatment_updated_successfully' => '治疗更新成功',
     'treatment_deleted_successfully' => '治疗删除成功',
+    'cannot_recover_treatment' => '删除后将无法恢复该治疗记录！',
+    'cannot_recover_allergy' => '删除后将无法恢复该过敏记录！',
+    'cannot_recover_illness' => '删除后将无法恢复该疾病记录！',
+    'cannot_recover_invoice_item' => '删除后将无法恢复该账单项目！',
+    'enter_tooth_number' => '输入牙位号',
+    'enter_amount' => '输入金额',
+    'select_procedure' => '选择诊疗项目',
 
     // 附加
     'treatment_history' => '治疗历史',

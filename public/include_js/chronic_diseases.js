@@ -141,12 +141,12 @@ function update_illness_record() {
 
 function deleteIllness(id) {
     swal({
-            title: "Are you sure?",
-            text: "Your will not be able to recover this Illness!",
+            title: LanguageManager.trans('medical_treatment.are_you_sure'),
+            text: LanguageManager.trans('medical_treatment.cannot_recover_illness'),
             type: "warning",
             showCancelButton: true,
             confirmButtonClass: "btn-danger",
-            confirmButtonText: "Yes, delete it!",
+            confirmButtonText: LanguageManager.trans('medical_treatment.yes_delete_it'),
             closeOnConfirm: false
         },
         function () {
@@ -179,7 +179,7 @@ function deleteIllness(id) {
 
 
 function alert_chronic_disease(message, status) {
-    swal("Alert!", message, status);
+    swal(LanguageManager.trans('medical_treatment.alert'), message, status);
     let oTable = $('#chronic_diseases_table').dataTable();
     oTable.fnDraw(true);
 }

@@ -141,12 +141,12 @@ function update_allergy_record() {
 
 function deleteAllergy(id) {
     swal({
-            title: "Are you sure?",
-            text: "Your will not be able to recover this Allergy!",
+            title: LanguageManager.trans('medical_treatment.are_you_sure'),
+            text: LanguageManager.trans('medical_treatment.cannot_recover_allergy'),
             type: "warning",
             showCancelButton: true,
             confirmButtonClass: "btn-danger",
-            confirmButtonText: "Yes, delete it!",
+            confirmButtonText: LanguageManager.trans('medical_treatment.yes_delete_it'),
             closeOnConfirm: false
         },
         function () {
@@ -179,7 +179,7 @@ function deleteAllergy(id) {
 
 
 function alert_allergies(message, status) {
-    swal("Alert!", message, status);
+    swal(LanguageManager.trans('medical_treatment.alert'), message, status);
     let oTable = $('#allergies_table').dataTable();
     oTable.fnDraw(true);
 }

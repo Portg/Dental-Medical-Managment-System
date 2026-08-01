@@ -1,4 +1,17 @@
 let drugs_ary = [];
+
+function mt(key, fallback) {
+    if (typeof LanguageManager !== 'undefined' && LanguageManager.trans) {
+        var v = LanguageManager.trans('medical_treatment.' + key);
+        if (v && v !== 'medical_treatment.' + key) return v;
+    }
+    if (typeof LanguageManager !== 'undefined' && LanguageManager.trans) {
+        var c = LanguageManager.trans('common.' + key);
+        if (c && c !== 'common.' + key) return c;
+    }
+    return fallback || key;
+}
+
 $("#prescriptions_tab_link").on("click", function () {
     load_prescriptions();
 });
@@ -13,17 +26,11 @@ function load_prescriptions() {
             // appointment-scoped list (NOT /prescriptions/{id} which is show/detail)
             url: "/prescriptions/appointment/" + appointment_id,
             data: function (d) {
-                // d.email = $('.searchEmail').val(),
-                //     d.search = $('input[type="search"]').val()
             }
         },
         dom: 'Bfrtip',
         buttons: {
-            buttons: [
-                // {extend: 'pdfHtml5', className: 'pdfButton'},
-                // {extend: 'excelHtml5', className: 'excelButton'},
-
-            ]
+            buttons: []
         },
         columns: [
             {data: 'DT_RowIndex', name: 'DT_RowIndex'},
@@ -39,9 +46,9 @@ function load_prescriptions() {
 
 function AddPrescription(id) {
     $("#prescription-form")[0].reset();
-    $('#prescription_id').val(''); ///always reset hidden form fields
-    $('#btn-save').attr('disabled', false);
-    $('#btn-save').text('Save Prescription');
+    $('#prescription_id').val('');
+    $('#prescription-modal #btn-save').attr('disabled', false);
+    $('#prescription-modal #btn-save').text(mt('save_prescription', 'Save Prescription'));
 
     $('#prescription_appointment_id').val(id);
     $('#prescription-modal').modal('show');
@@ -55,20 +62,16 @@ $(document).ready(function () {
             drugs_ary = JSON.parse(data);
         }
     }).done(function () {
-
         $("#drug_name").typeahead({
             source: drugs_ary,
             minLength: 1
         });
     });
-
 });
 
 
 $(document).on('click', '.remove-tr', function () {
-
     $(this).parents('tr').remove();
-
 });
 
 
@@ -78,10 +81,13 @@ $("#add").click(function () {
 
     $("#prescriptionsTable").append(
         '<tr>' +
-        '<td> <input type="text" id="drug_name' + i + '" name="addmore[' + i + '][drug]" placeholder="Enter drug"class="form-control"/></td>' +
-        '<td> <input type="text" name="addmore[' + i + '][qty]" placeholder="Enter ml/mg" class="form-control"/></td>' +
-        '<td> <textarea name="addmore[' + i + '][directions]" class="form-control"></textarea></td>' +
-        '<td><button type="button" class="btn btn-danger remove-tr">Remove</button></td>' +
+        '<td><input type="text" id="drug_name' + i + '" name="addmore[' + i + '][drug]" placeholder="' +
+            mt('enter_drug', 'Enter drug') + '" class="form-control"/></td>' +
+        '<td><input type="text" name="addmore[' + i + '][qty]" placeholder="' +
+            mt('enter_qty_unit', 'Enter ml/mg') + '" class="form-control"/></td>' +
+        '<td><textarea name="addmore[' + i + '][directions]" class="form-control"></textarea></td>' +
+        '<td><button type="button" class="btn btn-danger remove-tr">' +
+            mt('remove', 'Remove') + '</button></td>' +
         '</tr>');
     $("#drug_name" + i).typeahead({
         source: drugs_ary,
@@ -92,8 +98,8 @@ $("#add").click(function () {
 
 function save_prescription() {
     $('.loading').show();
-    $('#btn-save').attr('disabled', true);
-    $('#btn-save').text('processing...');
+    $('#prescription-modal #btn-save').attr('disabled', true);
+    $('#prescription-modal #btn-save').text(mt('processing', 'Processing...'));
     $.ajax({
         type: 'POST',
         data: $('#prescription-form').serialize(),
@@ -107,11 +113,11 @@ function save_prescription() {
                 alert_prescriptions(data.message, "danger");
             }
         },
-        error: function (request, status, error) {
+        error: function (request) {
             $('.loading').hide();
-            $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Save Prescription');
-            json = $.parseJSON(request.responseText);
+            $('#prescription-modal #btn-save').attr('disabled', false);
+            $('#prescription-modal #btn-save').text(mt('save_prescription', 'Save Prescription'));
+            var json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
                 $('.alert-danger').show();
                 $('.alert-danger').append('<p>' + value + '</p>');
@@ -123,8 +129,8 @@ function save_prescription() {
 function editPrescription(id) {
     $('.loading').show();
     $("#edit-prescription-form")[0].reset();
-    $('#prescription_id').val(''); ///always reset hidden form fields
-    $('#btn-save').attr('disabled', false);
+    $('#prescription_id').val('');
+    $('#edit-prescription-modal #btn-save').attr('disabled', false);
     $.ajax({
         type: 'get',
         url: "/prescriptions/" + id + "/edit",
@@ -136,10 +142,10 @@ function editPrescription(id) {
             $('[name="directions"]').val(data.directions);
 
             $('.loading').hide();
-            $('#btn-save').text('Update Record')
+            $('#edit-prescription-modal #btn-save').text(mt('update_record', 'Update Record'));
             $('#edit-prescription-modal').modal('show');
         },
-        error: function (request, status, error) {
+        error: function () {
             $('.loading').hide();
         }
     });
@@ -147,8 +153,8 @@ function editPrescription(id) {
 
 function update_prescription_record() {
     $('.loading').show();
-    $('#btn-save').attr('disabled', true);
-    $('#btn-save').text('Updating...');
+    $('#edit-prescription-modal #btn-save').attr('disabled', true);
+    $('#edit-prescription-modal #btn-save').text(mt('updating', 'Updating...'));
     $.ajax({
         type: 'PUT',
         data: $('#edit-prescription-form').serialize(),
@@ -162,11 +168,11 @@ function update_prescription_record() {
             }
             $('.loading').hide();
         },
-        error: function (request, status, error) {
+        error: function (request) {
             $('.loading').hide();
-            $('#btn-save').attr('disabled', false);
-            $('#btn-save').text('Update Record');
-            json = $.parseJSON(request.responseText);
+            $('#edit-prescription-modal #btn-save').attr('disabled', false);
+            $('#edit-prescription-modal #btn-save').text(mt('update_record', 'Update Record'));
+            var json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
                 $('.alert-danger').show();
                 $('.alert-danger').append('<p>' + value + '</p>');
@@ -177,16 +183,15 @@ function update_prescription_record() {
 
 function deletePrescription(id) {
     swal({
-            title: "Are you sure?",
-            text: "Your will not be able to recover this Prescription!",
+            title: mt('are_you_sure', 'Are you sure?'),
+            text: mt('cannot_recover_prescription', 'You will not be able to recover this prescription!'),
             type: "warning",
             showCancelButton: true,
             confirmButtonClass: "btn-danger",
-            confirmButtonText: "Yes, delete it!",
+            confirmButtonText: mt('yes_delete_it', 'Yes, delete it!'),
             closeOnConfirm: false
         },
         function () {
-
             var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
             $('.loading').show();
             $.ajax({
@@ -203,19 +208,16 @@ function deletePrescription(id) {
                     }
                     $('.loading').hide();
                 },
-                error: function (request, status, error) {
+                error: function () {
                     $('.loading').hide();
-
                 }
             });
-
         });
-
 }
 
 
 function alert_prescriptions(message, status) {
-    swal("Alert!", message, status);
+    swal(mt('alert', 'Alert!'), message, status);
 
     let oTable = $('#prescriptions_table').dataTable();
     oTable.fnDraw(true);

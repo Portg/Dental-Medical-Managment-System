@@ -182,12 +182,12 @@ function update_treatment_record() {
 
 function deleteTreatment(id) {
     swal({
-            title: "Are you sure?",
-            text: "Your will not be able to recover this Treatment!",
+            title: LanguageManager.trans('medical_treatment.are_you_sure'),
+            text: LanguageManager.trans('medical_treatment.cannot_recover_treatment'),
             type: "warning",
             showCancelButton: true,
             confirmButtonClass: "btn-danger",
-            confirmButtonText: "Yes, delete it!",
+            confirmButtonText: LanguageManager.trans('medical_treatment.yes_delete_it'),
             closeOnConfirm: false
         },
         function () {
@@ -220,7 +220,7 @@ function deleteTreatment(id) {
 
 
 function alert_dental_dialog(message, status) {
-    swal("Alert!", message, status);
+    swal(LanguageManager.trans('medical_treatment.alert'), message, status);
     let oTable = $('#dental_treatment_table').dataTable();
     oTable.fnDraw(true);
 }
