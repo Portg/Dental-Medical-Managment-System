@@ -126,6 +126,7 @@
                                                 <th>{{ __('appointment.patient') }}</th>
                                                 <th>{{ __('appointment.doctor') }}</th>
                                                 <th>{{ __('appointment.appointment_category') }}</th>
+                                                <th>{{ __('appointment.status') }}</th>
                                                 <th>{{ __('appointment.invoice_status') }}</th>
                                                 <th>{{ __('common.action') }}</th>
                                             </thead>

@@ -32,7 +32,7 @@ return [
     'appointment_date' => '预约日期',
     'appointment_time' => '预约时间',
     'appointment_category' => '预约类型',
-    'invoice_status' => '预约状态',
+    'invoice_status' => '账单状态',
     'date' => '预约日期',
     'status' => '状态',
     'appointment_reason' => '预约原因',
@@ -224,7 +224,7 @@ return [
 
     // Search and filters
     'quick_search_placeholder' => '搜索患者、电话、预约编号...',
-    'invoiced' => '已开票',
+    'invoiced' => '已生成账单',
     'appointment_status' => '预约状态',
 
     // Design spec F-APT-001: New appointment form

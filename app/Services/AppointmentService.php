@@ -163,8 +163,8 @@ class AppointmentService
             $events[] = [
                 'id' => $value->id,
                 'title' => $patientName . ' - ' . $doctorName,
-                'start' => date_format($startDt, "Y-m-d\TH:i:s"),
-                'end' => date_format($endDt, "Y-m-d\TH:i:s"),
+                'start' => date_format($startDt, 'Y-m-d H:i'),
+                'end' => date_format($endDt, 'Y-m-d H:i'),
                 'resourceId' => $value->doctor_id,
                 'backgroundColor' => $bgColor,
                 'borderColor' => $bgColor,
@@ -617,6 +617,10 @@ class AppointmentService
             })
             ->editColumn('sort_by', function ($row) {
                 return $row->sort_by ? \Carbon\Carbon::parse($row->sort_by)->format('Y-m-d H:i') : '-';
+            })
+            // start_time 是 time 列，原样输出会带秒（14:49:08）；预约只需精确到分
+            ->editColumn('start_time', function ($row) {
+                return $row->start_time ? substr($row->start_time, 0, 5) : '-';
             })
             ->editColumn('status', function ($row) {
                 return DictItem::nameByCode('appointment_status', $row->status) ?? $row->status;

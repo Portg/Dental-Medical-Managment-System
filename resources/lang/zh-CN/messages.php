@@ -176,8 +176,8 @@ return [
     // Specific Module Messages
     // Appointment Messages (additional)
     'appointment_rescheduled_successfully' => '患者预约已成功改期',
-    'no_invoice_yet' => '暂无发票',
-    'invoice_already_generated' => '发票已生成',
+    'no_invoice_yet' => '未生成账单',
+    'invoice_already_generated' => '已生成账单',
 
     // User Messages (additional)
     'user_registered_successfully' => '用户注册成功',

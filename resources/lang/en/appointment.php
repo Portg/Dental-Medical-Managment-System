@@ -21,7 +21,7 @@ return [
     'patient' => 'Patient',
     'doctor' => 'Doctor',
     'visit_information' => 'Visit Information',
-    'invoice_status' => 'Invoice status',
+    'invoice_status' => 'Billing status',
     'filter_appointments' => 'Filter Appointments',
     'enter_appointment_no' => 'Enter appointment No',
     'choose_patient' => 'Choose patient',

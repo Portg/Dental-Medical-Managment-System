@@ -62,8 +62,8 @@ class DoctorAppointmentService
         foreach ($query->get() as $value) {
             $events[] = [
                 'title' => NameHelper::join($value->surname, $value->othername),
-                'start' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
-                'end' => date_format(date_create($value->sort_by), "Y-m-d\TH:i:s"),
+                'start' => date_format(date_create($value->sort_by), 'Y-m-d H:i'),
+                'end' => date_format(date_create($value->sort_by), 'Y-m-d H:i'),
                 'textColor' => '#ffffff',
             ];
         }
