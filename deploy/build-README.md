@@ -29,7 +29,40 @@
 
 可用环境变量覆盖下载地址（内网镜像场景）：
 `PHP_DOWNLOAD_URL`、`MYSQL_DOWNLOAD_URL`、`NGINX_DOWNLOAD_URL`、
-`LARAGON_DOWNLOAD_URL`、`COMPOSER_DOWNLOAD_URL`、`PYTHON_DOWNLOAD_URL`。
+`LARAGON_DOWNLOAD_URL`、`COMPOSER_DOWNLOAD_URL`、`PYTHON_DOWNLOAD_URL`、
+`PHP_ZIP_DOWNLOAD_URL`。
+
+### PHP 7.4 的三个坑（改动 build.sh 前务必先读）
+
+这三条都是实跑构建才暴露出来的，靠 grep 或经验都会漏：
+
+1. **GD 扩展在 PHP 7.4 上叫 `gd2` 而不是 `gd`**
+   Windows 包里的 DLL 是 `php_gd2.dll`，PHP 8.0 起才改名 `php_gd.dll`。
+   php.ini 写成 `extension=gd` 会静默加载失败，患者照片等图像功能全挂。
+
+2. **PHP 7.4 官方 Windows 包不含 `php_zip.dll`**
+   实测包内 40 个 ext 无 zip，`php7.dll` 里也没有 libzip 符号。
+   而 `phpoffice/phpspreadsheet`（Excel 导入导出）和 `spatie/laravel-backup`
+   都硬性要求 ext-zip。`build.sh` 会从 PECL 1.22.8 补装对应的
+   `7.4-nts-vc15-x64` 构建；`composer.json` 也显式声明了 `ext-zip`，
+   这样目标机执行 `composer install` 时缺扩展会立即报错。
+
+3. **`bcmath` 无需声明**
+   它与 ctype / tokenizer / json / xml / simplexml / dom 一样已编译进
+   `php7.dll`（实测符号存在），在 php.ini 里写 `extension=bcmath` 反而会报错。
+   AG-005 要求的金额 `bc*()` 运算因此在 Win7 运行时上是可用的。
+
+### OCR 依赖的版本交集很窄
+
+`paddleocr 2.7.3` 要求 `Pillow>=10.0.0`，而 Pillow 提供 `cp38/win_amd64`
+轮子的最高版本是 `10.4.0`（11.x 起要求 Python ≥3.9）——交集只有 10.0～10.4。
+锁到 9.x 会直接 `ResolutionImpossible`。修改 `scripts/requirements.txt` 后，
+请务必用下面的命令先验证能解析，再跑完整构建：
+
+```bash
+pip3 download --platform win_amd64 --python-version 3.8 --only-binary=:all: \
+    -d /tmp/wheeltest -r scripts/requirements.txt
+```
 
 ### OCR 会在不支持的机器上自动降级
 
@@ -44,6 +77,23 @@ PaddleOCR 依赖的 paddlepaddle **需要 CPU 支持 AVX 指令集**（2011 年�
 
 > `.env` 必须**就地替换**而非追加 —— Laravel 的 Env 使用不可变仓库，
 > 同一个键以文件中**首次**出现的值为准。改键请用 `batch-helpers/set_env_value.php`。
+
+### 遗留安全公告（无法在本分支消除）
+
+`composer audit` 当前报告 **9 条**公告，均因技术栈锁死在 EOL 版本而无法升级。
+这是 Win7 部署的固有代价，交付前应让客户知情：
+
+| 包 | 条数 | 最高等级 | 说明 |
+| --- | --- | --- | --- |
+| `dompdf/dompdf` | 6 | medium | 修复版本 3.1.6+ 要求 PHP ^8.0 |
+| `laravel/framework` | 3 | **high** | Laravel 8 已 EOL；high 为 email 校验规则的 CRLF 注入，修复版本 12.60+ |
+
+> 已尽可能压低：`barryvdh/laravel-dompdf` 用的是 `^2.2`（不是历史 L8 时期的
+> `^1.0`），它同样兼容 Laravel 8 + PHP 7.4，但消除了 dompdf 1.x 的 3 条
+> critical（XXE、反序列化、URI 校验绕过）。**不要退回 `^1.0`。**
+>
+> 由于 PHP 7.4 与 Laravel 8 都不再发安全补丁，建议：数据库只监听
+> `127.0.0.1`、系统不直接暴露到公网、定期离线备份。
 
 ---
 
