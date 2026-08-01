@@ -3,7 +3,7 @@ $(document).ready(function() {
     var cfg = window.UnpaidInvoicesConfig;
     $('.datepicker').datepicker({ language: cfg.locale, format: 'yyyy-mm-dd', autoclose: true });
 
-    var today = new Date().toISOString().split('T')[0];
+    var today = window._serverNow.date;
     var monthStart = today.substring(0, 8) + '01';
     $('#start_date').val(monthStart);
     $('#end_date').val(today);

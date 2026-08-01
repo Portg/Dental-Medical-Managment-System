@@ -703,7 +703,7 @@ function createPatientPrescription() {
         $('#patientPrescriptionForm')[0].reset();
         $('#patientPrescriptionForm .alert-danger').hide();
         $('#rx_edit_id').val('');
-        $('#rx_date').val(new Date().toISOString().slice(0, 10));
+        $('#rx_date').val(window._serverNow.date);
         $('#prescriptionModalTitle').text(LanguageManager.trans('prescriptions.create_prescription'));
         $('#btn-rx-settle').show();
         $('#rxItemRows').empty();

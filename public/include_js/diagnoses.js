@@ -40,7 +40,7 @@ function addDiagnosis() {
     $('#diagnosis_id').val('');
     $('#diagnosis_medical_case_id').val(global_case_id);
     $('#diagnosis_patient_id').val(global_patient_id);
-    $('#diagnosis_date').val(new Date().toISOString().split('T')[0]);
+    $('#diagnosis_date').val(window._serverNow.date);
     $('#resolved_date_row').hide();
     $('#diagnosis_modal_title').text(LanguageManager.trans('medical_cases.add_diagnosis'));
     $('#btn_save_diagnosis').text(LanguageManager.trans('common.save'));

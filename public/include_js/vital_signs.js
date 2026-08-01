@@ -34,10 +34,8 @@ function addVitalSign() {
     $('#vital_sign_id').val('');
     $('#vital_patient_id').val(global_patient_id);
 
-    // Set current datetime
-    var now = new Date();
-    var datetime = now.toISOString().slice(0, 16);
-    $('#recorded_at').val(datetime);
+    // 当前时间取自服务端基准（见 layouts/app.blade.php 的 window._serverNow）
+    $('#recorded_at').val(window._serverNow.datetime);
 
     $('#vital_sign_modal_title').text(LanguageManager.trans('medical_cases.add_vital_sign'));
     $('#btn_save_vital_sign').text(LanguageManager.trans('common.save'));
@@ -57,9 +55,8 @@ function editVitalSign(id) {
 
             // Format datetime for input
             if (data.recorded_at) {
-                var recordedAt = new Date(data.recorded_at);
-                var datetime = recordedAt.toISOString().slice(0, 16);
-                $('#recorded_at').val(datetime);
+                // 后端已按本地时区序列化为 'Y-m-d H:i'，datetime-local 控件只需把空格换成 T
+                $('#recorded_at').val(String(data.recorded_at).replace(' ', 'T').slice(0, 16));
             }
 
             $('#blood_pressure_systolic').val(data.blood_pressure_systolic);

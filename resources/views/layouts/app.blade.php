@@ -153,6 +153,21 @@
         // Inject clinic settings for JS consumption
         window._clinicSettings = @json(\App\SystemSetting::getGroup('clinic'));
 
+        // 服务端时间基准（应用时区：{{ config('app.timezone') }}），取自页面渲染时刻。
+        // 前端填充日期/时间控件一律用它，不要 new Date() 自行推算：客户端时区与
+        // 时钟未必和诊所一致，且 toISOString() 会把本地时间转成 UTC —— 在东八区
+        // 会让「今天」在早上 8 点前变成昨天、datetime 控件恒早 8 小时。
+        // datetime 已按 datetime-local 控件所需的 YYYY-MM-DDTHH:MM 格式给出。
+        {{-- 数组先在 PHP 块中组装：json 指令按括号配对解析参数，多行数组字面量会让它误判 --}}
+        @php
+            $serverNow = [
+                'date'     => now()->format('Y-m-d'),
+                'datetime' => now()->format('Y-m-d\TH:i'),
+                'timezone' => config('app.timezone'),
+            ];
+        @endphp
+        window._serverNow = @json($serverNow);
+
         // Set Select2 default language globally
         if (typeof $.fn.select2 !== 'undefined') {
             $.fn.select2.defaults.set('language', '{{ app()->getLocale() }}');

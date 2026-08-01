@@ -3,7 +3,7 @@ $(document).ready(function() {
     var locale = window.FinancialDetailConfig.locale;
     $('.datepicker').datepicker({ language: locale, format: 'yyyy-mm-dd', autoclose: true });
 
-    var today = new Date().toISOString().split('T')[0];
+    var today = window._serverNow.date;
     var monthStart = today.substring(0, 8) + '01';
     $('#pay_start_date, #ref_start_date, #exp_start_date, #emp_start_date').val(monthStart);
     $('#pay_end_date, #ref_end_date, #exp_end_date, #emp_end_date').val(today);

@@ -90,10 +90,8 @@ function addProgressNote() {
     $('#note_medical_case_id').val(global_case_id);
     $('#note_patient_id').val(global_patient_id);
 
-    // Set current datetime
-    var now = new Date();
-    var datetime = now.toISOString().slice(0, 16);
-    $('#note_date').val(datetime);
+    // 当前时间取自服务端基准（见 layouts/app.blade.php 的 window._serverNow）
+    $('#note_date').val(window._serverNow.datetime);
 
     $('#progress_note_modal_title').text(LanguageManager.trans('medical_cases.add_progress_note'));
     $('#btn_save_progress_note').text(LanguageManager.trans('common.save'));
@@ -137,9 +135,9 @@ function editProgressNote(id) {
 
             // Format datetime for input
             if (data.note_date) {
-                var noteDate = new Date(data.note_date);
-                var datetime = noteDate.toISOString().slice(0, 16);
-                $('#note_date').val(datetime);
+                // 后端已按本地时区序列化为 'Y-m-d H:i'，datetime-local 控件只需把空格换成 T。
+                // 不可再经 new Date().toISOString()——那会把本地时间当 UTC 输出，导致早 8 小时。
+                $('#note_date').val(String(data.note_date).replace(' ', 'T').slice(0, 16));
             }
 
             $('#note_type').val(data.note_type);

@@ -104,7 +104,7 @@
         if ($form.length) {
             $form[0].reset();
             $form.find('[name="patient_id"]').val(patientId).trigger('change');
-            $form.find('[name="case_date"]').val(new Date().toISOString().slice(0, 10));
+            $form.find('[name="case_date"]').val(window._serverNow.date);
         }
         $('#medical_case_modal').modal('show');
     };

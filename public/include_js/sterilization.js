@@ -150,7 +150,7 @@ function resetRecordModal() {
     $('#record-kit-id').val(null).trigger('change');
     $('#record-method').val('autoclave');
     $('#record-temperature, #record-duration, #record-notes').val('');
-    $('#record-sterilized-at').val(new Date().toISOString().slice(0, 16));
+    $('#record-sterilized-at').val(window._serverNow.datetime);
 }
 
 function editRecord(id) {
@@ -236,7 +236,7 @@ function logUse(recordId) {
         $('#use-record-id').val(recordId);
         $('#use-batch-no').text(data.batch_no);
         $('#use-kit-name').text(data.kit_name || '');
-        $('#use-used-at').val(new Date().toISOString().slice(0, 16));
+        $('#use-used-at').val(window._serverNow.datetime);
         $('#use-patient-id').val(null).trigger('change');
         $('#use-notes').val('');
         $('#useModal').modal('show');

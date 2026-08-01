@@ -15,7 +15,7 @@
         initPatientSearch();
 
         // Set default case date to today
-        $('#field-case_date').val(new Date().toISOString().slice(0, 10));
+        $('#field-case_date').val(window._serverNow.date);
     });
 
     // ==================== Drop Zone ====================
