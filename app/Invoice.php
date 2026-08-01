@@ -32,8 +32,8 @@ class Invoice extends Model
     ];
 
     protected $casts = [
-        'invoice_date' => 'date',
-        'due_date' => 'date',
+        'invoice_date' => 'date:Y-m-d',
+        'due_date' => 'date:Y-m-d',
         'subtotal' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',
@@ -46,8 +46,8 @@ class Invoice extends Model
         'order_discount_rate' => 'decimal:2',
         'order_discount_amount' => 'decimal:2',
         'coupon_discount_amount' => 'decimal:2',
-        'discount_approved_at' => 'datetime',
-        'credit_approved_at' => 'datetime',
+        'discount_approved_at' => 'datetime:Y-m-d H:i',
+        'credit_approved_at' => 'datetime:Y-m-d H:i',
         'is_credit' => 'boolean',
     ];
 

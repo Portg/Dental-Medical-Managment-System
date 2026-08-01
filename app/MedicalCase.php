@@ -34,12 +34,12 @@ class MedicalCase extends Model implements AuditableContract
     ];
 
     protected $casts = [
-        'case_date' => 'date',
-        'closed_date' => 'date',
-        'next_visit_date' => 'date',
-        'locked_at' => 'datetime',
-        'modified_at' => 'datetime',
-        'signed_at' => 'datetime',
+        'case_date' => 'date:Y-m-d',
+        'closed_date' => 'date:Y-m-d',
+        'next_visit_date' => 'date:Y-m-d',
+        'locked_at' => 'datetime:Y-m-d H:i',
+        'modified_at' => 'datetime:Y-m-d H:i',
+        'signed_at' => 'datetime:Y-m-d H:i',
         'related_teeth' => 'array',
         'related_images' => 'array',
         'examination_teeth' => 'array',

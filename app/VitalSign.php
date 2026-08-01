@@ -17,7 +17,7 @@ class VitalSign extends Model
     ];
 
     protected $casts = [
-        'recorded_at' => 'datetime',
+        'recorded_at' => 'datetime:Y-m-d H:i',
     ];
 
     public function appointment()

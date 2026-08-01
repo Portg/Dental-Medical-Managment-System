@@ -26,7 +26,7 @@ class MemberTransaction extends Model
     ];
 
     protected $casts = [
-        'points_expires_at' => 'date',
+        'points_expires_at' => 'date:Y-m-d',
     ];
 
     /**

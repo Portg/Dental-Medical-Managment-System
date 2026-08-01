@@ -30,8 +30,8 @@ class SterilizationRecord extends Model
     ];
 
     protected $casts = [
-        'sterilized_at' => 'datetime',
-        'expires_at'    => 'datetime',
+        'sterilized_at' => 'datetime:Y-m-d H:i',
+        'expires_at'    => 'datetime:Y-m-d H:i',
     ];
 
     /**

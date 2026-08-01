@@ -26,7 +26,7 @@ class DentalChart extends Model implements AuditableContract
     ];
 
     protected $casts = [
-        'changed_at' => 'datetime',
+        'changed_at' => 'datetime:Y-m-d H:i',
     ];
 
     /**

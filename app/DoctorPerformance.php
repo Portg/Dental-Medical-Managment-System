@@ -26,8 +26,8 @@ class DoctorPerformance extends Model
     ];
 
     protected $casts = [
-        'period_start_date' => 'date',
-        'period_end_date' => 'date',
+        'period_start_date' => 'date:Y-m-d',
+        'period_end_date' => 'date:Y-m-d',
         'total_revenue' => 'decimal:2',
         'avg_transaction_value' => 'decimal:2',
         'total_commission' => 'decimal:2',

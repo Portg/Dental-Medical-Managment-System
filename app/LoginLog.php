@@ -19,8 +19,8 @@ class LoginLog extends Model
     ];
 
     protected $casts = [
-        'login_time' => 'datetime',
-        'logout_time' => 'datetime',
+        'login_time' => 'datetime:Y-m-d H:i:s',
+        'logout_time' => 'datetime:Y-m-d H:i:s',
     ];
 
     public function user()

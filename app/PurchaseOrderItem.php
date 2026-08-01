@@ -22,7 +22,7 @@ class PurchaseOrderItem extends Model
     ];
 
     protected $casts = [
-        'expiry_date' => 'date',
+        'expiry_date' => 'date:Y-m-d',
         'quantity_ordered' => 'decimal:2',
         'quantity_received' => 'decimal:2',
         'unit_price' => 'decimal:2',

@@ -31,8 +31,8 @@ class Diagnosis extends Model implements AuditableContract
     ];
 
     protected $casts = [
-        'diagnosis_date' => 'datetime',
-        'resolved_date' => 'datetime',
+        'diagnosis_date' => 'datetime:Y-m-d H:i',
+        'resolved_date' => 'datetime:Y-m-d H:i',
     ];
 
     public function medicalCase()

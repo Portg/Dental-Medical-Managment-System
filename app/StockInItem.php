@@ -25,8 +25,8 @@ class StockInItem extends Model
         'qty' => 'decimal:2',
         'unit_price' => 'decimal:2',
         'amount' => 'decimal:2',
-        'expiry_date' => 'date',
-        'production_date' => 'date',
+        'expiry_date' => 'date:Y-m-d',
+        'production_date' => 'date:Y-m-d',
     ];
 
     /**

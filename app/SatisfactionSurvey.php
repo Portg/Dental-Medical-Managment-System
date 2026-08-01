@@ -34,9 +34,9 @@ class SatisfactionSurvey extends Model
     ];
 
     protected $casts = [
-        'survey_date' => 'datetime',
-        'sent_at'     => 'datetime',
-        'expires_at'  => 'datetime',
+        'survey_date' => 'datetime:Y-m-d H:i',
+        'sent_at'     => 'datetime:Y-m-d H:i',
+        'expires_at'  => 'datetime:Y-m-d H:i',
     ];
 
     /**

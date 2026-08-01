@@ -23,8 +23,8 @@ class InventoryBatch extends Model
     ];
 
     protected $casts = [
-        'expiry_date' => 'date',
-        'production_date' => 'date',
+        'expiry_date' => 'date:Y-m-d',
+        'production_date' => 'date:Y-m-d',
         'qty' => 'decimal:2',
         'unit_cost' => 'decimal:2',
     ];

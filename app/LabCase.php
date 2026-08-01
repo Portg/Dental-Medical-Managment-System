@@ -22,9 +22,9 @@ class LabCase extends Model
     protected $casts = [
         'lab_fee'              => 'decimal:2',
         'patient_charge'       => 'decimal:2',
-        'sent_date'            => 'date',
-        'expected_return_date' => 'date',
-        'actual_return_date'   => 'date',
+        'sent_date'            => 'date:Y-m-d',
+        'expected_return_date' => 'date:Y-m-d',
+        'actual_return_date'   => 'date:Y-m-d',
     ];
 
     const STATUS_PENDING = 'pending';

@@ -23,10 +23,10 @@ class TreatmentPlanStage extends Model
     ];
 
     protected $casts = [
-        'estimated_start_date' => 'date',
-        'estimated_end_date' => 'date',
-        'actual_start_date' => 'date',
-        'actual_end_date' => 'date',
+        'estimated_start_date' => 'date:Y-m-d',
+        'estimated_end_date' => 'date:Y-m-d',
+        'actual_start_date' => 'date:Y-m-d',
+        'actual_end_date' => 'date:Y-m-d',
     ];
 
     public function treatmentPlan()

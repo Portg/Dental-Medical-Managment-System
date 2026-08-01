@@ -41,8 +41,8 @@ class StockOut extends Model
     ];
 
     protected $casts = [
-        'stock_out_date'    => 'date',
-        'approved_at'       => 'datetime',
+        'stock_out_date'    => 'date:Y-m-d',
+        'approved_at'       => 'datetime:Y-m-d H:i',
         'total_amount'      => 'decimal:2',
         'stock_insufficient' => 'boolean',
     ];

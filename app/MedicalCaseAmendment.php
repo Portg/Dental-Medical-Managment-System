@@ -24,7 +24,7 @@ class MedicalCaseAmendment extends Model implements AuditableContract
         'amendment_fields' => 'array',
         'old_values' => 'array',
         'new_values' => 'array',
-        'reviewed_at' => 'datetime',
+        'reviewed_at' => 'datetime:Y-m-d H:i',
     ];
 
     protected $auditExclude = ['updated_at', 'created_at'];

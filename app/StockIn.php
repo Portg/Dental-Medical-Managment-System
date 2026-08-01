@@ -25,7 +25,7 @@ class StockIn extends Model
     ];
 
     protected $casts = [
-        'stock_in_date' => 'date',
+        'stock_in_date' => 'date:Y-m-d',
         'total_amount' => 'decimal:2',
     ];
 

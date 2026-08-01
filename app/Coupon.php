@@ -30,8 +30,8 @@ class Coupon extends Model
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
+        'start_date' => 'date:Y-m-d',
+        'end_date' => 'date:Y-m-d',
         'is_active' => 'boolean',
         'applicable_services' => 'array',
         'applicable_member_levels' => 'array',

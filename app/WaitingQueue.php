@@ -32,10 +32,10 @@ class WaitingQueue extends Model
     ];
 
     protected $casts = [
-        'check_in_time' => 'datetime',
-        'called_time' => 'datetime',
-        'treatment_start_time' => 'datetime',
-        'treatment_end_time' => 'datetime',
+        'check_in_time' => 'datetime:Y-m-d H:i',
+        'called_time' => 'datetime:Y-m-d H:i',
+        'treatment_start_time' => 'datetime:Y-m-d H:i',
+        'treatment_end_time' => 'datetime:Y-m-d H:i',
     ];
 
     // 状态常量

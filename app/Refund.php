@@ -30,8 +30,8 @@ class Refund extends Model
     ];
 
     protected $casts = [
-        'refund_date' => 'datetime',
-        'approved_at' => 'datetime',
+        'refund_date' => 'datetime:Y-m-d H:i',
+        'approved_at' => 'datetime:Y-m-d H:i',
         'refund_amount' => 'decimal:2',
     ];
 

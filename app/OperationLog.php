@@ -21,7 +21,7 @@ class OperationLog extends Model
     ];
 
     protected $casts = [
-        'operation_time' => 'datetime',
+        'operation_time' => 'datetime:Y-m-d H:i:s',
         'old_values' => 'array',
         'new_values' => 'array',
     ];

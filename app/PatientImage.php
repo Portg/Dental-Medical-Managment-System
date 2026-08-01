@@ -27,7 +27,7 @@ class PatientImage extends Model
     ];
 
     protected $casts = [
-        'image_date' => 'datetime',
+        'image_date' => 'datetime:Y-m-d H:i',
     ];
 
     /**

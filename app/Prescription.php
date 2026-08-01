@@ -27,8 +27,8 @@ class Prescription extends Model implements AuditableContract
     ];
 
     protected $casts = [
-        'prescription_date' => 'date',
-        'expiry_date' => 'date',
+        'prescription_date' => 'date:Y-m-d',
+        'expiry_date' => 'date:Y-m-d',
     ];
 
     public function appointment()

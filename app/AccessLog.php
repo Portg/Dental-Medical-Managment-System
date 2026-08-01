@@ -17,7 +17,7 @@ class AccessLog extends Model
     ];
 
     protected $casts = [
-        'access_time' => 'datetime',
+        'access_time' => 'datetime:Y-m-d H:i:s',
     ];
 
     public function user()

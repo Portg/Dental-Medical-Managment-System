@@ -24,8 +24,8 @@ class InventoryCheck extends Model
     ];
 
     protected $casts = [
-        'check_date'   => 'date',
-        'confirmed_at' => 'datetime',
+        'check_date'   => 'date:Y-m-d',
+        'confirmed_at' => 'datetime:Y-m-d H:i',
     ];
 
     /**

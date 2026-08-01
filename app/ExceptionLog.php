@@ -20,7 +20,7 @@ class ExceptionLog extends Model
     ];
 
     protected $casts = [
-        'occurred_at' => 'datetime',
+        'occurred_at' => 'datetime:Y-m-d H:i:s',
         'request_data' => 'array',
     ];
 

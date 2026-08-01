@@ -37,11 +37,11 @@ class Appointment extends Model
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
-        'sort_by' => 'datetime',
-        'reminder_sent_at' => 'datetime',
-        'confirmed_at' => 'datetime',
+        'start_date' => 'date:Y-m-d',
+        'end_date' => 'date:Y-m-d',
+        'sort_by' => 'datetime:Y-m-d H:i',
+        'reminder_sent_at' => 'datetime:Y-m-d H:i',
+        'confirmed_at' => 'datetime:Y-m-d H:i',
         'reminder_sent' => 'boolean',
         'confirmed_by_patient' => 'boolean',
     ];

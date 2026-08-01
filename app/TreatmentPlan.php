@@ -39,10 +39,10 @@ class TreatmentPlan extends Model implements AuditableContract
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'target_completion_date' => 'date',
-        'actual_completion_date' => 'date',
-        'confirmed_at' => 'datetime',
+        'start_date' => 'date:Y-m-d',
+        'target_completion_date' => 'date:Y-m-d',
+        'actual_completion_date' => 'date:Y-m-d',
+        'confirmed_at' => 'datetime:Y-m-d H:i',
         'related_teeth' => 'array',
         'estimated_cost' => 'decimal:2',
         'actual_cost' => 'decimal:2',

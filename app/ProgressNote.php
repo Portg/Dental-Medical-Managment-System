@@ -25,7 +25,7 @@ class ProgressNote extends Model implements AuditableContract
     ];
 
     protected $casts = [
-        'note_date' => 'datetime',
+        'note_date' => 'datetime:Y-m-d H:i',
     ];
 
     public function appointment()

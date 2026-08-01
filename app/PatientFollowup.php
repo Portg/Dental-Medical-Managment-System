@@ -32,9 +32,9 @@ class PatientFollowup extends Model
     ];
 
     protected $casts = [
-        'scheduled_date' => 'datetime',
-        'completed_date' => 'datetime',
-        'next_followup_date' => 'datetime',
+        'scheduled_date' => 'datetime:Y-m-d H:i',
+        'completed_date' => 'datetime:Y-m-d H:i',
+        'next_followup_date' => 'datetime:Y-m-d H:i',
         'reminder_sent' => 'boolean',
     ];
 

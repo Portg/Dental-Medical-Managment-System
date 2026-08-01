@@ -23,7 +23,7 @@ class DailyReport extends Model
     ];
 
     protected $casts = [
-        'report_date' => 'date',
+        'report_date' => 'date:Y-m-d',
         'total_revenue' => 'decimal:2',
         'refund_amount' => 'decimal:2',
         'net_revenue' => 'decimal:2',

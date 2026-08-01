@@ -15,7 +15,7 @@ class SterilizationUsage extends Model
         'patient_name', 'doctor_name', 'kit_name', 'batch_no',
     ];
 
-    protected $casts = ['used_at' => 'datetime'];
+    protected $casts = ['used_at' => 'datetime:Y-m-d H:i'];
 
     public function record()
     {

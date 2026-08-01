@@ -23,8 +23,8 @@ class PatientAnalytics extends Model
     ];
 
     protected $casts = [
-        'first_visit_date' => 'date',
-        'last_visit_date' => 'date',
+        'first_visit_date' => 'date:Y-m-d',
+        'last_visit_date' => 'date:Y-m-d',
         'is_repeat_patient' => 'boolean',
         'total_spent' => 'decimal:2',
         'avg_transaction_value' => 'decimal:2',
