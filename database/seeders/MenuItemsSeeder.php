@@ -16,20 +16,101 @@ class MenuItemsSeeder extends Seeder
     private array $roleIds = [];
     private array $permIds = [];
 
+    /** 本次运行中由 seeder 定义（因而由其托管）的菜单项 ID */
+    private array $managedIds = [];
+
+    private int $created = 0;
+    private int $updated = 0;
+
+    /**
+     * 幂等执行：按 title_key 做 upsert，不再 truncate。
+     *
+     * 此前本 seeder 会 truncate menu_items / role_menu_items 再全量重建，
+     * 造成两类破坏：
+     *   1. 由迁移添加、而 seeder 中没有的菜单项被永久抹掉（库存查询、申领管理、
+     *      盘点管理、批量导入即因此消失，功能健在但侧边栏无入口）；
+     *   2. truncate 重置自增 ID，令 roles.hidden_menu_items 中存的菜单 ID
+     *      全部变成悬空引用，且静默失效。
+     *
+     * 改为 upsert 后：ID 稳定，未知菜单项不再被删除（仅报告，交由人工判断），
+     * 且 is_active 不覆盖既有值 —— 尊重管理员在菜单管理界面所做的启停。
+     */
     public function run(): void
     {
-        // 清空旧数据
-        DB::table('role_menu_items')->truncate();
-        DB::table('menu_items')->truncate();
-
-        // 缓存角色和权限 ID
         $this->roleIds = Role::pluck('id', 'slug')->toArray();
         $this->permIds = Permission::pluck('id', 'slug')->toArray();
 
+        $this->guardPrerequisites();
+
         $this->seedMenuTree();
+
+        $this->reportUnmanaged();
+
+        $this->command?->info(
+            "菜单同步完成：新增 {$this->created} 项，更新 {$this->updated} 项。"
+        );
 
         // 清除菜单缓存，确保侧边栏立即生效
         \Illuminate\Support\Facades\Cache::forget('menu_tree:all');
+    }
+
+    /**
+     * 前置校验：任一条不满足都会产出一棵错误的菜单树，宁可中止也不要写坏数据。
+     */
+    private function guardPrerequisites(): void
+    {
+        // permission_id 为 null 在 MenuService 中意味着「全员可见」。若权限表为空
+        // （例如先于 PermissionsTableSeeder 执行），整棵菜单树会对所有角色开放。
+        if (empty($this->permIds)) {
+            throw new \RuntimeException(
+                'permissions 表为空，请先执行 PermissionsTableSeeder。'
+                . '否则菜单权限会被写成 null，等同于对全员可见。'
+            );
+        }
+
+        if (empty($this->roleIds)) {
+            throw new \RuntimeException('roles 表为空，请先执行 RolesTableSeeder。');
+        }
+
+        // upsert 以 title_key 为匹配键，重复会导致只更新其中一条而另一条静默漂移。
+        // 目前表上没有 title_key 唯一索引，故在此显式校验。
+        $dupes = DB::table('menu_items')
+            ->select('title_key')
+            ->groupBy('title_key')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('title_key');
+
+        if ($dupes->isNotEmpty()) {
+            throw new \RuntimeException(
+                'menu_items 中存在重复的 title_key，upsert 无法安全匹配：'
+                . $dupes->implode(', ') . '。请先清理重复项。'
+            );
+        }
+    }
+
+    /**
+     * 报告库中存在、但本 seeder 未定义的菜单项。
+     *
+     * 有意只报告不删除：这些项通常来自迁移，删除它们正是此前 truncate 造成的问题。
+     * 是否清理由人工判断。
+     */
+    private function reportUnmanaged(): void
+    {
+        $unmanaged = MenuItem::whereNotIn('id', $this->managedIds ?: [0])
+            ->orderBy('id')
+            ->get(['id', 'title_key', 'url']);
+
+        if ($unmanaged->isEmpty()) {
+            return;
+        }
+
+        $this->command?->warn(
+            "以下 {$unmanaged->count()} 项菜单存在于数据库但未在 MenuItemsSeeder 中定义，"
+            . '已原样保留（未删除）。若为迁移添加的常驻菜单，建议补入本 seeder：'
+        );
+        foreach ($unmanaged as $item) {
+            $this->command?->warn("  [{$item->id}] {$item->title_key} → " . ($item->url ?: '(目录节点)'));
+        }
     }
 
     private function seedMenuTree(): void
@@ -285,17 +366,55 @@ class MenuItemsSeeder extends Seeder
     ): int {
         $permId = $permSlug ? ($this->permIds[$permSlug] ?? null) : null;
 
-        $menuItem = MenuItem::create([
+        // 声明了权限却查不到，说明 slug 写错或迁移未执行。此时若放任写入 null，
+        // 该菜单会变成全员可见 —— 属于静默的越权，必须显式失败。
+        if ($permSlug !== null && $permId === null) {
+            throw new \RuntimeException(
+                "菜单 {$titleKey} 声明的权限 {$permSlug} 在 permissions 表中不存在。"
+            );
+        }
+
+        // 由 seeder 托管的字段。有意不含 is_active：管理员可能在菜单管理界面
+        // 停用过某项，重跑 seeder 不应把它重新打开。
+        $attributes = [
             'parent_id'     => $parentId,
-            'title_key'     => $titleKey,
             'url'           => $url,
             'icon'          => $icon,
             'permission_id' => $permId,
             'sort_order'    => $sort,
-            'is_active'     => true,
-        ]);
+        ];
 
-        // 解析角色缩写并创建关联
+        $menuItem = MenuItem::where('title_key', $titleKey)->first();
+
+        if ($menuItem) {
+            $menuItem->fill($attributes)->save();
+            $this->updated++;
+        } else {
+            $menuItem = MenuItem::create(
+                $attributes + ['title_key' => $titleKey, 'is_active' => true]
+            );
+            $this->created++;
+        }
+
+        $this->managedIds[] = $menuItem->id;
+
+        $this->syncRoles($menuItem->id, $roles, $urlOverrides);
+
+        return $menuItem->id;
+    }
+
+    /**
+     * 幂等同步某菜单项的角色关联，使其恰好等于声明的角色串。
+     *
+     * 仅作用于本 seeder 托管的菜单项：未托管项的关联不受影响。
+     *
+     * 注意：role_menu_items 目前是死数据 —— MenuService 只依据
+     * menu_items.permission_id 与 roles.hidden_menu_items 过滤侧边栏，
+     * 从不读取本表，url_override 同样不生效。此处维持写入是为了在其
+     * 去留有定论之前不改变既有语义。
+     */
+    private function syncRoles(int $menuItemId, string $roles, array $urlOverrides): void
+    {
         $roleMap = [
             'S' => 'super-admin',
             'A' => 'admin',
@@ -305,22 +424,25 @@ class MenuItemsSeeder extends Seeder
             'I' => 'inventory-manager',
         ];
 
-        $pivotRows = [];
+        $desired = [];
         foreach (str_split($roles) as $char) {
             $slug = $roleMap[$char] ?? null;
             if ($slug && isset($this->roleIds[$slug])) {
-                $pivotRows[] = [
-                    'role_id'      => $this->roleIds[$slug],
-                    'menu_item_id' => $menuItem->id,
-                    'url_override' => $urlOverrides[$char] ?? null,
-                ];
+                $desired[$this->roleIds[$slug]] = $urlOverrides[$char] ?? null;
             }
         }
 
-        if ($pivotRows) {
-            DB::table('role_menu_items')->insert($pivotRows);
-        }
+        // 移除声明之外的角色关联（作用域仅限本菜单项）
+        DB::table('role_menu_items')
+            ->where('menu_item_id', $menuItemId)
+            ->whereNotIn('role_id', array_keys($desired) ?: [0])
+            ->delete();
 
-        return $menuItem->id;
+        foreach ($desired as $roleId => $override) {
+            DB::table('role_menu_items')->updateOrInsert(
+                ['role_id' => $roleId, 'menu_item_id' => $menuItemId],
+                ['url_override' => $override]
+            );
+        }
     }
 }

@@ -206,10 +206,14 @@ class MenuService
                 $item->setRelation('children',
                     $this->filterByPermission($item->children, $user)
                 );
-                // 目录节点无可见子项 → 隐藏
-                if (!$item->url && $item->children->isEmpty()) {
-                    return false;
-                }
+            }
+
+            // 目录节点（无 URL）无可见子项 → 隐藏。
+            // 该判断此前嵌在上面的 isNotEmpty 分支内，导致「本来就没有子节点」的
+            // 空目录永远命中不到，会渲染成一个点不动的死条目
+            // （例如迁移已建好分组、子项却尚未挂载的情况）。
+            if (!$item->url && $item->children->isEmpty()) {
+                return false;
             }
 
             return true;
