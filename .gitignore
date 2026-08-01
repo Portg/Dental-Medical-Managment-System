@@ -29,3 +29,5 @@ deploy/output/
 .vscode/
 .DS_Store
 .claude/
+# 构建打包时的瞬态暂存目录（正常构建结束会改回 deploy/dist/，中断时可能残留）
+deploy/dental-clinic-*/
