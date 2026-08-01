@@ -109,12 +109,25 @@ class SatisfactionSurveyController extends Controller
     }
 
     /**
-     * Patient fills out a survey (public link).
+     * 重新生成患者填写链接（原链接立即失效）。
+     *
+     * 短信通道尚未接入，因此「重发」在这里的含义是产出一条新的可复制链接，
+     * 由前台通过微信等渠道人工发给患者，或现场用平板打开。
      */
-    public function fill($token)
+    public function regenerateLink($id)
     {
-        // TODO: Implement token-based survey access
-        return view('satisfaction_surveys.fill');
+        try {
+            $survey = $this->service->regenerateToken((int) $id);
+        } catch (\RuntimeException $e) {
+            return response()->json(['status' => 0, 'message' => $e->getMessage()], 409);
+        }
+
+        return response()->json([
+            'status'     => 1,
+            'message'    => __('satisfaction.link_regenerated'),
+            'fill_url'   => $survey->fill_url,
+            'expires_at' => optional($survey->expires_at)->format('Y-m-d H:i'),
+        ]);
     }
 
     /**
@@ -150,15 +163,27 @@ class SatisfactionSurveyController extends Controller
     public function sendBatch(Request $request)
     {
         $request->validate([
-            'date' => 'required|date',
-            'channel' => 'required|in:sms,wechat'
+            'date'    => 'required|date',
+            'channel' => 'required|in:sms,wechat,instore'
         ]);
 
-        $sentCount = $this->service->sendBatch($request->date, $request->channel);
+        $surveys = $this->service->sendBatch($request->date, $request->channel);
+
+        // 短信通道未接入，这里不谎报「已发送」——返回生成的链接清单，
+        // 由前台自行分发（微信转发 / 现场扫码），做到界面所述即实际所做。
+        $links = collect($surveys)->map(function ($survey) {
+            return [
+                'id'           => $survey->id,
+                'patient_name' => optional($survey->patient)->full_name,
+                'fill_url'     => $survey->fill_url,
+            ];
+        })->values();
 
         return response()->json([
-            'status' => 'success',
-            'message' => __('satisfaction.batch_sent', ['count' => $sentCount])
+            'status'  => 1,
+            'count'   => $links->count(),
+            'links'   => $links,
+            'message' => __('satisfaction.batch_generated', ['count' => $links->count()]),
         ]);
     }
 }

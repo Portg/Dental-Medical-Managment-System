@@ -82,4 +82,40 @@ return [
     // Rankings
     'doctor_ranking' => 'Doctor Rating Ranking',
     'monthly_trend' => 'Monthly Trend',
+
+    // ── Public patient-facing form ─────────────────────────────────
+    'fill_title'  => 'Visit Satisfaction Survey',
+    'fill_intro'  => 'Thank you for your visit. Please rate your experience — your feedback helps us improve.',
+    'nps_help'    => '0 = would not recommend at all, 10 = would strongly recommend',
+    'star_hints'  => [
+        1 => 'Very dissatisfied',
+        2 => 'Dissatisfied',
+        3 => 'Neutral',
+        4 => 'Satisfied',
+        5 => 'Very satisfied',
+    ],
+    'feedback_placeholder'     => 'How was your overall experience? (optional)',
+    'suggestions_placeholder'  => 'What could we do better? (optional)',
+    'submit_anonymously'       => 'Submit anonymously (hide my name)',
+    'submit'                   => 'Submit',
+    'submitting'               => 'Submitting...',
+    'overall_rating_required'  => 'Please rate your overall satisfaction first',
+    'network_error'            => 'Network error, please try again later',
+    'thank_you_sub'            => 'Your feedback has been received. Thank you.',
+
+    // ── Link state ─────────────────────────────────────────────────
+    'link_invalid'      => 'Link no longer valid',
+    'link_invalid_hint' => 'This survey link does not exist, has already been completed, or has expired. Please contact the clinic front desk if you still wish to respond.',
+    'link_expired'      => 'This survey link has expired',
+    'already_completed' => 'This survey has already been completed and cannot be submitted again',
+    'link_regenerated'  => 'A new link has been generated; the previous one is now invalid',
+
+    // ── Back-office distribution ───────────────────────────────────
+    'batch_generated'  => ':count survey link(s) generated',
+    'copy_link'        => 'Copy survey link',
+    'link_copied'      => 'Link copied — paste it into WeChat to send to the patient',
+    'copy_failed'      => 'Copy failed, please select and copy the link manually',
+    'fill_link'        => 'Survey link',
+    'link_expires_at'  => 'Valid until :time',
+    'no_link_yet'      => 'No survey link generated yet',
 ];

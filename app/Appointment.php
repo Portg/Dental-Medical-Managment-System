@@ -81,6 +81,17 @@ class Appointment extends Model
         return $this->belongsTo('App\User', 'cancelled_by');
     }
 
+    /**
+     * 关联：满意度调查（一次就诊一份）
+     *
+     * SatisfactionSurveyService::sendBatch() 用 whereDoesntHave('satisfactionSurvey')
+     * 排除已发过的预约；此前缺少本关联，该调用会直接抛 BadMethodCallException。
+     */
+    public function satisfactionSurvey()
+    {
+        return $this->hasOne('App\SatisfactionSurvey', 'appointment_id');
+    }
+
     public function progressNotes()
     {
         return $this->hasMany('App\ProgressNote', 'appointment_id');

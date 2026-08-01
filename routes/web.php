@@ -20,6 +20,15 @@ Auth::routes();
 Route::get('/book-appointment', 'OnlineBookingController@frontend');
 Route::post('request-appointment', 'OnlineBookingController@store');
 
+// 患者满意度问卷（公开填写，凭 token 访问，必须在 auth 组之外）
+Route::get('survey/{token}', 'PublicSurveyController@fill')
+    ->where('token', '[A-Za-z0-9]{32}')
+    ->name('survey.fill');
+Route::post('survey/{token}', 'PublicSurveyController@submit')
+    ->where('token', '[A-Za-z0-9]{32}')
+    ->middleware('throttle:20,1')
+    ->name('survey.submit');
+
 Route::group(['middleware' => ['auth']], function () {
 
     Route::get('/home', 'HomeController@index')->name('home');
@@ -585,6 +594,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('satisfaction-surveys/{id}', 'SatisfactionSurveyController@show');
     Route::post('satisfaction-surveys/{id}/submit', 'SatisfactionSurveyController@submit');
     Route::post('satisfaction-surveys/send-batch', 'SatisfactionSurveyController@sendBatch');
+    Route::post('satisfaction-surveys/{id}/regenerate-link', 'SatisfactionSurveyController@regenerateLink');
 
     // ============================================================
     // Shift Management (班次管理)

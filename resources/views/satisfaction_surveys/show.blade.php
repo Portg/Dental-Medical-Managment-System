@@ -145,10 +145,33 @@
                         </div>
 
                         @if($survey->status == 'pending')
-                            <div class="survey-card text-center">
+                            <div class="survey-card">
                                 <p class="text-muted">{{ __('satisfaction.resend_hint') }}</p>
-                                <button type="button" class="btn btn-primary" id="resendBtn">
-                                    <i class="icon-paper-plane"></i> {{ __('satisfaction.resend') }}
+
+                                <div class="form-group">
+                                    <label>{{ __('satisfaction.fill_link') }}</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="fillUrl" readonly
+                                               value="{{ $survey->fill_url ?? '' }}"
+                                               placeholder="{{ __('satisfaction.no_link_yet') }}">
+                                        <span class="input-group-btn">
+                                            <button type="button" class="btn btn-default" id="copyLinkBtn">
+                                                <i class="icon-docs"></i> {{ __('satisfaction.copy_link') }}
+                                            </button>
+                                        </span>
+                                    </div>
+                                    @if($survey->expires_at)
+                                        <span class="help-block" id="expiresAt">
+                                            {{ __('satisfaction.link_expires_at', ['time' => $survey->expires_at->format('Y-m-d H:i')]) }}
+                                        </span>
+                                    @else
+                                        <span class="help-block" id="expiresAt"></span>
+                                    @endif
+                                </div>
+
+                                <button type="button" class="btn btn-primary" id="resendBtn"
+                                        data-url="{{ url('satisfaction-surveys/' . $survey->id . '/regenerate-link') }}">
+                                    <i class="icon-refresh"></i> {{ __('satisfaction.resend') }}
                                 </button>
                             </div>
                         @endif
@@ -163,11 +186,6 @@
 @section('js')
 <script>
     LanguageManager.loadFromPHP(@json(__('satisfaction')), 'satisfaction');
-    $(document).ready(function () {
-        $('#resendBtn').on('click', function () {
-            // TODO: Implement resend functionality
-            toastr.info(LanguageManager.trans('satisfaction.resend_not_implemented'));
-        });
-    });
 </script>
+<script src="{{ asset('include_js/satisfaction_survey_show.js') }}?v={{ file_exists(public_path('include_js/satisfaction_survey_show.js')) ? filemtime(public_path('include_js/satisfaction_survey_show.js')) : time() }}"></script>
 @endsection

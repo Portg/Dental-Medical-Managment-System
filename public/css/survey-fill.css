@@ -1,0 +1,213 @@
+/* ==========================================================================
+   患者满意度问卷 — 公开填写页
+   移动端优先：绝大多数患者是从微信里点开链接，用手机填写。
+   ========================================================================== */
+
+body {
+    margin: 0;
+    background: #f4f6f8;
+    color: #2c3e50;
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+}
+
+.survey-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+}
+
+/* ── 头部 ───────────────────────────────────────────────────────────── */
+.survey-header {
+    text-align: center;
+    padding: 8px 0 20px;
+}
+
+.survey-header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 8px;
+}
+
+.survey-sub {
+    margin: 0;
+    color: #7f8c9a;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.survey-meta {
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #5b6b7b;
+}
+
+.survey-meta span {
+    display: inline-block;
+    margin-right: 16px;
+}
+
+/* ── 题目区块 ───────────────────────────────────────────────────────── */
+.survey-block {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.survey-label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.survey-label .required {
+    color: #e74c3c;
+    margin-left: 2px;
+}
+
+.survey-help {
+    margin: -4px 0 10px;
+    font-size: 12px;
+    color: #95a5a6;
+}
+
+/* ── 星级 ───────────────────────────────────────────────────────────── */
+.star-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.star {
+    background: none;
+    border: none;
+    padding: 0 6px 0 0;
+    font-size: 32px;
+    line-height: 1;
+    color: #dfe4ea;
+    cursor: pointer;
+    /* 44px 是移动端可点区域的下限，星形本身视觉更小 */
+    min-width: 40px;
+    min-height: 44px;
+}
+
+.star.is-on {
+    color: #f5a623;
+}
+
+.star-hint {
+    margin-left: 8px;
+    font-size: 13px;
+    color: #f5a623;
+}
+
+/* ── NPS 0-10 ───────────────────────────────────────────────────────── */
+.nps-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.nps {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #dfe4ea;
+    border-radius: 6px;
+    background: #fff;
+    color: #5b6b7b;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.nps.is-on {
+    background: #3598dc;
+    border-color: #3598dc;
+    color: #fff;
+}
+
+/* ── 文本域 ─────────────────────────────────────────────────────────── */
+.survey-block textarea {
+    width: 100%;
+    border: 1px solid #dfe4ea;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.survey-anon {
+    font-size: 14px;
+    color: #5b6b7b;
+}
+
+.survey-anon input {
+    margin-right: 6px;
+}
+
+/* ── 提交 ───────────────────────────────────────────────────────────── */
+.survey-error {
+    background: #fdecea;
+    color: #c0392b;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.survey-submit {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    background: #3598dc;
+    color: #fff;
+    font-size: 17px;
+    padding: 14px;
+    cursor: pointer;
+}
+
+.survey-submit:disabled {
+    background: #a8c9de;
+    cursor: default;
+}
+
+/* ── 完成 / 失效 ────────────────────────────────────────────────────── */
+.survey-done {
+    background: #fff;
+    border-radius: 8px;
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.done-icon {
+    width: 64px;
+    height: 64px;
+    line-height: 64px;
+    border-radius: 50%;
+    background: #27ae60;
+    color: #fff;
+    font-size: 34px;
+    margin: 0 auto 16px;
+}
+
+.done-icon--muted {
+    background: #95a5a6;
+}
+
+.survey-done h2 {
+    font-size: 20px;
+    margin: 0 0 8px;
+}
+
+.survey-done p {
+    color: #7f8c9a;
+    font-size: 14px;
+    margin: 0;
+}

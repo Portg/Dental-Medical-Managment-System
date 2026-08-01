@@ -82,13 +82,66 @@ class SatisfactionSurveyService
         $appointment = Appointment::findOrFail($appointmentId);
 
         return SatisfactionSurvey::create([
-            'patient_id' => $appointment->patient_id,
+            'token'          => SatisfactionSurvey::generateToken(),
+            'patient_id'     => $appointment->patient_id,
             'appointment_id' => $appointment->id,
-            'doctor_id' => $appointment->doctor,
-            'branch_id' => Auth::user()->branch_id,
+            // 注意：doctor 是 belongsTo 关联，不是字段；预约表上的列名为 doctor_id。
+            // 原先写成 $appointment->doctor 会把 User 对象塞进 doctor_id。
+            'doctor_id'      => $appointment->doctor_id,
+            'branch_id'      => $appointment->branch_id ?? optional(Auth::user())->branch_id,
             'survey_channel' => $channel,
-            'status' => SatisfactionSurvey::STATUS_PENDING,
+            'status'         => SatisfactionSurvey::STATUS_PENDING,
+            'sent_at'        => now(),
+            'expires_at'     => now()->addDays(SatisfactionSurvey::DEFAULT_VALID_DAYS),
         ]);
+    }
+
+    /**
+     * 重新生成填写链接（原链接立即失效）。
+     *
+     * 用于「患者说没收到 / 链接过期」的场景：换新 token 并顺延有效期，
+     * 已填写完成的问卷不允许重开，避免覆盖已有评价。
+     */
+    public function regenerateToken(int $id): SatisfactionSurvey
+    {
+        $survey = SatisfactionSurvey::findOrFail($id);
+
+        if ($survey->status === SatisfactionSurvey::STATUS_COMPLETED) {
+            throw new \RuntimeException(__('satisfaction.already_completed'));
+        }
+
+        $survey->update([
+            'token'      => SatisfactionSurvey::generateToken(),
+            'status'     => SatisfactionSurvey::STATUS_PENDING,
+            'sent_at'    => now(),
+            'expires_at' => now()->addDays(SatisfactionSurvey::DEFAULT_VALID_DAYS),
+        ]);
+
+        return $survey->refresh();
+    }
+
+    /**
+     * 用公开 token 取出可填写的问卷。
+     *
+     * 返回 null 的三种情况：token 不存在、已填写过、链接已过期——
+     * 对外统一不区分，避免 token 探测。过期的顺手置为 expired。
+     */
+    public function findFillableByToken(string $token): ?SatisfactionSurvey
+    {
+        $survey = SatisfactionSurvey::with(['patient', 'doctor', 'branch'])
+            ->where('token', $token)
+            ->first();
+
+        if (!$survey) {
+            return null;
+        }
+
+        if ($survey->isExpired() && $survey->status === SatisfactionSurvey::STATUS_PENDING) {
+            $survey->update(['status' => SatisfactionSurvey::STATUS_EXPIRED]);
+            return null;
+        }
+
+        return $survey->canBeFilled() ? $survey : null;
     }
 
     /**
@@ -105,6 +158,17 @@ class SatisfactionSurveyService
     public function submitSurvey(int $id, array $data): bool
     {
         $survey = SatisfactionSurvey::findOrFail($id);
+
+        // 已完成的问卷不允许再次提交——公开链接一旦泄露，
+        // 否则任何人都能覆盖患者已给出的评价。
+        if ($survey->status === SatisfactionSurvey::STATUS_COMPLETED) {
+            throw new \RuntimeException(__('satisfaction.already_completed'));
+        }
+
+        if ($survey->isExpired()) {
+            $survey->update(['status' => SatisfactionSurvey::STATUS_EXPIRED]);
+            throw new \RuntimeException(__('satisfaction.link_expired'));
+        }
 
         return (bool) $survey->update([
             'overall_rating' => $data['overall_rating'],
@@ -123,27 +187,34 @@ class SatisfactionSurveyService
     /**
      * Send surveys in batch for completed appointments on a given date.
      */
-    public function sendBatch(string $date, string $channel): int
+    public function sendBatch(string $date, string $channel): array
     {
-        $appointments = Appointment::where('appointment_date', $date)
-            ->where('status', 'completed')
+        // 三处字段名此前都是错的，任一都会让本方法直接抛异常：
+        //   appointment_date → 预约表实际列名是 start_date
+        //   status 'completed' → 用模型常量，避免字面量与枚举漂移
+        //   $appointment->doctor → doctor 是关联，列名是 doctor_id
+        $appointments = Appointment::whereDate('start_date', $date)
+            ->where('status', Appointment::STATUS_COMPLETED)
+            ->whereNull('deleted_at')
             ->whereDoesntHave('satisfactionSurvey')
             ->get();
 
-        $sentCount = 0;
+        $created = [];
         foreach ($appointments as $appointment) {
-            SatisfactionSurvey::create([
-                'patient_id' => $appointment->patient_id,
+            $created[] = SatisfactionSurvey::create([
+                'token'          => SatisfactionSurvey::generateToken(),
+                'patient_id'     => $appointment->patient_id,
                 'appointment_id' => $appointment->id,
-                'doctor_id' => $appointment->doctor,
-                'branch_id' => Auth::user()->branch_id,
+                'doctor_id'      => $appointment->doctor_id,
+                'branch_id'      => $appointment->branch_id ?? optional(Auth::user())->branch_id,
                 'survey_channel' => $channel,
-                'status' => SatisfactionSurvey::STATUS_PENDING,
+                'status'         => SatisfactionSurvey::STATUS_PENDING,
+                'sent_at'        => now(),
+                'expires_at'     => now()->addDays(SatisfactionSurvey::DEFAULT_VALID_DAYS),
             ]);
-            $sentCount++;
         }
 
-        return $sentCount;
+        return $created;
     }
 
     /**
