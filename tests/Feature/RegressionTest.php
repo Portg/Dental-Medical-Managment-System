@@ -110,7 +110,7 @@ class RegressionTest extends TestCase
             '_who_added'     => $this->admin->id,
         ]);
 
-        $this->invoiceService = new InvoiceService();
+        $this->invoiceService = app(InvoiceService::class);
     }
 
     // ─── DataTables JSON structure ───────────────────────────────

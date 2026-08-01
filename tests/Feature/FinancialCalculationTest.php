@@ -74,7 +74,7 @@ class FinancialCalculationTest extends TestCase
             '_who_added'     => $this->admin->id,
         ]);
 
-        $this->invoiceService = new InvoiceService();
+        $this->invoiceService = app(InvoiceService::class);
 
         // payment_method 已由迁移 2026_04_12_220200 改为 VARCHAR(50)，此处无需再改表。
         // 注意：不要在 setUp 里执行 DDL —— MySQL 的 DDL 会隐式提交事务，
