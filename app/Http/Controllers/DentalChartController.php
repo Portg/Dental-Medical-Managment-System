@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\DentalChart;
 use App\Services\DentalChartService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Yajra\DataTables\Facades\DataTables;
 
 class DentalChartController extends Controller
@@ -14,7 +14,13 @@ class DentalChartController extends Controller
     public function __construct(DentalChartService $service)
     {
         $this->service = $service;
-        $this->middleware('can:edit-patients');
+        // 菜单配 manage-medical-cases，患者详情入口常只有 edit-patients —— 任一即可
+        $this->middleware(function ($request, $next) {
+            if (!Gate::any(['edit-patients', 'manage-medical-cases'])) {
+                abort(403);
+            }
+            return $next($request);
+        });
     }
 
     /**
@@ -29,18 +35,13 @@ class DentalChartController extends Controller
 
             return DataTables::of($data)
                 ->addIndexColumn()
-                ->editColumn('last_updated', function($row) {
+                ->editColumn('last_updated', function ($row) {
                     return $row->last_updated ? date('Y-m-d H:i', strtotime($row->last_updated)) : '-';
                 })
-                ->addColumn('action', function($row) {
-                    $latestAppointment = $this->service->getLatestAppointment($row->patient_id);
-
-                    if ($latestAppointment) {
-                        return '<a href="' . url('medical-treatment/' . $latestAppointment->id) . '" class="btn btn-sm btn-primary">
-                            <i class="fa fa-eye"></i> ' . __('odontogram.view_chart') . '
-                        </a>';
-                    }
-                    return '<span class="text-muted">' . __('odontogram.no_chart_data') . '</span>';
+                ->addColumn('action', function ($row) {
+                    return '<a href="' . url('dental-charting/for-patient/' . $row->patient_id) . '" class="btn btn-sm btn-primary">
+                        <i class="fa fa-edit"></i> ' . __('odontogram.open_chart') . '
+                    </a>';
                 })
                 ->rawColumns(['action'])
                 ->make(true);
@@ -50,17 +51,48 @@ class DentalChartController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @param Request $request
-     * @param $appointment_id
-     * @return \Illuminate\Http\Response
+     * Open chart editor for a patient (resolve/create appointment behind the scenes).
      */
-    public function create(Request $request, $appointment_id)
+    public function openForPatient($patientId)
     {
-        $data['patient'] = $this->service->getPatientForChart((int) $appointment_id);
-        $data['appointment_id'] = $appointment_id;
-        return view('dental_chart.create')->with($data);
+        try {
+            $appointment = $this->service->resolveAppointmentForChart((int) $patientId);
+        } catch (\RuntimeException $e) {
+            return redirect('dental-charting')->with('error', $e->getMessage());
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return redirect('dental-charting')->with('error', __('odontogram.patient_not_found'));
+        }
+
+        return redirect('dental-charting/open/' . $appointment->id);
+    }
+
+    /**
+     * Standalone chart editor page for an appointment.
+     */
+    public function open($appointmentId)
+    {
+        $patient = $this->service->getPatientForChart((int) $appointmentId);
+        if (!$patient) {
+            return redirect('dental-charting')->with('error', __('odontogram.patient_not_found'));
+        }
+
+        return view('dental_chart.create', [
+            'patient' => $patient,
+            'appointment_id' => (int) $appointmentId,
+        ]);
+    }
+
+    /**
+     * Legacy create entry — redirect into the open editor.
+     */
+    public function create(Request $request, $appointment_id = null)
+    {
+        $appointmentId = (int) ($appointment_id ?: $request->query('appointment_id'));
+        if ($appointmentId > 0) {
+            return redirect('dental-charting/open/' . $appointmentId);
+        }
+
+        return redirect('dental-charting');
     }
 
     /**
@@ -71,53 +103,42 @@ class DentalChartController extends Controller
      */
     public function store(Request $request)
     {
-        $this->service->replaceChartData((int) $request->appointment_id, $request->data);
+        $appointmentId = (int) $request->appointment_id;
+        if ($appointmentId <= 0 || !is_array($request->data)) {
+            return response()->json(['message' => __('odontogram.patient_not_found'), 'success' => false], 422);
+        }
+
+        try {
+            $this->service->replaceChartData($appointmentId, $request->data);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage(), 'success' => false], 404);
+        }
 
         return response()->json(['message' => __('odontogram.chart_saved_success'), 'success' => true]);
     }
 
     /**
-     * Display the specified resource.
+     * Display chart JSON for an appointment (used by odontogram JS).
      *
      * @param $id
      * @return \Illuminate\Http\Response
      */
     public function show($id)
     {
-        $data = $this->service->getChartByAppointment((int) $id);
-        return response()->json($data);
+        return response()->json($this->service->getChartByAppointment((int) $id));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param \App\DentalChart $dentalChart
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(DentalChart $dentalChart)
+    public function edit($id)
+    {
+        return redirect('dental-charting/open/' . (int) $id);
+    }
+
+    public function update(Request $request, $id)
     {
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param \App\DentalChart $dentalChart
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, DentalChart $dentalChart)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param \App\DentalChart $dentalChart
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(DentalChart $dentalChart)
+    public function destroy($id)
     {
         //
     }

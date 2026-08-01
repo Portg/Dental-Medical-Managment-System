@@ -3,6 +3,15 @@
 @section('page_title', __('odontogram.dental_chart_list'))
 @section('table_id', 'dental_chart_table')
 
+@section('header_actions')
+    <div class="dental-chart-open-bar">
+        <select id="chart_patient_select" class="form-control" style="width: 240px;"></select>
+        <button type="button" class="btn btn-primary" id="btn_open_chart">
+            <i class="fa fa-edit"></i> {{ __('odontogram.open_chart') }}
+        </button>
+    </div>
+@endsection
+
 @section('table_headers')
     <th>#</th>
     <th>{{ __('odontogram.patient_no') }}</th>
@@ -12,32 +21,22 @@
     <th>{{ __('common.actions') }}</th>
 @endsection
 
-@section('filter_area')
-    <div class="note note-info">
-        <p><i class="fa fa-info-circle"></i> {{ __('odontogram.go_to_appointment') }}</p>
-    </div>
+@section('page_css')
+<link href="{{ asset('css/dental_chart_index.css') }}?v={{ filemtime(public_path('css/dental_chart_index.css')) }}" rel="stylesheet">
 @endsection
 
 @section('page_js')
 <script type="text/javascript">
-$(document).ready(function() {
-    dataTable = $('#dental_chart_table').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: "{{ url('dental-charting') }}",
-        columns: [
-            {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
-            {data: 'patient_no', name: 'patient_no'},
-            {data: 'patient_name', name: 'patient_name'},
-            {data: 'tooth_count', name: 'tooth_count', orderable: false, searchable: false},
-            {data: 'last_updated', name: 'last_updated'},
-            {data: 'action', name: 'action', orderable: false, searchable: false}
-        ],
-        dom: 'rtip',
-        language: LanguageManager.getDataTableLang(),
-        order: [[4, 'desc']]
+    LanguageManager.loadAllFromPHP({
+        'odontogram': @json(__('odontogram'))
     });
-    setupEmptyStateHandler();
-});
+    window.DentalChartIndexConfig = {
+        searchPatientUrl: "{{ url('search-patient') }}",
+        openForPatientUrl: "{{ url('dental-charting/for-patient') }}",
+        listUrl: "{{ url('dental-charting') }}",
+        locale: "{{ app()->getLocale() }}",
+        flashError: @json(session('error'))
+    };
 </script>
+<script src="{{ asset('include_js/dental_chart_index.js') }}?v={{ filemtime(public_path('include_js/dental_chart_index.js')) }}"></script>
 @endsection

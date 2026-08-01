@@ -40,6 +40,10 @@ return [
     'no_chart_data' => '该患者暂无牙科图表数据',
     'create_new' => '创建新记录',
     'go_to_appointment' => '前往预约进行图表记录',
+    'new_appointment_for_chart' => '新增预约并记录图表',
+    'auto_appointment_note' => '系统为牙科图表记录自动创建的就诊',
+    'no_doctor_for_chart' => '系统中没有可用医生，无法打开图表',
+    'patient_not_found' => '未找到患者',
 
     // 牙科治疗
     'cleaning' => '洁牙',

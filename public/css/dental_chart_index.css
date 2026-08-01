@@ -1,0 +1,9 @@
+.dental-chart-open-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dental-chart-open-bar .select2-container {
+    min-width: 240px;
+}

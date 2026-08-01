@@ -510,9 +510,12 @@
                         <div class="tab-pane" id="dental_chart_tab">
                             <div class="text-center" style="padding: 20px;">
                                 <p>{{ __('patient.dental_chart_description') }}</p>
-                                <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url('medical-history/' . $patient->id) }}'">
+                                <a href="{{ url('dental-charting/for-patient/' . $patient->id) }}" class="btn btn-primary">
+                                    <i class="fa fa-edit"></i> {{ __('odontogram.open_chart') }}
+                                </a>
+                                <a href="{{ url('medical-history/' . $patient->id) }}" class="btn btn-default">
                                     {{ __('patient.view_dental_history') }}
-                                </button>
+                                </a>
                             </div>
                         </div>
 

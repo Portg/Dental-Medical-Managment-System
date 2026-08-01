@@ -271,6 +271,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('doctor-workload-report', fn() => redirect('doctor-report?tab=workload', 301));
 
 
+    // 按患者直接打开图表编辑页（须放在 resource 之前，避免被 {dental_charting} 吞掉）
+    Route::get('dental-charting/for-patient/{patientId}', 'DentalChartController@openForPatient')
+        ->where('patientId', '[0-9]+');
+    Route::get('dental-charting/open/{appointmentId}', 'DentalChartController@open')
+        ->where('appointmentId', '[0-9]+');
     Route::resource('dental-charting', 'DentalChartController');
     //payroll management
     Route::resource('employee-contracts', 'EmployeeContractController')->except(['create', 'show']);

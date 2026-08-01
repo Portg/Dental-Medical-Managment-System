@@ -1,11 +1,11 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
-@section('content')
+
 @section('css')
     @include('layouts.page_loader')
+    <link href="{{ asset('odontogram/css/estilosOdontograma.css') }}" rel="stylesheet" type="text/css"/>
 @endsection
 
-<link href="{{ asset('odontogram/css/estilosOdontograma.css') }}" rel="stylesheet" type="text/css"/>
-
+@section('content')
 <div class="note note-success">
     <div class="row">
         <div class="col-md-6">
@@ -49,19 +49,15 @@
     <i class="fa fa-refresh fa-spin fa-2x fa-fw"></i><br/>
     <span>{{ __('common.loading') }}</span>
 </div>
-
 @endsection
 
 @section('js')
 <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
 {{-- Dental charting plugins --}}
 <script src="{{ asset('odontogram/scripts/angular.js') }}"></script>
-<!-- Angular Modulos-->
 <script type="text/javascript" src="{{ asset('odontogram/scripts/modulos/app.js') }}"></script>
-<!-- Angular Controllers-->
 <script type="text/javascript" src="{{ asset('odontogram/scripts/controladores/controller.js') }}"></script>
 <script type="text/javascript" src="{{ asset('odontogram/scripts/jquery-odontograma.js') }}"></script>
-<!--Angular Directives-->
 <script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/canvasodontograma.js') }}"></script>
 <script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/opcionescanvas.js') }}"></script>
 <script type="text/javascript" src="{{ asset('odontogram/scripts/directivas/odontogramaGeneral.js') }}"></script>
