@@ -18,7 +18,12 @@ class UsersController extends Controller
     {
         $this->userService = $userService;
 
-        $this->middleware('can:view-users')->only(['index', 'show', 'filterDoctor', 'filterEmployees']);
+        // filterDoctor 不在此列：它只返回在职医生的 id 与姓名，供预约、病历、账单、
+        // 在线预约等页面的医生下拉查找使用，属于院内名录查询而非用户管理。
+        // 医生姓名本就在预约列表、排班、报表中公开显示，用 view-users 把它挡住
+        // 不产生任何保护，却让医生/护士/前台/库管（均无 view-users）在预约抽屉里
+        // 选不到医生——前台恰恰是开预约的主力。
+        $this->middleware('can:view-users')->only(['index', 'show', 'filterEmployees']);
         $this->middleware('can:create-users')->only(['create', 'store']);
         $this->middleware('can:edit-users')->only(['edit', 'update', 'changeStatus']);
         $this->middleware('can:delete-users')->only(['destroy']);
