@@ -16,7 +16,18 @@ class InvoicePaymentController extends Controller
     {
         $this->invoicePaymentService = $invoicePaymentService;
 
-        $this->middleware('can:edit-invoices');
+        // 收款按「读 / 登记 / 改删」三档分流，不再一律要求 edit-invoices。
+        //
+        // edit-invoices 同时守着折扣审批、设置挂账、编辑账单与删除收款记录，
+        // 属于财务控制点；而登记收款是前台柜台的日常作业。前台持有 view-invoices
+        // 与 create-invoices、不持有 edit-invoices，此前连自己刚开的账单收了多少钱
+        // 都看不到，弹窗一律 403——收款的人反而是唯一收不了款的人。
+        // 直接给前台发 edit-invoices 会顺带给出折扣审批权，故改为在此分流。
+        //
+        // 医生持有 view-invoices，据此可查看收款记录，但不能登记、修改或删除。
+        $this->middleware('can:view-invoices')->only(['index', 'show', 'create', 'getPaymentMethods', 'calculateChange']);
+        $this->middleware('can:create-invoices')->only(['store', 'storeMixed']);
+        $this->middleware('can:edit-invoices')->only(['edit', 'update', 'destroy']);
     }
 
     /**

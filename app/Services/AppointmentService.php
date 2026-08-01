@@ -666,9 +666,21 @@ class AppointmentService
                 return '<span class="text-primary">' . __('messages.invoice_already_generated') . '</span>';
             })
             ->addColumn('action', function ($row) {
-                $invoice_action = $row->has_invoice_status === 'pending'
-                    ? '<a href="#" onclick="RecordPayment(' . $row->id . ')" >' . __('invoices.generate_invoice') . '</a>'
-                    : '<a href="' . url('invoices/' . $row->invoice_id) . '">' . __('invoices.view_invoice') . '</a>';
+                // 账单入口按权限显示：「生成账单」最终 POST /invoices（需 create-invoices），
+                // 「查看账单」打开 /invoices/{id}（需 view-invoices）。护士两个权限都不持有，
+                // 此前无论落到哪个分支拿到的都是点了必然 403 的死链接；医生只有
+                // view-invoices，却同样看得到「生成账单」。服务端权限不变，这里只是不再
+                // 展示必然失败的入口；两者都无权时整条菜单项不再输出。
+                $user = auth()->user();
+                $invoice_action = '';
+                if ($row->has_invoice_status === 'pending') {
+                    if ($user && $user->can('create-invoices')) {
+                        $invoice_action = '<a href="#" onclick="RecordPayment(' . $row->id . ')" >' . __('invoices.generate_invoice') . '</a>';
+                    }
+                } elseif ($user && $user->can('view-invoices')) {
+                    $invoice_action = '<a href="' . url('invoices/' . $row->invoice_id) . '">' . __('invoices.view_invoice') . '</a>';
+                }
+                $invoice_item = $invoice_action === '' ? '' : '<li>' . $invoice_action . '</li>';
 
                 return '
                   <div class="btn-group">
@@ -680,9 +692,7 @@ class AppointmentService
                           <li>
                             <a href="#" onclick="RescheduleAppointment(' . $row->id . ')" >' . __('appointment.reschedule') . '</a>
                         </li>
-                         <li>
-                          ' . $invoice_action . '
-                        </li>
+                         ' . $invoice_item . '
                           <li>
                             <a href="#" onclick="editRecord(' . $row->id . ')" >' . __('common.edit') . '</a>
                         </li>

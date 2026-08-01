@@ -867,6 +867,13 @@ class InvoiceService
                 if (bccomp($balance, '0', 2) <= 0) {
                     return number_format($balance, 2);
                 }
+                // 「登记收款」按权限显示：它最终 POST /payments，需要 create-invoices。
+                // 医生凭 view-invoices 就能进入本页，却不持有 create-invoices，
+                // 此前这个链接对医生是点了必然 403 的死入口。服务端权限不变。
+                $user = auth()->user();
+                if (!$user || !$user->can('create-invoices')) {
+                    return number_format($balance, 2);
+                }
                 return number_format($balance, 2) . '<br>
                     <a href="#" onclick="record_payment(' . $row->id . ')" class="text-primary">' . __('invoices.record_payment') . '</a>
                     ';
