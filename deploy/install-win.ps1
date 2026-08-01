@@ -424,6 +424,34 @@ $NGINX_CONF_DIR = Join-Path $LARAGON_DIR "etc\nginx\sites-enabled"
 $HELPER_DIR = Join-Path $INSTALL_DIR "batch-helpers"
 $LARAGON_INSTALLER = Join-Path $INSTALL_DIR "laragon-wamp.exe"
 
+# ── 安装日志 ────────────────────────────────────────────────────────
+# 此前安装过程只打在控制台上。Inno 的安装包以 runhidden 调用本脚本，
+# 根本不存在控制台，一旦失败什么都不剩，只能让用户手动重跑一次才看得到错误。
+# ZIP 方式虽有窗口，但装完即关、日志同样不留。
+# 这里把完整过程落盘到 {安装目录}\logs\，成功和失败都在末尾打印路径。
+# 放在安装目录而非项目目录下：升级时项目目录会被整体替换，日志需要留存。
+$LOG_DIR = Join-Path $INSTALL_DIR "logs"
+$INSTALL_LOG = Join-Path $LOG_DIR ("install-{0}.log" -f (Get-Date -Format "yyyyMMdd-HHmmss"))
+$script:TranscriptStarted = $false
+
+function Stop-InstallTranscript {
+    if ($script:TranscriptStarted) {
+        try { Stop-Transcript | Out-Null } catch {}
+        $script:TranscriptStarted = $false
+    }
+}
+
+# 记日志失败绝不能阻断安装，整体包 try/catch
+try {
+    if (-not (Test-Path $LOG_DIR)) {
+        New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null
+    }
+    Start-Transcript -Path $INSTALL_LOG -Force | Out-Null
+    $script:TranscriptStarted = $true
+} catch {
+    $INSTALL_LOG = "(日志不可用: $($_.Exception.Message))"
+}
+
 Write-Host ""
 Write-Host "+=========================================================+"
 Write-Host "| Dental Clinic Management System - Windows Installer     |"
@@ -431,6 +459,7 @@ Write-Host "+=========================================================+"
 Write-Host ("| Script Revision: {0}" -f $script:ScriptRev)
 Write-Host ("| Install Dir: {0}" -f $INSTALL_DIR)
 Write-Host ("| Project Dir: {0}" -f $PROJECT_DIR)
+Write-Host ("| Install Log: {0}" -f $INSTALL_LOG)
 Write-Host "+=========================================================+"
 
 try {
@@ -1101,7 +1130,9 @@ try {
     Write-Host ("| App URL:      {0}" -f $APP_URL)
     Write-Host "| Admin User:   admin@example.com"
     Write-Host "| Admin Pass:   password"
+    Write-Host ("| Install Log:  {0}" -f $INSTALL_LOG)
     Write-Host "+=========================================================+"
+    Stop-InstallTranscript
     exit 0
 }
 catch {
@@ -1111,5 +1142,20 @@ catch {
     Write-Host "+=========================================================+"
     Write-Host ("| Error: {0}" -f $_.Exception.Message)
     Write-Host "+=========================================================+"
+    # 失败时把排查要用的日志一次列全 —— 装机现场通常没人会去翻目录
+    Write-Host ""
+    Write-Host "排查用日志:"
+    Write-Host ("  安装全过程: {0}" -f $INSTALL_LOG)
+    foreach ($extra in @(
+        (Join-Path $LARAGON_DIR "data\mysql-error.log"),
+        (Join-Path $LARAGON_DIR "data\mysql-console.log"),
+        (Join-Path $LARAGON_DIR "data\mysql-stderr.log"),
+        (Join-Path $PROJECT_DIR "storage\logs\ocr-install.log"),
+        (Join-Path $PROJECT_DIR "storage\logs\laravel.log")
+    )) {
+        if (Test-Path $extra) { Write-Host ("  {0}" -f $extra) }
+    }
+    Write-Host ""
+    Stop-InstallTranscript
     exit 1
 }

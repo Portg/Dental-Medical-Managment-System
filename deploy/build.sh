@@ -1243,6 +1243,16 @@ echo         Files copied.
 echo  [3/3] Running installer...
 echo.
 call "%INSTALL_DIR%\install-win.bat" "%INSTALL_DIR%"
+set "SETUP_RC=%ERRORLEVEL%"
+
+REM 无论成败都把日志位置说清楚 —— 窗口关掉之后就找不回来了
+echo.
+echo  Logs:
+echo    %INSTALL_DIR%\logs\install-*.log   configuration
+echo    %INSTALL_DIR%\logs\prereq.log      prerequisites (.NET / WMF)
+echo    %INSTALL_DIR%\laragon\data\mysql-error.log
+echo.
+exit /b %SETUP_RC%
 SHORTCUT_BAT
         info "创建 setup.bat（双击即可安装）"
         ;;

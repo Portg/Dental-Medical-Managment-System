@@ -146,6 +146,8 @@ Type: filesandordirs; Name: "{app}\laragon\www\dental\bootstrap\cache"
 Type: filesandordirs; Name: "{app}\laragon\www\dental\vendor"
 Type: filesandordirs; Name: "{app}\ocr-wheels"
 Type: filesandordirs; Name: "{app}\backups"
+; 安装日志由脚本运行时生成，不在 Inno 的文件清单里，不显式删就会留在磁盘上
+Type: filesandordirs; Name: "{app}\logs"
 
 [Code]
 // ── 安装前检查 ──────────────────────────────────────────────
@@ -221,9 +223,11 @@ begin
 
   if ResultCode <> 0 then
     MsgBox('系统配置脚本执行失败（错误码 ' + IntToStr(ResultCode) + '）。' + #13#10 + #13#10 +
-           '文件已安装完成，但数据库和服务尚未配置，系统还不能启动。' + #13#10 +
-           '请在安装目录下手动运行 install-win.bat 查看详细错误。' + #13#10 + #13#10 +
-           '安装目录: ' + ExpandConstant('{app}'),
+           '文件已安装完成，但数据库和服务尚未配置，系统还不能启动。' + #13#10 + #13#10 +
+           '完整日志已保存，请据此排查：' + #13#10 +
+           '  ' + AppDir + '\logs\install-*.log   配置全过程' + #13#10 +
+           '  ' + AppDir + '\logs\prereq.log      前置组件（.NET / WMF）' + #13#10 +
+           '  ' + AppDir + '\laragon\data\mysql-error.log   MySQL 启动',
            mbError, MB_OK);
 end;
 
