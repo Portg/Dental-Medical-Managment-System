@@ -84,7 +84,10 @@ class DentalChartService
         }
 
         $today = now()->toDateString();
-        $nowTime = now()->format('H:i:s');
+        // 预约时间的业务粒度是分钟。此处若用 now()->format('H:i:s')，会把当前秒
+        // （如 14:49:08）一并写入 start_time / sort_by，与其余创建入口
+        // （均为 date('H:i:s', strtotime($input))，秒恒为 00）不一致。
+        $nowTime = now()->startOfMinute()->format('H:i:s');
 
         return Appointment::create([
             'appointment_no'    => Appointment::AppointmentNo(),
