@@ -63,9 +63,17 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopShortcut}"; GroupDescription
 ; 各有独立的 DestDir，不该被复制进项目目录（否则白占 1.3GB+）。
 Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels,laragon,wmf51,win7-prereq,vc_redist.x64.exe,python-installer.exe"
 
+; ⚠ 这些运行时目录**不得**再加 Check: DirExists(ExpandConstant('{src}\dist\...'))。
+;   Check 是在**目标机安装时**求值的，而 {src} 指 setup.exe 所在目录 ——
+;   单独分发安装器时它旁边根本没有 dist\，条件恒为假，于是 Laragon/PHP/MySQL、
+;   SHA-2 补丁、WMF、.NET、OCR 全部被静默跳过，装完只剩一个空壳。
+;   编译期是否存在应交给 ISCC 自己判断：源目录缺失时直接编译失败，
+;   这正是我们要的 —— 缺前置的 Win7 包不该被产出。
+;   单文件的可选项用 skipifsourcedoesntexist（那是编译期语义，正确）。
+
 ; Win7 运行环境：PHP 8.2.33 / MySQL 5.7.44 / Nginx / Composer，由 build.sh 自组装。
 ; install-win.ps1 从 {app}\laragon\bin\{php,mysql,nginx} 自动发现版本目录。
-Source: "dist\laragon\*"; DestDir: "{app}\laragon"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\laragon'))
+Source: "dist\laragon\*"; DestDir: "{app}\laragon"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; VC++ 2015-2022 x64 运行库（PHP VS16 构建的依赖）
 Source: "dist\vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
@@ -73,15 +81,19 @@ Source: "dist\vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion skipifs
 ; 微软自 2019 年起用 SHA-2 重签所有更新，纯净 Win7 SP1 验不了签名，
 ; 此时 wusa 装 .NET/WMF 会长时间卡在「Searching for updates」而不返回。
 ; 文件名的 01-/02- 前缀即安装顺序，install-win.bat 按名字排序逐个安装。
-Source: "dist\win7-prereq\*"; DestDir: "{app}\win7-prereq"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\win7-prereq'))
+Source: "dist\win7-prereq\*"; DestDir: "{app}\win7-prereq"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; WMF 5.1：Win7 自带 PowerShell 2.0，install-win.bat 会按需静默安装
-Source: "dist\wmf51\*"; DestDir: "{app}\wmf51"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\wmf51'))
+Source: "dist\wmf51\*"; DestDir: "{app}\wmf51"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; .NET Framework 4.8：WMF 5.1 要求 .NET 4.5.2+，而纯净 Win7 SP1 只有 3.5.1。
 ; 不带这个，离线机器装不了 WMF，也就跑不了 install-win.ps1。
-Source: "dist\dotnet48\*"; DestDir: "{app}\dotnet48"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\dotnet48'))
+Source: "dist\dotnet48\*"; DestDir: "{app}\dotnet48"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; OCR Python 离线包
-Source: "dist\ocr-wheels\*"; DestDir: "{app}\ocr-wheels"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\ocr-wheels'))
+; OCR Python 离线包。这一项是真可选的（build.sh --skip-ocr 就不会产出），
+; 所以用 ISPP 的**编译期**条件，而不是运行时 Check —— SourcePath 是本 .iss
+; 所在目录，在编译机上求值，语义才对。
+#if DirExists(AddBackslash(SourcePath) + "dist\ocr-wheels")
+Source: "dist\ocr-wheels\*"; DestDir: "{app}\ocr-wheels"; Flags: ignoreversion recursesubdirs createallsubdirs
+#endif
 Source: "dist\python-installer.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "dist\laragon-wamp.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 

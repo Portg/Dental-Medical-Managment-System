@@ -150,11 +150,15 @@ call :log "PowerShell 主版本: %PS_MAJOR%"
 REM 自检必须放在版本探测之后（要报告 PS_MAJOR），但在任何安装动作之前
 if "%SELFTEST%"=="1" goto :selftest
 
-if %PS_MAJOR% GEQ 3 goto :ps_ok
+REM 门槛是 5 而不是 3：install-win.ps1 用了 [System.Text.UTF8Encoding]::new()
+REM （第 144、243 行），::new() 静态构造语法自 PowerShell 5.0 起才有。
+REM 写成 GEQ 3 的话，装了 PS3/PS4 的 Win7 会跳过 WMF 5.1，然后在 PS1 执行阶段
+REM 才以「方法调用失败」告终 —— 报错点离真正的原因十万八千里。
+if %PS_MAJOR% GEQ 5 goto :ps_ok
 
 echo.
 echo  =======================================================
-echo    检测到 PowerShell %PS_MAJOR%.0，安装程序需要 3.0 以上
+echo    检测到 PowerShell %PS_MAJOR%.0，安装程序需要 5.0 以上
 echo  =======================================================
 echo.
 echo  Windows 7 出厂自带 PowerShell 2.0，需要先安装 WMF 5.1。

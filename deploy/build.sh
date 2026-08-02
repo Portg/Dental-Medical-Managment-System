@@ -183,6 +183,10 @@ expected_sha256() {
         ssu4490628)   echo "8075f6d889bcb27be6f52ed47081675e5bb8a5390f2f5bfe4ec27a2bb70cbf5e" ;;
         # windows6.1-kb4474419-v3-x64.msu（SHA-2 代码签名支持）
         sha2_4474419) echo "99312df792b376f02e25607d2eb3355725c47d124d8da253193195515fe90213" ;;
+        # vc_redist.x64.exe —— 当前锁定的是 aka.ms/vs/17 在 2026-08-01 取到的那一版。
+        # ⚠ 待确认：该版本属于 VS2022 系列，Win7 SP1 兼容性需逐版本核实；
+        #   若确认不兼容，应改用 VS2019 14.29 系列并同步更新此指纹与 URL。
+        vcredist)     echo "cc0ff0eb1dc3f5188ae6300faef32bf5beeba4bdd6e8e445a9184072096b713b" ;;
         *)            echo "" ;;
     esac
 }
@@ -443,6 +447,146 @@ MANIFEST
     PHP_DIR_OK=false
     [[ -d "$ASSEMBLED_DIR/bin/php/$EXPECTED_PHP_DIR" ]] && PHP_DIR_OK=true
 
+# ── Win7 前置组件下载（VC++ / SHA-2 补丁 / WMF 5.1 / .NET 4.8）
+#
+# 必须独立于「运行时是否命中缓存」。这几样原本写在缓存重建分支里，
+# 结果是：只要 .cache/win7-runtime 还在（PHP/MySQL/Composer 齐、清单校验通过），
+# 整个 else 分支就不执行，新加的组件永远下不下来 —— 打出来的包看着成功，
+# 装到纯净 Win7 上却缺前置。
+download_win7_prereqs() {
+    PREREQ_OK=true
+
+    # ── VC++ 2015-2022 x64 运行库
+    # PHP 的 VS16 构建依赖它；Win7 常见的「php.exe 双击无反应/缺少 VCRUNTIME140.dll」
+    # 就是缺这个。随包提供，避免要求现场联网。
+    #
+    # ⚠ aka.ms/vs/17/release 是**移动地址**，永远指向最新的 VS2022 运行库。
+    #   后果有二：构建不可复现（同一个 tag 两次构建装进去的运行库不同）；
+    #   而且 VS2022 系列是否仍支持 Win7 SP1 需要逐版本确认，跟着它漂移等于
+    #   把「目标机能不能跑起来」交给上游随时改。
+    #   因此这里固定 SHA-256：指纹对不上就失败，逼人显式确认换版本。
+    #   要换版本：改 VCREDIST_DOWNLOAD_URL，跑一次拿到实际指纹，
+    #   再更新 expected_sha256() 里的 vcredist 条目。
+    VCREDIST_URL="${VCREDIST_DOWNLOAD_URL:-https://aka.ms/vs/17/release/vc_redist.x64.exe}"
+    VCREDIST_OVERRIDDEN=$([[ -n "${VCREDIST_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+    VCREDIST_CACHE="$CACHE_DIR/vc_redist.x64.exe"
+
+    if [[ -s "$VCREDIST_CACHE" ]] && ! verify_sha256 "$VCREDIST_CACHE" "vcredist" "$VCREDIST_OVERRIDDEN"; then
+        warn "VC++ 运行库: 缓存指纹不符，重新下载"
+        rm -f "$VCREDIST_CACHE"
+    fi
+
+    if [[ ! -s "$VCREDIST_CACHE" ]]; then
+        if curl -fsSL --retry 2 -o "$VCREDIST_CACHE" "$VCREDIST_URL" \
+           && [[ -s "$VCREDIST_CACHE" ]] \
+           && verify_sha256 "$VCREDIST_CACHE" "vcredist" "$VCREDIST_OVERRIDDEN"; then
+            info "VC++ 2015-2022 x64 运行库已下载"
+        else
+            rm -f "$VCREDIST_CACHE"
+            error "VC++ 运行库下载失败或指纹不符 —— PHP 在目标机上将无法启动"; PREREQ_OK=false
+        fi
+    else
+        info "VC++ 运行库: 使用缓存（指纹已校验）"
+    fi
+
+    # ── Win7 SHA-2 前置：服务堆栈更新 + SHA-2 代码签名支持
+    #
+    # 微软自 2019 年起把更新全部改用 SHA-2 签名。纯净 Win7 SP1 验不了 SHA-2，
+    # wusa 拿到这类 MSU 的典型表现不是快速报错，而是长时间卡在
+    # "Searching for updates on this computer" —— 安装 WMF 5.1 时"一直停着"
+    # 多半就是这个原因。必须按 SSU → SHA-2 的顺序先补上。
+    #
+    # 两个包都从 Windows Update CDN 取。文件名里的指纹是包的一部分，
+    # 换版本时请从 catalog.update.microsoft.com 重新解析地址并更新上面的 SHA-256。
+    SSU_URL="${SSU_DOWNLOAD_URL:-http://download.windowsupdate.com/c/msdownload/update/software/secu/2019/03/windows6.1-kb4490628-x64_d3de52d6987f7c8bdc2c015dca69eac96047c76e.msu}"
+    SHA2_URL="${SHA2_DOWNLOAD_URL:-http://download.windowsupdate.com/c/msdownload/update/software/secu/2019/09/windows6.1-kb4474419-v3-x64_b5614c6cea5cb4e198717789633dca16308ef79c.msu}"
+
+    PREREQ_CACHE="$CACHE_DIR/win7-prereq"
+    mkdir -p "$PREREQ_CACHE"
+
+    # 装入顺序由文件名前缀决定（install-win.bat 按名字排序逐个安装），
+    # 不要改这两个前缀：SSU 必须先于 SHA-2。
+    download_win7_prereq() {
+        local url="$1" out="$2" sha_key="$3" label="$4" size_hint="$5" overridden="$6"
+        local dest="$PREREQ_CACHE/$out"
+
+        if [[ -s "$dest" ]] && ! verify_sha256 "$dest" "$sha_key" "$overridden"; then
+            warn "$label: 缓存指纹不符，重新下载"
+            rm -f "$dest"
+        fi
+
+        if [[ -s "$dest" ]]; then
+            info "$label: 使用缓存"
+            return 0
+        fi
+
+        echo -e "  ${CYAN}下载 $label（约 ${size_hint}）...${NC}"
+        if curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$dest" "$url" \
+           && [[ -s "$dest" ]] \
+           && verify_sha256 "$dest" "$sha_key" "$overridden"; then
+            info "$label 已下载"
+            return 0
+        fi
+
+        rm -f "$dest"
+        return 1
+    }
+
+    if ! download_win7_prereq "$SSU_URL" "01-windows6.1-kb4490628-x64.msu" "ssu4490628" \
+            "服务堆栈更新 KB4490628" "10MB" \
+            "$([[ -n "${SSU_DOWNLOAD_URL:-}" ]] && echo true || echo false)"; then
+        error "KB4490628 下载失败 —— 纯净 Win7 SP1 装不了 SHA-2 补丁，WMF 5.1 会卡死"; PREREQ_OK=false
+    fi
+
+    if ! download_win7_prereq "$SHA2_URL" "02-windows6.1-kb4474419-v3-x64.msu" "sha2_4474419" \
+            "SHA-2 代码签名支持 KB4474419" "56MB" \
+            "$([[ -n "${SHA2_DOWNLOAD_URL:-}" ]] && echo true || echo false)"; then
+        error "KB4474419 下载失败 —— 纯净 Win7 SP1 验不了 SHA-2 签名，WMF 5.1 会卡死"; PREREQ_OK=false
+    fi
+
+    # ── WMF 5.1（PowerShell 5.1 for Win7 SP1）
+    # Win7 自带 PowerShell 2.0，而 install-win.ps1 使用了 [T]::new()（PS5）
+    # 与 *> 重定向（PS3），在 PS2 上会直接解析失败。安装前按需静默安装。
+    # 注意 WMF 5.1 本身要求 .NET Framework 4.5+。
+    WMF_URL="${WMF_DOWNLOAD_URL:-https://download.microsoft.com/download/6/F/5/6F5FF66C-6775-42B0-86C4-47D41F2DA187/Win7AndW2K8R2-KB3191566-x64.zip}"
+    WMF_URL_OVERRIDDEN=$([[ -n "${WMF_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+    if download_and_extract "$WMF_URL" "$CACHE_DIR/wmf51.zip" "$CACHE_DIR/wmf51-extracted" "WMF 5.1 (PowerShell 5.1)" "wmf51" "$WMF_URL_OVERRIDDEN"; then
+        info "WMF 5.1 已就位"
+    else
+        error "WMF 5.1 下载失败 —— Win7 自带的 PowerShell 2.0 无法运行安装脚本"; PREREQ_OK=false
+    fi
+
+    # ── .NET Framework 4.8 离线安装包
+    # WMF 5.1 的安装前提是 .NET Framework 4.5.2+，而纯净 Win7 SP1 只带 3.5.1。
+    # 不随包提供，离线的目标机就装不上 WMF，也就跑不了 install-win.ps1 ——
+    # 「离线安装」这件事在纯净 Win7 上根本不成立。约 115MB。
+    DOTNET48_URL="${DOTNET48_DOWNLOAD_URL:-https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe}"
+    DOTNET48_URL_OVERRIDDEN=$([[ -n "${DOTNET48_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+    DOTNET48_CACHE="$CACHE_DIR/ndp48-x86-x64-allos-enu.exe"
+
+    # 缓存也要对指纹：这是个长期复用目录，混进错误产物会一直沿用
+    if [[ -s "$DOTNET48_CACHE" ]] && ! verify_sha256 "$DOTNET48_CACHE" "dotnet48" "$DOTNET48_URL_OVERRIDDEN"; then
+        warn ".NET 4.8: 缓存指纹不符，重新下载"
+        rm -f "$DOTNET48_CACHE"
+    fi
+
+    if [[ ! -s "$DOTNET48_CACHE" ]]; then
+        echo -e "  ${CYAN}下载 .NET Framework 4.8 离线安装包（约 115MB）...${NC}"
+        if curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$DOTNET48_CACHE" "$DOTNET48_URL" \
+           && [[ -s "$DOTNET48_CACHE" ]] \
+           && verify_sha256 "$DOTNET48_CACHE" "dotnet48" "$DOTNET48_URL_OVERRIDDEN"; then
+            info ".NET Framework 4.8 已下载"
+        else
+            rm -f "$DOTNET48_CACHE"
+            error ".NET 4.8 下载失败 —— 纯净 Win7 SP1 将无法安装 WMF 5.1"; PREREQ_OK=false
+        fi
+    else
+        info ".NET Framework 4.8: 使用缓存"
+    fi
+
+    [[ "$PREREQ_OK" == true ]]
+}
+
     if [[ "$HAS_PHP" == true ]] && [[ "$HAS_MYSQL" == true ]] && [[ "$HAS_COMPOSER" == true ]] \
        && [[ "$MANIFEST_OK" == true ]] && [[ "$PHP_DIR_OK" == true ]]; then
         info "使用已组装的 Win7 运行环境缓存: $ASSEMBLED_DIR"
@@ -622,116 +766,6 @@ MANIFEST
             fi
         fi
 
-        # ── VC++ 2015-2022 x64 运行库
-        # PHP 的 VS16 构建依赖它；Win7 常见的「php.exe 双击无反应/缺少 VCRUNTIME140.dll」
-        # 就是缺这个。随包提供，避免要求现场联网。
-        VCREDIST_URL="${VCREDIST_DOWNLOAD_URL:-https://aka.ms/vs/17/release/vc_redist.x64.exe}"
-        VCREDIST_CACHE="$CACHE_DIR/vc_redist.x64.exe"
-        if [[ ! -s "$VCREDIST_CACHE" ]]; then
-            if curl -fsSL --retry 2 -o "$VCREDIST_CACHE" "$VCREDIST_URL" && [[ -s "$VCREDIST_CACHE" ]]; then
-                info "VC++ 2015-2022 x64 运行库已下载"
-            else
-                rm -f "$VCREDIST_CACHE"
-                error "VC++ 运行库下载失败 —— PHP 在目标机上将无法启动"; ASSEMBLE_OK=false
-            fi
-        else
-            info "VC++ 运行库: 使用缓存"
-        fi
-
-        # ── Win7 SHA-2 前置：服务堆栈更新 + SHA-2 代码签名支持
-        #
-        # 微软自 2019 年起把更新全部改用 SHA-2 签名。纯净 Win7 SP1 验不了 SHA-2，
-        # wusa 拿到这类 MSU 的典型表现不是快速报错，而是长时间卡在
-        # "Searching for updates on this computer" —— 安装 WMF 5.1 时"一直停着"
-        # 多半就是这个原因。必须按 SSU → SHA-2 的顺序先补上。
-        #
-        # 两个包都从 Windows Update CDN 取。文件名里的指纹是包的一部分，
-        # 换版本时请从 catalog.update.microsoft.com 重新解析地址并更新上面的 SHA-256。
-        SSU_URL="${SSU_DOWNLOAD_URL:-http://download.windowsupdate.com/c/msdownload/update/software/secu/2019/03/windows6.1-kb4490628-x64_d3de52d6987f7c8bdc2c015dca69eac96047c76e.msu}"
-        SHA2_URL="${SHA2_DOWNLOAD_URL:-http://download.windowsupdate.com/c/msdownload/update/software/secu/2019/09/windows6.1-kb4474419-v3-x64_b5614c6cea5cb4e198717789633dca16308ef79c.msu}"
-
-        PREREQ_CACHE="$CACHE_DIR/win7-prereq"
-        mkdir -p "$PREREQ_CACHE"
-
-        # 装入顺序由文件名前缀决定（install-win.bat 按名字排序逐个安装），
-        # 不要改这两个前缀：SSU 必须先于 SHA-2。
-        download_win7_prereq() {
-            local url="$1" out="$2" sha_key="$3" label="$4" size_hint="$5" overridden="$6"
-            local dest="$PREREQ_CACHE/$out"
-
-            if [[ -s "$dest" ]] && ! verify_sha256 "$dest" "$sha_key" "$overridden"; then
-                warn "$label: 缓存指纹不符，重新下载"
-                rm -f "$dest"
-            fi
-
-            if [[ -s "$dest" ]]; then
-                info "$label: 使用缓存"
-                return 0
-            fi
-
-            echo -e "  ${CYAN}下载 $label（约 ${size_hint}）...${NC}"
-            if curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$dest" "$url" \
-               && [[ -s "$dest" ]] \
-               && verify_sha256 "$dest" "$sha_key" "$overridden"; then
-                info "$label 已下载"
-                return 0
-            fi
-
-            rm -f "$dest"
-            return 1
-        }
-
-        if ! download_win7_prereq "$SSU_URL" "01-windows6.1-kb4490628-x64.msu" "ssu4490628" \
-                "服务堆栈更新 KB4490628" "10MB" \
-                "$([[ -n "${SSU_DOWNLOAD_URL:-}" ]] && echo true || echo false)"; then
-            error "KB4490628 下载失败 —— 纯净 Win7 SP1 装不了 SHA-2 补丁，WMF 5.1 会卡死"; ASSEMBLE_OK=false
-        fi
-
-        if ! download_win7_prereq "$SHA2_URL" "02-windows6.1-kb4474419-v3-x64.msu" "sha2_4474419" \
-                "SHA-2 代码签名支持 KB4474419" "56MB" \
-                "$([[ -n "${SHA2_DOWNLOAD_URL:-}" ]] && echo true || echo false)"; then
-            error "KB4474419 下载失败 —— 纯净 Win7 SP1 验不了 SHA-2 签名，WMF 5.1 会卡死"; ASSEMBLE_OK=false
-        fi
-
-        # ── WMF 5.1（PowerShell 5.1 for Win7 SP1）
-        # Win7 自带 PowerShell 2.0，而 install-win.ps1 使用了 [T]::new()（PS5）
-        # 与 *> 重定向（PS3），在 PS2 上会直接解析失败。安装前按需静默安装。
-        # 注意 WMF 5.1 本身要求 .NET Framework 4.5+。
-        WMF_URL="${WMF_DOWNLOAD_URL:-https://download.microsoft.com/download/6/F/5/6F5FF66C-6775-42B0-86C4-47D41F2DA187/Win7AndW2K8R2-KB3191566-x64.zip}"
-        WMF_URL_OVERRIDDEN=$([[ -n "${WMF_DOWNLOAD_URL:-}" ]] && echo true || echo false)
-        if download_and_extract "$WMF_URL" "$CACHE_DIR/wmf51.zip" "$CACHE_DIR/wmf51-extracted" "WMF 5.1 (PowerShell 5.1)" "wmf51" "$WMF_URL_OVERRIDDEN"; then
-            info "WMF 5.1 已就位"
-        else
-            error "WMF 5.1 下载失败 —— Win7 自带的 PowerShell 2.0 无法运行安装脚本"; ASSEMBLE_OK=false
-        fi
-
-        # ── .NET Framework 4.8 离线安装包
-        # WMF 5.1 的安装前提是 .NET Framework 4.5.2+，而纯净 Win7 SP1 只带 3.5.1。
-        # 不随包提供，离线的目标机就装不上 WMF，也就跑不了 install-win.ps1 ——
-        # 「离线安装」这件事在纯净 Win7 上根本不成立。约 115MB。
-        DOTNET48_URL="${DOTNET48_DOWNLOAD_URL:-https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe}"
-        DOTNET48_URL_OVERRIDDEN=$([[ -n "${DOTNET48_DOWNLOAD_URL:-}" ]] && echo true || echo false)
-        DOTNET48_CACHE="$CACHE_DIR/ndp48-x86-x64-allos-enu.exe"
-
-        # 缓存也要对指纹：这是个长期复用目录，混进错误产物会一直沿用
-        if [[ -s "$DOTNET48_CACHE" ]] && ! verify_sha256 "$DOTNET48_CACHE" "dotnet48" "$DOTNET48_URL_OVERRIDDEN"; then
-            warn ".NET 4.8: 缓存指纹不符，重新下载"
-            rm -f "$DOTNET48_CACHE"
-        fi
-
-        if [[ ! -s "$DOTNET48_CACHE" ]]; then
-            echo -e "  ${CYAN}下载 .NET Framework 4.8 离线安装包（约 115MB）...${NC}"
-            if curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$DOTNET48_CACHE" "$DOTNET48_URL" \
-               && [[ -s "$DOTNET48_CACHE" ]] \
-               && verify_sha256 "$DOTNET48_CACHE" "dotnet48" "$DOTNET48_URL_OVERRIDDEN"; then
-                info ".NET Framework 4.8 已下载"
-            else
-                rm -f "$DOTNET48_CACHE"
-                error ".NET 4.8 下载失败 —— 纯净 Win7 SP1 将无法安装 WMF 5.1"; ASSEMBLE_OK=false
-            fi
-        else
-            info ".NET Framework 4.8: 使用缓存"
-        fi
 
         if [[ "$ASSEMBLE_OK" == true ]]; then
             # 组装成功才写清单 —— 半成品不留清单，下次构建会当作不可信缓存丢弃
@@ -742,6 +776,13 @@ MANIFEST
             rm -rf "$ASSEMBLED_DIR"
             fatal "Win7 运行环境组装失败（PHP 或 MySQL 缺失），请检查网络或用 PHP_DOWNLOAD_URL/MYSQL_DOWNLOAD_URL 指定镜像"
         fi
+    fi
+
+    # 前置组件的下载与运行时缓存是否命中**无关**，必须无条件执行。
+    # 缺任何一样，包在纯净 Win7 上都装不起来 —— 与其产出一个装不上的
+    # 「成功包」，不如当场失败。
+    if ! download_win7_prereqs; then
+        fatal "Win7 前置组件缺失（SHA-2 补丁 / WMF 5.1 / .NET 4.8 / VC++ 运行库），拒绝产出装不上的安装包"
     fi
 fi
 
@@ -789,7 +830,14 @@ SUFFIX="${TARGET}"
 if [[ "$UPGRADE" == true ]]; then
     SUFFIX="${TARGET}-upgrade"
 fi
-ARCHIVE_NAME="dental-clinic-${VERSION}-${SUFFIX}.zip"
+
+# 产物名带上 commit 短哈希：现场反复拿旧包测试、以为改动没生效，是真实发生过的事。
+# 文件名里有构建标识，一眼就能对上是哪次提交出的包。
+BUILD_ID="$(cd "$PROJECT_ROOT" 2>/dev/null && git rev-parse --short HEAD 2>/dev/null)"
+[[ -n "$(cd "$PROJECT_ROOT" 2>/dev/null && git status --porcelain 2>/dev/null)" ]] && BUILD_ID="${BUILD_ID}-dirty"
+[[ -z "$BUILD_ID" ]] && BUILD_ID="nogit"
+
+ARCHIVE_NAME="dental-clinic-${VERSION}-${SUFFIX}-${BUILD_ID}.zip"
 ARCHIVE_PATH="$OUTPUT_DIR/$ARCHIVE_NAME"
 
 # ── 构建开始 ───────────────────────────────────────────────────────────
@@ -1763,6 +1811,56 @@ p.write_text(text, encoding="utf-8-sig")
 fi
 
 # ═══════════════════════════════════════════════════════════════════════
+# Step N: 打包前内容断言
+#
+# 前面每一步缺件时大多只是 warn，于是可以一路「成功」地产出一个装不上的包。
+# 这里是最后一道闸：Win7 全量包必须齐的东西，缺一样就失败，不许出包。
+# ═══════════════════════════════════════════════════════════════════════
+if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
+    step "校验发布包内容"
+
+    ASSERT_FAIL=false
+    assert_exists() {   # <路径> <说明>
+        if [[ -e "$DIST_DIR/$1" ]]; then
+            info "  ✓ $2"
+        else
+            error "  ✗ 缺失: $1（$2）"; ASSERT_FAIL=true
+        fi
+    }
+    assert_glob_count() {  # <glob> <期望个数> <说明>
+        local n
+        n=$(find "$DIST_DIR/$(dirname "$1")" -name "$(basename "$1")" 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$n" -ge "$2" ]]; then
+            info "  ✓ $3（$n 个）"
+        else
+            error "  ✗ $3：期望至少 $2 个，实际 $n 个（$1）"; ASSERT_FAIL=true
+        fi
+    }
+
+    # 纯净 Win7 装不上就是缺这几样
+    assert_glob_count "win7-prereq/*.msu" 2 "SHA-2 前置补丁（KB4490628 + KB4474419）"
+    assert_glob_count "wmf51/*.msu"       1 "WMF 5.1"
+    assert_glob_count "dotnet48/*.exe"    1 ".NET Framework 4.8"
+    assert_exists     "vc_redist.x64.exe"   "VC++ 2015-2022 x64 运行库"
+    assert_exists     "laragon/bin/php"     "PHP 运行时"
+    assert_exists     "laragon/bin/mysql"   "MySQL 运行时"
+    assert_exists     "install-win.bat"     "安装脚本"
+    assert_exists     "install-win.ps1"     "配置脚本"
+
+    # 脚本必须是当前版本，不能是残留的旧副本。--selftest 是最近加的，
+    # 拿它当版本水印：缺了就说明 dist 里混进了过时的 BAT。
+    if [[ -f "$DIST_DIR/install-win.bat" ]] && ! grep -q -- "--selftest" "$DIST_DIR/install-win.bat" 2>/dev/null; then
+        error "  ✗ install-win.bat 不含 --selftest —— dist 里是过时的副本"
+        ASSERT_FAIL=true
+    fi
+
+    if [[ "$ASSERT_FAIL" == true ]]; then
+        fatal "发布包内容校验未通过，拒绝产出装不上的安装包（详见上方 ✗ 项）"
+    fi
+    info "发布包内容校验通过"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════
 # Step N: 打包
 # ═══════════════════════════════════════════════════════════════════════
 step "创建发布包"
@@ -1774,7 +1872,7 @@ if [[ -f "$ARCHIVE_PATH" ]]; then
 fi
 
 # 创建压缩包（在 dist 的父目录执行，使归档内路径为 dental-clinic-VERSION-TARGET/...）
-ARCHIVE_ROOT_NAME="dental-clinic-${VERSION}-${SUFFIX}"
+ARCHIVE_ROOT_NAME="dental-clinic-${VERSION}-${SUFFIX}-${BUILD_ID}"
 
 # 重命名 dist 目录为目标名称以获得干净的归档路径
 mv "$DIST_DIR" "$PROJECT_ROOT/deploy/$ARCHIVE_ROOT_NAME"
