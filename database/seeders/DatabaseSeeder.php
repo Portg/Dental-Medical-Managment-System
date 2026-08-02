@@ -45,6 +45,15 @@ class DatabaseSeeder extends Seeder
         // 诊疗服务项目
         $this->call(MedicalServicesSeeder::class);
 
+        // 收费项目分类 —— 必须排在 MedicalServicesSeeder **之后**：
+        // 它是从项目表的旧 category 字段反推分类再回填 category_id 的，
+        // 项目还没插进来的话建不出任何分类（这正是全新安装时分类树为空的原因）。
+        $this->call(ServiceCategoriesSeeder::class);
+
+        // 默认班次 —— 排班依赖它，没有班次就排不了班、出不了可预约时段。
+        // 放在 UsersTableSeeder 之后，_who_added 的外键才有得填。
+        $this->call(ShiftsTableSeeder::class);
+
         // 费用分类
         $this->call(ExpenseCategoriesSeeder::class);
 
