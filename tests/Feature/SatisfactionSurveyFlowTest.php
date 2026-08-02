@@ -222,4 +222,98 @@ class SatisfactionSurveyFlowTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->service()->regenerateToken($survey->id);
     }
+
+    // ── 匿名与并发 ──────────────────────────────────────────────────
+
+    /**
+     * 匿名标志必须与评价同一次落库。分两次写的话，两次之间问卷已是 completed，
+     * 此刻被读到就会带出患者身份。
+     */
+    public function test_anonymous_flag_is_persisted_together_with_the_ratings(): void
+    {
+        $this->actingAs($this->admin);
+        $survey = $this->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $this->post('/survey/' . $survey->token, [
+            'overall_rating' => 5,
+            'is_anonymous'   => 1,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('satisfaction_surveys', [
+            'id'           => $survey->id,
+            'status'       => SatisfactionSurvey::STATUS_COMPLETED,
+            'is_anonymous' => 1,
+        ]);
+    }
+
+    /**
+     * 提交是带 status = pending 条件的更新，第二次提交影响 0 行即被拒，
+     * 而不是覆盖患者已给出的评价。
+     */
+    public function test_second_submit_cannot_overwrite_the_first_rating(): void
+    {
+        $this->actingAs($this->admin);
+        $survey = $this->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $this->post('/survey/' . $survey->token, ['overall_rating' => 5])->assertOk();
+        $this->post('/survey/' . $survey->token, ['overall_rating' => 1])->assertStatus(404);
+
+        $this->assertDatabaseHas('satisfaction_surveys', [
+            'id'             => $survey->id,
+            'overall_rating' => 5,
+        ]);
+    }
+
+    /**
+     * 一次就诊一份问卷——并发窗口靠 appointment_id 的唯一索引兜底。
+     */
+    public function test_appointment_can_only_have_one_survey(): void
+    {
+        $this->actingAs($this->admin);
+
+        $first  = $this->service()->createSurvey($this->appointment->id, 'wechat');
+        $second = $this->service()->createSurvey($this->appointment->id, 'wechat');
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame(1, SatisfactionSurvey::where('appointment_id', $this->appointment->id)->count());
+    }
+
+    // ── 权限边界 ────────────────────────────────────────────────────
+
+    /**
+     * 看得到问卷 ≠ 能生成问卷。医生只有 view-surveys，不该能批量生成或重置链接。
+     */
+    public function test_view_only_role_cannot_generate_or_reset_surveys(): void
+    {
+        $doctor = $this->userWithPermissions('doctor-view-only', ['view-surveys']);
+        $survey = $this->actingAs($this->admin)->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $this->actingAs($doctor)->get('/satisfaction-surveys')->assertOk();
+
+        $this->actingAs($doctor)
+            ->post('/satisfaction-surveys/send-batch', ['date' => now()->format('Y-m-d'), 'channel' => 'wechat'])
+            ->assertStatus(403);
+
+        $this->actingAs($doctor)
+            ->post('/satisfaction-surveys/' . $survey->id . '/regenerate-link')
+            ->assertStatus(403);
+    }
+
+    private function userWithPermissions(string $roleSlug, array $permissionSlugs): User
+    {
+        $role = Role::create(['name' => $roleSlug, 'slug' => $roleSlug]);
+
+        foreach ($permissionSlugs as $slug) {
+            $permId = \App\Permission::where('slug', $slug)->value('id')
+                ?? \App\Permission::create(['name' => $slug, 'slug' => $slug, 'module' => 'test'])->id;
+
+            \App\RolePermission::create(['role_id' => $role->id, 'permission_id' => $permId]);
+        }
+
+        return User::factory()->create([
+            'role_id'   => $role->id,
+            'branch_id' => $this->admin->branch_id,
+            'status'    => User::STATUS_ACTIVE,
+        ]);
+    }
 }

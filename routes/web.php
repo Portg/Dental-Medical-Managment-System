@@ -602,7 +602,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('satisfaction-surveys/create', 'SatisfactionSurveyController@create');
     Route::post('satisfaction-surveys', 'SatisfactionSurveyController@store');
     Route::get('satisfaction-surveys/{id}', 'SatisfactionSurveyController@show');
-    Route::post('satisfaction-surveys/{id}/submit', 'SatisfactionSurveyController@submit');
+    // 患者提交走公开的 token 链接（PublicSurveyController），
+    // 后台按数字 ID 提交的入口已移除，避免员工替患者伪造评价
     Route::post('satisfaction-surveys/send-batch', 'SatisfactionSurveyController@sendBatch');
     Route::post('satisfaction-surveys/{id}/regenerate-link', 'SatisfactionSurveyController@regenerateLink');
 

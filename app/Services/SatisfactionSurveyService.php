@@ -81,10 +81,11 @@ class SatisfactionSurveyService
     {
         $appointment = Appointment::findOrFail($appointmentId);
 
-        return SatisfactionSurvey::create([
+        // 一次就诊一份问卷（关系与测试都这么声明）。firstOrCreate 配合
+        // appointment_id 上的唯一索引，才能挡住「查不存在→创建」之间的并发窗口。
+        return SatisfactionSurvey::firstOrCreate(['appointment_id' => $appointment->id], [
             'token'          => SatisfactionSurvey::generateToken(),
             'patient_id'     => $appointment->patient_id,
-            'appointment_id' => $appointment->id,
             // 注意：doctor 是 belongsTo 关联，不是字段；预约表上的列名为 doctor_id。
             // 原先写成 $appointment->doctor 会把 User 对象塞进 doctor_id。
             'doctor_id'      => $appointment->doctor_id,
@@ -170,18 +171,32 @@ class SatisfactionSurveyService
             throw new \RuntimeException(__('satisfaction.link_expired'));
         }
 
-        return (bool) $survey->update([
-            'overall_rating' => $data['overall_rating'],
-            'service_rating' => $data['service_rating'] ?? null,
-            'environment_rating' => $data['environment_rating'] ?? null,
-            'wait_time_rating' => $data['wait_time_rating'] ?? null,
-            'doctor_rating' => $data['doctor_rating'] ?? null,
-            'would_recommend' => $data['would_recommend'] ?? null,
-            'feedback' => $data['feedback'] ?? null,
-            'suggestions' => $data['suggestions'] ?? null,
-            'survey_date' => now(),
-            'status' => SatisfactionSurvey::STATUS_COMPLETED,
-        ]);
+        // 上面的状态检查挡不住并发：两个请求可以同时读到 pending，后写的一份会
+        // 覆盖先写的评价。真正的判定放在带 status = pending 条件的更新里，
+        // 靠影响行数决定谁抢到；匿名标志也必须在同一次更新内落库，
+        // 否则会出现「已完成但匿名标志还没写」的中间态。
+        $affected = SatisfactionSurvey::where('id', $survey->id)
+            ->where('status', SatisfactionSurvey::STATUS_PENDING)
+            ->update([
+                'overall_rating' => $data['overall_rating'],
+                'service_rating' => $data['service_rating'] ?? null,
+                'environment_rating' => $data['environment_rating'] ?? null,
+                'wait_time_rating' => $data['wait_time_rating'] ?? null,
+                'doctor_rating' => $data['doctor_rating'] ?? null,
+                'would_recommend' => $data['would_recommend'] ?? null,
+                'feedback' => $data['feedback'] ?? null,
+                'suggestions' => $data['suggestions'] ?? null,
+                'is_anonymous' => (bool) ($data['is_anonymous'] ?? false),
+                'survey_date' => now(),
+                'status' => SatisfactionSurvey::STATUS_COMPLETED,
+            ]);
+
+        if ($affected === 0) {
+            // 并发下输给了另一个请求，或状态已被改成 expired
+            throw new \RuntimeException(__('satisfaction.already_completed'));
+        }
+
+        return true;
     }
 
     /**

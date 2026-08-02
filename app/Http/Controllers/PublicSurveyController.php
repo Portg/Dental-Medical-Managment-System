@@ -74,16 +74,14 @@ class PublicSurveyController extends Controller
         }
 
         try {
+            // is_anonymous 必须随评价一起提交：单独再 update 一次的话，
+            // 两次写之间问卷已经是 completed 状态，此刻若被读取就会带出患者身份。
             $this->service->submitSurvey($survey->id, $request->only([
                 'overall_rating', 'service_rating', 'environment_rating', 'wait_time_rating',
                 'doctor_rating', 'would_recommend', 'feedback', 'suggestions',
-            ]));
+            ]) + ['is_anonymous' => $request->boolean('is_anonymous')]);
         } catch (\RuntimeException $e) {
             return response()->json(['status' => 0, 'message' => $e->getMessage()], 409);
-        }
-
-        if ($request->boolean('is_anonymous')) {
-            $survey->update(['is_anonymous' => true]);
         }
 
         return response()->json([

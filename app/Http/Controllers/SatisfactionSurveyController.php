@@ -13,8 +13,11 @@ class SatisfactionSurveyController extends Controller
     public function __construct(SatisfactionSurveyService $service)
     {
         $this->service = $service;
-        // 满意度调查属于患者关怀日常运营（前台为主力），不是系统设置
-        $this->middleware('can:view-patients');
+        // 满意度调查属于患者关怀日常运营（前台为主力），不是系统设置。
+        // 但「看」和「改」必须分开：view-patients 授予了全部业务角色，
+        // 挂在整个控制器上等于让任何能看患者的人都能批量生成问卷、重置患者填写链接。
+        $this->middleware('can:view-surveys');
+        $this->middleware('can:manage-surveys')->only(['create', 'store', 'sendBatch', 'regenerateLink']);
     }
 
     /**
@@ -42,7 +45,14 @@ class SatisfactionSurveyController extends Controller
 
         return DataTables::of($query)
             ->addColumn('patient_name', function($row) {
-                return $row->patient->name ?? ($row->is_anonymous ? __('satisfaction.anonymous') : '-');
+                // 匿名判断必须在取姓名之前。原写法是 $row->patient->name ?? (匿名?...)，
+                // 既把匿名判断放在了后面，又读了 patients 表根本没有的 name 列
+                // （恒为 null），结果非匿名问卷的姓名也从来显示不出来。
+                if ($row->is_anonymous) {
+                    return __('satisfaction.anonymous');
+                }
+
+                return optional($row->patient)->full_name ?: '-';
             })
             ->addColumn('doctor_name', function($row) {
                 return $row->doctor->surname ?? '-';
@@ -131,32 +141,9 @@ class SatisfactionSurveyController extends Controller
         ]);
     }
 
-    /**
-     * Submit survey responses.
-     */
-    public function submit(Request $request, $id)
-    {
-        $request->validate([
-            'overall_rating' => 'required|integer|min:1|max:5',
-            'service_rating' => 'nullable|integer|min:1|max:5',
-            'environment_rating' => 'nullable|integer|min:1|max:5',
-            'wait_time_rating' => 'nullable|integer|min:1|max:5',
-            'doctor_rating' => 'nullable|integer|min:1|max:5',
-            'would_recommend' => 'nullable|integer|min:0|max:10',
-            'feedback' => 'nullable|string|max:1000',
-            'suggestions' => 'nullable|string|max:1000',
-        ]);
-
-        $this->service->submitSurvey((int) $id, $request->only([
-            'overall_rating', 'service_rating', 'environment_rating', 'wait_time_rating',
-            'doctor_rating', 'would_recommend', 'feedback', 'suggestions',
-        ]));
-
-        return response()->json([
-            'status' => 'success',
-            'message' => __('satisfaction.thank_you')
-        ]);
-    }
+    // 后台按数字 ID 提交评分的接口已移除：患者填写一律走
+    // PublicSurveyController 的 token 链接，前端从未调用过这个入口，
+    // 留着只是让任何有权限进本控制器的员工都能替患者伪造评价。
 
     /**
      * Send surveys in batch.

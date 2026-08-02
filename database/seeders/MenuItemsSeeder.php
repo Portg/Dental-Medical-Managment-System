@@ -163,7 +163,7 @@ class MenuItemsSeeder extends Seeder
         $careGroup = $this->item($parentId, 'menu.group_patient_care', null, 'icon-call-out', null, 30, 'SANR');
         $this->item($careGroup, 'menu.patient_followups', 'patient-followups', null, 'view-patients', 10, 'SANR');
         $this->item($careGroup, 'menu.birthday_wishes', 'birthday-wishes', null, 'view-patients', 20, 'SANR');
-        $this->item($careGroup, 'menu.satisfaction_survey', 'satisfaction-surveys', null, 'view-patients', 30, 'SAR');
+        $this->item($careGroup, 'menu.satisfaction_survey', 'satisfaction-surveys', null, 'view-surveys', 30, 'SAR');
 
         // 2.4 Image Data — DIRECT for all
         $this->item($parentId, 'menu.group_image_data', 'patient-images', 'icon-picture', 'view-patients', 40, 'SADNR');
