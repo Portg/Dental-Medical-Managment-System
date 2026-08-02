@@ -29,8 +29,12 @@ class LabCaseService
                 'patients.patient_no',
                 'users.othername as doctor_name',
                 'labs.name as lab_name',
+                // lab_case_items 是软删除模型，缩减明细时旧行仍在表里，
+                // 这里是裸查询不走 SoftDeletes，必须自己过滤，否则列表会显示已移除的修复体
                 DB::raw("(SELECT GROUP_CONCAT(lci.prosthesis_type ORDER BY lci.sort_order SEPARATOR ',')
-                          FROM lab_case_items lci WHERE lci.lab_case_id = lab_cases.id) as item_types")
+                          FROM lab_case_items lci
+                          WHERE lci.lab_case_id = lab_cases.id
+                            AND lci.deleted_at IS NULL) as item_types")
             );
 
         if (!empty($filters['status'])) {

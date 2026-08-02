@@ -736,7 +736,11 @@ class TodayWorkService
             ->join('patients as p', 'p.id', '=', 'lc.patient_id')
             ->join('users as d', 'd.id', '=', 'lc.doctor_id')
             ->leftJoin('labs as l', 'l.id', '=', 'lc.lab_id')
-            ->leftJoin('lab_case_items as lci', 'lci.lab_case_id', '=', 'lc.id')
+            // lci 是软删除模型，裸 join 不走 SoftDeletes，否则已移除的明细会混进今日工作
+            ->leftJoin('lab_case_items as lci', function ($join) {
+                $join->on('lci.lab_case_id', '=', 'lc.id')
+                     ->whereNull('lci.deleted_at');
+            })
             ->where(function ($q) use ($today) {
                 $q->where('lc.expected_return_date', $today)
                   ->orWhere('lc.actual_return_date', $today);

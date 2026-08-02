@@ -85,7 +85,8 @@ class LabCaseController extends ApiController
             'patient_charge'       => 'nullable|numeric|min:0',
             'quality_rating'       => 'nullable|integer|min:1|max:5',
             'notes'                => 'nullable|string|max:2000',
-        ] + $this->itemRules('nullable|string|max:100'));
+            // prosthesis_type 是 NOT NULL 列：可以不传（不改明细），但传了就不能是空
+        ] + $this->itemRules('sometimes|required|string|max:100'));
 
         if ($validator->fails()) {
             return $this->error(__('common.validation_failed'), 422, $validator->errors());
@@ -241,6 +242,13 @@ class LabCaseController extends ApiController
             : collect();
 
         $first = $existing->first();
+
+        // prosthesis_type 是 NOT NULL。只传了 material 之类的辅助字段、而单子上又
+        // 没有可继承的既有明细时（历史上通过 API 建的单子明细就是空的），无从拼出
+        // 一条合法明细——此时不动明细，而不是拿 null 去撞数据库约束换一个 500。
+        if ($first === null && !$request->filled('prosthesis_type')) {
+            return null;
+        }
 
         $items = [[
             'prosthesis_type' => $request->input('prosthesis_type', $first->prosthesis_type ?? null),
