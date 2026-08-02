@@ -130,6 +130,42 @@ class DentalChartApiTest extends TestCase
                  ->assertJsonPath('success', false);
     }
 
+    public function test_store_rejects_status_outside_the_enum(): void
+    {
+        // tooth_status 是 NOT NULL enum 列：枚举外的值会被 MySQL 严格模式 1265 拒绝。
+        // 客户端应拿到明确的 422，而不是被静默改写。
+        $response = $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/dental-charts', [
+                'appointment_id' => $this->appointment->id,
+                'chart_data'     => [
+                    ['tooth' => '11', 'tooth_status' => 'not_an_enum_value'],
+                ],
+            ]);
+
+        $response->assertStatus(422)
+                 ->assertJsonPath('success', false);
+
+        $this->assertDatabaseCount('dental_charts', 0);
+    }
+
+    public function test_store_accepts_valid_tooth_status(): void
+    {
+        $response = $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/dental-charts', [
+                'appointment_id' => $this->appointment->id,
+                'chart_data'     => [
+                    ['tooth' => '11', 'tooth_status' => 'caries', 'color' => '2'],
+                ],
+            ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('dental_charts', [
+            'tooth'        => '11',
+            'tooth_status' => 'caries',
+        ]);
+    }
+
     // ─── Patient chart ─────────────────────────────────────────────
 
     public function test_patient_chart(): void

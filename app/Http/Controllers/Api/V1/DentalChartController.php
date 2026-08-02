@@ -8,6 +8,7 @@ use App\Services\DentalChartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 /**
  * @group Dental Charts
@@ -66,6 +67,10 @@ class DentalChartController extends ApiController
             'chart_data.*.tooth'    => 'required|string|max:10',
             'chart_data.*.section'  => 'nullable|string|max:50',
             'chart_data.*.color'    => 'nullable|string|max:50',
+            // tooth_status / tooth_type 都是 NOT NULL enum 列，枚举外的值会被 MySQL
+            // 严格模式拒绝。Service 层还有一道兜底，这里给客户端明确的 422 而不是静默改写。
+            'chart_data.*.tooth_status' => ['nullable', Rule::in(DentalChartService::TOOTH_STATUSES)],
+            'chart_data.*.tooth_type'   => ['nullable', Rule::in(['permanent', 'primary', 'mixed'])],
         ]);
 
         if ($validator->fails()) {

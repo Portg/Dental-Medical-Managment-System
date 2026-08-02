@@ -15,10 +15,24 @@ class DentalChartService
     /**
      * 旧版 Angular 牙位图只存 color 编号，没有 tooth_status。
      * 写入和读取都用这张表把颜色编号折算成状态。
+     *
+     * public：public/include_js/dental_chart_editor.js 里有一份同样的映射，
+     * DentalChartColorMapParityTest 用这个常量断言两份不漂移。
      */
-    private const COLOR_TO_STATUS = [
+    public const COLOR_TO_STATUS = [
         '1' => 'filled', '2' => 'caries', '3' => 'rct', '4' => 'missing',
         '6' => 'implant', '8' => 'crown', '11' => 'impacted',
+    ];
+
+    /**
+     * dental_charts.tooth_status 的合法枚举值，与 2026_01_17_800003 建列时一致。
+     *
+     * 该列是 NOT NULL enum，写进不在表内的值会被 MySQL 严格模式拒绝（1265），
+     * 非严格模式下则静默截断成空串。写入端一律先过这张白名单。
+     */
+    public const TOOTH_STATUSES = [
+        'normal', 'caries', 'filled', 'crown', 'rct',
+        'missing', 'implant', 'pontic', 'extraction_planned', 'impacted',
     ];
 
     /**
@@ -177,10 +191,7 @@ class DentalChartService
                 'tooth' => $tooth,
                 'tooth_number' => $tooth,
                 'tooth_type' => $value['tooth_type'] ?? ($tooth >= 51 ? 'primary' : 'permanent'),
-                // tooth_status 是 NOT NULL enum（默认 normal），不能写 null。
-                // 没给状态时先按旧版 color 编号折算，折算不出就落回 normal。
-                'tooth_status' => $value['tooth_status']
-                    ?? (self::COLOR_TO_STATUS[(string) ($value['color'] ?? '')] ?? 'normal'),
+                'tooth_status' => $this->resolveToothStatus($value),
                 'section' => $section,
                 'color' => $value['color'] ?? null,
                 'surface' => $value['surface'] ?? null,
@@ -191,6 +202,26 @@ class DentalChartService
         }
 
         return true;
+    }
+
+    /**
+     * 解析单个牙位要写入的 tooth_status。
+     *
+     * tooth_status 是 NOT NULL enum（默认 normal），既不能写 null，也不能写枚举外的值。
+     * 优先级：请求给的合法状态 → 按旧版 color 编号折算 → normal。
+     *
+     * 兜底放在 Service 而非只放在 API 校验里：Web 端 DentalChartController::store()
+     * 直接把请求体透传进来，没有 Validator 把关，两个入口共用这一道闸。
+     */
+    private function resolveToothStatus(array $value): string
+    {
+        $status = $value['tooth_status'] ?? null;
+
+        if (is_string($status) && in_array($status, self::TOOTH_STATUSES, true)) {
+            return $status;
+        }
+
+        return self::COLOR_TO_STATUS[(string) ($value['color'] ?? '')] ?? 'normal';
     }
 
     /**
