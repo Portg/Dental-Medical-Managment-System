@@ -562,8 +562,14 @@ if "!MSU_RC!"=="3010" (
     goto :msu_ok
 )
 if "!MSU_RC!"=="2359302"     goto :msu_ok
-if "!MSU_RC!"=="2149842967"  goto :msu_ok
-if "!MSU_RC!"=="-2145124329" goto :msu_ok
+
+REM 0x80240017 = 不适用于本系统。不能当「成功」静默放过 —— 常见原因是
+REM 补丁 SKU 与系统不符：我们随包的是「Windows 7 x64」版，而
+REM Windows Embedded Standard 7 需要各自的 Embedded 版补丁（更新目录里是
+REM 独立条目）。此时跳过 SHA-2 会让后面的 .NET/WMF 接着失败，
+REM 报错点离真正原因很远，所以这里必须留一句明确的提示。
+if "!MSU_RC!"=="2149842967"  goto :msu_not_applicable
+if "!MSU_RC!"=="-2145124329" goto :msu_not_applicable
 
 REM 1618 = ERROR_INSTALL_ALREADY_RUNNING，可重试，不是环境坏了
 if "!MSU_RC!"=="1618" (
@@ -590,6 +596,15 @@ echo         常见原因：系统未打 SP1，或 Windows Update 组件损坏�
 call :log "[ERROR] !KB! 安装失败，错误码 !MSU_RC!"
 endlocal & set "PREREQ_REBOOT=%LOCAL_REBOOT%"
 exit /b 1
+
+:msu_not_applicable
+echo  [警告] !KB! 不适用于本系统（0x80240017），已跳过。
+echo         若本机是 Windows Embedded Standard 7，需要的是 Embedded 专用版补丁，
+echo         随包的「Windows 7 x64」版装不上；请到更新目录按 SKU 单独获取。
+echo         若后续 .NET / WMF 安装失败，多半就是这里被跳过导致的。
+call :log "[WARN] !KB! 不适用于本系统(0x80240017)，已跳过 —— 注意 SKU 是否匹配"
+endlocal & set "PREREQ_REBOOT=%LOCAL_REBOOT%"
+goto :eof
 
 :msu_ok
 echo  !KB! 就绪
