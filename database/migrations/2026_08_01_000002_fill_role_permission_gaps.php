@@ -29,7 +29,9 @@ return new class extends Migration
             'manage-expenses',
         ],
         'nurse' => [
-            // 护士需录入护理记录（注意：该权限同时包含病历完整读写，暂无更细粒度）
+            // 护士需打开病历录护理记录。2026_08_02_140314 已把只读能力拆成
+            // view-medical-cases 并收回护士的 manage-medical-cases；
+            // 这里保持原样是为了不改写历史迁移的行为，后续迁移会纠正。
             'manage-medical-cases',
         ],
     ];
@@ -44,10 +46,14 @@ return new class extends Migration
 
     public function down(): void
     {
-        $this->apply(fn ($roleId, $permId) => DB::table('role_permissions')
-            ->where('role_id', $roleId)
-            ->where('permission_id', $permId)
-            ->delete());
+        // 故意不做逆向删除。
+        //
+        // up() 用的是 insertOrIgnore：GRANTS 里的配对可能本来就存在（迁移只是补齐
+        // 缺口），迁移结束后已无从分辨哪些是自己新增的。无条件按 GRANTS 删除会连带
+        // 撤销迁移前就有的授权，把回滚变成一次权限事故——而权限被悄悄收回在医疗系统
+        // 里表现为"某角色突然打不开某功能"，排查成本远高于多留几条授权。
+        //
+        // 真要撤销请针对具体角色手工处理，或写一条只删指定配对的新迁移。
     }
 
     private function apply(callable $op): void

@@ -86,6 +86,15 @@ class AuthServiceProvider extends ServiceProvider
             if ($user->hasPermission($ability)) {
                 return true;
             }
+
+            // 「能管理」蕴含「能查看」：view-x 被 manage-x 覆盖。
+            // 否则每次把只读能力从 manage-x 里拆出来，都得回头给所有已持有
+            // manage-x 的角色补发 view-x，漏一个就是一次线上 403。
+            if (str_starts_with($ability, 'view-')
+                && $user->hasPermission('manage-' . substr($ability, 5))
+            ) {
+                return true;
+            }
         });
     }
 }

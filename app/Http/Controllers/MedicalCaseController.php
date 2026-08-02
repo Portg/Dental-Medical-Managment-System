@@ -15,7 +15,16 @@ class MedicalCaseController extends Controller
     public function __construct(MedicalCaseService $medicalCaseService)
     {
         $this->medicalCaseService = $medicalCaseService;
-        $this->middleware('can:manage-medical-cases');
+
+        // 读写分权：护士要录生命体征/护理记录就得先打开病历，但不该因此获得
+        // 病历的完整读写（建档、改写、删除、修改审批、归档）。
+        // 只读动作走 view-medical-cases，写动作仍要 manage-medical-cases。
+        $this->middleware('can:view-medical-cases');
+        $this->middleware('can:manage-medical-cases')->except([
+            'index', 'patientCases', 'show', 'getCase',
+            'printCase', 'exportPdf', 'searchIcd10',
+            'amendments', 'versionHistory',
+        ]);
     }
 
     /**
