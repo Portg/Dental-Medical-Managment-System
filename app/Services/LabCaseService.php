@@ -108,7 +108,17 @@ class LabCaseService
     public function updateLabCase(int $id, array $data, ?array $items = null): bool
     {
         return DB::transaction(function () use ($id, $data, $items) {
-            $updated = (bool) LabCase::where('id', $id)->update($data);
+            $labCase = LabCase::find($id);
+
+            if (!$labCase) {
+                return false;
+            }
+
+            // 只改明细、不改主表时 $data 为空，此时不能下发 update()（空 SET 是非法 SQL）。
+            // 另外主表字段原样提交时 affected rows 为 0，不代表失败，所以不再拿它当返回值。
+            if (!empty($data)) {
+                $labCase->fill($data)->save();
+            }
 
             if ($items !== null) {
                 // Delete old items and recreate
@@ -120,7 +130,7 @@ class LabCaseService
                 }
             }
 
-            return $updated;
+            return true;
         });
     }
 

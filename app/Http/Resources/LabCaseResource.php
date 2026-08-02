@@ -2,25 +2,45 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class LabCaseResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
+        $items = $this->items ?? collect();
+        $first = $items->first();
+
         return [
             'id'                    => $this->id,
             'lab_case_no'           => $this->lab_case_no,
-            'prosthesis_type'       => $this->prosthesis_type,
-            'material'              => $this->material,
-            'color_shade'           => $this->color_shade,
-            'teeth_positions'       => $this->teeth_positions,
+            'processing_days'       => $this->processing_days,
+
+            // 明细。2026_03_06 迁移后修复体信息挂在 lab_case_items 上，
+            // 一张单最多 4 件；下面的平铺字段取第一件，兼容旧调用方。
+            'items'                 => $items->map(fn ($item) => [
+                'id'              => $item->id,
+                'prosthesis_type' => $item->prosthesis_type,
+                'material'        => $item->material,
+                'color_shade'     => $item->color_shade,
+                'teeth_positions' => $item->teeth_positions,
+                'qty'             => $item->qty,
+                'sort_order'      => $item->sort_order,
+            ])->values(),
+            'prosthesis_type'       => $first->prosthesis_type ?? null,
+            'material'              => $first->material ?? null,
+            'color_shade'           => $first->color_shade ?? null,
+            'teeth_positions'       => $first->teeth_positions ?? null,
+
             'special_requirements'  => $this->special_requirements,
             'status'                => $this->status,
-            'sent_date'             => $this->sent_date?->format('Y-m-d'),
-            'expected_return_date'  => $this->expected_return_date?->format('Y-m-d'),
-            'actual_return_date'    => $this->actual_return_date?->format('Y-m-d'),
+            'sent_date'             => $this->dateOnly($this->sent_date),
+            'expected_return_date'  => $this->dateOnly($this->expected_return_date),
+            'actual_return_date'    => $this->dateOnly($this->actual_return_date),
             'lab_fee'               => (float) $this->lab_fee,
             'patient_charge'        => (float) $this->patient_charge,
             'profit'                => $this->profit,
@@ -47,8 +67,8 @@ class LabCaseResource extends JsonResource
             ]),
             'appointment_id'        => $this->appointment_id,
             'medical_case_id'       => $this->medical_case_id,
-            'created_at'            => $this->created_at?->toIso8601String(),
-            'updated_at'            => $this->updated_at?->toIso8601String(),
+            'created_at'            => $this->dateTime($this->created_at),
+            'updated_at'            => $this->dateTime($this->updated_at),
         ];
     }
 }

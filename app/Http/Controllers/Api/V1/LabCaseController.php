@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Resources\LabCaseResource;
 use App\LabCase;
+use App\LabCaseItem;
 use App\Services\LabCaseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,10 +46,7 @@ class LabCaseController extends ApiController
             'patient_id'           => 'required|exists:patients,id',
             'doctor_id'            => 'required|exists:users,id',
             'lab_id'               => 'required|exists:labs,id',
-            'prosthesis_type'      => 'required|string|max:100',
-            'material'             => 'nullable|string|max:100',
-            'color_shade'          => 'nullable|string|max:50',
-            'teeth_positions'      => 'nullable|array',
+            'processing_days'      => 'nullable|integer|min:1|max:365',
             'special_requirements' => 'nullable|string|max:2000',
             'expected_return_date' => 'nullable|date|after_or_equal:today',
             'lab_fee'              => 'nullable|numeric|min:0',
@@ -56,20 +54,35 @@ class LabCaseController extends ApiController
             'appointment_id'       => 'nullable|exists:appointments,id',
             'medical_case_id'      => 'nullable|exists:medical_cases,id',
             'notes'                => 'nullable|string|max:2000',
+
+            // 明细：多件走 items[]，单件可继续用平铺字段（见 extractItems）
+            'items'                   => 'nullable|array|min:1|max:4',
+            'items.*.prosthesis_type' => 'required_with:items|string|max:100',
+            'items.*.material'        => 'nullable|string|max:100',
+            'items.*.color_shade'     => 'nullable|string|max:50',
+            'items.*.teeth_positions' => 'nullable',
+            'items.*.qty'             => 'nullable|integer|min:1|max:99',
+            'prosthesis_type'         => 'required_without:items|string|max:100',
+            'material'                => 'nullable|string|max:100',
+            'color_shade'             => 'nullable|string|max:50',
+            'teeth_positions'         => 'nullable',
         ]);
 
         if ($validator->fails()) {
             return $this->error(__('common.validation_failed'), 422, $validator->errors());
         }
 
-        $case = $this->service->createLabCase($request->only([
-            'patient_id', 'doctor_id', 'lab_id', 'prosthesis_type',
-            'material', 'color_shade', 'teeth_positions', 'special_requirements',
-            'expected_return_date', 'lab_fee', 'patient_charge',
-            'appointment_id', 'medical_case_id', 'notes',
-        ]));
+        $case = $this->service->createLabCase(
+            $request->only([
+                'patient_id', 'doctor_id', 'lab_id', 'processing_days',
+                'special_requirements', 'expected_return_date',
+                'lab_fee', 'patient_charge',
+                'appointment_id', 'medical_case_id', 'notes',
+            ]),
+            $this->extractItems($request) ?? []
+        );
 
-        $case->load(['patient', 'doctor', 'lab']);
+        $case->load(['patient', 'doctor', 'lab', 'items']);
 
         return $this->success(new LabCaseResource($case), __('lab_cases.case_created'), 201);
     }
@@ -77,27 +90,38 @@ class LabCaseController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'prosthesis_type'      => 'nullable|string|max:100',
-            'material'             => 'nullable|string|max:100',
-            'color_shade'          => 'nullable|string|max:50',
-            'teeth_positions'      => 'nullable|array',
+            'processing_days'      => 'nullable|integer|min:1|max:365',
             'special_requirements' => 'nullable|string|max:2000',
             'expected_return_date' => 'nullable|date',
             'lab_fee'              => 'nullable|numeric|min:0',
             'patient_charge'       => 'nullable|numeric|min:0',
             'quality_rating'       => 'nullable|integer|min:1|max:5',
             'notes'                => 'nullable|string|max:2000',
+
+            'items'                   => 'nullable|array|min:1|max:4',
+            'items.*.prosthesis_type' => 'required_with:items|string|max:100',
+            'items.*.material'        => 'nullable|string|max:100',
+            'items.*.color_shade'     => 'nullable|string|max:50',
+            'items.*.teeth_positions' => 'nullable',
+            'items.*.qty'             => 'nullable|integer|min:1|max:99',
+            'prosthesis_type'         => 'nullable|string|max:100',
+            'material'                => 'nullable|string|max:100',
+            'color_shade'             => 'nullable|string|max:50',
+            'teeth_positions'         => 'nullable',
         ]);
 
         if ($validator->fails()) {
             return $this->error(__('common.validation_failed'), 422, $validator->errors());
         }
 
-        $status = $this->service->updateLabCase($id, $request->only([
-            'prosthesis_type', 'material', 'color_shade', 'teeth_positions',
-            'special_requirements', 'expected_return_date', 'lab_fee',
-            'patient_charge', 'quality_rating', 'notes',
-        ]));
+        $status = $this->service->updateLabCase(
+            $id,
+            $request->only([
+                'processing_days', 'special_requirements', 'expected_return_date',
+                'lab_fee', 'patient_charge', 'quality_rating', 'notes',
+            ]),
+            $this->extractItems($request, $id)
+        );
 
         if (!$status) {
             return $this->error(__('lab_cases.error_updating_case'), 500);
@@ -178,6 +202,68 @@ class LabCaseController extends ApiController
         $stats = $this->service->getStatistics();
 
         return $this->success($stats);
+    }
+
+    /**
+     * 归一化请求里的技工单明细。
+     *
+     * 2026_03_06 的迁移把 prosthesis_type / material / color_shade / teeth_positions
+     * 从 lab_cases 移到了 lab_case_items，一张单可挂最多 4 件。接口同时接受两种写法：
+     *
+     *   - items[]：多件，与 Web 端一致，是推荐写法；
+     *   - 平铺字段：旧版单件写法，映射成一条明细。
+     *
+     * 返回 null 表示请求没带明细信息（更新时即"保持原样"）。
+     * $labCaseId 非空时，平铺字段会并到现有第一条明细上，避免只传 material
+     * 就把 prosthesis_type 冲掉。
+     */
+    private function extractItems(Request $request, ?int $labCaseId = null): ?array
+    {
+        if ($request->has('items')) {
+            return array_map(fn ($item) => [
+                'prosthesis_type' => $item['prosthesis_type'],
+                'material'        => $item['material'] ?? null,
+                'color_shade'     => $item['color_shade'] ?? null,
+                'teeth_positions' => $this->normalizeTeethPositions($item['teeth_positions'] ?? null),
+                'qty'             => $item['qty'] ?? 1,
+            ], $request->input('items', []));
+        }
+
+        $legacyKeys = ['prosthesis_type', 'material', 'color_shade', 'teeth_positions'];
+
+        if (!$request->hasAny($legacyKeys)) {
+            return null;
+        }
+
+        $existing = $labCaseId
+            ? LabCaseItem::where('lab_case_id', $labCaseId)->orderBy('sort_order')->first()
+            : null;
+
+        return [[
+            'prosthesis_type' => $request->input('prosthesis_type', $existing->prosthesis_type ?? null),
+            'material'        => $request->input('material', $existing->material ?? null),
+            'color_shade'     => $request->input('color_shade', $existing->color_shade ?? null),
+            'teeth_positions' => $request->has('teeth_positions')
+                ? $this->normalizeTeethPositions($request->input('teeth_positions'))
+                : ($existing->teeth_positions ?? null),
+            'qty'             => $existing->qty ?? 1,
+        ]];
+    }
+
+    /**
+     * 牙位既可能是数组，也可能是 Web 表单传来的逗号分隔字符串。
+     */
+    private function normalizeTeethPositions($value): ?array
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_array($value)) {
+            return array_values($value);
+        }
+
+        return array_map('trim', explode(',', (string) $value));
     }
 
     /**

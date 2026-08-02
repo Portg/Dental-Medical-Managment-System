@@ -186,10 +186,15 @@ class LabCaseApiTest extends TestCase
                  ->assertJsonStructure(['success', 'data' => ['id', 'lab_case_no', 'prosthesis_type', 'status']]);
 
         $this->assertDatabaseHas('lab_cases', [
+            'patient_id' => $this->patient->id,
+            'status'     => 'pending',
+        ]);
+
+        // 修复体信息挂在明细表上（2026_03_06 迁移把这几列从 lab_cases 移走了）
+        $this->assertDatabaseHas('lab_case_items', [
+            'lab_case_id'     => $response->json('data.id'),
             'prosthesis_type' => 'crown',
             'material'        => 'zirconia',
-            'patient_id'      => $this->patient->id,
-            'status'          => 'pending',
         ]);
     }
 
@@ -248,8 +253,15 @@ class LabCaseApiTest extends TestCase
 
         $this->assertDatabaseHas('lab_cases', [
             'id'             => $caseId,
-            'material'       => 'emax',
             'patient_charge' => 2500,
+        ]);
+
+        // 只传 material 时 prosthesis_type 应保留原值，不被冲掉
+        $this->assertDatabaseHas('lab_case_items', [
+            'lab_case_id'     => $caseId,
+            'prosthesis_type' => 'crown',
+            'material'        => 'emax',
+            'deleted_at'      => null,
         ]);
     }
 
