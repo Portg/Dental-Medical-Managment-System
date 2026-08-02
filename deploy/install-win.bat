@@ -18,11 +18,13 @@ REM  任何等待输入的语句都会让安装永久挂起。
 REM  其余参数原样转发给 install-win.ps1（Inno 会传 {app}）。
 REM ═══════════════════════════════════════════════════════════════
 set "UNATTENDED=0"
+set "SELFTEST=0"
 set "PS_ARGS="
 
 :parse_args
 if "%~1"=="" goto :args_done
 if /i "%~1"=="--unattended" ( set "UNATTENDED=1" & shift & goto :parse_args )
+if /i "%~1"=="--selftest"   ( set "SELFTEST=1"   & shift & goto :parse_args )
 set PS_ARGS=!PS_ARGS! "%~1"
 shift
 goto :parse_args
@@ -144,6 +146,10 @@ if errorlevel 1 (
 )
 
 call :log "PowerShell 主版本: %PS_MAJOR%"
+
+REM 自检必须放在版本探测之后（要报告 PS_MAJOR），但在任何安装动作之前
+if "%SELFTEST%"=="1" goto :selftest
+
 if %PS_MAJOR% GEQ 3 goto :ps_ok
 
 echo.
@@ -357,6 +363,79 @@ set "EXIT_CODE=!ERRORLEVEL!"
 call :log "install-win.ps1 退出码: !EXIT_CODE!"
 
 endlocal & exit /b %EXIT_CODE%
+
+REM ── 自检模式（--selftest）───────────────────────────────────────
+REM
+REM  只读：不装任何东西、不碰服务栈，几秒钟跑完。
+REM  用途是把「解析逻辑对不对」这类问题在 2 秒内暴露出来，而不是等一次
+REM  40 分钟的真实安装跑完才发现 KB 号是空的。
+REM  开发机（macOS/Linux）跑不了批处理，这就是最快的验证回路。
+REM ────────────────────────────────────────────────────────────────
+:selftest
+echo.
+echo  ===== install-win.bat 自检（不安装任何东西）=====
+echo.
+echo  [脚本] %~f0
+echo  [目录] %SCRIPT_DIR%
+echo  [日志] %PREREQ_LOG%
+echo.
+
+echo  --- PowerShell ---
+echo    探测到主版本: %PS_MAJOR%   ^(^>=3 则跳过全部前置，直接跑 install-win.ps1^)
+echo.
+
+echo  --- Windows Update 服务 ---
+set "WU_STATE="
+for /f "tokens=3" %%S in ('sc query wuauserv 2^>nul ^| findstr /i /c:"STATE"') do set "WU_STATE=%%S"
+echo    状态码: [!WU_STATE!]   ^(4=RUNNING；wusa 依赖它，非 4 会先尝试启动^)
+echo.
+
+echo  --- 正在运行的安装会话 ---
+tasklist /fi "IMAGENAME eq wusa.exe" 2>nul | findstr /i "wusa.exe" >nul
+if errorlevel 1 (echo    wusa.exe: 未运行) else (echo    wusa.exe: **正在运行** —— 现在装会拿到 1618)
+tasklist /fi "IMAGENAME eq TrustedInstaller.exe" 2>nul | findstr /i "TrustedInstaller.exe" >nul
+if errorlevel 1 (echo    TrustedInstaller.exe: 未运行) else (echo    TrustedInstaller.exe: **正在运行**)
+echo.
+
+echo  --- SHA-2 前置补丁 ---
+if not exist "%SCRIPT_DIR%\win7-prereq" (
+    echo    [缺失] 没有 win7-prereq 目录 —— 纯净 Win7 装 WMF 会卡死
+) else (
+    for %%M in ("%SCRIPT_DIR%\win7-prereq\*.msu") do call :selftest_msu "%%~fM"
+)
+echo.
+
+echo  --- 其余前置 ---
+if exist "%SCRIPT_DIR%\dotnet48\*.exe" (echo    dotnet48: 已随包) else (echo    dotnet48: 缺失)
+if exist "%SCRIPT_DIR%\wmf51\*.msu"    (echo    wmf51:    已随包) else (echo    wmf51:    缺失)
+echo.
+echo  ===== 自检结束，未做任何修改 =====
+echo.
+call :log "自检完成"
+call :maybe_pause
+exit /b 0
+
+REM 自检里逐个 MSU 报告：解析出的 KB 号 + 是否已安装
+:selftest_msu
+setlocal EnableDelayedExpansion
+set "MSU_NAME=%~n1"
+set "KB="
+set "MSU_TOKENS=!MSU_NAME:-= !"
+for %%T in (!MSU_TOKENS!) do (
+    set "TOK=%%T"
+    if /i "!TOK:~0,2!"=="kb" set "KB=%%T"
+)
+if not defined KB set "KB=!MSU_NAME!"
+
+set "KB_STATE=未安装"
+wmic qfe get hotfixid 2>nul | findstr /i "!KB!" >nul
+if not errorlevel 1 set "KB_STATE=已安装"
+
+echo    %~nx1
+echo        解析出的 KB 号: [!KB!]   状态: !KB_STATE!
+call :log "自检: %~nx1 -> KB=[!KB!] !KB_STATE!"
+endlocal
+goto :eof
 
 REM ── 安装单个 MSU 补丁 ───────────────────────────────────────────
 REM
