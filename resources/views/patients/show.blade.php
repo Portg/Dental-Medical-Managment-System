@@ -330,7 +330,7 @@
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.dob') }}</th>
-                                            <td>{{ $patient->dob ?? '-' }}</td>
+                                            <td>{{ $patient->date_of_birth?->format('Y-m-d') ?? '-' }}</td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.nin') }}</th>

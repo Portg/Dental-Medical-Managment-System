@@ -3,12 +3,15 @@
 namespace App\Http\Resources;
 
 use App\AccessLog;
+use App\Http\Resources\Concerns\FormatsDates;
 use App\Services\DataMaskingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class PatientResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         $reveal = $request->boolean('unmask') && $request->user()?->can('view-sensitive-data');
@@ -25,8 +28,9 @@ class PatientResource extends JsonResource
             'surname'        => $this->surname,
             'othername'      => $this->othername,
             'gender'         => $this->gender,
-            'dob'            => $this->dob,
-            'date_of_birth'  => $this->date_of_birth ? $this->date_of_birth->toIso8601String() : null,
+            // 不再输出 dob：patients 表没有这个列（dob 只是表单字段名，
+            // PatientService::OPTIONAL_FIELDS 会映射到 date_of_birth），此处一直返回 null
+            'date_of_birth'  => $this->dateOnly($this->date_of_birth),
             'age'            => $this->age,
             'phone_no'       => $reveal ? $this->phone_no : DataMaskingService::maskPhone($this->phone_no),
             'alternative_no' => $reveal ? $this->alternative_no : DataMaskingService::maskPhone($this->alternative_no),
@@ -69,12 +73,12 @@ class PatientResource extends JsonResource
             'member_balance'  => $this->member_balance,
             'member_points'   => $this->member_points,
             'member_status'   => $this->member_status,
-            'member_since'    => $this->member_since ? $this->member_since->toIso8601String() : null,
-            'member_expiry'   => $this->member_expiry ? $this->member_expiry->toIso8601String() : null,
+            'member_since'    => $this->dateOnly($this->member_since),
+            'member_expiry'   => $this->dateOnly($this->member_expiry),
 
             'source_id'  => $this->source_id,
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'created_at' => $this->dateTime($this->created_at),
+            'updated_at' => $this->dateTime($this->updated_at),
         ];
     }
 }

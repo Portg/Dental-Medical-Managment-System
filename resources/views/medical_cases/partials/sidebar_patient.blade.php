@@ -54,8 +54,10 @@
                     <div class="text-muted" style="font-size: 12px;">
                         @if($currentPatient)
                             {{ $currentPatient->gender == 'Male' ? __('patient.male') : __('patient.female') }}
-                            @if($currentPatient->dob)
-                                {{ \Carbon\Carbon::parse($currentPatient->dob)->age }}{{ __('common.years_old') }}
+                            @if($currentPatient->date_of_birth)
+                                {{ \Carbon\Carbon::parse($currentPatient->date_of_birth)->age }}{{ __('common.years_old') }}
+                            @elseif($currentPatient->age !== null && $currentPatient->age !== '')
+                                {{ (int) $currentPatient->age }}{{ __('common.years_old') }}
                             @endif
                         @endif
                     </div>

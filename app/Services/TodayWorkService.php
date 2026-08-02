@@ -1065,7 +1065,9 @@ class TodayWorkService
             'full_name'     => $patient->full_name,
             'patient_no'    => $patient->patient_no,
             'gender'        => $patient->gender,
-            'dob'           => $patient->dob,
+            // key 保持 dob——前端 today_work_patient_drawer.js 按这个名字算年龄；
+            // 值必须取 date_of_birth，patients 表没有 dob 列
+            'dob'           => $patient->date_of_birth?->format('Y-m-d'),
             'phone_no'      => $patient->phone_no
                 ? substr($patient->phone_no, 0, 3) . '****' . substr($patient->phone_no, -4)
                 : '',

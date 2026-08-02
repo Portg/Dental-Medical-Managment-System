@@ -28,7 +28,7 @@ class PatientExport implements FromArray, WithHeadings, ShouldAutoSize
                 $row->patient_no ?? '',
                 $mask ? DataMaskingService::maskName($fullName) : $fullName,
                 $gender,
-                $row->dob ?? '',
+                $row->date_of_birth ?? '',
                 $mask ? DataMaskingService::maskPhone($row->phone_no) : ($row->phone_no ?? ''),
                 $mask ? DataMaskingService::maskPhone($row->alternative_no) : ($row->alternative_no ?? ''),
                 $mask ? DataMaskingService::maskEmail($row->email) : ($row->email ?? ''),

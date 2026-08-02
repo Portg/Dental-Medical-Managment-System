@@ -7,8 +7,6 @@
         $patientAge = null;
         if ($p->date_of_birth) {
             $patientAge = \Carbon\Carbon::parse($p->date_of_birth)->age;
-        } elseif ($p->dob) {
-            $patientAge = \Carbon\Carbon::parse($p->dob)->age;
         } elseif ($p->age !== null && $p->age !== '') {
             $patientAge = (int) $p->age;
         }

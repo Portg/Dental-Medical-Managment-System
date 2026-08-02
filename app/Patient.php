@@ -16,7 +16,8 @@ class Patient extends Model
 
     protected $fillable = [
         'patient_no', 'patient_code', 'status', 'merged_to_id',
-        'surname', 'othername', 'gender', 'dob', 'date_of_birth', 'age',
+        // 注意：没有 dob——它是只读派生属性（见 getDobAttribute），写入用 date_of_birth
+        'surname', 'othername', 'gender', 'date_of_birth', 'age',
         'ethnicity', 'marital_status', 'education', 'blood_type',
         'email', 'phone_no', 'alternative_no', 'address',
         'medication_history', 'drug_allergies', 'drug_allergies_other',
@@ -112,6 +113,12 @@ class Patient extends Model
     ];
 
     /**
+     * dob 需要出现在模型的数组/JSON 序列化里——前端多处直接消费原始模型 payload
+     * 并按 dob 算年龄（medical_record_edit.js、appointment_drawer.js）。
+     */
+    protected $appends = ['dob'];
+
+    /**
      * 预设的药物过敏选项
      */
     public static $allergyOptions = [
@@ -190,6 +197,21 @@ class Patient extends Model
             return $this->surname . $this->othername;
         }
         return $this->surname . ' ' . $this->othername;
+    }
+
+    /**
+     * Accessor: 出生日期的兼容别名。
+     *
+     * patients 表**没有** dob 列——dob 只是历史遗留的表单字段名，写入时由
+     * PatientService::OPTIONAL_FIELDS 映射到 date_of_birth。此前各处直接读
+     * $patient->dob 全部拿到 null（患者详情出生日期、病历侧栏年龄、患者导出
+     * 都因此常年为空）。这里收敛成一个只读派生属性，消费方不必再猜列名。
+     *
+     * 只读：不要往 $fillable 里放 dob，写入一律用 date_of_birth。
+     */
+    public function getDobAttribute(): ?string
+    {
+        return $this->date_of_birth?->format('Y-m-d');
     }
 
     public function routeNotificationForSms($notifiable)
