@@ -20,25 +20,56 @@ use Illuminate\Support\Facades\Log;
  * 只修**能证明受损**的行：sort_by 的小时数恰好等于 start_time 小时数 + 12（模 24）。
  * 这是 PM 截断的精确特征，同时覆盖 12:30 AM → 00:30 的情形；
  * 而 '08:30 AM' 截断成 '08:30' 本就等于 24 小时制真值，两者一致，不会被误改。
- * walk-in 的 start_time（实际到店时间）与 sort_by（预约时段）本就可能不同，
- * 除非恰好相差整 12 小时，否则不受影响。
+ *
+ * **排除 walk-in**：这个判据的前提是 start_time 与 sort_by 描述同一时刻。
+ * 对非 walk-in 成立——两者同源于 $data['appointment_time']（见 createAppointment）；
+ * 对 walk-in 不成立——start_time 是 now() 的实际到店时间，sort_by 是预约时段，
+ * 本就是两个独立的量。硬套这个判据是双向错的：
+ *   - 真正被截断的 walk-in，其 sort_by 与到店时间通常不差整 12 小时，匹配不上，修不到；
+ *   - 合法的 walk-in（如 20:30 到店、08:30 时段）反而正好命中，到店时间被时段覆盖。
+ * 被截断的 walk-in 无从还原——sort_by 里没有到店时间这个信息——只记日志交人工判断，
+ * 不拿时段去覆盖到店时间。
  */
 return new class extends Migration
 {
-    public function up(): void
-    {
-        $condition = "sort_by IS NOT NULL
+    /** start_time 与 sort_by 同源、判据成立的行 */
+    private const REPAIRABLE = "sort_by IS NOT NULL
                       AND start_time IS NOT NULL
                       AND CHAR_LENGTH(start_time) = 5
                       AND HOUR(sort_by) = MOD(HOUR(STR_TO_DATE(start_time, '%H:%i')) + 12, 24)
                       AND MINUTE(sort_by) = MINUTE(STR_TO_DATE(start_time, '%H:%i'))";
 
+    public function up(): void
+    {
         $affected = DB::table('appointments')
-            ->whereRaw($condition)
+            // 不能写成 where('visit_information','<>','walk_in')：SQL 里 NULL <> 'x'
+            // 结果是 NULL 而非 true，visit_information 为空的行会被静默漏掉
+            ->whereRaw("(visit_information IS NULL OR visit_information <> 'walk_in')")
+            ->whereRaw(self::REPAIRABLE)
             ->update(['start_time' => DB::raw("TIME_FORMAT(sort_by, '%H:%i')")]);
 
         if ($affected > 0) {
             Log::warning("[repair_appointment_start_time] 按 sort_by 还原了 {$affected} 条被截断 AM/PM 的预约时间。");
+        }
+
+        $this->reportUnrepairableWalkIns();
+    }
+
+    /**
+     * walk-in 不自动修，但命中特征的要报出来，否则这批脏数据会一直没人知道。
+     */
+    private function reportUnrepairableWalkIns(): void
+    {
+        $suspects = DB::table('appointments')
+            ->where('visit_information', 'walk_in')
+            ->whereRaw(self::REPAIRABLE)
+            ->count();
+
+        if ($suspects > 0) {
+            Log::warning(
+                "[repair_appointment_start_time] 另有 {$suspects} 条 walk-in 预约的 start_time 疑似被截断 AM/PM，"
+                . '但 walk-in 的 start_time 是实际到店时间、sort_by 是预约时段，无法据此还原，已跳过，需人工核对。'
+            );
         }
     }
 
