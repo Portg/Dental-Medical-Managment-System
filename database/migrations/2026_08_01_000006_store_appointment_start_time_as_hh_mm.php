@@ -19,6 +19,17 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // 先把 12 小时制（如 '08:30 PM'，历史上 walk-in 与部分表单透传会写成这样）
+        // 转成 24 小时制，再截断。直接 LEFT(...,5) 会把 PM 连同真实时段一起丢掉，
+        // 让晚上 8 点半变成早上 8 点半。
+        //
+        // 注：本迁移早期版本正是直接 LEFT()。已经跑过旧版本的库由
+        // 2026_08_02_135347_repair_appointment_start_time_pm_truncation 按 sort_by 还原。
+        DB::table('appointments')
+            ->whereNotNull('start_time')
+            ->whereRaw("start_time REGEXP '[AaPp][Mm][[:space:]]*$'")
+            ->update(['start_time' => DB::raw("TIME_FORMAT(STR_TO_DATE(TRIM(start_time), '%h:%i %p'), '%H:%i')")]);
+
         DB::table('appointments')
             ->whereNotNull('start_time')
             ->whereRaw('CHAR_LENGTH(start_time) > 5')

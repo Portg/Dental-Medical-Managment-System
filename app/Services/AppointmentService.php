@@ -347,10 +347,15 @@ class AppointmentService
      */
     public function createAppointment(array $data): ?Appointment
     {
+        // start_time 是 varchar，一律存 24 小时制 HH:MM。
+        // 曾经这里 walk-in 走 format('h:i A')、其余分支直接透传表单原值，于是库里混着
+        // 「08:30 PM」这类 12 小时制字符串；2026_08_01_000006 用 LEFT(...,5) 归一时
+        // 把 AM/PM 连同真实时段一起截掉，晚 8 点半会变成早 8 点半。
+        // 存量数据由 2026_08_02_* 的修复迁移按 sort_by 还原。
         $time24  = date("H:i:s", strtotime($data['appointment_time']));
         $appTime = ($data['visit_information'] == Appointment::VISIT_WALK_IN)
-            ? (new DateTime('now'))->format("h:i A")
-            : $data['appointment_time'];
+            ? now()->format('H:i')
+            : date('H:i', strtotime($data['appointment_time']));
         $shiftId = $data['shift_id'] ?? null;
 
         return DB::transaction(function () use ($data, $time24, $appTime, $shiftId) {

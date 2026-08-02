@@ -96,6 +96,42 @@ class AppointmentCrudSmokeTest extends TestCase
         ]);
     }
 
+    /**
+     * start_time 是 varchar，必须落 24 小时制 HH:MM。
+     * 曾经这里存 '02:00 PM'，被 2026_08_01_000006 的 LEFT(...,5) 截成 '02:00'，
+     * 下午 2 点变成凌晨 2 点。
+     */
+    public function test_create_appointment_stores_24_hour_start_time(): void
+    {
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/appointments', $this->validAppointmentData([
+                'appointment_time' => '02:00 PM',
+            ]))
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('appointments', [
+            'patient_id' => $this->patient->id,
+            'start_time' => '14:00',
+        ]);
+    }
+
+    public function test_walk_in_appointment_stores_24_hour_start_time(): void
+    {
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/appointments', $this->validAppointmentData([
+                'visit_information' => \App\Appointment::VISIT_WALK_IN,
+                'appointment_date'  => now()->format('Y-m-d'),
+                'appointment_time'  => now()->format('H:i'),
+            ]))
+            ->assertStatus(201);
+
+        $startTime = \App\Appointment::where('patient_id', $this->patient->id)
+            ->latest('id')->value('start_time');
+
+        $this->assertMatchesRegularExpression('/^\d{2}:\d{2}$/', $startTime);
+        $this->assertSame(now()->format('H:i'), $startTime);
+    }
+
     public function test_create_appointment_validation_fails(): void
     {
         $response = $this->withHeaders($this->authHeader())
