@@ -9,6 +9,7 @@ use App\Patient;
 use App\Permission;
 use App\Role;
 use App\RolePermission;
+use App\Shift;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -81,11 +82,21 @@ class DoctorTimeSlotTest extends TestCase
 
     public function test_custom_schedule_generates_slots(): void
     {
+        // 2026_03_15_100002 之后排班的时间来自关联的 Shift，
+        // doctor_schedules.start_time/end_time 只是历史遗留列，不再参与出诊时段计算。
+        $shift = Shift::create([
+            'name'         => '全天班',
+            'start_time'   => '08:00',
+            'end_time'     => '17:00',
+            'work_status'  => Shift::STATUS_ON_DUTY,
+            'max_patients' => 0,
+            '_who_added'   => $this->admin->id,
+        ]);
+
         DoctorSchedule::create([
             'doctor_id'     => $this->doctor->id,
+            'shift_id'      => $shift->id,
             'schedule_date' => '2026-03-11',
-            'start_time'    => '08:00',
-            'end_time'      => '17:00',
             'branch_id'     => $this->branch->id,
             '_who_added'    => $this->admin->id,
         ]);

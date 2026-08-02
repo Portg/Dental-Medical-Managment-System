@@ -44,7 +44,7 @@ class PatientDemographicsReportTest extends TestCase
         DB::table('patients')->insert(array_merge($base, ['surname' => 'NoDob', 'date_of_birth' => null]));
 
         $response = $this->actingAs($this->admin)
-            ->get('/patient-demographics-report');
+            ->get('/patient-report?tab=demographics');
 
         $response->assertOk();
         $response->assertViewHas('totalPatients');
@@ -56,7 +56,7 @@ class PatientDemographicsReportTest extends TestCase
     public function patient_demographics_report_works_with_no_patients(): void
     {
         $response = $this->actingAs($this->admin)
-            ->get('/patient-demographics-report');
+            ->get('/patient-report?tab=demographics');
 
         $response->assertOk();
         $response->assertViewHas('totalPatients', 0);

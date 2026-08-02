@@ -49,6 +49,9 @@ class QuotationSmokeTest extends TestCase
             'role_id' => $role->id,
             'branch_id' => $branch->id,
             'is_doctor' => 'No',
+            // 必须显式给：库里有默认值，但 create() 返回的内存实例 status 会是 null，
+            // actingAs() 用的正是这个实例，CheckUserStatus 会当成停用账号拦掉。
+            'status' => User::STATUS_ACTIVE,
         ]);
 
         $this->patient = Patient::create([

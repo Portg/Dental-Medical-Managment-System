@@ -48,19 +48,21 @@ class AuthSmokeTest extends TestCase
 
     public function test_web_login_with_valid_credentials(): void
     {
+        // 登录字段是 login（邮箱或用户名皆可），不是 email
         $response = $this->post('/login', [
-            'email'    => $this->admin->email,
+            'login'    => $this->admin->email,
             'password' => $this->password,
         ]);
 
-        $response->assertRedirect('/home');
+        // 管理员登录后落到 /today-work（/home 会再跳一次，见 test_authenticated_user_can_access_home）
+        $response->assertRedirect('/today-work');
         $this->assertAuthenticatedAs($this->admin);
     }
 
     public function test_web_login_with_invalid_credentials(): void
     {
         $response = $this->post('/login', [
-            'email'    => $this->admin->email,
+            'login'    => $this->admin->email,
             'password' => 'wrong-password',
         ]);
 
@@ -98,7 +100,7 @@ class AuthSmokeTest extends TestCase
     public function test_api_login_returns_token(): void
     {
         $response = $this->postJson('/api/v1/auth/login', [
-            'email'    => $this->admin->email,
+            'login'    => $this->admin->email,
             'password' => $this->password,
         ]);
 
@@ -115,7 +117,7 @@ class AuthSmokeTest extends TestCase
     public function test_api_login_with_invalid_credentials(): void
     {
         $response = $this->postJson('/api/v1/auth/login', [
-            'email'    => $this->admin->email,
+            'login'    => $this->admin->email,
             'password' => 'wrong',
         ]);
 

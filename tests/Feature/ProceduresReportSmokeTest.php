@@ -38,7 +38,8 @@ class ProceduresReportSmokeTest extends TestCase
     public function procedure_income_report_ajax_returns_json_with_dates(): void
     {
         $response = $this->actingAs($this->admin)
-            ->get('/procedure-income-report?' . http_build_query([
+            ->get('/billing-report?' . http_build_query([
+                'tab'        => 'procedures',
                 'draw'       => 1,
                 'start'      => 0,
                 'length'     => 10,
@@ -54,7 +55,8 @@ class ProceduresReportSmokeTest extends TestCase
     public function procedure_income_report_ajax_returns_json_without_dates(): void
     {
         $response = $this->actingAs($this->admin)
-            ->get('/procedure-income-report?' . http_build_query([
+            ->get('/billing-report?' . http_build_query([
+                'tab'    => 'procedures',
                 'draw'   => 1,
                 'start'  => 0,
                 'length' => 10,
