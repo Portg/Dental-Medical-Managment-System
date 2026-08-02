@@ -46,7 +46,7 @@ class SupplierService
             'address'              => $data['address'] ?? null,
             'notes'                => $data['notes'] ?? null,
             'business_license_no'  => $data['business_license_no'] ?? null,
-            'license_expiry_date'  => $data['license_expiry_date'] ?: null,
+            'license_expiry_date'  => ($data['license_expiry_date'] ?? null) ?: null,
             '_who_added'           => Auth::user()->id,
         ]);
     }
@@ -64,7 +64,7 @@ class SupplierService
             'address'              => $data['address'] ?? null,
             'notes'                => $data['notes'] ?? null,
             'business_license_no'  => $data['business_license_no'] ?? null,
-            'license_expiry_date'  => $data['license_expiry_date'] ?: null,
+            'license_expiry_date'  => ($data['license_expiry_date'] ?? null) ?: null,
         ]);
     }
 

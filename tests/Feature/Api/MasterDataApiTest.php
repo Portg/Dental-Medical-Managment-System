@@ -142,6 +142,13 @@ class MasterDataApiTest extends TestCase
         $response->assertOk()
                  ->assertJsonPath('success', true)
                  ->assertJsonPath('data.id', $serviceId);
+
+        // 这条接口的数据源是 DB::table() 的 stdClass，日期是字符串而非 Carbon，
+        // 走的正是 FormatsDates 的字符串分支：必须是应用时区的 'Y-m-d H:i:s'，不能是 ISO-8601 UTC
+        $this->assertMatchesRegularExpression(
+            '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/',
+            $response->json('data.created_at')
+        );
     }
 
     // ─── Update ────────────────────────────────────────────────────

@@ -234,6 +234,11 @@ class PrescriptionService
                 'doctor_id'         => $data['doctor_id'] ?? $prescription->doctor_id,
                 'prescription_date' => $data['prescription_date'] ?? $prescription->prescription_date,
                 'notes'             => $data['notes'] ?? $prescription->notes,
+                // 单药处方仍把药名/数量/用法直接存在 prescriptions 上（API 的 store 就是这么写的）。
+                // 这里不处理的话，PUT 明明校验了这三个字段却静默不生效。
+                'drug'              => $data['drug'] ?? $prescription->drug,
+                'qty'               => $data['qty'] ?? $prescription->qty,
+                'directions'        => $data['directions'] ?? $prescription->directions,
             ]);
 
             // Replace items if provided
