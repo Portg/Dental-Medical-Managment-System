@@ -13,6 +13,15 @@ use Illuminate\Support\Facades\DB;
 class DentalChartService
 {
     /**
+     * 旧版 Angular 牙位图只存 color 编号，没有 tooth_status。
+     * 写入和读取都用这张表把颜色编号折算成状态。
+     */
+    private const COLOR_TO_STATUS = [
+        '1' => 'filled', '2' => 'caries', '3' => 'rct', '4' => 'missing',
+        '6' => 'implant', '8' => 'crown', '11' => 'impacted',
+    ];
+
+    /**
      * Get patients with dental chart records for DataTables.
      */
     public function getPatientChartList(): \Illuminate\Database\Query\Builder
@@ -168,7 +177,10 @@ class DentalChartService
                 'tooth' => $tooth,
                 'tooth_number' => $tooth,
                 'tooth_type' => $value['tooth_type'] ?? ($tooth >= 51 ? 'primary' : 'permanent'),
-                'tooth_status' => $value['tooth_status'] ?? null,
+                // tooth_status 是 NOT NULL enum（默认 normal），不能写 null。
+                // 没给状态时先按旧版 color 编号折算，折算不出就落回 normal。
+                'tooth_status' => $value['tooth_status']
+                    ?? (self::COLOR_TO_STATUS[(string) ($value['color'] ?? '')] ?? 'normal'),
                 'section' => $section,
                 'color' => $value['color'] ?? null,
                 'surface' => $value['surface'] ?? null,
@@ -207,10 +219,7 @@ class DentalChartService
      */
     public function getChartSummaryForPatient(int $patientId): array
     {
-        $COLOR_TO_STATUS = [
-            '1' => 'filled', '2' => 'caries', '3' => 'rct', '4' => 'missing',
-            '6' => 'implant', '8' => 'crown', '11' => 'impacted',
-        ];
+        $COLOR_TO_STATUS = self::COLOR_TO_STATUS;
         $STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'crown', 'rct', 'filled', 'caries'];
         $SHORT_KEYS = [
             'caries' => 'short_caries', 'filled' => 'short_filled', 'rct' => 'short_rct',
@@ -244,7 +253,8 @@ class DentalChartService
                 $byTooth[$tooth] = [];
             }
             $st = $row->tooth_status ?: ($COLOR_TO_STATUS[(string) $row->color] ?? null);
-            if ($st) {
+            // normal 是"没问题"，不该出现在摘要标记里
+            if ($st && $st !== 'normal') {
                 $byTooth[$tooth][] = $st;
             }
             if ($row->updated_at && ($lastUpdated === null || $row->updated_at > $lastUpdated)) {
