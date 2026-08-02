@@ -74,10 +74,72 @@ REM  就失败——报错信息还很难懂。因此这里先探测版本，低
 REM  WMF 5.1（KB3191566），装完需要重启才生效。
 REM ═══════════════════════════════════════════════════════════════
 set "PS_MAJOR="
-for /f "usebackq delims=" %%V in (`"%PS_EXE%" -NoProfile -Command "$PSVersionTable.PSVersion.Major" 2^>nul`) do set "PS_MAJOR=%%V"
+set "PS_RAW="
+set "PS_OUT=%LOG_DIR%\ps-probe.out"
+set "PS_ERR=%LOG_DIR%\ps-probe.err"
+del "%PS_OUT%" "%PS_ERR%" >nul 2>&1
+
+REM 探测 1：直接问 PowerShell。
+REM
+REM 这里刻意**不用** for /f 去跑命令：命令以带引号的路径开头时，cmd 对反引号内
+REM 容的引号处理有坑，一旦解析歪了就是「没有输出」，和 PowerShell 本身起不来
+REM 的表现完全一样，没法区分。改成普通重定向到文件，再用 for /f 读文件——
+REM 读文件是 usebackq 里最不含糊的一种形态。
+REM stderr 也必须留下：之前写的是 2>nul，把真实错误吞了，现场只剩一句
+REM 「无法探测」，连 powershell 报了什么都看不到。
+"%PS_EXE%" -NoProfile -NonInteractive -Command "$PSVersionTable.PSVersion.Major" >"%PS_OUT%" 2>"%PS_ERR%"
+
+if exist "%PS_OUT%" for /f "usebackq delims=" %%V in ("%PS_OUT%") do set "PS_MAJOR=%%V"
+if defined PS_MAJOR set "PS_MAJOR=!PS_MAJOR: =!"
+
+REM 探测 2：回退读注册表。
+REM PowerShell 进程起不来时（.NET 3.5.1 功能被关、组策略限制、WOW64 重定向到
+REM 一个坏掉的 SysWOW64 副本等）这里仍读得到版本，至少能判断该不该装 WMF。
+REM PS3+ 装好后会写 \3\ 这个键，PS1/2 只有 \1\。
+if not defined PS_MAJOR (
+    call :probe_ps_registry "HKLM\SOFTWARE\Microsoft\PowerShell\3\PowerShellEngine"
+    if not defined PS_RAW call :probe_ps_registry "HKLM\SOFTWARE\Microsoft\PowerShell\1\PowerShellEngine"
+    if defined PS_RAW (
+        for /f "delims=." %%M in ("!PS_RAW!") do set "PS_MAJOR=%%M"
+        call :log "PowerShell 版本取自注册表: !PS_RAW!（powershell.exe 无法直接执行）"
+    )
+)
 
 if not defined PS_MAJOR (
-    call :log "[ERROR] 无法探测 PowerShell 版本，请确认 %PS_EXE% 可正常运行。"
+    call :log "[ERROR] 无法探测 PowerShell 版本。"
+    call :log "        PS_EXE=%PS_EXE%"
+    if exist "%PS_ERR%" (
+        for /f "usebackq delims=" %%E in ("%PS_ERR%") do call :log "        powershell 报错: %%E"
+    )
+    echo.
+    echo  =======================================================
+    echo    无法探测 PowerShell 版本
+    echo  =======================================================
+    echo.
+    echo  详细信息已写入: %PREREQ_LOG%
+    echo.
+    echo  请在目标机手动执行下面这条命令，看它报什么错：
+    echo    "%PS_EXE%" -NoProfile -Command "$PSVersionTable.PSVersion.Major"
+    echo.
+    echo  常见原因：
+    echo    1. .NET Framework 3.5.1 功能被关闭 —— PowerShell 2.0 依赖它，
+    echo       在「控制面板 ^> 程序和功能 ^> 打开或关闭 Windows 功能」中开启
+    echo    2. 组策略/杀毒软件拦截了 powershell.exe
+    echo    3. 系统文件损坏 —— 以管理员身份执行 sfc /scannow 后重试
+    echo.
+    exit /b 1
+)
+
+REM 必须确认是纯数字：批处理的 GEQ 遇到非数字会退化成字符串比较，
+REM 万一探测到的是一行错误文本，"Some error" GEQ 3 会为真，
+REM 于是带着 PS2 一路冲进 install-win.ps1，在解析阶段炸得莫名其妙。
+echo %PS_MAJOR%| findstr /r "^[0-9][0-9]*$" >nul
+if errorlevel 1 (
+    call :log "[ERROR] PowerShell 版本探测结果不是数字: [%PS_MAJOR%]"
+    echo.
+    echo  PowerShell 版本探测结果异常: [%PS_MAJOR%]
+    echo  详细信息见: %PREREQ_LOG%
+    echo.
     exit /b 1
 )
 
@@ -256,4 +318,13 @@ REM 隐藏窗口下控制台那份没人看得到，日志是唯一线索
 :log
 echo %~1
 >>"%PREREQ_LOG%" echo [%DATE% %TIME%] %~1
+goto :eof
+
+REM 读注册表里的 PowerShell 版本，结果放进 PS_RAW（读不到就保持未定义）。
+REM 两个注册表视图都试：64 位系统上如果本脚本被 32 位宿主（比如 32 位的 Inno
+REM 安装程序）拉起，默认视图会被重定向到 Wow6432Node，那里没有这些键。
+REM 反过来在 32 位系统上 /reg:64 会直接报错，输出为空，正好被跳过。
+:probe_ps_registry
+for /f "tokens=3" %%V in ('reg query "%~1" /v PowerShellVersion 2^>nul ^| findstr /i "PowerShellVersion"') do set "PS_RAW=%%V"
+if not defined PS_RAW for /f "tokens=3" %%V in ('reg query "%~1" /v PowerShellVersion /reg:64 2^>nul ^| findstr /i "PowerShellVersion"') do set "PS_RAW=%%V"
 goto :eof
