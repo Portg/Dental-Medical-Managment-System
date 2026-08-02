@@ -54,19 +54,7 @@ class LabCaseController extends ApiController
             'appointment_id'       => 'nullable|exists:appointments,id',
             'medical_case_id'      => 'nullable|exists:medical_cases,id',
             'notes'                => 'nullable|string|max:2000',
-
-            // 明细：多件走 items[]，单件可继续用平铺字段（见 extractItems）
-            'items'                   => 'nullable|array|min:1|max:4',
-            'items.*.prosthesis_type' => 'required_with:items|string|max:100',
-            'items.*.material'        => 'nullable|string|max:100',
-            'items.*.color_shade'     => 'nullable|string|max:50',
-            'items.*.teeth_positions' => 'nullable',
-            'items.*.qty'             => 'nullable|integer|min:1|max:99',
-            'prosthesis_type'         => 'required_without:items|string|max:100',
-            'material'                => 'nullable|string|max:100',
-            'color_shade'             => 'nullable|string|max:50',
-            'teeth_positions'         => 'nullable',
-        ]);
+        ] + $this->itemRules('required_without:items|string|max:100'));
 
         if ($validator->fails()) {
             return $this->error(__('common.validation_failed'), 422, $validator->errors());
@@ -97,18 +85,7 @@ class LabCaseController extends ApiController
             'patient_charge'       => 'nullable|numeric|min:0',
             'quality_rating'       => 'nullable|integer|min:1|max:5',
             'notes'                => 'nullable|string|max:2000',
-
-            'items'                   => 'nullable|array|min:1|max:4',
-            'items.*.prosthesis_type' => 'required_with:items|string|max:100',
-            'items.*.material'        => 'nullable|string|max:100',
-            'items.*.color_shade'     => 'nullable|string|max:50',
-            'items.*.teeth_positions' => 'nullable',
-            'items.*.qty'             => 'nullable|integer|min:1|max:99',
-            'prosthesis_type'         => 'nullable|string|max:100',
-            'material'                => 'nullable|string|max:100',
-            'color_shade'             => 'nullable|string|max:50',
-            'teeth_positions'         => 'nullable',
-        ]);
+        ] + $this->itemRules('nullable|string|max:100'));
 
         if ($validator->fails()) {
             return $this->error(__('common.validation_failed'), 422, $validator->errors());
@@ -205,6 +182,29 @@ class LabCaseController extends ApiController
     }
 
     /**
+     * 技工单明细的校验规则，store / update 共用。
+     *
+     * $prosthesisTypeRule 是**平铺** prosthesis_type 的规则：建单时必填（除非走 items[]），
+     * 更新时可选。其余规则两边完全一致。
+     */
+    private function itemRules(string $prosthesisTypeRule): array
+    {
+        return [
+            // 明细：多件走 items[]，单件可继续用平铺字段（见 extractItems）
+            'items'                   => 'nullable|array|min:1|max:4',
+            'items.*.prosthesis_type' => 'required_with:items|string|max:100',
+            'items.*.material'        => 'nullable|string|max:100',
+            'items.*.color_shade'     => 'nullable|string|max:50',
+            'items.*.teeth_positions' => 'nullable',
+            'items.*.qty'             => 'nullable|integer|min:1|max:99',
+            'prosthesis_type'         => $prosthesisTypeRule,
+            'material'                => 'nullable|string|max:100',
+            'color_shade'             => 'nullable|string|max:50',
+            'teeth_positions'         => 'nullable',
+        ];
+    }
+
+    /**
      * 归一化请求里的技工单明细。
      *
      * 2026_03_06 的迁移把 prosthesis_type / material / color_shade / teeth_positions
@@ -214,8 +214,6 @@ class LabCaseController extends ApiController
      *   - 平铺字段：旧版单件写法，映射成一条明细。
      *
      * 返回 null 表示请求没带明细信息（更新时即"保持原样"）。
-     * $labCaseId 非空时，平铺字段会并到现有第一条明细上，避免只传 material
-     * 就把 prosthesis_type 冲掉。
      */
     private function extractItems(Request $request, ?int $labCaseId = null): ?array
     {
@@ -235,19 +233,36 @@ class LabCaseController extends ApiController
             return null;
         }
 
+        // 平铺字段只描述**一件**，但单子上可能挂着最多 4 件，而 updateLabCase()
+        // 的语义是"按传入列表对齐明细"——只回传第一件会把第 2~4 件直接删掉。
+        // 所以这里把其余明细原样带回，平铺字段只并进第一件。
         $existing = $labCaseId
-            ? LabCaseItem::where('lab_case_id', $labCaseId)->orderBy('sort_order')->first()
-            : null;
+            ? LabCaseItem::where('lab_case_id', $labCaseId)->orderBy('sort_order')->get()
+            : collect();
 
-        return [[
-            'prosthesis_type' => $request->input('prosthesis_type', $existing->prosthesis_type ?? null),
-            'material'        => $request->input('material', $existing->material ?? null),
-            'color_shade'     => $request->input('color_shade', $existing->color_shade ?? null),
+        $first = $existing->first();
+
+        $items = [[
+            'prosthesis_type' => $request->input('prosthesis_type', $first->prosthesis_type ?? null),
+            'material'        => $request->input('material', $first->material ?? null),
+            'color_shade'     => $request->input('color_shade', $first->color_shade ?? null),
             'teeth_positions' => $request->has('teeth_positions')
                 ? $this->normalizeTeethPositions($request->input('teeth_positions'))
-                : ($existing->teeth_positions ?? null),
-            'qty'             => $existing->qty ?? 1,
+                : ($first->teeth_positions ?? null),
+            'qty'             => $first->qty ?? 1,
         ]];
+
+        foreach ($existing->slice(1) as $item) {
+            $items[] = [
+                'prosthesis_type' => $item->prosthesis_type,
+                'material'        => $item->material,
+                'color_shade'     => $item->color_shade,
+                'teeth_positions' => $item->teeth_positions,
+                'qty'             => $item->qty,
+            ];
+        }
+
+        return $items;
     }
 
     /**
@@ -260,7 +275,11 @@ class LabCaseController extends ApiController
         }
 
         if (is_array($value)) {
-            return array_values($value);
+            // 只收标量牙位号：teeth_positions 是 json 列，嵌套数组/对象原样落库
+            // 会让读取端（Blade 与前端 JS 都按扁平字符串数组渲染）拿到无法处理的结构。
+            $positions = array_values(array_filter($value, 'is_scalar'));
+
+            return $positions ?: null;
         }
 
         return array_map('trim', explode(',', (string) $value));

@@ -92,10 +92,8 @@ class LabCaseService
 
             $labCase = LabCase::create($data);
 
-            foreach ($items as $index => $item) {
-                $item['lab_case_id'] = $labCase->id;
-                $item['sort_order'] = $index;
-                LabCaseItem::create($item);
+            foreach (array_values($items) as $index => $item) {
+                LabCaseItem::create($this->normalizeItem($item, $labCase->id, $index));
             }
 
             return $labCase;
@@ -121,17 +119,59 @@ class LabCaseService
             }
 
             if ($items !== null) {
-                // Delete old items and recreate
-                LabCaseItem::where('lab_case_id', $id)->delete();
-                foreach ($items as $index => $item) {
-                    $item['lab_case_id'] = $id;
-                    $item['sort_order'] = $index;
-                    LabCaseItem::create($item);
-                }
+                $this->syncItems($id, $items);
             }
 
             return true;
         });
+    }
+
+    /**
+     * 按传入列表对齐技工单明细。
+     *
+     * 不用"全删重建"：LabCaseItem 是软删除模型，每改一次都会留下一批 deleted_at
+     * 非空的历史行；明细 id 也会随之漂移，而 id 是前端和审计日志的引用锚点。
+     * 这里按 sort_order 就位复用现有行，只有多出来的才删。
+     */
+    private function syncItems(int $labCaseId, array $items): void
+    {
+        $existing = LabCaseItem::where('lab_case_id', $labCaseId)
+            ->orderBy('sort_order')
+            ->get()
+            ->values();
+
+        foreach (array_values($items) as $index => $item) {
+            $attributes = $this->normalizeItem($item, $labCaseId, $index);
+
+            if ($current = $existing->get($index)) {
+                $current->fill($attributes)->save();
+                continue;
+            }
+
+            LabCaseItem::create($attributes);
+        }
+
+        $existing->slice(count($items))->each->delete();
+    }
+
+    /**
+     * 把一条明细补齐成完整的托管列集合。
+     *
+     * 就位复用会保留行上的旧值，所以缺省的 key 必须显式写成 null——调用方"清空某字段"
+     * 的表达方式就是不传这个 key（Web 端 LabCaseController 的 teeth_positions 为空时
+     * 直接不放进数组），补齐不做的话清空操作会静默失效。
+     */
+    private function normalizeItem(array $item, int $labCaseId, int $sortOrder): array
+    {
+        return [
+            'lab_case_id'     => $labCaseId,
+            'sort_order'      => $sortOrder,
+            'prosthesis_type' => $item['prosthesis_type'] ?? null,
+            'material'        => $item['material'] ?? null,
+            'color_shade'     => $item['color_shade'] ?? null,
+            'teeth_positions' => $item['teeth_positions'] ?? null,
+            'qty'             => $item['qty'] ?? 1,
+        ];
     }
 
     /**
