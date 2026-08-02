@@ -49,12 +49,29 @@
 可用环境变量覆盖下载地址（内网镜像场景）：
 `PHP_DOWNLOAD_URL`、`MYSQL_DOWNLOAD_URL`、`NGINX_DOWNLOAD_URL`、
 `LARAGON_DOWNLOAD_URL`、`COMPOSER_DOWNLOAD_URL`、`PYTHON_DOWNLOAD_URL`、
-`VCREDIST_DOWNLOAD_URL`、`WMF_DOWNLOAD_URL`、`DOTNET48_DOWNLOAD_URL`。
+`VCREDIST_DOWNLOAD_URL`、`WMF_DOWNLOAD_URL`、`DOTNET48_DOWNLOAD_URL`、
+`SSU_DOWNLOAD_URL`、`SHA2_DOWNLOAD_URL`。
 
 覆盖任一地址会**跳过该组件的 SHA256 校验**（换镜像换版本必然换指纹），
 构建时会打印警告。默认地址均带指纹校验，见 `build.sh` 的 `expected_sha256()`。
 
-### Win7 特有的三个前置组件（已随包提供）
+### Win7 特有的四个前置组件（已随包提供）
+
+0. **SHA-2 支持（KB4490628 服务堆栈 + KB4474419 签名）** —— 微软自 2019 年起
+   用 **SHA-2** 重签所有更新包，而纯净 Win7 SP1 只认 SHA-1。签名验不过时
+   `wusa.exe` 的表现**不是报错**，而是长时间卡在
+   "Searching for updates on this computer" 永不返回 —— 装 .NET/WMF 时
+   「一直停着不动」的头号原因就是它。
+
+   安装包内附 `win7-prereq\01-windows6.1-kb4490628-x64.msu`（服务堆栈，约 10 MB）
+   与 `win7-prereq\02-windows6.1-kb4474419-v3-x64.msu`（SHA-2，约 56 MB）。
+   文件名的 `01-` / `02-` 前缀即安装顺序，**SSU 必须先装**。
+   `install-win.bat` 在装 .NET/WMF 之前按序安装，已装则跳过。
+
+   > 这两个包只能从 Windows Update CDN 取，地址里的指纹是包的一部分。
+   > 换版本时请到 <https://catalog.update.microsoft.com> 搜 KB 号，
+   > 用 `DownloadDialog.aspx` 解析出真实地址，再更新 `build.sh` 里
+   > `expected_sha256()` 的 `ssu4490628` / `sha2_4474419` 两条指纹。
 
 1. **VC++ 2015-2022 x64 运行库** —— PHP 的 VS16 构建依赖它。缺失时的典型症状
    是 `php.exe` 双击无反应或提示缺少 `VCRUNTIME140.dll`。安装包根目录附带
@@ -73,11 +90,18 @@
    （约 115 MB），`install-win.bat` 读注册表 `NDP\v4\Full` 的 `Release` 值
    （< 379893 即低于 4.5.2）按需静默安装。
 
-   > **纯净 Win7 需要重启两次**：装 .NET 4.8 → 重启 → 装 WMF 5.1 → 重启 →
-   > 再运行 `install-win.bat` 完成配置。脚本每一步都会明确提示。
+   > **纯净 Win7 需要重启三次**：装 SHA-2 前置（KB4490628 + KB4474419）→ 重启 →
+   > 装 .NET 4.8 → 重启 → 装 WMF 5.1 → 重启 → 再运行 `install-win.bat` 完成配置。
+   > 脚本每一步都会明确提示，并以退出码 3010 告知需要重启。
    >
-   > .NET 4.8 要求系统已打 **SP1 + KB4474419（SHA-2 代码签名）+ KB4490628**。
-   > 缺失时安装器返回 5100，脚本会把这三个 KB 号打印出来。
+   > .NET 4.8 要求系统已打 **SP1 + KB4474419 + KB4490628**，缺失时安装器返回 5100。
+   > 现在这两个 KB 已随包提供并在第 0 步自动安装，正常不会再走到 5100。
+   >
+   > **卡住时怎么判断**：`install-win.bat` 每分钟打印一次等待秒数，超过 45 分钟
+   > 会明确报超时（**不会杀 wusa 进程**——中途杀掉可能损坏服务堆栈）。
+   > 真正的进度看 `C:\Windows\Logs\CBS\CBS.log` 尾部时间戳，
+   > 以及任务管理器里 `TiWorker.exe` / `TrustedInstaller.exe` 是否在占用 CPU。
+   > 两者都静止才是真卡住，此时多为 Windows Update 组件损坏。
 
 ### 构建机必须是 PHP 8.2.x
 
@@ -306,6 +330,7 @@ deploy/.cache/
 ├── nginx-win7.zip          ← Nginx 原始包
 ├── vc_redist.x64.exe       ← VC++ 2015-2022 运行库
 ├── wmf51.zip / wmf51-extracted/   ← WMF 5.1（PowerShell 5.1 for Win7）
+├── win7-prereq/                   ← SHA-2 前置（01-KB4490628 / 02-KB4474419）
 ├── ndp48-x86-x64-allos-enu.exe    ← .NET Framework 4.8 离线包
 ├── python-3.8.10-amd64.exe ← OCR 用 Python 安装器
 └── ocr-wheels-win/         ← OCR 离线 wheel 包

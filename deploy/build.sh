@@ -179,6 +179,10 @@ expected_sha256() {
         laragon-core) echo "d66ae3c6f1949e39ee0cfb13cb79aa0d77b3542863291f707e4d4a96452ad4ae" ;;
         # ndp48-x86-x64-allos-enu.exe (.NET Framework 4.8 离线安装包)
         dotnet48)     echo "68c9986a8dcc0214d909aa1f31bee9fb5461bb839edca996a75b08ddffc1483f" ;;
+        # windows6.1-kb4490628-x64.msu（2019-03 服务堆栈更新，SHA-2 的前置）
+        ssu4490628)   echo "8075f6d889bcb27be6f52ed47081675e5bb8a5390f2f5bfe4ec27a2bb70cbf5e" ;;
+        # windows6.1-kb4474419-v3-x64.msu（SHA-2 代码签名支持）
+        sha2_4474419) echo "99312df792b376f02e25607d2eb3355725c47d124d8da253193195515fe90213" ;;
         *)            echo "" ;;
     esac
 }
@@ -632,6 +636,61 @@ MANIFEST
             fi
         else
             info "VC++ 运行库: 使用缓存"
+        fi
+
+        # ── Win7 SHA-2 前置：服务堆栈更新 + SHA-2 代码签名支持
+        #
+        # 微软自 2019 年起把更新全部改用 SHA-2 签名。纯净 Win7 SP1 验不了 SHA-2，
+        # wusa 拿到这类 MSU 的典型表现不是快速报错，而是长时间卡在
+        # "Searching for updates on this computer" —— 安装 WMF 5.1 时"一直停着"
+        # 多半就是这个原因。必须按 SSU → SHA-2 的顺序先补上。
+        #
+        # 两个包都从 Windows Update CDN 取。文件名里的指纹是包的一部分，
+        # 换版本时请从 catalog.update.microsoft.com 重新解析地址并更新上面的 SHA-256。
+        SSU_URL="${SSU_DOWNLOAD_URL:-http://download.windowsupdate.com/c/msdownload/update/software/secu/2019/03/windows6.1-kb4490628-x64_d3de52d6987f7c8bdc2c015dca69eac96047c76e.msu}"
+        SHA2_URL="${SHA2_DOWNLOAD_URL:-http://download.windowsupdate.com/c/msdownload/update/software/secu/2019/09/windows6.1-kb4474419-v3-x64_b5614c6cea5cb4e198717789633dca16308ef79c.msu}"
+
+        PREREQ_CACHE="$CACHE_DIR/win7-prereq"
+        mkdir -p "$PREREQ_CACHE"
+
+        # 装入顺序由文件名前缀决定（install-win.bat 按名字排序逐个安装），
+        # 不要改这两个前缀：SSU 必须先于 SHA-2。
+        download_win7_prereq() {
+            local url="$1" out="$2" sha_key="$3" label="$4" size_hint="$5" overridden="$6"
+            local dest="$PREREQ_CACHE/$out"
+
+            if [[ -s "$dest" ]] && ! verify_sha256 "$dest" "$sha_key" "$overridden"; then
+                warn "$label: 缓存指纹不符，重新下载"
+                rm -f "$dest"
+            fi
+
+            if [[ -s "$dest" ]]; then
+                info "$label: 使用缓存"
+                return 0
+            fi
+
+            echo -e "  ${CYAN}下载 $label（约 ${size_hint}）...${NC}"
+            if curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$dest" "$url" \
+               && [[ -s "$dest" ]] \
+               && verify_sha256 "$dest" "$sha_key" "$overridden"; then
+                info "$label 已下载"
+                return 0
+            fi
+
+            rm -f "$dest"
+            return 1
+        }
+
+        if ! download_win7_prereq "$SSU_URL" "01-windows6.1-kb4490628-x64.msu" "ssu4490628" \
+                "服务堆栈更新 KB4490628" "10MB" \
+                "$([[ -n "${SSU_DOWNLOAD_URL:-}" ]] && echo true || echo false)"; then
+            error "KB4490628 下载失败 —— 纯净 Win7 SP1 装不了 SHA-2 补丁，WMF 5.1 会卡死"; ASSEMBLE_OK=false
+        fi
+
+        if ! download_win7_prereq "$SHA2_URL" "02-windows6.1-kb4474419-v3-x64.msu" "sha2_4474419" \
+                "SHA-2 代码签名支持 KB4474419" "56MB" \
+                "$([[ -n "${SHA2_DOWNLOAD_URL:-}" ]] && echo true || echo false)"; then
+            error "KB4474419 下载失败 —— 纯净 Win7 SP1 验不了 SHA-2 签名，WMF 5.1 会卡死"; ASSEMBLE_OK=false
         fi
 
         # ── WMF 5.1（PowerShell 5.1 for Win7 SP1）
@@ -1257,6 +1316,8 @@ for %%F in (python-installer.exe vc_redist.x64.exe) do (
     if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>&1
 )
 if exist "%PKG_DIR%\wmf51" xcopy "%PKG_DIR%\wmf51" "%INSTALL_DIR%\wmf51\" /E /I /H /Y /Q >nul 2>&1
+REM Win7 SHA-2 前置：没有它们，纯净 Win7 SP1 装 WMF 时 wusa 会卡住不返回
+if exist "%PKG_DIR%\win7-prereq" xcopy "%PKG_DIR%\win7-prereq" "%INSTALL_DIR%\win7-prereq\" /E /I /H /Y /Q >nul 2>&1
 REM .NET 4.8：WMF 5.1 的前置，纯净 Win7 SP1 只有 3.5.1
 if exist "%PKG_DIR%\dotnet48" xcopy "%PKG_DIR%\dotnet48" "%INSTALL_DIR%\dotnet48\" /E /I /H /Y /Q >nul 2>&1
 echo         Files copied.
@@ -1490,6 +1551,17 @@ if [[ -n "$WIN7_RUNTIME_DIR" ]] && [[ -d "$WIN7_RUNTIME_DIR" ]]; then
     if [[ -s "$CACHE_DIR/vc_redist.x64.exe" ]]; then
         cp "$CACHE_DIR/vc_redist.x64.exe" "$DIST_DIR/vc_redist.x64.exe"
         info "复制 VC++ 2015-2022 x64 运行库"
+    fi
+
+    # Win7 SHA-2 前置（KB4490628 服务堆栈 + KB4474419 SHA-2 签名支持）。
+    # 文件名的 01-/02- 前缀就是安装顺序，install-win.bat 按名字排序逐个装。
+    if compgen -G "$CACHE_DIR/win7-prereq/*.msu" >/dev/null 2>&1; then
+        mkdir -p "$DIST_DIR/win7-prereq"
+        cp "$CACHE_DIR"/win7-prereq/*.msu "$DIST_DIR/win7-prereq/"
+        PREREQ_COUNT=$(find "$DIST_DIR/win7-prereq" -name '*.msu' | wc -l | tr -d ' ')
+        info "复制 Win7 SHA-2 前置补丁（${PREREQ_COUNT} 个 .msu）"
+    else
+        warn "未找到 Win7 SHA-2 前置补丁，纯净 Win7 SP1 安装 WMF 5.1 时可能卡死"
     fi
 
     # .NET Framework 4.8（WMF 5.1 的前置，纯净 Win7 SP1 只有 3.5.1）

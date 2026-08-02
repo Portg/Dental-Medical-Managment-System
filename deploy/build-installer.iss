@@ -61,7 +61,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopShortcut}"; GroupDescription
 ; 项目代码（由 build.sh --target win 构建）
 ; 排除 laragon / wmf51 / vc_redist —— 它们属于运行环境与前置安装包，
 ; 各有独立的 DestDir，不该被复制进项目目录（否则白占 1.3GB+）。
-Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels,laragon,wmf51,vc_redist.x64.exe,python-installer.exe"
+Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels,laragon,wmf51,win7-prereq,vc_redist.x64.exe,python-installer.exe"
 
 ; Win7 运行环境：PHP 8.2.33 / MySQL 5.7.44 / Nginx / Composer，由 build.sh 自组装。
 ; install-win.ps1 从 {app}\laragon\bin\{php,mysql,nginx} 自动发现版本目录。
@@ -69,6 +69,11 @@ Source: "dist\laragon\*"; DestDir: "{app}\laragon"; Flags: ignoreversion recurse
 
 ; VC++ 2015-2022 x64 运行库（PHP VS16 构建的依赖）
 Source: "dist\vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+; Win7 SHA-2 前置（KB4490628 服务堆栈 + KB4474419 SHA-2 签名支持）。
+; 微软自 2019 年起用 SHA-2 重签所有更新，纯净 Win7 SP1 验不了签名，
+; 此时 wusa 装 .NET/WMF 会长时间卡在「Searching for updates」而不返回。
+; 文件名的 01-/02- 前缀即安装顺序，install-win.bat 按名字排序逐个安装。
+Source: "dist\win7-prereq\*"; DestDir: "{app}\win7-prereq"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\win7-prereq'))
 ; WMF 5.1：Win7 自带 PowerShell 2.0，install-win.bat 会按需静默安装
 Source: "dist\wmf51\*"; DestDir: "{app}\wmf51"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\dist\wmf51'))
 ; .NET Framework 4.8：WMF 5.1 要求 .NET 4.5.2+，而纯净 Win7 SP1 只有 3.5.1。

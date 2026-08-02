@@ -155,6 +155,58 @@ echo  Windows 7 出厂自带 PowerShell 2.0，需要先安装 WMF 5.1。
 echo.
 
 REM ═══════════════════════════════════════════════════════════════
+REM  前置 0: Win7 SHA-2 支持（KB4490628 服务堆栈 + KB4474419 签名）
+REM
+REM  微软自 2019 年起用 SHA-2 重签所有更新包。纯净 Win7 SP1 不支持 SHA-2，
+REM  wusa 拿到这类 MSU 的典型表现**不是**报错，而是长时间卡在
+REM  "Searching for updates on this computer" 永不返回 —— 这正是装 .NET/WMF
+REM  时「一直停着」的头号原因。必须按 SSU → SHA-2 的顺序先补上。
+REM
+REM  win7-prereq\ 下的文件名带 01- / 02- 前缀，即安装顺序，for 按名字排序遍历。
+REM ═══════════════════════════════════════════════════════════════
+if not exist "%SCRIPT_DIR%\win7-prereq" (
+    call :log "未随包提供 win7-prereq，跳过 SHA-2 前置（老安装包或已手工处理）"
+    goto :sha2_done
+)
+
+REM wusa 走 CBS/Windows Update 栈，wuauserv 被禁用时会无限等待而不报错。
+REM 取的是数值状态（4=RUNNING）而非 "RUNNING" 字样：sc 的输出标签在中文系统上
+REM 是本地化的，按字样匹配会取空；取空时也走启动分支，重复启动无害。
+set "WU_STATE="
+for /f "tokens=3" %%S in ('sc query wuauserv 2^>nul ^| findstr /i /c:"STATE"') do set "WU_STATE=%%S"
+call :log "Windows Update 服务状态码: [!WU_STATE!]（4=RUNNING）"
+if not "!WU_STATE!"=="4" (
+    echo  正在启动 Windows Update 服务（wusa 依赖它，被停用会导致安装卡死）...
+    sc config wuauserv start= demand >>"%PREREQ_LOG%" 2>&1
+    net start wuauserv >>"%PREREQ_LOG%" 2>&1
+    call :log "已尝试启动 wuauserv"
+)
+
+REM :install_msu 是 call 的子过程，其中的 exit /b 1 只把错误码交回这里、
+REM 不会中止脚本。必须逐个判断，否则前置装失败会被忽略、继续去装注定失败的 .NET。
+set "PREREQ_REBOOT=0"
+for %%M in ("%SCRIPT_DIR%\win7-prereq\*.msu") do (
+    call :install_msu "%%~fM"
+    if errorlevel 1 (
+        call :maybe_pause
+        exit /b 1
+    )
+)
+
+if "!PREREQ_REBOOT!"=="1" (
+    echo.
+    echo  =======================================================
+    echo    SHA-2 前置补丁安装完成，请重启电脑后重新运行本安装程序
+    echo  =======================================================
+    echo.
+    call :log "SHA-2 前置就绪，需重启后重新运行（退出码 %RC_REBOOT_REQUIRED%）"
+    call :maybe_pause
+    exit /b %RC_REBOOT_REQUIRED%
+)
+
+:sha2_done
+
+REM ═══════════════════════════════════════════════════════════════
 REM  前置 1: .NET Framework 4.5.2+
 REM
 REM  WMF 5.1 (KB3191566) 的安装前提是 .NET Framework **4.5.2** 或更高，
@@ -305,6 +357,109 @@ set "EXIT_CODE=!ERRORLEVEL!"
 call :log "install-win.ps1 退出码: !EXIT_CODE!"
 
 endlocal & exit /b %EXIT_CODE%
+
+REM ── 安装单个 MSU 补丁 ───────────────────────────────────────────
+REM
+REM  用法: call :install_msu "<完整路径.msu>"
+REM
+REM  不直接 `wusa ... /quiet`（同步阻塞）的原因：wusa 不往 stdout 写进度，
+REM  输出又被重定向进日志，一旦 CBS 卡住，界面上就只剩一行「请勿关闭窗口」，
+REM  在装和挂死完全无法区分，用户只能干等。这里改为异步启动 + 轮询 +
+REM  每分钟心跳 + 超时上报，退出码通过临时文件回传。
+REM
+REM  超时后**不杀进程**：wusa 中途被杀可能损坏服务堆栈，届时连正常的
+REM  Windows Update 都会坏掉。只上报并退出，让用户决定是继续等还是排查。
+REM ────────────────────────────────────────────────────────────────
+:install_msu
+setlocal EnableDelayedExpansion
+set "MSU=%~1"
+set "MSU_NAME=%~n1"
+set "MSU_TIMEOUT_SEC=2700"
+set "LOCAL_REBOOT=%PREREQ_REBOOT%"
+
+REM 从文件名里取 KB 号（形如 01-windows6.1-kb4490628-x64）
+set "KB="
+for %%T in (!MSU_NAME:-= !) do (
+    echo %%T | findstr /i /b /c:"kb" >nul && set "KB=%%T"
+)
+
+if defined KB (
+    wmic qfe get hotfixid 2>nul | findstr /i "!KB!" >nul && (
+        echo  !KB! 已安装，跳过
+        call :log "!KB! 已安装，跳过"
+        endlocal & set "PREREQ_REBOOT=%LOCAL_REBOOT%"
+        goto :eof
+    )
+)
+
+echo.
+echo  正在安装 !KB!（首次安装可能需要 10-40 分钟，请勿关机）...
+echo  进度可查看: C:\Windows\Logs\CBS\CBS.log
+call :log "开始安装 !MSU!"
+
+set "MSU_CODE=%LOG_DIR%\.msu_code.tmp"
+set "MSU_RUNNER=%LOG_DIR%\.msu_run.bat"
+del /q "!MSU_CODE!" >nul 2>&1
+
+> "!MSU_RUNNER!" echo @echo off
+>>"!MSU_RUNNER!" echo wusa.exe "!MSU!" /quiet /norestart ^>^>"%PREREQ_LOG%" 2^>^&1
+>>"!MSU_RUNNER!" echo echo %%ERRORLEVEL%%^>"!MSU_CODE!"
+
+start "" /b cmd /c "!MSU_RUNNER!"
+
+set /a MSU_WAITED=0
+:msu_poll
+if exist "!MSU_CODE!" goto :msu_finished
+ping -n 16 127.0.0.1 >nul 2>&1
+set /a MSU_WAITED+=15
+if !MSU_WAITED! GEQ !MSU_TIMEOUT_SEC! goto :msu_timeout
+set /a MSU_TICK=!MSU_WAITED! %% 60
+if !MSU_TICK! EQU 0 echo    ...仍在安装，已等待 !MSU_WAITED! 秒
+goto :msu_poll
+
+:msu_timeout
+echo.
+echo  [错误] !KB! 安装超过 !MSU_TIMEOUT_SEC! 秒仍未结束。
+echo         wusa 仍在后台运行，**不要关机**，也不要重复运行安装程序。
+echo         请检查：
+echo           1. C:\Windows\Logs\CBS\CBS.log 尾部时间戳是否还在推进
+echo           2. 任务管理器里 TiWorker.exe / TrustedInstaller.exe 是否在占用 CPU
+echo         若两者都静止，多为 Windows Update 组件损坏，需先修复 WU 再重试。
+call :log "[ERROR] !KB! 安装超时（!MSU_TIMEOUT_SEC! 秒），未杀进程"
+endlocal & set "PREREQ_REBOOT=%LOCAL_REBOOT%"
+exit /b 1
+
+:msu_finished
+set "MSU_RC="
+set /p MSU_RC=<"!MSU_CODE!"
+del /q "!MSU_CODE!" "!MSU_RUNNER!" >nul 2>&1
+call :log "!KB! (wusa) 退出码: !MSU_RC!"
+
+REM 0=成功 3010=成功待重启 2359302=已安装 0x80240017=不适用于本系统
+REM 注意必须用括号包住：`if cond A & goto B` 里的 goto 不属于 if 体，会无条件执行。
+REM 0x80240017 在 %ERRORLEVEL% 里可能以无符号或有符号（-2145124329）两种形式出现。
+if "!MSU_RC!"=="0" (
+    set "LOCAL_REBOOT=1"
+    goto :msu_ok
+)
+if "!MSU_RC!"=="3010" (
+    set "LOCAL_REBOOT=1"
+    goto :msu_ok
+)
+if "!MSU_RC!"=="2359302"     goto :msu_ok
+if "!MSU_RC!"=="2149842967"  goto :msu_ok
+if "!MSU_RC!"=="-2145124329" goto :msu_ok
+
+echo  [错误] !KB! 安装失败（错误码 !MSU_RC!）。
+echo         常见原因：系统未打 SP1，或 Windows Update 组件损坏。
+call :log "[ERROR] !KB! 安装失败，错误码 !MSU_RC!"
+endlocal & set "PREREQ_REBOOT=%LOCAL_REBOOT%"
+exit /b 1
+
+:msu_ok
+echo  !KB! 就绪
+endlocal & set "PREREQ_REBOOT=%LOCAL_REBOOT%"
+goto :eof
 
 REM ── 仅在交互模式下暂停 ──────────────────────────────────────────
 REM 隐藏窗口（Inno runhidden）里 pause 等不到按键，会永久挂起安装流程
