@@ -42,7 +42,16 @@ class MenuItemsSeeder extends Seeder
 
         $this->guardPrerequisites();
 
-        $this->seedMenuTree();
+        // 整棵菜单树必须一次成败。item() 在权限 slug 查不到时会中途抛异常，
+        // 没有事务的话前半棵树已经落库：父项在而子项缺、或部分项指向旧的父 ID，
+        // 而升级脚本只会打印警告继续跑，半更新的侧边栏就这样留在了生产环境。
+        //
+        // 不在 guardPrerequisites() 里预校验全部 slug，是因为 slug 散落在几十处
+        // item() 调用的字面量里，另抄一份清单必然与实际调用漂移；
+        // 事务已经保证"要么全成要么全不动"，item() 的报错信息本身也足够定位。
+        DB::transaction(function () {
+            $this->seedMenuTree();
+        });
 
         $this->reportUnmanaged();
 

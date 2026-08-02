@@ -224,7 +224,10 @@ return [
     |
     */
     'value_binder'       => [
-        'default' => Maatwebsite\Excel\DefaultValueBinder::class,
+        // 全局改用防公式注入的绑定器：导出内容含大量用户可控文本，
+        // 默认绑定器会把 '=HYPERLINK(...)' 这类字符串写成公式（单元格类型 f）。
+        // 没有任何导出类实现 WithCustomValueBinder，因此这里改一处即全量生效。
+        'default' => App\Exports\SafeValueBinder::class,
     ],
 
     'cache'        => [
