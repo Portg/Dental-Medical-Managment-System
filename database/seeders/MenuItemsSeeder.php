@@ -191,9 +191,13 @@ class MenuItemsSeeder extends Seeder
         $this->item($apptGroup, 'menu.doctor_queue', 'doctor-queue', null, 'view-appointments', 50, 'D');
 
         // 3.2 Medical Records — SAD sees group with children, N sees direct link
-        $mrGroup = $this->item($parentId, 'menu.group_medical_records', 'medical-cases', 'icon-doc', 'manage-medical-cases', 20, 'SADN');
-        $this->item($mrGroup, 'menu.medical_cases', 'medical-cases', null, 'manage-medical-cases', 10, 'SAD');
-        $this->item($mrGroup, 'menu.dental_charting', 'dental-charting', null, 'manage-medical-cases', 20, 'SAD');
+        // 挂 view-medical-cases 而非 manage-：2026_08_02_140314 把病历拆成读写两权后，
+        // 护士只持有 view-。MenuService 用 hasPermission() 直查这个 slug，不走
+        // Gate::before 的「manage 蕴含 view」，继续挂 manage- 会让护士整组菜单消失，
+        // 而她们本来是有权只读的。持有 manage- 的角色已显式获授 view-（迁移与 Seeder 均是）。
+        $mrGroup = $this->item($parentId, 'menu.group_medical_records', 'medical-cases', 'icon-doc', 'view-medical-cases', 20, 'SADN');
+        $this->item($mrGroup, 'menu.medical_cases', 'medical-cases', null, 'view-medical-cases', 10, 'SAD');
+        $this->item($mrGroup, 'menu.dental_charting', 'dental-charting', null, 'view-medical-cases', 20, 'SAD');
         $this->item($mrGroup, 'menu.prescriptions', 'prescriptions', null, 'manage-treatments', 30, 'SAD');
 
         // 3.3 Treatment Plans — DIRECT for SAD

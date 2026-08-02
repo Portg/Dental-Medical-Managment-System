@@ -56,6 +56,10 @@ class PermissionsTableSeeder extends Seeder
             ['name' => '查看敏感信息', 'slug' => 'view-sensitive-data', 'module' => '数据安全', 'description' => '查看脱敏字段的完整信息'],
 
             // 医疗管理
+            // 病历读写分权见 2026_08_02_140314：只读动作走 view-，写动作走 manage-。
+            // 全新安装不跑那条迁移（空库上它无事可做），权限定义必须在这里也有一份，
+            // 否则新装环境根本不存在 view-medical-cases，护士只能靠 manage- 越权进入。
+            ['name' => '查看病历', 'slug' => 'view-medical-cases', 'module' => '医疗管理', 'description' => '打开病历、查看修改记录与版本历史、打印导出，不含建档与改写'],
             ['name' => '管理病例', 'slug' => 'manage-medical-cases', 'module' => '医疗管理', 'description' => '管理病例记录'],
             ['name' => '管理治疗', 'slug' => 'manage-treatments', 'module' => '医疗管理', 'description' => '管理治疗方案与处方'],
             ['name' => '管理医疗服务', 'slug' => 'manage-medical-services', 'module' => '医疗管理', 'description' => '管理医疗服务项目与模板'],
@@ -96,6 +100,12 @@ class PermissionsTableSeeder extends Seeder
             // 诊所事务
             ['name' => '查看消毒记录', 'slug' => 'view-sterilization',   'module' => '诊所事务', 'description' => '查看灭菌记录和器械包列表，登记使用'],
             ['name' => '管理消毒记录', 'slug' => 'manage-sterilization', 'module' => '诊所事务', 'description' => '新增/编辑/删除灭菌记录与器械包台账'],
+
+            // 满意度调查（拆分见 2026_08_02_135903）
+            // 同上：全新安装不跑那条迁移，这里必须有定义，否则 MenuItemsSeeder
+            // 声明的 view-surveys 查不到会直接抛异常，整个 db:seed 失败。
+            ['name' => '查看满意度调查', 'slug' => 'view-surveys',   'module' => '满意度调查', 'description' => '查看满意度调查看板与问卷列表'],
+            ['name' => '管理满意度调查', 'slug' => 'manage-surveys', 'module' => '满意度调查', 'description' => '生成问卷、批量生成、重置患者填写链接'],
         ];
 
         foreach ($permissions as $permission) {
