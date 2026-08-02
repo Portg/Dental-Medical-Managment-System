@@ -213,7 +213,7 @@ REM  WMF 5.1 (KB3191566) 的安装前提是 .NET Framework **4.5.2** 或更高�
 REM  纯净 Win7 SP1 只带 .NET 3.5.1，直接装 WMF 会失败。
 REM  判据是注册表 NDP\v4\Full 的 Release 值：
 REM    378389=4.5  378675=4.5.1  379893=4.5.2  528040=4.8
-REM  参考 learn.microsoft.com «如何：确定安装的 .NET Framework 版本»
+REM  参考 learn.microsoft.com "如何：确定安装的 .NET Framework 版本"
 REM ═══════════════════════════════════════════════════════════════
 set "DOTNET_MIN=379893"
 set "DOTNET_RELEASE="
@@ -377,11 +377,19 @@ set "MSU_NAME=%~n1"
 set "MSU_TIMEOUT_SEC=2700"
 set "LOCAL_REBOOT=%PREREQ_REBOOT%"
 
-REM 从文件名里取 KB 号（形如 01-windows6.1-kb4490628-x64）
+REM 从文件名里取 KB 号（形如 01-windows6.1-kb4490628-x64）。
+REM 不用 `echo %%T ^| findstr ... ^&^& set`：管道会派生子 cmd，在 for 体里
+REM 与 && 组合时赋值不稳定 —— 实测就是空的，导致所有提示里 KB 号缺失。
+REM 纯字符串截取没有子进程、没有解析歧义。
 set "KB="
-for %%T in (!MSU_NAME:-= !) do (
-    echo %%T | findstr /i /b /c:"kb" >nul && set "KB=%%T"
+set "MSU_TOKENS=!MSU_NAME:-= !"
+for %%T in (!MSU_TOKENS!) do (
+    set "TOK=%%T"
+    if /i "!TOK:~0,2!"=="kb" set "KB=%%T"
 )
+
+REM 兜底：万一文件名不含 kb 段，也要有个非空标识，否则日志和报错全是空白
+if not defined KB set "KB=!MSU_NAME!"
 
 if defined KB (
     wmic qfe get hotfixid 2>nul | findstr /i "!KB!" >nul && (
@@ -395,10 +403,34 @@ if defined KB (
 echo.
 echo  正在安装 !KB!（首次安装可能需要 10-40 分钟，请勿关机）...
 echo  进度可查看: C:\Windows\Logs\CBS\CBS.log
-call :log "开始安装 !MSU!"
-
 set "MSU_CODE=%LOG_DIR%\.msu_code.tmp"
 set "MSU_RUNNER=%LOG_DIR%\.msu_run.bat"
+set /a MSU_ATTEMPT=0
+
+:msu_attempt
+set /a MSU_ATTEMPT+=1
+call :log "开始安装 !MSU!（第 !MSU_ATTEMPT! 次尝试）"
+
+REM 服务栈同一时刻只允许一个安装会话，抢不到就是 1618。
+REM 上一次卡住的 wusa 往往还活着占着锁，直接开新的必然失败，先等它退出。
+set /a LOCK_WAITED=0
+:msu_lock_wait
+tasklist /fi "IMAGENAME eq wusa.exe" 2>nul | findstr /i "wusa.exe" >nul
+if errorlevel 1 goto :msu_lock_free
+if !LOCK_WAITED! GEQ 600 (
+    echo  [警告] 已有 wusa.exe 运行超过 10 分钟仍未退出，继续尝试可能拿到 1618。
+    call :log "[WARN] 等待既有 wusa.exe 退出超时，仍继续尝试"
+    goto :msu_lock_free
+)
+if !LOCK_WAITED! EQU 0 (
+    echo  检测到已有安装会话在运行，等待其结束...
+    call :log "检测到既有 wusa.exe，等待其退出"
+)
+ping -n 16 127.0.0.1 >nul 2>&1
+set /a LOCK_WAITED+=15
+goto :msu_lock_wait
+:msu_lock_free
+
 del /q "!MSU_CODE!" >nul 2>&1
 
 > "!MSU_RUNNER!" echo @echo off
@@ -449,6 +481,26 @@ if "!MSU_RC!"=="3010" (
 if "!MSU_RC!"=="2359302"     goto :msu_ok
 if "!MSU_RC!"=="2149842967"  goto :msu_ok
 if "!MSU_RC!"=="-2145124329" goto :msu_ok
+
+REM 1618 = ERROR_INSTALL_ALREADY_RUNNING，可重试，不是环境坏了
+if "!MSU_RC!"=="1618" (
+    if !MSU_ATTEMPT! LSS 3 (
+        echo  服务栈被另一个安装会话占用（1618），120 秒后重试（已尝试 !MSU_ATTEMPT!/3）...
+        call :log "1618 —— 服务栈被占用，等待后重试"
+        ping -n 121 127.0.0.1 >nul 2>&1
+        goto :msu_attempt
+    )
+    echo.
+    echo  [错误] !KB! 安装失败：服务栈始终被另一个安装会话占用（错误码 1618）。
+    echo         这通常是上一次卡住的 wusa.exe，或 Windows Update 正在装别的更新。
+    echo         处理办法：
+    echo           1. 任务管理器结束 wusa.exe，等 1 分钟后重新运行本程序
+    echo           2. 或先让 Windows Update 把手头的更新跑完
+    echo           3. 实在不退就重启一次再运行 —— 重启会释放服务栈的锁
+    call :log "[ERROR] !KB! 安装失败：1618，重试 !MSU_ATTEMPT! 次后仍被占用"
+    endlocal & set "PREREQ_REBOOT=%LOCAL_REBOOT%"
+    exit /b 1
+)
 
 echo  [错误] !KB! 安装失败（错误码 !MSU_RC!）。
 echo         常见原因：系统未打 SP1，或 Windows Update 组件损坏。
