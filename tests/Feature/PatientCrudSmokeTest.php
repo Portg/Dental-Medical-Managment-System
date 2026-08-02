@@ -66,6 +66,20 @@ class PatientCrudSmokeTest extends TestCase
         ]);
     }
 
+    public function test_patient_resource_exposes_dob_alongside_date_of_birth(): void
+    {
+        // dob 是表单字段名，写入时映射到 date_of_birth（PatientService::OPTIONAL_FIELDS）。
+        // 两个 key 都要出现在响应里且同值：dob 是 v1 的历史契约，不能因为它曾经恒为 null 就删掉。
+        $response = $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/patients', $this->validPatientData(['dob' => '1990-05-15']));
+
+        $response->assertStatus(201)
+                 ->assertJsonPath('data.dob', '1990-05-15')
+                 ->assertJsonPath('data.date_of_birth', '1990-05-15');
+
+        $this->assertDatabaseHas('patients', ['date_of_birth' => '1990-05-15']);
+    }
+
     public function test_create_patient_validation_fails_without_required_fields(): void
     {
         $response = $this->withHeaders($this->authHeader())

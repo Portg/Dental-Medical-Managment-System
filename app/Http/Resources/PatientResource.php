@@ -28,8 +28,11 @@ class PatientResource extends JsonResource
             'surname'        => $this->surname,
             'othername'      => $this->othername,
             'gender'         => $this->gender,
-            // 不再输出 dob：patients 表没有这个列（dob 只是表单字段名，
-            // PatientService::OPTIONAL_FIELDS 会映射到 date_of_birth），此处一直返回 null
+            // dob 与 date_of_birth 同值：patients 表只有 date_of_birth 列，dob 是
+            // 表单字段名（PatientService::OPTIONAL_FIELDS 映射）兼留的只读派生属性。
+            // 此前 dob 恒为 null，但保留这个 key——删掉会破坏 v1 契约，而现在有
+            // Patient::getDobAttribute()，输出真实值的成本为零。
+            'dob'            => $this->dateOnly($this->date_of_birth),
             'date_of_birth'  => $this->dateOnly($this->date_of_birth),
             'age'            => $this->age,
             'phone_no'       => $reveal ? $this->phone_no : DataMaskingService::maskPhone($this->phone_no),

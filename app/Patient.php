@@ -211,7 +211,14 @@ class Patient extends Model
      */
     public function getDobAttribute(): ?string
     {
-        return $this->date_of_birth?->format('Y-m-d');
+        try {
+            return $this->date_of_birth?->format('Y-m-d');
+        } catch (\Throwable $e) {
+            // $appends 把 dob 放进了每一次序列化：date_of_birth 若是脏值（历史库里的
+            // '0000-00-00' 之类），date cast 解析失败会连累整个患者 JSON 一起炸。
+            // 这里降级成 null，让脏数据只影响一个字段。
+            return null;
+        }
     }
 
     public function routeNotificationForSms($notifiable)
