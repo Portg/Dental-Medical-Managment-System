@@ -72,15 +72,13 @@ return new class extends Migration
                 ->update(['permission_id' => $viewPatients, 'updated_at' => now()]);
         }
 
-        foreach (['view-surveys', 'manage-surveys'] as $slug) {
-            $permId = DB::table('permissions')->where('slug', $slug)->value('id');
-            if (!$permId) {
-                continue;
-            }
-
-            DB::table('role_permissions')->where('permission_id', $permId)->delete();
-            DB::table('permissions')->where('id', $permId)->delete();
-        }
+        // 不删 view-surveys / manage-surveys，也不删它们的角色授权。
+        //
+        // up() 对权限用「有则复用、无则新建」，对授权用 insertOrIgnore —— 迁移跑完
+        // 就无从分辨哪些是自己新增的、哪些是客户环境本来就有的。无条件删除会连带
+        // 撤销迁移前就存在的配置。同 2026_08_01_000002 的处理（见 c9c611e）。
+        //
+        // 留下多余的权限行只是冗余，删掉别人的权限是数据损坏，两害相权取其轻。
 
         if (Schema::hasTable('satisfaction_surveys')) {
             Schema::table('satisfaction_surveys', function (Blueprint $table) {
@@ -107,22 +105,36 @@ return new class extends Migration
     }
 
     /**
-     * 加唯一索引前先清理历史重复：同一预约只保留最早的一份，
-     * 其余软删除（保留痕迹，不物理丢弃患者已填写的评价）。
+     * 加唯一索引前先清理历史重复：同一预约保留**最有价值**的一份，
+     * 其余解除预约关联（把 appointment_id 置 null）。
+     *
+     * 注意这里不是软删除：重复行本身仍然保留，只是不再挂在该预约上，
+     * 便于事后人工核对；物理丢弃患者已填写的评价是不可接受的。
+     *
+     * 取舍顺序：已填写（completed）优先于未填写，同档再取最早的一条。
+     * 不能简单取 MIN(id)——批量生成常常先建出一份 pending，患者后来填的是另一份，
+     * 按 id 最小保留会把预约挂到空白问卷上，真正的评价反被摘掉关联。
      */
     private function addAppointmentUniqueIndex(): void
     {
         $duplicated = DB::table('satisfaction_surveys')
             ->whereNotNull('appointment_id')
-            ->select('appointment_id', DB::raw('MIN(id) as keep_id'), DB::raw('COUNT(*) as c'))
+            ->select('appointment_id', DB::raw('COUNT(*) as c'))
             ->groupBy('appointment_id')
             ->having('c', '>', 1)
-            ->get();
+            ->pluck('appointment_id');
 
-        foreach ($duplicated as $row) {
+        foreach ($duplicated as $appointmentId) {
+            $keepId = DB::table('satisfaction_surveys')
+                ->where('appointment_id', $appointmentId)
+                ->orderByRaw("CASE WHEN status = 'completed' THEN 0 ELSE 1 END")
+                ->orderByRaw('CASE WHEN survey_date IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('id')
+                ->value('id');
+
             DB::table('satisfaction_surveys')
-                ->where('appointment_id', $row->appointment_id)
-                ->where('id', '<>', $row->keep_id)
+                ->where('appointment_id', $appointmentId)
+                ->where('id', '<>', $keepId)
                 ->update(['appointment_id' => null]);
         }
 

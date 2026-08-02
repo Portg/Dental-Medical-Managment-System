@@ -223,6 +223,56 @@ class SatisfactionSurveyFlowTest extends TestCase
         $this->service()->regenerateToken($survey->id);
     }
 
+    public function test_old_link_cannot_submit_after_regenerate(): void
+    {
+        // 患者打开旧链接（此时问卷已被查出），管理员随后重置链接，患者才提交。
+        // 只按 id + pending 判定的话，本该失效的旧链接照样能写入。
+        $this->actingAs($this->admin);
+        $survey   = $this->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+        $oldToken = $survey->token;
+
+        $this->get('/survey/' . $oldToken)->assertStatus(200);
+
+        $this->service()->regenerateToken($survey->id);
+
+        $this->post('/survey/' . $oldToken, ['overall_rating' => 5])->assertStatus(404);
+
+        $this->assertDatabaseHas('satisfaction_surveys', [
+            'id'     => $survey->id,
+            'status' => SatisfactionSurvey::STATUS_PENDING,
+        ]);
+    }
+
+    public function test_regenerate_cannot_reopen_a_survey_completed_mid_flight(): void
+    {
+        // 管理员读到 pending 之后、写回之前，患者完成了提交。
+        // 无条件按主键 update 会把 completed 改回 pending 并发新 token，
+        // 等于把患者已给出的评价重新开放给任何人覆盖。
+        $this->actingAs($this->admin);
+        $survey = $this->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $service = $this->service();
+
+        // 模拟竞态：拿到的是重置动作开始前的那份快照
+        $stale = SatisfactionSurvey::find($survey->id);
+        $this->assertSame(SatisfactionSurvey::STATUS_PENDING, $stale->status);
+
+        $this->post('/survey/' . $survey->token, ['overall_rating' => 4])->assertOk();
+
+        try {
+            $service->regenerateToken($survey->id);
+            $this->fail('已完成的问卷不应被重置为 pending');
+        } catch (\RuntimeException $e) {
+            // 预期：原子更新影响 0 行
+        }
+
+        $this->assertDatabaseHas('satisfaction_surveys', [
+            'id'             => $survey->id,
+            'status'         => SatisfactionSurvey::STATUS_COMPLETED,
+            'overall_rating' => 4,
+        ]);
+    }
+
     // ── 匿名与并发 ──────────────────────────────────────────────────
 
     /**

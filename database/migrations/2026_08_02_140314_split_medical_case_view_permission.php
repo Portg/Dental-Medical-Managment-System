@@ -73,12 +73,14 @@ return new class extends Migration
             Cache::forget("role:{$nurseId}:permissions");
         }
 
-        $viewId = DB::table('permissions')->where('slug', 'view-medical-cases')->value('id');
-
-        if ($viewId) {
-            DB::table('role_permissions')->where('permission_id', $viewId)->delete();
-            DB::table('permissions')->where('id', $viewId)->delete();
-        }
+        // 不删 view-medical-cases，也不删它的角色授权。
+        //
+        // up() 对权限用「有则复用、无则新建」，对授权用 insertOrIgnore —— 迁移跑完
+        // 就无从分辨哪些是自己新增的、哪些是客户环境本来就有的。无条件删除会连带
+        // 撤销迁移前就存在的配置。同 2026_08_01_000002 的处理（见 c9c611e）。
+        //
+        // 另外 MedicalCaseController 的只读动作已经改挂 view-medical-cases，
+        // 删掉这个权限会让回滚后的只读入口直接 403。
 
         foreach (DB::table('roles')->pluck('id') as $roleId) {
             Cache::forget("role:{$roleId}:permissions");
