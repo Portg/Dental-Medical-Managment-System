@@ -36,7 +36,7 @@ class RunBackupJob implements ShouldQueue
         try {
             Cache::put('backup_status', [
                 'status'       => 'running',
-                'started_at'   => now()->toIso8601String(),
+                'started_at'   => now()->format('Y-m-d H:i:s'),
                 'completed_at' => null,
                 'file'         => null,
                 'error'        => null,
@@ -47,8 +47,8 @@ class RunBackupJob implements ShouldQueue
             if ($exitCode !== 0) {
                 Cache::put('backup_status', [
                     'status'       => 'failed',
-                    'started_at'   => Cache::get('backup_status')['started_at'] ?? now()->toIso8601String(),
-                    'completed_at' => now()->toIso8601String(),
+                    'started_at'   => Cache::get('backup_status')['started_at'] ?? now()->format('Y-m-d H:i:s'),
+                    'completed_at' => now()->format('Y-m-d H:i:s'),
                     'file'         => null,
                     'error'        => Artisan::output(),
                 ], now()->addHours(24));
@@ -62,8 +62,8 @@ class RunBackupJob implements ShouldQueue
     {
         Cache::put('backup_status', [
             'status'       => 'failed',
-            'started_at'   => Cache::get('backup_status')['started_at'] ?? now()->toIso8601String(),
-            'completed_at' => now()->toIso8601String(),
+            'started_at'   => Cache::get('backup_status')['started_at'] ?? now()->format('Y-m-d H:i:s'),
+            'completed_at' => now()->format('Y-m-d H:i:s'),
             'file'         => null,
             'error'        => $exception->getMessage(),
         ], now()->addHours(24));

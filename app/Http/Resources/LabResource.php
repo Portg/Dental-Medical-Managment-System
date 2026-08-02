@@ -2,11 +2,14 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class LabResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
@@ -19,8 +22,8 @@ class LabResource extends JsonResource
             'avg_turnaround_days'  => $this->avg_turnaround_days,
             'notes'                => $this->notes,
             'is_active'            => (bool) $this->is_active,
-            'created_at'           => $this->created_at?->toIso8601String(),
-            'updated_at'           => $this->updated_at?->toIso8601String(),
+            'created_at'           => $this->dateTime($this->created_at),
+            'updated_at'           => $this->dateTime($this->updated_at),
         ];
     }
 }

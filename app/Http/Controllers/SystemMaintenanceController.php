@@ -45,7 +45,7 @@ class SystemMaintenanceController extends Controller
 
         Cache::put('backup_status', [
             'status'       => 'queued',
-            'started_at'   => now()->toIso8601String(),
+            'started_at'   => now()->format('Y-m-d H:i:s'),
             'completed_at' => null,
             'file'         => null,
             'error'        => null,

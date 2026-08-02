@@ -2,11 +2,14 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class InventoryItemResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
@@ -31,8 +34,8 @@ class InventoryItemResource extends JsonResource
             'notes'               => $this->notes,
             'is_active'           => $this->is_active,
             'is_low_stock'        => $this->isLowStock(),
-            'created_at'          => $this->created_at?->toIso8601String(),
-            'updated_at'          => $this->updated_at?->toIso8601String(),
+            'created_at'          => $this->dateTime($this->created_at),
+            'updated_at'          => $this->dateTime($this->updated_at),
         ];
     }
 }

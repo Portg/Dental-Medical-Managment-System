@@ -2,11 +2,14 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class RefundResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
@@ -24,15 +27,15 @@ class RefundResource extends JsonResource
             ]),
             'refund_amount'    => $this->refund_amount,
             'refund_reason'    => $this->refund_reason,
-            'refund_date'      => $this->refund_date?->toIso8601String(),
+            'refund_date'      => $this->dateTime($this->refund_date),
             'refund_method'    => $this->refund_method,
             'approval_status'  => $this->approval_status,
             'approved_by'      => $this->approved_by,
-            'approved_at'      => $this->approved_at?->toIso8601String(),
+            'approved_at'      => $this->dateTime($this->approved_at),
             'rejection_reason' => $this->rejection_reason,
             'branch_id'        => $this->branch_id,
-            'created_at'       => $this->created_at?->toIso8601String(),
-            'updated_at'       => $this->updated_at?->toIso8601String(),
+            'created_at'       => $this->dateTime($this->created_at),
+            'updated_at'       => $this->dateTime($this->updated_at),
         ];
     }
 }

@@ -16,8 +16,8 @@ class UpdateBackupStatusOnSuccess
 
         Cache::put('backup_status', [
             'status'       => 'completed',
-            'started_at'   => $current['started_at'] ?? now()->toIso8601String(),
-            'completed_at' => now()->toIso8601String(),
+            'started_at'   => $current['started_at'] ?? now()->format('Y-m-d H:i:s'),
+            'completed_at' => now()->format('Y-m-d H:i:s'),
             'file'         => $filename,
             'error'        => null,
         ], now()->addHours(24));

@@ -2,11 +2,14 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class DentalChartResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
@@ -27,9 +30,9 @@ class DentalChartResource extends JsonResource
                 'id'        => $this->doctor->id,
                 'full_name' => $this->doctor->full_name,
             ]),
-            'changed_at'      => $this->changed_at?->toIso8601String(),
-            'created_at'      => $this->created_at?->toIso8601String(),
-            'updated_at'      => $this->updated_at?->toIso8601String(),
+            'changed_at'      => $this->dateTime($this->changed_at),
+            'created_at'      => $this->dateTime($this->created_at),
+            'updated_at'      => $this->dateTime($this->updated_at),
         ];
     }
 }

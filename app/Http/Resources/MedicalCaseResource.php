@@ -2,18 +2,21 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class MedicalCaseResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
             'id'        => $this->id,
             'case_no'   => $this->case_no,
             'title'     => $this->title,
-            'case_date' => $this->case_date?->toIso8601String(),
+            'case_date' => $this->dateOnly($this->case_date),
             'status'    => $this->status,
             'is_draft'  => $this->is_draft,
             'visit_type' => $this->visit_type,
@@ -39,15 +42,15 @@ class MedicalCaseResource extends JsonResource
             'medical_orders'     => $this->medical_orders,
 
             // Followup
-            'next_visit_date'      => $this->next_visit_date?->toIso8601String(),
+            'next_visit_date'      => $this->dateOnly($this->next_visit_date),
             'next_visit_note'      => $this->next_visit_note,
             'auto_create_followup' => $this->auto_create_followup,
 
             // Status tracking
-            'closed_date'   => $this->closed_date?->toIso8601String(),
+            'closed_date'   => $this->dateOnly($this->closed_date),
             'closing_notes' => $this->closing_notes,
-            'locked_at'     => $this->locked_at?->toIso8601String(),
-            'modified_at'   => $this->modified_at?->toIso8601String(),
+            'locked_at'     => $this->dateTime($this->locked_at),
+            'modified_at'   => $this->dateTime($this->modified_at),
 
             // Compliance
             'version_number' => $this->version_number ?? 1,
@@ -55,7 +58,7 @@ class MedicalCaseResource extends JsonResource
 
             // Signature
             'signature' => $this->signature,
-            'signed_at' => $this->signed_at?->toIso8601String(),
+            'signed_at' => $this->dateTime($this->signed_at),
 
             // Relations
             'patient_id' => $this->patient_id,
@@ -70,8 +73,8 @@ class MedicalCaseResource extends JsonResource
                 'full_name' => $this->doctor->full_name,
             ]),
 
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'created_at' => $this->dateTime($this->created_at),
+            'updated_at' => $this->dateTime($this->updated_at),
         ];
     }
 }

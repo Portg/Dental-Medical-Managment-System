@@ -2,11 +2,14 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class MemberResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
@@ -27,9 +30,9 @@ class MemberResource extends JsonResource
             'member_points'     => $this->member_points,
             'total_consumption' => $this->total_consumption,
             'member_status'     => $this->member_status,
-            'member_since'      => $this->member_since ? $this->member_since->toIso8601String() : null,
-            'member_expiry'     => $this->member_expiry ? $this->member_expiry->toIso8601String() : null,
-            'created_at'        => $this->created_at?->toIso8601String(),
+            'member_since'      => $this->dateOnly($this->member_since),
+            'member_expiry'     => $this->dateOnly($this->member_expiry),
+            'created_at'        => $this->dateTime($this->created_at),
         ];
     }
 }

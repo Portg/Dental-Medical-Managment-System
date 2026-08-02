@@ -2,21 +2,24 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class AppointmentResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
             'id'               => $this->id,
             'appointment_no'   => $this->appointment_no,
-            'start_date'       => $this->start_date?->toIso8601String(),
-            'end_date'         => $this->end_date?->toIso8601String(),
+            'start_date'       => $this->dateOnly($this->start_date),
+            'end_date'         => $this->dateOnly($this->end_date),
             'start_time'       => $this->start_time,
             'duration_minutes' => $this->duration_minutes,
-            'sort_by'          => $this->sort_by?->toIso8601String(),
+            'sort_by'          => $this->dateTime($this->sort_by),
             'appointment_type' => $this->appointment_type,
             'source'           => $this->source,
             'visit_information' => $this->visit_information,
@@ -25,9 +28,9 @@ class AppointmentResource extends JsonResource
 
             // Confirmation
             'reminder_sent'        => $this->reminder_sent,
-            'reminder_sent_at'     => $this->reminder_sent_at?->toIso8601String(),
+            'reminder_sent_at'     => $this->dateTime($this->reminder_sent_at),
             'confirmed_by_patient' => $this->confirmed_by_patient,
-            'confirmed_at'         => $this->confirmed_at?->toIso8601String(),
+            'confirmed_at'         => $this->dateTime($this->confirmed_at),
 
             // Cancellation
             'cancelled_reason' => $this->cancelled_reason,
@@ -59,8 +62,8 @@ class AppointmentResource extends JsonResource
             ]),
             'medical_case_id' => $this->medical_case_id,
 
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'created_at' => $this->dateTime($this->created_at),
+            'updated_at' => $this->dateTime($this->updated_at),
         ];
     }
 }

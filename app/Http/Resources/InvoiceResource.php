@@ -2,17 +2,20 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class InvoiceResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
             'id'                 => $this->id,
             'invoice_no'         => $this->invoice_no,
-            'invoice_date'       => $this->invoice_date?->toIso8601String(),
+            'invoice_date'       => $this->dateOnly($this->invoice_date),
             'invoice_type'       => $this->invoice_type,
             'status'             => $this->status,
             'payment_status'     => $this->payment_status,
@@ -24,7 +27,7 @@ class InvoiceResource extends JsonResource
             'total_amount'       => $this->total_amount,
             'paid_amount'        => $this->paid_amount,
             'outstanding_amount' => $this->outstanding_amount,
-            'due_date'           => $this->due_date?->toIso8601String(),
+            'due_date'           => $this->dateOnly($this->due_date),
             'notes'              => $this->notes,
 
             // Discounts
@@ -38,11 +41,11 @@ class InvoiceResource extends JsonResource
 
             // Discount approval
             'discount_approval_status' => $this->discount_approval_status,
-            'discount_approved_at'     => $this->discount_approved_at?->toIso8601String(),
+            'discount_approved_at'     => $this->dateTime($this->discount_approved_at),
 
             // Credit
             'is_credit'          => $this->is_credit,
-            'credit_approved_at' => $this->credit_approved_at?->toIso8601String(),
+            'credit_approved_at' => $this->dateTime($this->credit_approved_at),
 
             // Relations
             'appointment_id'   => $this->appointment_id,
@@ -65,8 +68,8 @@ class InvoiceResource extends JsonResource
                 'doctor_id'          => $item->doctor_id,
             ])),
 
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'created_at' => $this->dateTime($this->created_at),
+            'updated_at' => $this->dateTime($this->updated_at),
         ];
     }
 }

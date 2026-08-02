@@ -2,11 +2,14 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\FormatsDates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class PrescriptionResource extends JsonResource
 {
+    use FormatsDates;
+
     public function toArray(Request $request): array
     {
         return [
@@ -16,8 +19,8 @@ class PrescriptionResource extends JsonResource
             'qty'               => $this->qty,
             'directions'        => $this->directions,
             'status'            => $this->status,
-            'prescription_date' => $this->prescription_date?->toIso8601String(),
-            'expiry_date'       => $this->expiry_date?->toIso8601String(),
+            'prescription_date' => $this->dateOnly($this->prescription_date),
+            'expiry_date'       => $this->dateOnly($this->expiry_date),
             'refills_allowed'   => $this->refills_allowed,
             'refills_used'      => $this->refills_used,
             'can_refill'        => $this->can_refill,
@@ -37,8 +40,8 @@ class PrescriptionResource extends JsonResource
                 'full_name' => $this->doctor->full_name,
             ]),
             'items'             => $this->whenLoaded('items'),
-            'created_at'        => $this->created_at?->toIso8601String(),
-            'updated_at'        => $this->updated_at?->toIso8601String(),
+            'created_at'        => $this->dateTime($this->created_at),
+            'updated_at'        => $this->dateTime($this->updated_at),
         ];
     }
 }

@@ -190,6 +190,23 @@ return response()->json([
 
 查询时包含 `whereNull('deleted_at')` 或使用模型 `SoftDeletes` trait。
 
+### 日期与时区（强制）
+
+应用时区是 `Asia/Shanghai`。**接口输出里不允许出现 ISO-8601 UTC**（形如 `2026-07-31T16:00:00.000000Z`）——东八区会早 8 小时甚至跨天。三层兜底，按层就位：
+
+| 层 | 机制 | 输出格式 |
+| --- | --- | --- |
+| API Resource | `App\Http\Resources\Concerns\FormatsDates` 的 `dateOnly()` / `dateTime()` | `Y-m-d` / `Y-m-d H:i:s` |
+| 模型序列化 | `App\Concerns\SerializesDatesInAppTimezone`（所有模型已 use） | `Y-m-d H:i:s` |
+| 裸 Carbon 进 `json_encode` | `AppServiceProvider` 里的 `Carbon::serializeUsing()` | `Y-m-d H:i:s` |
+
+约定：
+
+- **Resource 里所有日期字段必须走 `dateOnly()` / `dateTime()`**，不要直接 `->format()`（数据源可能是 `DB::table()` 的 stdClass，日期是字符串，`?->` 挡不住）；纯日期列用 `dateOnly()`，`datetime` 列用 `dateTime()`。
+- **`$casts` 里 `datetime:Y-m-d H:i`（分钟精度）只影响 `toArray()`，是 Web 端 DataTables / AJAX 的展示格式，与 API 的 `Y-m-d H:i:s` 并存，不要为了"统一"去批量改**——这些格式有 30+ 个字段被前端 JS 和 Blade 直接消费，改动等于改 UI。判断标准是**看输出给谁**：给 API 用 `Y-m-d H:i:s`，给 Web 页面沿用模型 cast。
+- **不要用 `$casts` 覆盖 `created_at` / `updated_at`**：时间戳先经 `addDateAttributesToArray` 序列化成字符串，cast 再二次解析，结果会早 8 小时（详见 `SerializesDatesInAppTimezone` 的注释）。
+- 前端**禁止**用 `new Date().toISOString()` 生成要回传的时间，那会把本地时间当 UTC 输出。
+
 ## 本地与验证
 
 ### 首次启动
