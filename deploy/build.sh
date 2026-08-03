@@ -1338,6 +1338,14 @@ REM 只调用本系统已有的停止脚本；绝不按进程名结束目标机�
 if exist "%INSTALL_DIR%\stop-win.bat" call "%INSTALL_DIR%\stop-win.bat" "%INSTALL_DIR%" --background >nul 2>&1
 timeout /t 2 /nobreak >nul 2>&1
 
+REM 应用代码的目标目录随运行时形态而变：
+REM   laragon -> {安装目录}\laragon\www\dental
+REM   xampp   -> {安装目录}\xampp\htdocs\dental
+REM 按包内目录存在性判定，与 install-win.ps1 的识别方式保持一致，
+REM 这样同一份 setup.bat 两种包都能用，不需要构建期分叉出两个模板。
+set "APP_ROOT=%INSTALL_DIR%\laragon\www\dental"
+if exist "%PKG_DIR%\xampp\apache\bin\httpd.exe" set "APP_ROOT=%INSTALL_DIR%\xampp\htdocs\dental"
+
 echo  [2/3] Copying runtime and application files...
 
 REM 运行时（PHP/MySQL/Nginx/Composer）必须先落到 %INSTALL_DIR%\laragon，
@@ -1363,7 +1371,7 @@ if "%IN_PLACE%"=="0" (
 
 for %%D in (app bootstrap config database public resources routes storage vendor scripts) do (
     if exist "%PKG_DIR%\%%D" (
-        call :copy_dir "%PKG_DIR%\%%D" "%INSTALL_DIR%\laragon\www\dental\%%D" "application directory %%D"
+        call :copy_dir "%PKG_DIR%\%%D" "%APP_ROOT%\%%D" "application directory %%D"
         if errorlevel 1 goto :copy_failed
     )
 )
@@ -1372,7 +1380,7 @@ REM artisan 与 composer.json/lock 缺一不可：
 REM install-win.ps1 会显式校验 artisan 是否存在，缺了直接判定「项目不完整」。
 for %%F in (artisan composer.json composer.lock .env.deploy VERSION .htaccess) do (
     if exist "%PKG_DIR%\%%F" (
-        call :copy_file "%PKG_DIR%\%%F" "%INSTALL_DIR%\laragon\www\dental\%%F" "application file %%F"
+        call :copy_file "%PKG_DIR%\%%F" "%APP_ROOT%\%%F" "application file %%F"
         if errorlevel 1 goto :copy_failed
     )
 )
@@ -1717,22 +1725,26 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM 目标目录随运行时形态而变（同 setup.bat 的判定）
+set "APP_ROOT=%INSTALL_DIR%\laragon\www\dental"
+if exist "%~dp0xampp\apache\bin\httpd.exe" set "APP_ROOT=%INSTALL_DIR%\xampp\htdocs\dental"
+
 echo  [1/4] Copying application files...
-xcopy "%~dp0app" "%INSTALL_DIR%\laragon\www\dental\app\" /E /I /H /Y /Q >nul 2>&1
-xcopy "%~dp0bootstrap" "%INSTALL_DIR%\laragon\www\dental\bootstrap\" /E /I /H /Y /Q >nul 2>&1
-xcopy "%~dp0config" "%INSTALL_DIR%\laragon\www\dental\config\" /E /I /H /Y /Q >nul 2>&1
-xcopy "%~dp0database" "%INSTALL_DIR%\laragon\www\dental\database\" /E /I /H /Y /Q >nul 2>&1
-xcopy "%~dp0public" "%INSTALL_DIR%\laragon\www\dental\public\" /E /I /H /Y /Q >nul 2>&1
-xcopy "%~dp0resources" "%INSTALL_DIR%\laragon\www\dental\resources\" /E /I /H /Y /Q >nul 2>&1
-xcopy "%~dp0routes" "%INSTALL_DIR%\laragon\www\dental\routes\" /E /I /H /Y /Q >nul 2>&1
-xcopy "%~dp0storage" "%INSTALL_DIR%\laragon\www\dental\storage\" /E /I /H /Y /Q >nul 2>&1
-xcopy "%~dp0vendor" "%INSTALL_DIR%\laragon\www\dental\vendor\" /E /I /H /Y /Q >nul 2>&1
-if exist "%~dp0scripts" xcopy "%~dp0scripts" "%INSTALL_DIR%\laragon\www\dental\scripts\" /E /I /H /Y /Q >nul 2>&1
-copy "%~dp0artisan" "%INSTALL_DIR%\laragon\www\dental\" /Y >nul 2>&1
-copy "%~dp0composer.json" "%INSTALL_DIR%\laragon\www\dental\" /Y >nul 2>&1
-copy "%~dp0composer.lock" "%INSTALL_DIR%\laragon\www\dental\" /Y >nul 2>&1
-copy "%~dp0.env.deploy" "%INSTALL_DIR%\laragon\www\dental\.env.deploy" /Y >nul 2>&1
-copy "%~dp0VERSION" "%INSTALL_DIR%\laragon\www\dental\" /Y >nul 2>&1
+xcopy "%~dp0app" "%APP_ROOT%\app\" /E /I /H /Y /Q >nul 2>&1
+xcopy "%~dp0bootstrap" "%APP_ROOT%\bootstrap\" /E /I /H /Y /Q >nul 2>&1
+xcopy "%~dp0config" "%APP_ROOT%\config\" /E /I /H /Y /Q >nul 2>&1
+xcopy "%~dp0database" "%APP_ROOT%\database\" /E /I /H /Y /Q >nul 2>&1
+xcopy "%~dp0public" "%APP_ROOT%\public\" /E /I /H /Y /Q >nul 2>&1
+xcopy "%~dp0resources" "%APP_ROOT%\resources\" /E /I /H /Y /Q >nul 2>&1
+xcopy "%~dp0routes" "%APP_ROOT%\routes\" /E /I /H /Y /Q >nul 2>&1
+xcopy "%~dp0storage" "%APP_ROOT%\storage\" /E /I /H /Y /Q >nul 2>&1
+xcopy "%~dp0vendor" "%APP_ROOT%\vendor\" /E /I /H /Y /Q >nul 2>&1
+if exist "%~dp0scripts" xcopy "%~dp0scripts" "%APP_ROOT%\scripts\" /E /I /H /Y /Q >nul 2>&1
+copy "%~dp0artisan" "%APP_ROOT%\" /Y >nul 2>&1
+copy "%~dp0composer.json" "%APP_ROOT%\" /Y >nul 2>&1
+copy "%~dp0composer.lock" "%APP_ROOT%\" /Y >nul 2>&1
+copy "%~dp0.env.deploy" "%APP_ROOT%\.env.deploy" /Y >nul 2>&1
+copy "%~dp0VERSION" "%APP_ROOT%\" /Y >nul 2>&1
 echo         App files copied.
 
 echo  [2/4] Copying installer assets...
