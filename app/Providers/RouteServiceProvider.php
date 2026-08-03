@@ -92,9 +92,26 @@ class RouteServiceProvider extends ServiceProvider
              ->group(base_path('routes/api.php'));
     }
 
+    /**
+     * API v1 路由统一挂 api.v1. 名字前缀。
+     *
+     * 不加前缀的话，api/v1 里的 Route::apiResource('patients', ...) 生成的名字是
+     * patients.index，和 web.php 里 Route::resource('patients', ...) 撞车 —— 全站
+     * 有 68 个这样的重名（14 个资源 × 各 CRUD 动作）。
+     *
+     * 不缓存路由时 Laravel 容忍重名（后注册的覆盖），所以一直没暴露；但
+     * `artisan route:cache` 会直接拒绝序列化并以退出码 1 失败，导致**生产环境
+     * 从来没有过路由缓存**，每个请求都要重新注册全部路由。同时 route('patients.index')
+     * 解析到哪一条取决于注册顺序，URL 生成是有歧义的。
+     *
+     * 改 API 侧而不是 Web 侧：API 消费方用的是 URL（/api/v1/patients），不走
+     * 路由名；Web 侧那些才是 Blade 里将来会用到的常规名字。已核对全仓库，
+     * 这 68 个名字当前零引用（无 route() 调用、无 Ziggy、无动态调用），改名安全。
+     */
     protected function mapApiV1Routes()
     {
         Route::prefix('api/v1')
+             ->name('api.v1.')
              ->middleware(['api', 'auth:sanctum', 'api.version:v1'])
              ->namespace($this->namespace . '\Api\V1')
              ->group(base_path('routes/api/v1.php'));
