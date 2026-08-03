@@ -1416,7 +1416,16 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         }
     } else {
         $OCR_VENV = Join-Path $PROJECT_DIR "scripts\venv"
-        $OCR_REQUIREMENTS = Join-Path $PROJECT_DIR "scripts\requirements.txt"
+
+        # 优先用锁文件：离线 wheels 是构建时按 requirements-lock.txt 以 --no-deps
+        # 下载的那 81 个精确版本。若在这里用只有 5 个顶层包的 requirements.txt，
+        # pip 得自己在 wheels 目录里重新解析依赖树，解出来的版本一旦和已下载的
+        # 对不上就整体失败，然后回退在线安装 —— 而目标机通常没有外网，最终表现为
+        # 一次漫长的超时，真正的原因（离线解析失败）被埋在日志前半段。
+        $OCR_REQUIREMENTS = Join-Path $PROJECT_DIR "scripts\requirements-lock.txt"
+        if (-not (Test-Path $OCR_REQUIREMENTS)) {
+            $OCR_REQUIREMENTS = Join-Path $PROJECT_DIR "scripts\requirements.txt"
+        }
         $OCR_WHEELS_DIR = Join-Path $INSTALL_DIR "ocr-wheels"
         if (-not (Test-Path $OCR_WHEELS_DIR)) { $OCR_WHEELS_DIR = Join-Path $PROJECT_DIR "ocr-wheels" }
         if (-not (Test-Path $OCR_WHEELS_DIR)) { $OCR_WHEELS_DIR = Join-Path $PROJECT_DIR "scripts\wheels" }

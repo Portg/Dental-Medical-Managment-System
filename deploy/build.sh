@@ -1500,16 +1500,26 @@ step "准备 OCR 服务依赖"
 OCR_REQUIREMENTS="$PROJECT_ROOT/scripts/requirements.txt"
 
 if [[ -f "$OCR_REQUIREMENTS" ]]; then
-    # 始终复制 OCR 脚本（安装时用 pip install -r requirements.txt 联网安装）
+    # OCR 脚本：整目录同步，不再逐个列文件名。
+    #
+    # 原先是硬编码 6 个文件名的白名单，结果漏了两个必需件：
+    #   - paddle_compat.py    ocr_service.py 与 ocr_server.py 都 import 它，
+    #                         缺了它 pip 装得再顺利，OCR 一跑就 ImportError；
+    #   - worklog_ocr.py      PHP 侧直接调用。
+    # 白名单这种写法每加一个文件就要记得同步，漏了还不报错 —— 换成目录同步。
     OCR_SCRIPTS_DIR="$DIST_DIR/scripts"
     mkdir -p "$OCR_SCRIPTS_DIR"
-    for ocr_file in ocr_service.py ocr_server.py ocr_corrections.json requirements.txt setup_ocr_venv.sh setup_ocr_venv.bat; do
-        if [[ -f "$PROJECT_ROOT/scripts/$ocr_file" ]]; then
-            cp "$PROJECT_ROOT/scripts/$ocr_file" "$OCR_SCRIPTS_DIR/"
-        fi
-    done
+    rsync -a --delete \
+        --exclude 'venv/' --exclude '__pycache__/' --exclude '*.pyc' \
+        --exclude 'wheels/' \
+        "$PROJECT_ROOT/scripts/" "$OCR_SCRIPTS_DIR/"
     chmod +x "$OCR_SCRIPTS_DIR"/*.sh 2>/dev/null || true
-    info "复制 OCR 服务脚本"
+    info "复制 OCR 服务脚本（$(find "$OCR_SCRIPTS_DIR" -maxdepth 1 -type f | wc -l | tr -d ' ') 个文件）"
+
+    # 必需件断言：缺任何一个，OCR 装完也跑不起来，且现场只会看到一句 ImportError
+    for required in ocr_server.py ocr_service.py worklog_ocr.py paddle_compat.py requirements.txt; do
+        [[ -f "$OCR_SCRIPTS_DIR/$required" ]] || fatal "OCR 脚本缺失: scripts/$required"
+    done
 
     if [[ "$TARGET" == "win" ]] && [[ "$SKIP_OCR" == false ]]; then
         # Win7 版：Python 3.8.10 是官方最后一个提供 Windows 7 安装器的版本
