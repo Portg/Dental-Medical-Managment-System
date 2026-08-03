@@ -1343,27 +1343,32 @@ REM   laragon -> {安装目录}\laragon\www\dental
 REM   xampp   -> {安装目录}\xampp\htdocs\dental
 REM 按包内目录存在性判定，与 install-win.ps1 的识别方式保持一致，
 REM 这样同一份 setup.bat 两种包都能用，不需要构建期分叉出两个模板。
+set "RUNTIME_DIR_NAME=laragon"
 set "APP_ROOT=%INSTALL_DIR%\laragon\www\dental"
-if exist "%PKG_DIR%\xampp\apache\bin\httpd.exe" set "APP_ROOT=%INSTALL_DIR%\xampp\htdocs\dental"
+if exist "%PKG_DIR%\xampp\apache\bin\httpd.exe" (
+    set "RUNTIME_DIR_NAME=xampp"
+    set "APP_ROOT=%INSTALL_DIR%\xampp\htdocs\dental"
+)
 
 echo  [2/3] Copying runtime and application files...
 
-REM 运行时（PHP/MySQL/Nginx/Composer）必须先落到 %INSTALL_DIR%\laragon，
-REM 否则 install-win.ps1 会因找不到 Laragon 目录而直接退出。
+REM 运行时必须先落到 %INSTALL_DIR%\%RUNTIME_DIR_NAME%，
+REM 否则 install-win.ps1 会因找不到运行时目录而直接退出。
+REM 目录名随包内形态而定（laragon 或 xampp），不能写死。
 REM 安装包允许直接解压到 C:\DentalClinic。此时源和目标相同，绝不能 xcopy 自身。
 if "%IN_PLACE%"=="0" (
-    if not exist "%PKG_DIR%\laragon" (
-        echo  [ERROR] Missing laragon runtime in package:
-        echo          %PKG_DIR%\laragon
+    if not exist "%PKG_DIR%\%RUNTIME_DIR_NAME%" (
+        echo  [ERROR] Missing %RUNTIME_DIR_NAME% runtime in package:
+        echo          %PKG_DIR%\%RUNTIME_DIR_NAME%
         exit /b 1
     )
-    echo         Copying runtime ^(about 1.3 GB, please wait^)...
-    call :copy_dir "%PKG_DIR%\laragon" "%INSTALL_DIR%\laragon" "laragon runtime"
+    echo         Copying %RUNTIME_DIR_NAME% runtime, please wait...
+    call :copy_dir "%PKG_DIR%\%RUNTIME_DIR_NAME%" "%INSTALL_DIR%\%RUNTIME_DIR_NAME%" "%RUNTIME_DIR_NAME% runtime"
     if errorlevel 1 goto :copy_failed
 ) else (
-    if not exist "%INSTALL_DIR%\laragon" (
-        echo  [ERROR] In-place package is missing laragon runtime:
-        echo          %INSTALL_DIR%\laragon
+    if not exist "%INSTALL_DIR%\%RUNTIME_DIR_NAME%" (
+        echo  [ERROR] In-place package is missing %RUNTIME_DIR_NAME% runtime:
+        echo          %INSTALL_DIR%\%RUNTIME_DIR_NAME%
         exit /b 1
     )
     echo         Package is already in the install directory; runtime self-copy skipped.
@@ -1427,7 +1432,11 @@ echo.
 echo  Logs:
 echo    %INSTALL_DIR%\logs\install-*.log   configuration
 echo    %INSTALL_DIR%\logs\prereq.log      PowerShell bootstrap
-echo    %INSTALL_DIR%\laragon\data\mysql-error.log
+if "%RUNTIME_DIR_NAME%"=="xampp" (
+    echo    %INSTALL_DIR%\xampp\mysql\data\mysql-error.log
+) else (
+    echo    %INSTALL_DIR%\laragon\data\mysql-error.log
+)
 echo.
 exit /b %SETUP_RC%
 
@@ -1908,6 +1917,15 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
 
     # setup.bat 必须允许安装包直接解压到 C:\DentalClinic 后重复执行。
     # 回归测试验证同目录检测、跳过自复制、复制错误显式失败三件事。
+    # setup.bat 不能写死运行时目录名 —— XAMPP 包会在「Missing laragon runtime」
+    # 上直接失败，连第一步都过不去（真实发生过）。
+    if ! bash "$PROJECT_ROOT/deploy/tests/test-setup-runtime-flavor.sh"; then
+        error "  ✗ setup.bat 运行时形态无感测试失败"
+        ASSERT_FAIL=true
+    else
+        info "  ✓ setup.bat 对运行时形态无感"
+    fi
+
     if ! bash "$PROJECT_ROOT/deploy/tests/test-setup-rerun.sh"; then
         error "  ✗ setup.bat 重复执行回归测试失败"
         ASSERT_FAIL=true
