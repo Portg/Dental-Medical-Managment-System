@@ -72,6 +72,14 @@ usage() {
   --skip-ocr                   跳过 OCR Python wheels 打包（减小包体积）
   --init-db-from-local         用本地库的结构+数据做初始数据库（默认只导结构）
                                注意：本地库全部数据都会进包，含账号/患者/日志
+  --use-existing-mysql        Windows ZIP 复用目标机 127.0.0.1:3306 MySQL
+                               安装时隐藏输入管理员密码，不管理 mysqld 生命周期
+  --bundled-mysql-port <port> Windows ZIP 内置 MySQL 使用独立端口（如 3307）
+                               适用于目标机已有 MySQL，保留原实例并避免版本冲突
+  --runtime <laragon|xampp>    运行时形态（默认 laragon）
+                               laragon: PHP-NTS + MySQL 5.7 + Nginx + php-cgi（自组装）
+                               xampp:   Apache + mod_php + MariaDB（官方 portable 包）
+                                        Web 层不再需要单独维护 php-cgi 进程
   --keep-dist                  保留 deploy/dist/ 不删除（编译 Inno .exe 安装包必须加）
   --version <X.Y.Z>            覆盖 VERSION 文件中的版本号
   --laragon-url <url>          Windows: 指定 laragon-wamp.exe 下载地址（.exe 直链）
@@ -86,6 +94,7 @@ usage() {
   ./deploy/build.sh --target linux --upgrade              # Linux 升级包
   ./deploy/build.sh --target mac --skip-obfuscate         # macOS 不混淆
   ./deploy/build.sh --target win --version 2.0.0          # 指定版本号
+  ./deploy/build.sh --target win --bundled-mysql-port 3307 # 内置 MySQL 与现有 3306 隔离
 USAGE
     exit 0
 }
@@ -96,13 +105,29 @@ UPGRADE=false
 SKIP_OBFUSCATE=false
 SKIP_OCR=false
 INIT_DB_FROM_LOCAL=false
+USE_EXISTING_MYSQL=false
+BUNDLED_MYSQL_PORT=""
 KEEP_DIST=false
 VERSION_OVERRIDE=""
 LARAGON_INSTALLER_EXE=""
 LARAGON_URL_OVERRIDE=""
+# 运行时形态：
+#   laragon（默认）— 下载 PHP-NTS / MySQL 5.7 / Nginx / composer 自行组装，
+#                    Web 层是 Nginx + php-cgi（需额外维护一个 9000 端口的进程）
+#   xampp          — 下载 XAMPP portable 解压即用，Web 层是 Apache + mod_php
+#                    （PHP 跑在 Apache 进程内，没有 php-cgi 要管），数据库是 MariaDB
+RUNTIME_FLAVOR="laragon"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --runtime)
+            RUNTIME_FLAVOR="${2:-}"
+            case "$RUNTIME_FLAVOR" in
+                laragon|xampp) ;;
+                *) fatal "--runtime 只支持 laragon 或 xampp（收到: ${RUNTIME_FLAVOR}）" ;;
+            esac
+            shift 2
+            ;;
         --target)
             TARGET="${2:-}"
             [[ -z "$TARGET" ]] && fatal "--target 需要指定平台 (win|linux|mac)"
@@ -123,6 +148,15 @@ while [[ $# -gt 0 ]]; do
         --init-db-from-local)
             INIT_DB_FROM_LOCAL=true
             shift
+            ;;
+        --use-existing-mysql)
+            USE_EXISTING_MYSQL=true
+            shift
+            ;;
+        --bundled-mysql-port)
+            BUNDLED_MYSQL_PORT="${2:-}"
+            [[ -z "$BUNDLED_MYSQL_PORT" ]] && fatal "--bundled-mysql-port 需要指定端口号"
+            shift 2
             ;;
         --keep-dist)
             KEEP_DIST=true
@@ -154,6 +188,17 @@ case "$TARGET" in
     win|linux|mac) ;;
     *) fatal "--target 仅支持 win、linux、mac，当前值: $TARGET" ;;
 esac
+if [[ "$USE_EXISTING_MYSQL" == true ]] && [[ "$TARGET" != "win" || "$UPGRADE" == true ]]; then
+    fatal "--use-existing-mysql 只支持 Windows 全量 ZIP 安装包"
+fi
+if [[ -n "$BUNDLED_MYSQL_PORT" ]]; then
+    [[ "$TARGET" != "win" || "$UPGRADE" == true ]] && fatal "--bundled-mysql-port 只支持 Windows 全量 ZIP 安装包"
+    [[ "$USE_EXISTING_MYSQL" == true ]] && fatal "--bundled-mysql-port 不能与 --use-existing-mysql 同时使用"
+    [[ ! "$BUNDLED_MYSQL_PORT" =~ ^[0-9]+$ ]] && fatal "MySQL 端口必须是数字: $BUNDLED_MYSQL_PORT"
+    BUNDLED_MYSQL_PORT_NUMBER=$((10#$BUNDLED_MYSQL_PORT))
+    (( BUNDLED_MYSQL_PORT_NUMBER < 1 || BUNDLED_MYSQL_PORT_NUMBER > 65535 )) && fatal "MySQL 端口超出范围: $BUNDLED_MYSQL_PORT"
+    BUNDLED_MYSQL_PORT="$BUNDLED_MYSQL_PORT_NUMBER"
+fi
 
 # ── SHA256 指纹表 ────────────────────────────────────────────────
 #
@@ -173,16 +218,8 @@ expected_sha256() {
         mysql57)      echo "aed661fe8120254a1dc30f5a4d5de346681922f4847cf025e2d4084eca78e70e" ;;
         # nginx-1.24.0.zip
         nginx)        echo "69a36bfd2a61d7a736fafd392708bd0fb6cf15d741f8028fe6d8bb5ebd670eb9" ;;
-        # Win7AndW2K8R2-KB3191566-x64.zip (WMF 5.1)
-        wmf51)        echo "f383c34aa65332662a17d95409a2ddedadceda74427e35d05024cd0a6a2fa647" ;;
         # laragon 8.6.1 源码 zip
         laragon-core) echo "d66ae3c6f1949e39ee0cfb13cb79aa0d77b3542863291f707e4d4a96452ad4ae" ;;
-        # ndp48-x86-x64-allos-enu.exe (.NET Framework 4.8 离线安装包)
-        dotnet48)     echo "68c9986a8dcc0214d909aa1f31bee9fb5461bb839edca996a75b08ddffc1483f" ;;
-        # windows6.1-kb4490628-x64.msu（2019-03 服务堆栈更新，SHA-2 的前置）
-        ssu4490628)   echo "8075f6d889bcb27be6f52ed47081675e5bb8a5390f2f5bfe4ec27a2bb70cbf5e" ;;
-        # windows6.1-kb4474419-v3-x64.msu（SHA-2 代码签名支持）
-        sha2_4474419) echo "99312df792b376f02e25607d2eb3355725c47d124d8da253193195515fe90213" ;;
         # vc_redist.x64.exe —— 当前锁定的是 aka.ms/vs/17 在 2026-08-01 取到的那一版。
         # ⚠ 待确认：该版本属于 VS2022 系列，Win7 SP1 兼容性需逐版本核实；
         #   若确认不兼容，应改用 VS2019 14.29 系列并同步更新此指纹与 URL。
@@ -371,14 +408,70 @@ fi
 #    Nginx 1.24.0              — 保守选择，Win7 上验证充分
 #    Python 3.8.10（OCR）      — 3.9 起最低要求 Windows 8.1
 #
-#  另随包提供 VC++ 2015-2022 x64 运行库与 WMF 5.1：
-#    前者是 PHP VS16 构建的依赖，后者因为 Win7 自带 PowerShell 2.0，
-#    而 install-win.ps1 用到了 PS3+ 语法。
+#  另随包提供 VC++ 2015-2022 x64 运行库，它是 PHP VS16 构建的依赖。
+#  install-win.ps1 保持 PowerShell 2.0 语法兼容，不再要求 WMF/.NET 更新。
 # ════════════════════════════════════════════════════════════════════════
+# ── Win7 前置组件下载（VC++ 运行库）────────────────────────────────────
+#
+# 定义必须在顶层：它原本嵌在 `if RUNTIME_FLAVOR == laragon` 块内部，
+# --runtime xampp 时那个块不执行，函数根本不会被定义，调用处直接
+# command not found（外面套着 `if !` 所以表现为「前置组件缺失」，
+# 误导性极强 —— 实测踩过一次）。
+download_win7_prereqs() {
+    PREREQ_OK=true
+
+    # ── VC++ 2015-2022 x64 运行库
+    # PHP 的 VS16 构建依赖它；Win7 常见的「php.exe 双击无反应/缺少 VCRUNTIME140.dll」
+    # 就是缺这个。随包提供，避免要求现场联网。
+    #
+    # ⚠ aka.ms/vs/17/release 是**移动地址**，永远指向最新的 VS2022 运行库。
+    #   后果有二：构建不可复现（同一个 tag 两次构建装进去的运行库不同）；
+    #   而且 VS2022 系列是否仍支持 Win7 SP1 需要逐版本确认，跟着它漂移等于
+    #   把「目标机能不能跑起来」交给上游随时改。
+    #   因此这里固定 SHA-256：指纹对不上就失败，逼人显式确认换版本。
+    #   要换版本：改 VCREDIST_DOWNLOAD_URL，跑一次拿到实际指纹，
+    #   再更新 expected_sha256() 里的 vcredist 条目。
+    VCREDIST_URL="${VCREDIST_DOWNLOAD_URL:-https://aka.ms/vs/17/release/vc_redist.x64.exe}"
+    VCREDIST_OVERRIDDEN=$([[ -n "${VCREDIST_DOWNLOAD_URL:-}" ]] && echo true || echo false)
+    VCREDIST_CACHE="$CACHE_DIR/vc_redist.x64.exe"
+
+    if [[ -s "$VCREDIST_CACHE" ]] && ! verify_sha256 "$VCREDIST_CACHE" "vcredist" "$VCREDIST_OVERRIDDEN"; then
+        warn "VC++ 运行库: 缓存指纹不符，重新下载"
+        rm -f "$VCREDIST_CACHE"
+    fi
+
+    if [[ ! -s "$VCREDIST_CACHE" ]]; then
+        if curl -fsSL --retry 2 -o "$VCREDIST_CACHE" "$VCREDIST_URL" \
+           && [[ -s "$VCREDIST_CACHE" ]] \
+           && verify_sha256 "$VCREDIST_CACHE" "vcredist" "$VCREDIST_OVERRIDDEN"; then
+            info "VC++ 2015-2022 x64 运行库已下载"
+        else
+            rm -f "$VCREDIST_CACHE"
+            error "VC++ 运行库下载失败或指纹不符 —— PHP 在目标机上将无法启动"; PREREQ_OK=false
+        fi
+    else
+        info "VC++ 运行库: 使用缓存（指纹已校验）"
+    fi
+
+    [[ "$PREREQ_OK" == true ]]
+}
+
 WIN7_RUNTIME_DIR=""
+# XAMPP 运行时的解压目录（--runtime xampp 时由 prepare-xampp-runtime.sh 产出）
+XAMPP_RUNTIME_SRC=""
+
+# CACHE_DIR 必须在两条运行时分支之外定义。
+# 它原本只在 Laragon 分支内赋值，--runtime xampp 时那段不执行，
+# 后面打包处引用 $CACHE_DIR/vc_redist.x64.exe 会在 set -u 下直接 unbound。
+CACHE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.cache"
+
+# XAMPP 运行时的准备放在 download_win7_prereqs() 定义之后（见本段末尾），
+# 因为它要调用那个函数 —— bash 是顺序执行的，在定义之前调用会 command not found。
+
 # --upgrade 明确排除：升级包只带代码和迁移，目标机上的 PHP/MySQL/Nginx 早已装好。
 # 少了这个判断，升级包会连约 1.3GB 运行时一起下载、组装并打包。
-if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" == false ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
+# RUNTIME_FLAVOR == xampp 时同样跳过：那条路径不需要自组装 Laragon。
+if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" == false ]] && [[ "$RUNTIME_FLAVOR" == "laragon" ]] && [[ -z "${LARAGON_INSTALLER_EXE:-}" ]]; then
     CACHE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.cache"
     ASSEMBLED_DIR="$CACHE_DIR/win7-runtime"
 
@@ -447,145 +540,12 @@ MANIFEST
     PHP_DIR_OK=false
     [[ -d "$ASSEMBLED_DIR/bin/php/$EXPECTED_PHP_DIR" ]] && PHP_DIR_OK=true
 
-# ── Win7 前置组件下载（VC++ / SHA-2 补丁 / WMF 5.1 / .NET 4.8）
+# ── Win7 前置组件下载（VC++ 运行库）
 #
-# 必须独立于「运行时是否命中缓存」。这几样原本写在缓存重建分支里，
+# 必须独立于「运行时是否命中缓存」。VC++ 下载原本写在缓存重建分支里，
 # 结果是：只要 .cache/win7-runtime 还在（PHP/MySQL/Composer 齐、清单校验通过），
-# 整个 else 分支就不执行，新加的组件永远下不下来 —— 打出来的包看着成功，
+# 整个 else 分支就不执行，新加的组件永远下不下来，打出来的包看着成功，
 # 装到纯净 Win7 上却缺前置。
-download_win7_prereqs() {
-    PREREQ_OK=true
-
-    # ── VC++ 2015-2022 x64 运行库
-    # PHP 的 VS16 构建依赖它；Win7 常见的「php.exe 双击无反应/缺少 VCRUNTIME140.dll」
-    # 就是缺这个。随包提供，避免要求现场联网。
-    #
-    # ⚠ aka.ms/vs/17/release 是**移动地址**，永远指向最新的 VS2022 运行库。
-    #   后果有二：构建不可复现（同一个 tag 两次构建装进去的运行库不同）；
-    #   而且 VS2022 系列是否仍支持 Win7 SP1 需要逐版本确认，跟着它漂移等于
-    #   把「目标机能不能跑起来」交给上游随时改。
-    #   因此这里固定 SHA-256：指纹对不上就失败，逼人显式确认换版本。
-    #   要换版本：改 VCREDIST_DOWNLOAD_URL，跑一次拿到实际指纹，
-    #   再更新 expected_sha256() 里的 vcredist 条目。
-    VCREDIST_URL="${VCREDIST_DOWNLOAD_URL:-https://aka.ms/vs/17/release/vc_redist.x64.exe}"
-    VCREDIST_OVERRIDDEN=$([[ -n "${VCREDIST_DOWNLOAD_URL:-}" ]] && echo true || echo false)
-    VCREDIST_CACHE="$CACHE_DIR/vc_redist.x64.exe"
-
-    if [[ -s "$VCREDIST_CACHE" ]] && ! verify_sha256 "$VCREDIST_CACHE" "vcredist" "$VCREDIST_OVERRIDDEN"; then
-        warn "VC++ 运行库: 缓存指纹不符，重新下载"
-        rm -f "$VCREDIST_CACHE"
-    fi
-
-    if [[ ! -s "$VCREDIST_CACHE" ]]; then
-        if curl -fsSL --retry 2 -o "$VCREDIST_CACHE" "$VCREDIST_URL" \
-           && [[ -s "$VCREDIST_CACHE" ]] \
-           && verify_sha256 "$VCREDIST_CACHE" "vcredist" "$VCREDIST_OVERRIDDEN"; then
-            info "VC++ 2015-2022 x64 运行库已下载"
-        else
-            rm -f "$VCREDIST_CACHE"
-            error "VC++ 运行库下载失败或指纹不符 —— PHP 在目标机上将无法启动"; PREREQ_OK=false
-        fi
-    else
-        info "VC++ 运行库: 使用缓存（指纹已校验）"
-    fi
-
-    # ── Win7 SHA-2 前置：服务堆栈更新 + SHA-2 代码签名支持
-    #
-    # 微软自 2019 年起把更新全部改用 SHA-2 签名。纯净 Win7 SP1 验不了 SHA-2，
-    # wusa 拿到这类 MSU 的典型表现不是快速报错，而是长时间卡在
-    # "Searching for updates on this computer" —— 安装 WMF 5.1 时"一直停着"
-    # 多半就是这个原因。必须按 SSU → SHA-2 的顺序先补上。
-    #
-    # 两个包都从 Windows Update CDN 取。文件名里的指纹是包的一部分，
-    # 换版本时请从 catalog.update.microsoft.com 重新解析地址并更新上面的 SHA-256。
-    SSU_URL="${SSU_DOWNLOAD_URL:-http://download.windowsupdate.com/c/msdownload/update/software/secu/2019/03/windows6.1-kb4490628-x64_d3de52d6987f7c8bdc2c015dca69eac96047c76e.msu}"
-    SHA2_URL="${SHA2_DOWNLOAD_URL:-http://download.windowsupdate.com/c/msdownload/update/software/secu/2019/09/windows6.1-kb4474419-v3-x64_b5614c6cea5cb4e198717789633dca16308ef79c.msu}"
-
-    PREREQ_CACHE="$CACHE_DIR/win7-prereq"
-    mkdir -p "$PREREQ_CACHE"
-
-    # 装入顺序由文件名前缀决定（install-win.bat 按名字排序逐个安装），
-    # 不要改这两个前缀：SSU 必须先于 SHA-2。
-    download_win7_prereq() {
-        local url="$1" out="$2" sha_key="$3" label="$4" size_hint="$5" overridden="$6"
-        local dest="$PREREQ_CACHE/$out"
-
-        if [[ -s "$dest" ]] && ! verify_sha256 "$dest" "$sha_key" "$overridden"; then
-            warn "$label: 缓存指纹不符，重新下载"
-            rm -f "$dest"
-        fi
-
-        if [[ -s "$dest" ]]; then
-            info "$label: 使用缓存"
-            return 0
-        fi
-
-        echo -e "  ${CYAN}下载 $label（约 ${size_hint}）...${NC}"
-        if curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$dest" "$url" \
-           && [[ -s "$dest" ]] \
-           && verify_sha256 "$dest" "$sha_key" "$overridden"; then
-            info "$label 已下载"
-            return 0
-        fi
-
-        rm -f "$dest"
-        return 1
-    }
-
-    if ! download_win7_prereq "$SSU_URL" "01-windows6.1-kb4490628-x64.msu" "ssu4490628" \
-            "服务堆栈更新 KB4490628" "10MB" \
-            "$([[ -n "${SSU_DOWNLOAD_URL:-}" ]] && echo true || echo false)"; then
-        error "KB4490628 下载失败 —— 纯净 Win7 SP1 装不了 SHA-2 补丁，WMF 5.1 会卡死"; PREREQ_OK=false
-    fi
-
-    if ! download_win7_prereq "$SHA2_URL" "02-windows6.1-kb4474419-v3-x64.msu" "sha2_4474419" \
-            "SHA-2 代码签名支持 KB4474419" "56MB" \
-            "$([[ -n "${SHA2_DOWNLOAD_URL:-}" ]] && echo true || echo false)"; then
-        error "KB4474419 下载失败 —— 纯净 Win7 SP1 验不了 SHA-2 签名，WMF 5.1 会卡死"; PREREQ_OK=false
-    fi
-
-    # ── WMF 5.1（PowerShell 5.1 for Win7 SP1）
-    # Win7 自带 PowerShell 2.0，而 install-win.ps1 使用了 [T]::new()（PS5）
-    # 与 *> 重定向（PS3），在 PS2 上会直接解析失败。安装前按需静默安装。
-    # 注意 WMF 5.1 本身要求 .NET Framework 4.5+。
-    WMF_URL="${WMF_DOWNLOAD_URL:-https://download.microsoft.com/download/6/F/5/6F5FF66C-6775-42B0-86C4-47D41F2DA187/Win7AndW2K8R2-KB3191566-x64.zip}"
-    WMF_URL_OVERRIDDEN=$([[ -n "${WMF_DOWNLOAD_URL:-}" ]] && echo true || echo false)
-    if download_and_extract "$WMF_URL" "$CACHE_DIR/wmf51.zip" "$CACHE_DIR/wmf51-extracted" "WMF 5.1 (PowerShell 5.1)" "wmf51" "$WMF_URL_OVERRIDDEN"; then
-        info "WMF 5.1 已就位"
-    else
-        error "WMF 5.1 下载失败 —— Win7 自带的 PowerShell 2.0 无法运行安装脚本"; PREREQ_OK=false
-    fi
-
-    # ── .NET Framework 4.8 离线安装包
-    # WMF 5.1 的安装前提是 .NET Framework 4.5.2+，而纯净 Win7 SP1 只带 3.5.1。
-    # 不随包提供，离线的目标机就装不上 WMF，也就跑不了 install-win.ps1 ——
-    # 「离线安装」这件事在纯净 Win7 上根本不成立。约 115MB。
-    DOTNET48_URL="${DOTNET48_DOWNLOAD_URL:-https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe}"
-    DOTNET48_URL_OVERRIDDEN=$([[ -n "${DOTNET48_DOWNLOAD_URL:-}" ]] && echo true || echo false)
-    DOTNET48_CACHE="$CACHE_DIR/ndp48-x86-x64-allos-enu.exe"
-
-    # 缓存也要对指纹：这是个长期复用目录，混进错误产物会一直沿用
-    if [[ -s "$DOTNET48_CACHE" ]] && ! verify_sha256 "$DOTNET48_CACHE" "dotnet48" "$DOTNET48_URL_OVERRIDDEN"; then
-        warn ".NET 4.8: 缓存指纹不符，重新下载"
-        rm -f "$DOTNET48_CACHE"
-    fi
-
-    if [[ ! -s "$DOTNET48_CACHE" ]]; then
-        echo -e "  ${CYAN}下载 .NET Framework 4.8 离线安装包（约 115MB）...${NC}"
-        if curl -fSL --progress-bar --retry 2 --retry-delay 3 -o "$DOTNET48_CACHE" "$DOTNET48_URL" \
-           && [[ -s "$DOTNET48_CACHE" ]] \
-           && verify_sha256 "$DOTNET48_CACHE" "dotnet48" "$DOTNET48_URL_OVERRIDDEN"; then
-            info ".NET Framework 4.8 已下载"
-        else
-            rm -f "$DOTNET48_CACHE"
-            error ".NET 4.8 下载失败 —— 纯净 Win7 SP1 将无法安装 WMF 5.1"; PREREQ_OK=false
-        fi
-    else
-        info ".NET Framework 4.8: 使用缓存"
-    fi
-
-    [[ "$PREREQ_OK" == true ]]
-}
 
     if [[ "$HAS_PHP" == true ]] && [[ "$HAS_MYSQL" == true ]] && [[ "$HAS_COMPOSER" == true ]] \
        && [[ "$MANIFEST_OK" == true ]] && [[ "$PHP_DIR_OK" == true ]]; then
@@ -778,11 +738,32 @@ download_win7_prereqs() {
         fi
     fi
 
-    # 前置组件的下载与运行时缓存是否命中**无关**，必须无条件执行。
-    # 缺任何一样，包在纯净 Win7 上都装不起来 —— 与其产出一个装不上的
-    # 「成功包」，不如当场失败。
+    # VC++ 运行库的下载与运行时缓存是否命中无关，必须无条件执行。
     if ! download_win7_prereqs; then
-        fatal "Win7 前置组件缺失（SHA-2 补丁 / WMF 5.1 / .NET 4.8 / VC++ 运行库），拒绝产出装不上的安装包"
+        fatal "Win7 前置组件缺失（VC++ 运行库），拒绝产出装不上的安装包"
+    fi
+fi
+
+# ── XAMPP 运行时（--runtime xampp）─────────────────────────────────────
+#
+# 与上面的 Laragon 自组装二选一。XAMPP 官方提供 portable 压缩包，解压即用，
+# 不需要逐件下载组装，所以这里只负责调用准备脚本、拿到目录；
+# 下载/校验/解压/自检的细节都在 deploy/prepare-xampp-runtime.sh 里。
+#
+# 位置必须在 download_win7_prereqs() 定义之后（该函数定义在本段之前不远处）。
+if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" == false ]] && [[ "$RUNTIME_FLAVOR" == "xampp" ]]; then
+    step "准备 XAMPP portable 运行时"
+    XAMPP_PREPARE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/prepare-xampp-runtime.sh"
+    [[ -x "$XAMPP_PREPARE" ]] || fatal "找不到可执行的 $XAMPP_PREPARE"
+    "$XAMPP_PREPARE" || fatal "XAMPP 运行时准备失败"
+    XAMPP_RUNTIME_SRC="$CACHE_DIR/xampp-runtime/xampp"
+    [[ -d "$XAMPP_RUNTIME_SRC" ]] || fatal "XAMPP 运行时目录不存在: $XAMPP_RUNTIME_SRC"
+
+    # XAMPP 的 Apache / PHP 同样是 VS16 构建，一样依赖 VC++ 运行库。
+    # 这个下载原本只挂在 Laragon 分支里，不在这里补一次的话，
+    # XAMPP 包会缺 vc_redist.x64.exe，目标机上 httpd.exe 直接起不来。
+    if ! download_win7_prereqs; then
+        fatal "Win7 前置组件缺失（VC++ 运行库），拒绝产出装不上的安装包"
     fi
 fi
 
@@ -811,8 +792,9 @@ fi
 
 # ── 计算总步骤数 ───────────────────────────────────────────────────────
 # 必须与实际的 step "..." 调用数一致，否则会打出 [10/9] 这种进度。
-# 无条件执行的 6 步：清理目录 / 复制项目 / Composer / 复制部署脚本 / OCR / 打包
-TOTAL_STEPS=6
+# 无条件执行的 7 步：清理目录 / 复制项目 / Composer / 复制部署脚本 /
+# OCR / 发布内容校验 / 打包
+TOTAL_STEPS=7
 if [[ "$SKIP_OBFUSCATE" == false ]]; then
     TOTAL_STEPS=$((TOTAL_STEPS + 1))  # PHP 代码混淆
 fi
@@ -829,6 +811,10 @@ OUTPUT_DIR="$PROJECT_ROOT/deploy/output"
 SUFFIX="${TARGET}"
 if [[ "$UPGRADE" == true ]]; then
     SUFFIX="${TARGET}-upgrade"
+elif [[ "$USE_EXISTING_MYSQL" == true ]]; then
+    SUFFIX="${TARGET}-existing-mysql"
+elif [[ -n "$BUNDLED_MYSQL_PORT" ]]; then
+    SUFFIX="${TARGET}-bundled-mysql-${BUNDLED_MYSQL_PORT}"
 fi
 
 # 产物名带上 commit 短哈希：现场反复拿旧包测试、以为改动没生效，是真实发生过的事。
@@ -849,6 +835,9 @@ echo ""
 echo -e "  版本:     ${BOLD}${VERSION}${NC}"
 echo -e "  目标:     ${BOLD}${TARGET}${NC}"
 echo -e "  模式:     ${BOLD}$(if [[ "$UPGRADE" == true ]]; then echo '升级包'; else echo '全量安装包'; fi)${NC}"
+if [[ "$USE_EXISTING_MYSQL" == true ]]; then
+echo -e "  MySQL:    ${BOLD}复用目标机 127.0.0.1:3306（密码安装时输入）${NC}"
+fi
 echo -e "  混淆:     ${BOLD}$(if [[ "$SKIP_OBFUSCATE" == true ]]; then echo '跳过'; else echo '启用'; fi)${NC}"
 if [[ -n "$LARAGON_INSTALLER_EXE" ]]; then
 echo -e "  Laragon:  ${BOLD}${LARAGON_INSTALLER_EXE}${NC}"
@@ -1309,6 +1298,14 @@ case "$TARGET" in
         else
             warn "目录不存在，跳过: deploy/batch-helpers"
         fi
+        if [[ "$USE_EXISTING_MYSQL" == true ]]; then
+            touch "$DIST_DIR/use-existing-mysql.flag"
+            info "标记安装包复用目标机 MySQL"
+        fi
+        if [[ -n "$BUNDLED_MYSQL_PORT" ]]; then
+            printf '%s\n' "$BUNDLED_MYSQL_PORT" > "$DIST_DIR/bundled-mysql-port.txt"
+            info "标记内置 MySQL 独立端口: $BUNDLED_MYSQL_PORT"
+        fi
         # 创建 setup.bat 快捷入口（Laragon 已预装模式）
         cat > "$DIST_DIR/setup.bat" <<'SHORTCUT_BAT'
 @echo off
@@ -1318,6 +1315,10 @@ chcp 936 >nul 2>&1
 set "INSTALL_DIR=C:\DentalClinic"
 set "PKG_DIR=%~dp0"
 if "%PKG_DIR:~-1%"=="\" set "PKG_DIR=%PKG_DIR:~0,-1%"
+for %%I in ("%INSTALL_DIR%") do set "INSTALL_DIR=%%~fI"
+for %%I in ("%PKG_DIR%") do set "PKG_DIR=%%~fI"
+set "IN_PLACE=0"
+if /I "%PKG_DIR%"=="%INSTALL_DIR%" set "IN_PLACE=1"
 
 echo.
 echo  =======================================================
@@ -1325,64 +1326,129 @@ echo    Dental Clinic Management System - Installer
 echo  =======================================================
 echo.
 
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" >nul 2>&1
+if errorlevel 1 (
+    echo  [ERROR] Failed to create install directory:
+    echo          %INSTALL_DIR%
+    exit /b 1
+)
+
 echo  [1/3] Stopping running services...
-taskkill /f /im mysqld.exe   >nul 2>&1
-taskkill /f /im nginx.exe    >nul 2>&1
-taskkill /f /im php.exe      >nul 2>&1
-taskkill /f /im php-cgi.exe  >nul 2>&1
+REM 只调用本系统已有的停止脚本；绝不按进程名结束目标机的其他 PHP/Nginx。
+if exist "%INSTALL_DIR%\stop-win.bat" call "%INSTALL_DIR%\stop-win.bat" "%INSTALL_DIR%" --background >nul 2>&1
 timeout /t 2 /nobreak >nul 2>&1
 
 echo  [2/3] Copying runtime and application files...
 
 REM 运行时（PHP/MySQL/Nginx/Composer）必须先落到 %INSTALL_DIR%\laragon，
 REM 否则 install-win.ps1 会因找不到 Laragon 目录而直接退出。
-if exist "%PKG_DIR%\laragon" (
+REM 安装包允许直接解压到 C:\DentalClinic。此时源和目标相同，绝不能 xcopy 自身。
+if "%IN_PLACE%"=="0" (
+    if not exist "%PKG_DIR%\laragon" (
+        echo  [ERROR] Missing laragon runtime in package:
+        echo          %PKG_DIR%\laragon
+        exit /b 1
+    )
     echo         Copying runtime ^(about 1.3 GB, please wait^)...
-    xcopy "%PKG_DIR%\laragon" "%INSTALL_DIR%\laragon\" /E /I /H /Y /Q >nul 2>&1
+    call :copy_dir "%PKG_DIR%\laragon" "%INSTALL_DIR%\laragon" "laragon runtime"
+    if errorlevel 1 goto :copy_failed
+) else (
+    if not exist "%INSTALL_DIR%\laragon" (
+        echo  [ERROR] In-place package is missing laragon runtime:
+        echo          %INSTALL_DIR%\laragon
+        exit /b 1
+    )
+    echo         Package is already in the install directory; runtime self-copy skipped.
 )
 
 for %%D in (app bootstrap config database public resources routes storage vendor scripts) do (
     if exist "%PKG_DIR%\%%D" (
-        xcopy "%PKG_DIR%\%%D" "%INSTALL_DIR%\laragon\www\dental\%%D\" /E /I /H /Y /Q >nul 2>&1
+        call :copy_dir "%PKG_DIR%\%%D" "%INSTALL_DIR%\laragon\www\dental\%%D" "application directory %%D"
+        if errorlevel 1 goto :copy_failed
     )
 )
 
 REM artisan 与 composer.json/lock 缺一不可：
 REM install-win.ps1 会显式校验 artisan 是否存在，缺了直接判定「项目不完整」。
 for %%F in (artisan composer.json composer.lock .env.deploy VERSION .htaccess) do (
-    if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\laragon\www\dental\%%F" /Y >nul 2>&1
+    if exist "%PKG_DIR%\%%F" (
+        call :copy_file "%PKG_DIR%\%%F" "%INSTALL_DIR%\laragon\www\dental\%%F" "application file %%F"
+        if errorlevel 1 goto :copy_failed
+    )
 )
 
-for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
-    if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>&1
-)
-if exist "%PKG_DIR%\batch-helpers" xcopy "%PKG_DIR%\batch-helpers" "%INSTALL_DIR%\batch-helpers\" /E /I /H /Y /Q >nul 2>&1
+REM 同目录重跑时这些资源已经在正确位置；跳过可避免 copy "file" "file"。
+if "%IN_PLACE%"=="0" (
+    for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
+        if exist "%PKG_DIR%\%%F" (
+            call :copy_file "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" "deployment script %%F"
+            if errorlevel 1 goto :copy_failed
+        )
+    )
+    if exist "%PKG_DIR%\batch-helpers" (
+        call :copy_dir "%PKG_DIR%\batch-helpers" "%INSTALL_DIR%\batch-helpers" "batch helpers"
+        if errorlevel 1 goto :copy_failed
+    )
 
-REM OCR 离线资源与运行库安装器（安装脚本按需取用）
-if exist "%PKG_DIR%\ocr-wheels" xcopy "%PKG_DIR%\ocr-wheels" "%INSTALL_DIR%\ocr-wheels\" /E /I /H /Y /Q >nul 2>&1
-for %%F in (python-installer.exe vc_redist.x64.exe) do (
-    if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>&1
+    REM OCR 离线资源与运行库安装器（安装脚本按需取用）
+    if exist "%PKG_DIR%\ocr-wheels" (
+        call :copy_dir "%PKG_DIR%\ocr-wheels" "%INSTALL_DIR%\ocr-wheels" "OCR wheels"
+        if errorlevel 1 goto :copy_failed
+    )
+    for %%F in (python-installer.exe vc_redist.x64.exe) do (
+        if exist "%PKG_DIR%\%%F" (
+            call :copy_file "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" "runtime installer %%F"
+            if errorlevel 1 goto :copy_failed
+        )
+    )
 )
-if exist "%PKG_DIR%\wmf51" xcopy "%PKG_DIR%\wmf51" "%INSTALL_DIR%\wmf51\" /E /I /H /Y /Q >nul 2>&1
-REM Win7 SHA-2 前置：没有它们，纯净 Win7 SP1 装 WMF 时 wusa 会卡住不返回
-if exist "%PKG_DIR%\win7-prereq" xcopy "%PKG_DIR%\win7-prereq" "%INSTALL_DIR%\win7-prereq\" /E /I /H /Y /Q >nul 2>&1
-REM .NET 4.8：WMF 5.1 的前置，纯净 Win7 SP1 只有 3.5.1
-if exist "%PKG_DIR%\dotnet48" xcopy "%PKG_DIR%\dotnet48" "%INSTALL_DIR%\dotnet48\" /E /I /H /Y /Q >nul 2>&1
 echo         Files copied.
 
 echo  [3/3] Running installer...
 echo.
-call "%INSTALL_DIR%\install-win.bat" "%INSTALL_DIR%"
+set "MYSQL_INSTALL_ARGS="
+set "BUNDLED_MYSQL_PORT="
+if exist "%PKG_DIR%\bundled-mysql-port.txt" set /p BUNDLED_MYSQL_PORT=<"%PKG_DIR%\bundled-mysql-port.txt"
+if defined BUNDLED_MYSQL_PORT set "MYSQL_INSTALL_ARGS=--db-port %BUNDLED_MYSQL_PORT%"
+if exist "%PKG_DIR%\use-existing-mysql.flag" set "MYSQL_INSTALL_ARGS=--use-existing-mysql --db-admin-user root"
+call "%INSTALL_DIR%\install-win.bat" "%INSTALL_DIR%" %MYSQL_INSTALL_ARGS%
 set "SETUP_RC=%ERRORLEVEL%"
 
 REM 无论成败都把日志位置说清楚 —— 窗口关掉之后就找不回来了
 echo.
 echo  Logs:
 echo    %INSTALL_DIR%\logs\install-*.log   configuration
-echo    %INSTALL_DIR%\logs\prereq.log      prerequisites (.NET / WMF)
+echo    %INSTALL_DIR%\logs\prereq.log      PowerShell bootstrap
 echo    %INSTALL_DIR%\laragon\data\mysql-error.log
 echo.
 exit /b %SETUP_RC%
+
+:copy_dir
+xcopy "%~1" "%~2\" /E /I /H /Y /Q >nul 2>&1
+if errorlevel 1 (
+    echo  [ERROR] Failed to copy %~3.
+    echo          Source: %~1
+    echo          Target: %~2
+    exit /b 1
+)
+exit /b 0
+
+:copy_file
+copy "%~1" "%~2" /Y >nul 2>&1
+if errorlevel 1 (
+    echo  [ERROR] Failed to copy %~3.
+    echo          Source: %~1
+    echo          Target: %~2
+    exit /b 1
+)
+exit /b 0
+
+:copy_failed
+echo.
+echo  Setup stopped because package files could not be copied.
+echo  Close programs using C:\DentalClinic files, then run setup.bat as Administrator.
+echo.
+exit /b 1
 SHORTCUT_BAT
         info "创建 setup.bat（双击即可安装）"
         ;;
@@ -1588,6 +1654,21 @@ if [[ -n "$LARAGON_INSTALLER_EXE" ]]; then
     warn "注意：laragon-wamp.exe 需要 Windows 10，且内置 PHP 8.x，不能用于 Win7 目标机"
 fi
 
+# ── 复制 XAMPP 运行环境（--runtime xampp）
+# 目录名必须是 xampp —— install-win.ps1 以 {安装目录}\xampp 为根定位运行时，
+# 且 XAMPP 自带配置里写死了 /xampp/... 的绝对路径（装机时由 setup_xampp.bat 重写）。
+if [[ -n "$XAMPP_RUNTIME_SRC" ]] && [[ -d "$XAMPP_RUNTIME_SRC" ]]; then
+    cp -r "$XAMPP_RUNTIME_SRC" "$DIST_DIR/xampp"
+    RUNTIME_SIZE=$(du -sh "$DIST_DIR/xampp" 2>/dev/null | cut -f1)
+    info "复制 XAMPP 运行环境到安装包 ($RUNTIME_SIZE)"
+
+    # VC++ 运行库：XAMPP 的 Apache/PHP 同样是 VS16 构建，依赖它
+    if [[ -s "$CACHE_DIR/vc_redist.x64.exe" ]]; then
+        cp "$CACHE_DIR/vc_redist.x64.exe" "$DIST_DIR/vc_redist.x64.exe"
+        info "复制 VC++ 2015-2022 x64 运行库"
+    fi
+fi
+
 # ── 复制自组装的 Win7 运行环境（PHP 8.2 / MySQL 5.7 / Nginx / Composer）
 # 目录名必须是 laragon —— install-win.ps1 以 {安装目录}\laragon 为根定位运行时。
 if [[ -n "$WIN7_RUNTIME_DIR" ]] && [[ -d "$WIN7_RUNTIME_DIR" ]]; then
@@ -1601,38 +1682,6 @@ if [[ -n "$WIN7_RUNTIME_DIR" ]] && [[ -d "$WIN7_RUNTIME_DIR" ]]; then
         info "复制 VC++ 2015-2022 x64 运行库"
     fi
 
-    # Win7 SHA-2 前置（KB4490628 服务堆栈 + KB4474419 SHA-2 签名支持）。
-    # 文件名的 01-/02- 前缀就是安装顺序，install-win.bat 按名字排序逐个装。
-    if compgen -G "$CACHE_DIR/win7-prereq/*.msu" >/dev/null 2>&1; then
-        mkdir -p "$DIST_DIR/win7-prereq"
-        cp "$CACHE_DIR"/win7-prereq/*.msu "$DIST_DIR/win7-prereq/"
-        PREREQ_COUNT=$(find "$DIST_DIR/win7-prereq" -name '*.msu' | wc -l | tr -d ' ')
-        info "复制 Win7 SHA-2 前置补丁（${PREREQ_COUNT} 个 .msu）"
-    else
-        warn "未找到 Win7 SHA-2 前置补丁，纯净 Win7 SP1 安装 WMF 5.1 时可能卡死"
-    fi
-
-    # .NET Framework 4.8（WMF 5.1 的前置，纯净 Win7 SP1 只有 3.5.1）
-    if [[ -s "$CACHE_DIR/ndp48-x86-x64-allos-enu.exe" ]]; then
-        mkdir -p "$DIST_DIR/dotnet48"
-        cp "$CACHE_DIR/ndp48-x86-x64-allos-enu.exe" "$DIST_DIR/dotnet48/"
-        info "复制 .NET Framework 4.8 离线安装包"
-    else
-        warn "未找到 .NET 4.8 离线包，纯净 Win7 SP1 上装不了 WMF 5.1"
-    fi
-
-    # WMF 5.1（Win7 自带 PowerShell 2.0，装不了就跑不了安装脚本）
-    if [[ -d "$CACHE_DIR/wmf51-extracted" ]]; then
-        mkdir -p "$DIST_DIR/wmf51"
-        find "$CACHE_DIR/wmf51-extracted" -name '*.msu' -exec cp {} "$DIST_DIR/wmf51/" \; 2>/dev/null || true
-        WMF_COUNT=$(find "$DIST_DIR/wmf51" -name '*.msu' | wc -l | tr -d ' ')
-        if [[ "$WMF_COUNT" -gt 0 ]]; then
-            info "复制 WMF 5.1 安装包（${WMF_COUNT} 个 .msu）"
-        else
-            rm -rf "$DIST_DIR/wmf51"
-            warn "WMF 5.1 压缩包内未找到 .msu，PowerShell 2.0 的机器需手动升级"
-        fi
-    fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1827,30 +1876,145 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
             error "  ✗ 缺失: $1（$2）"; ASSERT_FAIL=true
         fi
     }
-    assert_glob_count() {  # <glob> <期望个数> <说明>
-        local n
-        n=$(find "$DIST_DIR/$(dirname "$1")" -name "$(basename "$1")" 2>/dev/null | wc -l | tr -d ' ')
-        if [[ "$n" -ge "$2" ]]; then
-            info "  ✓ $3（$n 个）"
-        else
-            error "  ✗ $3：期望至少 $2 个，实际 $n 个（$1）"; ASSERT_FAIL=true
-        fi
-    }
-
-    # 纯净 Win7 装不上就是缺这几样
-    assert_glob_count "win7-prereq/*.msu" 2 "SHA-2 前置补丁（KB4490628 + KB4474419）"
-    assert_glob_count "wmf51/*.msu"       1 "WMF 5.1"
-    assert_glob_count "dotnet48/*.exe"    1 ".NET Framework 4.8"
+    # 纯净 Win7 只要求系统自带 PowerShell 2.0，不再携带或安装 Windows 更新包。
     assert_exists     "vc_redist.x64.exe"   "VC++ 2015-2022 x64 运行库"
-    assert_exists     "laragon/bin/php"     "PHP 运行时"
-    assert_exists     "laragon/bin/mysql"   "MySQL 运行时"
+    # 运行时布局按形态区分：Laragon 是 laragon/bin/{php,mysql}，
+    # XAMPP 是扁平的 xampp/{php,mysql,apache}（没有版本号子目录）。
+    if [[ "$RUNTIME_FLAVOR" == "xampp" ]]; then
+        assert_exists "xampp/php/php.exe"              "PHP 运行时（XAMPP）"
+        assert_exists "xampp/php/php8ts.dll"           "PHP TS 运行库（mod_php 依赖）"
+        assert_exists "xampp/php/php8apache2_4.dll"    "mod_php 模块"
+        assert_exists "xampp/apache/bin/httpd.exe"     "Apache"
+        assert_exists "xampp/mysql/bin/mysqld.exe"     "MariaDB"
+        assert_exists "xampp/setup_xampp.bat"          "XAMPP 路径重写脚本"
+    else
+        assert_exists "laragon/bin/php"     "PHP 运行时"
+        assert_exists "laragon/bin/mysql"   "MySQL 运行时"
+    fi
     assert_exists     "install-win.bat"     "安装脚本"
     assert_exists     "install-win.ps1"     "配置脚本"
+
+    # setup.bat 必须允许安装包直接解压到 C:\DentalClinic 后重复执行。
+    # 回归测试验证同目录检测、跳过自复制、复制错误显式失败三件事。
+    if ! bash "$PROJECT_ROOT/deploy/tests/test-setup-rerun.sh"; then
+        error "  ✗ setup.bat 重复执行回归测试失败"
+        ASSERT_FAIL=true
+    else
+        info "  ✓ setup.bat 可安全重复执行"
+    fi
 
     # 脚本必须是当前版本，不能是残留的旧副本。--selftest 是最近加的，
     # 拿它当版本水印：缺了就说明 dist 里混进了过时的 BAT。
     if [[ -f "$DIST_DIR/install-win.bat" ]] && ! grep -q -- "--selftest" "$DIST_DIR/install-win.bat" 2>/dev/null; then
         error "  ✗ install-win.bat 不含 --selftest —— dist 里是过时的副本"
+        ASSERT_FAIL=true
+    fi
+
+    # PowerShell 2.0 回归门禁。::new() 需要 PS5，*> 需要 PS3；任何一个回归都会
+    # 让纯净 Win7 在解析 install-win.ps1 时直接失败。
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && grep -qF '::new(' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 含 PS5 专用 ::new() 语法"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && grep -qF '*>' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 含 PS3 专用 *> 重定向"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && grep -qE '(^|[[:space:]])-WindowStyle[[:space:]]' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 使用 PowerShell 2 不兼容的 Start-Process -WindowStyle 参数组合"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && grep -qF '[string[]]$Args' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 使用 PowerShell 自动变量 \$args 保存 MySQL 连接参数"
+        ASSERT_FAIL=true
+    fi
+    # PowerShell 2.0 + ErrorActionPreference=Stop 时，直接把原生命令的 stderr
+    # 合并到 stdout 会在读取 LASTEXITCODE 之前终止脚本。只允许在
+    # Invoke-Native* 包装器内部使用这种重定向。
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && awk '/^[[:space:]]*& / && /2>&1/ && !/\$FilePath/ { found=1 } END { exit !found }' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 含未包装的原生 stderr 合并，会在 PowerShell 2.0 中误终止"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && ! grep -qF 'function Invoke-NativeQuiet' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 缺少 PowerShell 2.0 原生命令兼容包装器"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && ! grep -qF 'DentalClinic-ServiceWatchdog' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 未注册 Win7 后台服务健康检查任务"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/start-win.bat" ]] && ! grep -qF 'PHP FastCGI' "$DIST_DIR/start-win.bat"; then
+        error "  ✗ start-win.bat 未启动 PHP FastCGI，Nginx 将无法执行 PHP"
+        ASSERT_FAIL=true
+    fi
+    if [[ ! -f "$DIST_DIR/batch-helpers/write_nginx_main_conf.php" ]] || ! grep -qF 'worker_processes' "$DIST_DIR/batch-helpers/write_nginx_main_conf.php"; then
+        error "  ✗ Nginx 主配置生成器不完整"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && ! grep -qF '__DENTAL_DB_PASSWORD_EMPTY__' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 未处理 Windows PowerShell 2.0 的空密码环境变量语义"
+        ASSERT_FAIL=true
+    fi
+    for env_helper in install_render_env.php install_update_env.php; do
+        if [[ -f "$DIST_DIR/batch-helpers/$env_helper" ]] && ! grep -qF '__DENTAL_DB_PASSWORD_EMPTY__' "$DIST_DIR/batch-helpers/$env_helper"; then
+            error "  ✗ $env_helper 未解析空数据库密码哨兵"
+            ASSERT_FAIL=true
+        fi
+    done
+    if [[ -f "$DIST_DIR/use-existing-mysql.flag" ]]; then
+        if ! grep -qF -- '--use-existing-mysql --db-admin-user root' "$DIST_DIR/setup.bat"; then
+            error "  ✗ 现有 MySQL 安装包没有把安全模式参数传给安装脚本"
+            ASSERT_FAIL=true
+        fi
+        if grep -qiE 'taskkill .*/im mysqld\.exe' "$DIST_DIR/setup.bat"; then
+            error "  ✗ 现有 MySQL 安装包仍会全局终止 mysqld.exe"
+            ASSERT_FAIL=true
+        fi
+        for lifecycle_script in start-win.bat stop-win.bat uninstall-win.bat; do
+            if ! grep -qF 'existing-mysql.conf' "$DIST_DIR/$lifecycle_script"; then
+                error "  ✗ $lifecycle_script 未识别现有 MySQL 生命周期标记"
+                ASSERT_FAIL=true
+            fi
+        done
+        if ! grep -qF 'MYSQL_CHECK_RC' "$DIST_DIR/start-win.bat" || ! grep -qF 'SELECT 1' "$DIST_DIR/start-win.bat"; then
+            error "  ✗ start-win.bat 未在启动应用前检查现有 MySQL 连接"
+            ASSERT_FAIL=true
+        fi
+    fi
+    if [[ -f "$DIST_DIR/bundled-mysql-port.txt" ]]; then
+        if ! grep -qF 'bundled-mysql-port.txt' "$DIST_DIR/setup.bat" || ! grep -qF -- '--db-port %BUNDLED_MYSQL_PORT%' "$DIST_DIR/setup.bat"; then
+            error "  ✗ 独立端口安装包没有把 MySQL 端口传给安装脚本"
+            ASSERT_FAIL=true
+        fi
+        if ! grep -qF 'bundled-mysql.conf' "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ 独立端口安装包未记录内置 MySQL 生命周期标记"
+            ASSERT_FAIL=true
+        fi
+        if ! grep -qF "'bind-address=127.0.0.1'" "$DIST_DIR/install-win.ps1" || ! grep -qF 'Set-Content -Path $mysqlIni' "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ 独立端口安装包不会生成仅监听本机的 my.ini"
+            ASSERT_FAIL=true
+        fi
+        if ! grep -qF 'Refusing to clear a live MySQL data directory' "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ 独立端口安装包可能在覆盖安装时清理仍在运行的 MySQL 数据目录"
+            ASSERT_FAIL=true
+        fi
+        if grep -qiE 'taskkill .*/im mysqld\.exe' "$DIST_DIR/stop-win.bat"; then
+            error "  ✗ stop-win.bat 仍会全局终止 mysqld.exe"
+            ASSERT_FAIL=true
+        fi
+        if grep -qF 'Get-Process -Name "mysqld"' "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ install-win.ps1 仍会按进程名停止全部 mysqld"
+            ASSERT_FAIL=true
+        fi
+        for lifecycle_script in start-win.bat stop-win.bat uninstall-win.bat; do
+            if ! grep -qF 'DentalClinicMySQL' "$DIST_DIR/$lifecycle_script"; then
+                error "  ✗ $lifecycle_script 未限定为 DentalClinicMySQL 服务"
+                ASSERT_FAIL=true
+            fi
+        done
+    fi
+    if [[ -f "$DIST_DIR/install-win.bat" ]] && grep -qiE 'wusa\.exe|KB3191566|dotnet48|win7-prereq' "$DIST_DIR/install-win.bat"; then
+        error "  ✗ install-win.bat 仍包含 Windows Update / WMF / .NET 硬前置"
         ASSERT_FAIL=true
     fi
 
