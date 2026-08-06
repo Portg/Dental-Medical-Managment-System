@@ -14,13 +14,32 @@ REM ── 参数处理 ──────────────────�
 set "INSTALL_DIR=%~1"
 if "%INSTALL_DIR%"=="" set "INSTALL_DIR=C:\DentalClinic"
 if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+set "BACKGROUND_MODE=0"
+if /I "%~2"=="--background" set "BACKGROUND_MODE=1"
+set "STOP_MARKER=%INSTALL_DIR%\services-stopped.flag"
+if "%BACKGROUND_MODE%"=="1" if exist "%STOP_MARKER%" exit /b 0
+if not "%BACKGROUND_MODE%"=="1" if exist "%STOP_MARKER%" del /f /q "%STOP_MARKER%" >nul 2>&1
 
+REM ── 运行时形态判定 ──────────────────────────────────────────────
+REM 与 install-win.ps1 / setup.bat 用同一条判据：包内有 Apache 就是 xampp。
+REM   xampp   : Apache + mod_php，代码在 xampp\htdocs\dental，无 php-cgi
+REM   laragon : Nginx + php-cgi，代码在 laragon\www\dental
+REM 此前本脚本把 PROJECT_DIR 写死成 laragon\www\dental，xampp 安装跑到下面
+REM 「环境检测」那一步就会因为找不到 artisan 直接退出 —— 也就是说 xampp 包
+REM 装完之后 Web 服务器从来没被启动过。
+set "XAMPP_DIR=%INSTALL_DIR%\xampp"
 set "LARAGON_DIR=%INSTALL_DIR%\laragon"
+set "RUNTIME_FLAVOR=laragon"
+if exist "%XAMPP_DIR%\apache\bin\httpd.exe" set "RUNTIME_FLAVOR=xampp"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
+if "%RUNTIME_FLAVOR%"=="xampp" set "PROJECT_DIR=%XAMPP_DIR%\htdocs\dental"
+set "EXTERNAL_MYSQL_MARKER=%INSTALL_DIR%\existing-mysql.conf"
+set "APACHE_SERVICE=DentalClinicApache"
 
 REM ── 自动发现路径（版本无关）────────────────────────────────────
 set "PHP_DIR="
 set "PHP_EXE="
+set "PHP_CGI_EXE="
 set "MYSQL_DIR="
 set "MYSQL_EXE="
 set "MYSQLD_EXE="
@@ -47,7 +66,10 @@ REM Nginx: nginx-* → 任意子目录
 for /d %%D in ("%LARAGON_DIR%\bin\nginx\nginx-*") do set "NGINX_DIR=%%D"
 if not defined NGINX_DIR for /d %%D in ("%LARAGON_DIR%\bin\nginx\*") do if exist "%%D\nginx.exe" set "NGINX_DIR=%%D"
 
-if defined PHP_DIR set "PHP_EXE=%PHP_DIR%\php.exe"
+if defined PHP_DIR (
+    set "PHP_EXE=%PHP_DIR%\php.exe"
+    set "PHP_CGI_EXE=%PHP_DIR%\php-cgi.exe"
+)
 if defined MYSQL_DIR (
     set "MYSQL_EXE=%MYSQL_DIR%\bin\mysql.exe"
     set "MYSQLD_EXE=%MYSQL_DIR%\bin\mysqld.exe"
@@ -55,6 +77,23 @@ if defined MYSQL_DIR (
     set "MYSQL_INI=%LARAGON_DIR%\etc\mysql\my.ini"
 )
 if defined NGINX_DIR set "NGINX_EXE=%NGINX_DIR%\nginx.exe"
+
+REM xampp 的目录布局是扁平的（没有 php-8.2.x 这种版本号子目录），
+REM 上面按 laragon 布局做的探测对它全都不适用，这里直接覆盖成确定路径。
+REM MYSQL_INI 必须和 install-win.ps1 里的 $DB_CONFIG_FILE 一致（xampp\mysql\my.ini）。
+if "%RUNTIME_FLAVOR%"=="xampp" (
+    set "PHP_DIR=%XAMPP_DIR%\php"
+    set "PHP_EXE=%XAMPP_DIR%\php\php.exe"
+    set "PHP_CGI_EXE="
+    set "MYSQL_DIR=%XAMPP_DIR%\mysql"
+    set "MYSQL_EXE=%XAMPP_DIR%\mysql\bin\mysql.exe"
+    set "MYSQLD_EXE=%XAMPP_DIR%\mysql\bin\mysqld.exe"
+    set "MYSQLADMIN_EXE=%XAMPP_DIR%\mysql\bin\mysqladmin.exe"
+    set "MYSQL_INI=%XAMPP_DIR%\mysql\my.ini"
+    set "NGINX_DIR="
+    set "NGINX_EXE="
+    set "APACHE_EXE=%XAMPP_DIR%\apache\bin\httpd.exe"
+)
 
 REM 如果 Laragon 内没有，尝试系统 PATH
 if not defined PHP_EXE (
@@ -71,17 +110,6 @@ if not defined MYSQL_EXE (
     )
     :found_sys_mysql
 )
-if not defined MYSQLD_EXE (
-    where mysqld >nul 2>&1 && for /f "tokens=*" %%P in ('where mysqld 2^>nul') do (
-        set "MYSQLD_EXE=%%P"
-    )
-)
-if not defined MYSQLADMIN_EXE (
-    where mysqladmin >nul 2>&1 && for /f "tokens=*" %%P in ('where mysqladmin 2^>nul') do (
-        set "MYSQLADMIN_EXE=%%P"
-    )
-)
-
 REM ── 状态变量 ────────────────────────────────────────────────────
 set "LARAGON_MODE=0"
 set "MYSQL_OK=0"
@@ -90,7 +118,7 @@ set "WEB_MODE=none"
 set "OCR_OK=0"
 set "QUEUE_OK=0"
 set "APP_PORT=8000"
-set "APP_URL=http://localhost/dental"
+set "APP_URL=http://localhost"
 set "OCR_PORT=5000"
 set "MYSQL_WAIT_MAX=30"
 
@@ -115,99 +143,158 @@ if not defined PHP_EXE (
     goto :error
 )
 
-REM 检测是否有 Laragon
-if exist "%LARAGON_EXE%" set "LARAGON_MODE=1"
+REM Laragon 面板仍可供人工查看，但后台模式由本脚本直接管理明确的
+REM PHP/Nginx/OCR 进程，避免 Laragon 同时接管目标机原有的 MySQL 5.6。
+set "LARAGON_MODE=0"
 
 REM ══════════════════════════════════════════════════════════════
 REM  Step 1/6: 启动 MySQL
 REM ══════════════════════════════════════════════════════════════
 echo  [1/6] 启动 MySQL...
 
-REM 检查 MySQL 是否已在运行
-if defined MYSQL_EXE (
-    "%MYSQL_EXE%" -u root -e "SELECT 1" >nul 2>&1
-    if !ERRORLEVEL! equ 0 (
-        echo        MySQL 已在运行                              [跳过]
-        set "MYSQL_OK=1"
-        goto :mysql_done
+REM 始终读取应用实际连接信息。隔离安装包写入 DB_PORT=3307，
+REM 因此这里不会误把 3306 上的目标机 MySQL 5.6 当成本系统数据库。
+set "APP_DB_HOST=127.0.0.1"
+set "APP_DB_PORT=3306"
+set "APP_DB_USER=root"
+set "APP_DB_PASS="
+if exist "%PROJECT_DIR%\.env" (
+    for /f "usebackq tokens=1,* delims==" %%A in ("%PROJECT_DIR%\.env") do (
+        if /i "%%A"=="DB_HOST" set "APP_DB_HOST=%%B"
+        if /i "%%A"=="DB_PORT" set "APP_DB_PORT=%%B"
+        if /i "%%A"=="DB_USERNAME" set "APP_DB_USER=%%B"
+        if /i "%%A"=="DB_PASSWORD" set "APP_DB_PASS=%%B"
     )
 )
 
-REM 方式1: 通过 Laragon 启动（它会管理 MySQL + Nginx）
-if "%LARAGON_MODE%"=="1" (
-    tasklist /FI "IMAGENAME eq laragon.exe" 2>nul | findstr /I "laragon.exe" >nul
-    if !ERRORLEVEL! neq 0 (
-        echo        通过 Laragon 启动...
-        start "" "%LARAGON_EXE%"
-    ) else (
-        echo        Laragon 已在运行
-    )
+if not defined MYSQL_EXE (
+    echo        [错误] 未找到 MySQL 客户端，无法检查数据库
+    goto :error
+)
 
-    REM 等待 MySQL 就绪
-    if defined MYSQL_EXE (
-        set /a "WAIT=0"
-        :wait_mysql_laragon
-        timeout /t 2 /nobreak >nul
-        "%MYSQL_EXE%" -u root -e "SELECT 1" >nul 2>&1
-        if !ERRORLEVEL! equ 0 (
-            echo        MySQL 启动成功 (Laragon^)                   [OK]
-            set "MYSQL_OK=1"
-            goto :mysql_done
-        )
-        set /a "WAIT+=2"
-        if !WAIT! geq %MYSQL_WAIT_MAX% (
-            echo        [警告] MySQL 启动超时 (%MYSQL_WAIT_MAX% 秒^)
-            goto :mysql_done
-        )
-        goto :wait_mysql_laragon
-    )
+set "MYSQL_PWD=!APP_DB_PASS!"
+"%MYSQL_EXE%" -h !APP_DB_HOST! -P !APP_DB_PORT! -u !APP_DB_USER! -e "SELECT 1" >nul 2>&1
+set "MYSQL_CHECK_RC=!ERRORLEVEL!"
+
+if "!MYSQL_CHECK_RC!"=="0" (
+    echo        MySQL 连接正常: !APP_DB_HOST!:!APP_DB_PORT!          [OK]
+    set "MYSQL_OK=1"
     goto :mysql_done
 )
 
-REM 方式2: 直接启动 mysqld
-if defined MYSQLD_EXE (
-    echo        直接启动 mysqld...
-    if exist "%MYSQL_INI%" (
-        start "" /b "%MYSQLD_EXE%" --defaults-file="%MYSQL_INI%" --console >nul 2>&1
-    ) else (
-        start "" /b "%MYSQLD_EXE%" --console >nul 2>&1
-    )
-) else (
-    REM 方式3: Windows 服务
-    net start mysql >nul 2>&1
-    if !ERRORLEVEL! neq 0 (
-        echo  [错误] 无法启动 MySQL，请手动启动数据库
-        goto :error
-    )
+REM 现有 MySQL 模式只检查、不管理数据库生命周期。
+if exist "%EXTERNAL_MYSQL_MARKER%" (
+    echo        [错误] 现有 MySQL 未启动或连接失败: !APP_DB_HOST!:!APP_DB_PORT!
+    echo               请先手动启动 MySQL，再重新运行 start-win.bat
+    goto :error
 )
 
-REM 等待 MySQL 就绪
-if defined MYSQL_EXE (
-    set /a "WAIT=0"
-    :wait_mysql_direct
-    timeout /t 2 /nobreak >nul
-    "%MYSQL_EXE%" -u root -e "SELECT 1" >nul 2>&1
-    if !ERRORLEVEL! equ 0 (
-        echo        MySQL 启动成功                              [OK]
-        set "MYSQL_OK=1"
-        goto :mysql_done
-    )
-    set /a "WAIT+=2"
-    if !WAIT! geq %MYSQL_WAIT_MAX% (
-        echo  [错误] MySQL 启动超时 (%MYSQL_WAIT_MAX% 秒^)
-        goto :error
-    )
-    echo        等待中... (!WAIT!/%MYSQL_WAIT_MAX% 秒^)
-    goto :wait_mysql_direct
+REM 内置模式只启动 DentalClinicMySQL；不调用 net start mysql，也不通过
+REM Laragon 启动，避免接管目标机原有的 MySQL 服务。
+sc query DentalClinicMySQL >nul 2>&1
+if !ERRORLEVEL! equ 0 (
+    echo        启动 DentalClinicMySQL 服务...
+    net start DentalClinicMySQL >nul 2>&1
+    goto :wait_mysql_managed
 )
+
+if not defined MYSQLD_EXE (
+    echo        [错误] 未找到安装包内置 mysqld.exe
+    goto :error
+)
+if not exist "%MYSQL_INI%" (
+    echo        [错误] 未找到内置 MySQL 配置: %MYSQL_INI%
+    goto :error
+)
+
+echo        直接启动安装包内置 mysqld...
+start "" /b "%MYSQLD_EXE%" --defaults-file="%MYSQL_INI%" --console >nul 2>&1
+
+:wait_mysql_managed
+set /a "WAIT=0"
+:wait_mysql_direct
+timeout /t 2 /nobreak >nul
+"%MYSQL_EXE%" -h !APP_DB_HOST! -P !APP_DB_PORT! -u !APP_DB_USER! -e "SELECT 1" >nul 2>&1
+if !ERRORLEVEL! equ 0 (
+    echo        内置 MySQL 启动成功: !APP_DB_HOST!:!APP_DB_PORT!     [OK]
+    set "MYSQL_OK=1"
+    goto :mysql_done
+)
+set /a "WAIT+=2"
+if !WAIT! geq %MYSQL_WAIT_MAX% (
+    echo        [错误] 内置 MySQL 启动超时: !APP_DB_HOST!:!APP_DB_PORT!
+    goto :error
+)
+echo        等待中... (!WAIT!/%MYSQL_WAIT_MAX% 秒^)
+goto :wait_mysql_direct
 
 :mysql_done
+set "MYSQL_PWD="
+set "APP_DB_PASS="
 echo.
 
 REM ══════════════════════════════════════════════════════════════
 REM  Step 2/6: 启动 Nginx（或 PHP 内置服务器作为备选）
 REM ══════════════════════════════════════════════════════════════
 echo  [2/6] 启动 Web 服务器...
+
+REM ─ xampp 形态：Apache + mod_php ─
+REM PHP 跑在 Apache 进程内，没有 php-cgi 要维护（这正是换 XAMPP 的目的）。
+REM Apache 由 install-win.ps1 注册成 DentalClinicApache 服务（对齐 DentalClinicMySQL
+REM 的做法），因此这里只会动本系统这一个实例，绝不碰目标机上其他 Apache。
+REM net start 幂等：已在运行时返回非零，不当失败 —— 判据是 80 端口是否在监听。
+REM 标签一律放在顶层：cmd 里 ( ) 块内的 :label 行为是坏的。
+if not "%RUNTIME_FLAVOR%"=="xampp" goto :web_laragon
+sc query %APACHE_SERVICE% >nul 2>&1
+if errorlevel 1 goto :apache_no_service
+echo        启动 Apache 服务 ^(%APACHE_SERVICE%^)...
+net start %APACHE_SERVICE% >nul 2>&1
+set /a "WAIT=0"
+:wait_apache
+timeout /t 2 /nobreak >nul
+netstat -an 2>nul | findstr ":80 " | findstr "LISTENING" >nul 2>&1
+if !ERRORLEVEL! equ 0 goto :apache_ok
+set /a "WAIT+=2"
+if !WAIT! geq 20 goto :apache_timeout
+goto :wait_apache
+:apache_timeout
+echo        [错误] Apache 服务已启动但 80 端口始终未监听
+echo               见 %XAMPP_DIR%\apache\logs\error.log
+goto :error
+:apache_no_service
+echo        [错误] 未找到 %APACHE_SERVICE% 服务
+echo               请重新运行安装程序（install-win.bat）以注册 Apache 服务
+goto :error
+:apache_ok
+echo        Apache 已就绪 ^(%APACHE_SERVICE%^)                [OK]
+set "WEB_OK=1"
+set "WEB_MODE=apache"
+set "APP_URL=http://localhost"
+goto :web_done
+
+:web_laragon
+REM Nginx 只负责 HTTP，PHP 请求必须先有 php-cgi 监听 9000。
+netstat -an 2>nul | findstr ":9000 " | findstr "LISTENING" >nul 2>&1
+if !ERRORLEVEL! equ 0 goto :php_cgi_ready
+if not exist "%PHP_CGI_EXE%" (
+    echo        [错误] 未找到 php-cgi.exe
+    goto :error
+)
+echo        启动 PHP FastCGI (127.0.0.1:9000^)...
+start "" /b "%PHP_CGI_EXE%" -b 127.0.0.1:9000 -c "%PHP_DIR%\php.ini" >nul 2>&1
+set /a "WAIT=0"
+:wait_php_cgi
+timeout /t 1 /nobreak >nul
+netstat -an 2>nul | findstr ":9000 " | findstr "LISTENING" >nul 2>&1
+if !ERRORLEVEL! equ 0 goto :php_cgi_ready
+set /a "WAIT+=1"
+if !WAIT! geq 15 (
+    echo        [错误] PHP FastCGI 启动超时
+    goto :error
+)
+goto :wait_php_cgi
+:php_cgi_ready
+echo        PHP FastCGI 已就绪                            [OK]
 
 REM Laragon 模式: Nginx 由 Laragon 管理
 if "%LARAGON_MODE%"=="1" (
@@ -218,7 +305,7 @@ if "%LARAGON_MODE%"=="1" (
         echo        Nginx 由 Laragon 管理                       [OK]
         set "WEB_OK=1"
         set "WEB_MODE=laragon"
-        set "APP_URL=http://localhost/dental"
+        set "APP_URL=http://localhost"
         goto :web_done
     )
     echo        [警告] Laragon 的 Nginx 未就绪，尝试其他方式
@@ -230,7 +317,7 @@ if !ERRORLEVEL! equ 0 (
     echo        Nginx 已在运行                                [跳过]
     set "WEB_OK=1"
     set "WEB_MODE=nginx"
-    set "APP_URL=http://localhost/dental"
+    set "APP_URL=http://localhost"
     goto :web_done
 )
 
@@ -247,7 +334,7 @@ if defined NGINX_EXE (
         echo        启动 Nginx...
         pushd "%NGINX_DIR%"
         if exist "%LARAGON_DIR%\etc\nginx" (
-            start "" /b "%NGINX_EXE%" -p "%LARAGON_DIR%\etc\nginx" 2>nul
+            start "" /b "%NGINX_EXE%" -p "%NGINX_DIR%\" -c "%LARAGON_DIR%\etc\nginx\nginx.conf" >nul 2>&1
         ) else (
             start "" /b "%NGINX_EXE%" 2>nul
         )
@@ -258,7 +345,7 @@ if defined NGINX_EXE (
             echo        Nginx 启动成功                              [OK]
             set "WEB_OK=1"
             set "WEB_MODE=nginx"
-            set "APP_URL=http://localhost/dental"
+            set "APP_URL=http://localhost"
             goto :web_done
         )
         echo        [警告] Nginx 启动失败，使用 PHP 内置服务器
@@ -361,7 +448,7 @@ if not defined PHP_EXE (
 )
 
 pushd "%PROJECT_DIR%"
-start "dental-queue-worker" /min "%PHP_EXE%" artisan queue:work --sleep=3 --tries=3 --max-time=3600
+start "" /b "%PHP_EXE%" artisan queue:work --sleep=3 --tries=3 --max-time=3600 >nul 2>&1
 popd
 set "QUEUE_OK=1"
 echo        队列工作进程启动成功                            [OK]
@@ -373,9 +460,14 @@ REM ═════════════════════════�
 REM  Step 5/6: 打开浏览器
 REM ══════════════════════════════════════════════════════════════
 echo  [5/6] 打开浏览器...
+if "%BACKGROUND_MODE%"=="1" (
+    echo        后台健康检查模式，不打开浏览器                  [跳过]
+    goto :browser_done
+)
 timeout /t 2 /nobreak >nul
 start "" "%APP_URL%"
 echo        已打开 %APP_URL%                               [OK]
+:browser_done
 echo.
 
 REM ══════════════════════════════════════════════════════════════
@@ -394,7 +486,9 @@ if "%MYSQL_OK%"=="1" (
     echo  |  MySQL .................. 未启动                   |
 )
 
-if "%WEB_MODE%"=="laragon" (
+if "%WEB_MODE%"=="apache" (
+    echo  |  Web 服务器 ............. Apache + mod_php         |
+) else if "%WEB_MODE%"=="laragon" (
     echo  |  Web 服务器 ............. Laragon Nginx            |
 ) else if "%WEB_MODE%"=="nginx" (
     echo  |  Web 服务器 ............. Nginx                    |
@@ -432,5 +526,5 @@ echo  +=====================================================+
 echo.
 
 :done
+if not "%BACKGROUND_MODE%"=="1" pause
 endlocal
-pause

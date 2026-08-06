@@ -59,14 +59,14 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopShortcut}"; GroupDescription
 
 [Files]
 ; 项目代码（由 build.sh --target win 构建）
-; 排除 laragon / wmf51 / vc_redist —— 它们属于运行环境与前置安装包，
-; 各有独立的 DestDir，不该被复制进项目目录（否则白占 1.3GB+）。
-Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels,laragon,wmf51,win7-prereq,vc_redist.x64.exe,python-installer.exe"
+; 排除 laragon / vc_redist，它们属于运行环境与前置安装包，
+; 各有独立的 DestDir，不该被复制进项目目录。
+Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels,laragon,vc_redist.x64.exe,python-installer.exe"
 
 ; ⚠ 这些运行时目录**不得**再加 Check: DirExists(ExpandConstant('{src}\dist\...'))。
 ;   Check 是在**目标机安装时**求值的，而 {src} 指 setup.exe 所在目录 ——
 ;   单独分发安装器时它旁边根本没有 dist\，条件恒为假，于是 Laragon/PHP/MySQL、
-;   SHA-2 补丁、WMF、.NET、OCR 全部被静默跳过，装完只剩一个空壳。
+;   VC++ 运行库、OCR 全部被静默跳过，装完只剩一个空壳。
 ;   编译期是否存在应交给 ISCC 自己判断：源目录缺失时直接编译失败，
 ;   这正是我们要的 —— 缺前置的 Win7 包不该被产出。
 ;   单文件的可选项用 skipifsourcedoesntexist（那是编译期语义，正确）。
@@ -77,16 +77,6 @@ Source: "dist\laragon\*"; DestDir: "{app}\laragon"; Flags: ignoreversion recurse
 
 ; VC++ 2015-2022 x64 运行库（PHP VS16 构建的依赖）
 Source: "dist\vc_redist.x64.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-; Win7 SHA-2 前置（KB4490628 服务堆栈 + KB4474419 SHA-2 签名支持）。
-; 微软自 2019 年起用 SHA-2 重签所有更新，纯净 Win7 SP1 验不了签名，
-; 此时 wusa 装 .NET/WMF 会长时间卡在「Searching for updates」而不返回。
-; 文件名的 01-/02- 前缀即安装顺序，install-win.bat 按名字排序逐个安装。
-Source: "dist\win7-prereq\*"; DestDir: "{app}\win7-prereq"; Flags: ignoreversion recursesubdirs createallsubdirs
-; WMF 5.1：Win7 自带 PowerShell 2.0，install-win.bat 会按需静默安装
-Source: "dist\wmf51\*"; DestDir: "{app}\wmf51"; Flags: ignoreversion recursesubdirs createallsubdirs
-; .NET Framework 4.8：WMF 5.1 要求 .NET 4.5.2+，而纯净 Win7 SP1 只有 3.5.1。
-; 不带这个，离线机器装不了 WMF，也就跑不了 install-win.ps1。
-Source: "dist\dotnet48\*"; DestDir: "{app}\dotnet48"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; OCR Python 离线包。这一项是真可选的（build.sh --skip-ocr 就不会产出），
 ; 所以用 ISPP 的**编译期**条件，而不是运行时 Check —— SourcePath 是本 .iss
@@ -193,13 +183,7 @@ end;
 //
 // install-win.bat 用 --unattended 调用：窗口不可见，脚本内不得有
 // choice / pause / set /p，否则会永久挂起。
-// 退出码约定（见 install-win.bat 顶部）：
-//   0    配置完成
-//   3010 前置组件（.NET 4.8 / WMF 5.1）已装好，需重启后重新运行安装程序
-//   其他 失败
-
-const
-  RC_REBOOT_REQUIRED = 3010;
+// 退出码约定（见 install-win.bat）：0=配置完成，其他=失败。
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
@@ -228,22 +212,12 @@ begin
     Exit;
   end;
 
-  if ResultCode = RC_REBOOT_REQUIRED then
-  begin
-    MsgBox('已为系统安装必需的前置组件（.NET Framework 4.8 / WMF 5.1）。' + #13#10 + #13#10 +
-           '请立即重启电脑，重启后在安装目录下运行 install-win.bat' + #13#10 +
-           '完成剩余配置，然后才能启动系统。' + #13#10 + #13#10 +
-           '安装目录: ' + ExpandConstant('{app}'),
-           mbInformation, MB_OK);
-    Exit;
-  end;
-
   if ResultCode <> 0 then
     MsgBox('系统配置脚本执行失败（错误码 ' + IntToStr(ResultCode) + '）。' + #13#10 + #13#10 +
            '文件已安装完成，但数据库和服务尚未配置，系统还不能启动。' + #13#10 + #13#10 +
            '完整日志已保存，请据此排查：' + #13#10 +
            '  ' + AppDir + '\logs\install-*.log   配置全过程' + #13#10 +
-           '  ' + AppDir + '\logs\prereq.log      前置组件（.NET / WMF）' + #13#10 +
+           '  ' + AppDir + '\logs\prereq.log      PowerShell 启动检查' + #13#10 +
            '  ' + AppDir + '\laragon\data\mysql-error.log   MySQL 启动',
            mbError, MB_OK);
 end;

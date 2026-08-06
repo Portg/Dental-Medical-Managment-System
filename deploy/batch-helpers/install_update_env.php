@@ -7,6 +7,16 @@ if ($argc < 8) {
 
 [$script, $target, $appUrl, $dbHost, $dbPort, $dbName, $dbUser, $dbPass] = $argv;
 
+if ($dbPass === '__DENTAL_DB_PASSWORD_EMPTY__') {
+    $dbPass = '';
+} elseif ($dbPass === '__DENTAL_DB_PASSWORD_FROM_ENV__') {
+    $dbPass = getenv('DENTAL_DB_PASSWORD');
+    if ($dbPass === false) {
+        fwrite(STDERR, "DENTAL_DB_PASSWORD is not set\n");
+        exit(1);
+    }
+}
+
 $env = @file_get_contents($target);
 if ($env === false) {
     fwrite(STDERR, "Failed to read env file: {$target}\n");

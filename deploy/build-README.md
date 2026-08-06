@@ -49,59 +49,23 @@
 可用环境变量覆盖下载地址（内网镜像场景）：
 `PHP_DOWNLOAD_URL`、`MYSQL_DOWNLOAD_URL`、`NGINX_DOWNLOAD_URL`、
 `LARAGON_DOWNLOAD_URL`、`COMPOSER_DOWNLOAD_URL`、`PYTHON_DOWNLOAD_URL`、
-`VCREDIST_DOWNLOAD_URL`、`WMF_DOWNLOAD_URL`、`DOTNET48_DOWNLOAD_URL`、
-`SSU_DOWNLOAD_URL`、`SHA2_DOWNLOAD_URL`。
+`VCREDIST_DOWNLOAD_URL`。
 
 覆盖任一地址会**跳过该组件的 SHA256 校验**（换镜像换版本必然换指纹），
 构建时会打印警告。默认地址均带指纹校验，见 `build.sh` 的 `expected_sha256()`。
 
-### Win7 特有的四个前置组件（已随包提供）
+### Win7 特有的运行前提（已随包提供）
 
-0. **SHA-2 支持（KB4490628 服务堆栈 + KB4474419 签名）** —— 微软自 2019 年起
-   用 **SHA-2** 重签所有更新包，而纯净 Win7 SP1 只认 SHA-1。签名验不过时
-   `wusa.exe` 的表现**不是报错**，而是长时间卡在
-   "Searching for updates on this computer" 永不返回 —— 装 .NET/WMF 时
-   「一直停着不动」的头号原因就是它。
+1. **PowerShell 2.0** —— Windows 7 SP1 出厂自带。`install-win.ps1` 保持 PS2
+   语法兼容，安装程序只探测版本，不安装 WMF 5.1、.NET 4.8 或任何 Windows
+   Update 包。系统更新组件损坏或正被占用，不再阻断本应用安装。
 
-   安装包内附 `win7-prereq\01-windows6.1-kb4490628-x64.msu`（服务堆栈，约 10 MB）
-   与 `win7-prereq\02-windows6.1-kb4474419-v3-x64.msu`（SHA-2，约 56 MB）。
-   文件名的 `01-` / `02-` 前缀即安装顺序，**SSU 必须先装**。
-   `install-win.bat` 在装 .NET/WMF 之前按序安装，已装则跳过。
-
-   > 这两个包只能从 Windows Update CDN 取，地址里的指纹是包的一部分。
-   > 换版本时请到 <https://catalog.update.microsoft.com> 搜 KB 号，
-   > 用 `DownloadDialog.aspx` 解析出真实地址，再更新 `build.sh` 里
-   > `expected_sha256()` 的 `ssu4490628` / `sha2_4474419` 两条指纹。
-
-1. **VC++ 2015-2022 x64 运行库** —— PHP 的 VS16 构建依赖它。缺失时的典型症状
+2. **VC++ 2015-2022 x64 运行库** —— PHP 的 VS16 构建依赖它。缺失时的典型症状
    是 `php.exe` 双击无反应或提示缺少 `VCRUNTIME140.dll`。安装包根目录附带
    `vc_redist.x64.exe`。
 
-2. **WMF 5.1（PowerShell 5.1）** —— Windows 7 SP1 出厂自带 **PowerShell 2.0**，
-   而 `install-win.ps1` 用到了 `[Type]::new()`（需 PS5）与 `*>` 重定向（需 PS3），
-   在 PS2 上会在**解析阶段**就失败。`install-win.bat` 会先探测
-   `$PSVersionTable.PSVersion.Major`，低于 3 时提示并静默安装随包的
-   `wmf51\*.msu`（KB3191566），**装完需重启**再重新运行安装程序。
-
-3. **.NET Framework 4.8** —— WMF 5.1 的安装前提是 .NET Framework **4.5.2**
-   （不是 4.5），而纯净 Win7 SP1 只带 .NET 3.5.1。不随包提供的话，
-   离线目标机装不了 WMF，也就跑不了 `install-win.ps1` ——「离线安装」
-   在纯净 Win7 上根本不成立。安装包内附 `dotnet48\ndp48-x86-x64-allos-enu.exe`
-   （约 115 MB），`install-win.bat` 读注册表 `NDP\v4\Full` 的 `Release` 值
-   （< 379893 即低于 4.5.2）按需静默安装。
-
-   > **纯净 Win7 需要重启三次**：装 SHA-2 前置（KB4490628 + KB4474419）→ 重启 →
-   > 装 .NET 4.8 → 重启 → 装 WMF 5.1 → 重启 → 再运行 `install-win.bat` 完成配置。
-   > 脚本每一步都会明确提示，并以退出码 3010 告知需要重启。
-   >
-   > .NET 4.8 要求系统已打 **SP1 + KB4474419 + KB4490628**，缺失时安装器返回 5100。
-   > 现在这两个 KB 已随包提供并在第 0 步自动安装，正常不会再走到 5100。
-   >
-   > **卡住时怎么判断**：`install-win.bat` 每分钟打印一次等待秒数，超过 45 分钟
-   > 会明确报超时（**不会杀 wusa 进程**——中途杀掉可能损坏服务堆栈）。
-   > 真正的进度看 `C:\Windows\Logs\CBS\CBS.log` 尾部时间戳，
-   > 以及任务管理器里 `TiWorker.exe` / `TrustedInstaller.exe` 是否在占用 CPU。
-   > 两者都静止才是真卡住，此时多为 Windows Update 组件损坏。
+如果 PowerShell 探测失败，先确认 Windows 功能中的 .NET Framework 3.5.1 已开启；
+它是系统自带 PowerShell 2.0 的运行基础，不是本安装包新增的前置组件。
 
 ### 构建机必须是 PHP 8.2.x
 
@@ -181,7 +145,7 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 | Composer | 是 | PHP 包管理 |
 | zip | 是 | 打包归档 |
 | rsync | 是 | 文件同步 |
-| curl 或 wget | 是 | 下载 PHP/MySQL/Nginx/Python/VC++/WMF 等运行时组件 |
+| curl 或 wget | 是 | 下载 PHP/MySQL/Nginx/Python/VC++ 等运行时组件 |
 | yakpro-po | 可选 | PHP 源码混淆（`composer global require nicoco007/yakpro-po`） |
 | pip3 | 可选 | 下载 OCR Python 离线包 |
 
@@ -218,6 +182,7 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 | `--skip-obfuscate` | 跳过 PHP 代码混淆 |
 | `--skip-ocr` | 跳过 OCR Python wheels 下载 |
 | `--init-db-from-local` | 用**本地库的结构 + 数据**做初始数据库（默认只导结构）。⚠️ 见下 |
+| `--use-existing-mysql` | Windows ZIP 复用目标机 `127.0.0.1:3306` MySQL；安装时隐藏输入管理员密码，启停/卸载不管理该 MySQL |
 | `--keep-dist` | 保留 `deploy/dist/` 不删除 —— **编译 Inno `.exe` 安装包必须加** |
 | `--version <X.Y.Z>` | 覆盖 VERSION 文件中的版本号 |
 | `--laragon-url <url>` | ⚠️ **本分支请勿使用**：会跳过 Win7 自组装运行时，改打入要求 Windows 10 的 `laragon-wamp.exe` |
@@ -227,7 +192,7 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 | 环境变量 | 说明 |
 |----------|------|
 | `PYTHON_DOWNLOAD_URL` | Windows OCR 用 Python 安装器下载地址（默认官方 **3.8.10**，Win7 上可用的最高版本；3.9 起要求 Windows 8.1） |
-| `DOTNET48_DOWNLOAD_URL` | .NET Framework 4.8 离线安装包下载地址（WMF 5.1 的前置） |
+| `VCREDIST_DOWNLOAD_URL` | Windows VC++ x64 运行库下载地址 |
 
 ### 1.3.0 初始数据库：默认只导结构
 
@@ -239,6 +204,9 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 
 ```bash
 ./deploy/build.sh --target win --init-db-from-local
+
+# 目标机已有 MySQL：安装时复用该实例（密码不写入 ZIP）
+./deploy/build.sh --target win --init-db-from-local --use-existing-mysql
 ```
 
 它会把 `.env` 指向的本地库整个导出（结构 + 数据）作为初始数据库。
@@ -279,7 +247,7 @@ PaddleOCR 2.x 与 3.x 的接口差异由 `scripts/paddle_compat.py` 抹平
 说明：
 - 构建时自动下载并组装 PHP 8.2 / MySQL 5.7 / Nginx / Composer 到
   `deploy/.cache/win7-runtime`，目录结构与 Laragon 一致，后续构建复用缓存
-- 同时下载 VC++ 2015-2022 x64 运行库与 WMF 5.1，一并打进安装包
+- 同时下载 VC++ 2015-2022 x64 运行库并打进安装包
 - 打包时整体复制到安装包的 `laragon/` 目录，目标机无需联网
 
 > ⚠️ **不要用 `--laragon-url`。** 传入该参数会跳过上述自组装流程，
@@ -308,7 +276,7 @@ build.sh 执行步骤:
   [7] 下载 OCR Python wheels（可选，--skip-ocr 跳过，按 --target 平台区分）
       │
   [8] 组装并复制 Win7 运行时到安装包（PHP 8.2/MySQL 5.7/Nginx/Composer
-      + VC++ 运行库 + WMF 5.1 + .NET 4.8）
+      + VC++ 运行库）
       ※ --upgrade 跳过本步：升级包不含运行时（否则平白多出约 1.3GB）
       ※ 复用缓存前校验 .build-manifest 与各产物 SHA256，版本漂移即重建
       │
@@ -329,9 +297,6 @@ deploy/.cache/
 ├── mysql57.zip             ← MySQL 5.7.44 原始包
 ├── nginx-win7.zip          ← Nginx 原始包
 ├── vc_redist.x64.exe       ← VC++ 2015-2022 运行库
-├── wmf51.zip / wmf51-extracted/   ← WMF 5.1（PowerShell 5.1 for Win7）
-├── win7-prereq/                   ← SHA-2 前置（01-KB4490628 / 02-KB4474419）
-├── ndp48-x86-x64-allos-enu.exe    ← .NET Framework 4.8 离线包
 ├── python-3.8.10-amd64.exe ← OCR 用 Python 安装器
 └── ocr-wheels-win/         ← OCR 离线 wheel 包
 ```
@@ -356,7 +321,7 @@ deploy/.cache/
 ```
 dental-clinic-1.0.0-win/
 ├── setup.bat                 ← 用户双击此文件（推荐入口）
-├── install-win.bat           ← 实际安装逻辑 (18 步)
+├── install-win.bat           ← 实际安装逻辑 (19 步)
 ├── install-win.ps1           ← Windows 安装主逻辑
 ├── upgrade-win.bat           ← 升级脚本
 ├── start-win.bat             ← 启动服务
@@ -367,7 +332,6 @@ dental-clinic-1.0.0-win/
 ├── VERSION                   ← 版本号
 ├── laragon/                  ← 自组装运行时（PHP 8.2/MySQL 5.7/Nginx/Composer）
 ├── vc_redist.x64.exe         ← VC++ 2015-2022 x64 运行库
-├── wmf51/                    ← WMF 5.1（PowerShell 2.0 的机器需先装）
 ├── python-installer.exe      ← OCR 用 Python 安装器（可选）
 ├── ocr-wheels/               ← OCR Python 离线包 (可选)
 │
@@ -770,8 +734,7 @@ deploy/
 │  ── 构建产物 & 缓存 ──────────────────
 ├── .cache/                 # 运行时与前置组件下载缓存（.gitignore）
 │   ├── php82.zip / mysql57.zip / nginx-win7.zip
-│   ├── wmf51.zip / vc_redist.x64.exe
-│   ├── ndp48-x86-x64-allos-enu.exe   # .NET 4.8 离线包
+│   ├── vc_redist.x64.exe
 │   ├── ocr-wheels-win/               # OCR wheels
 │   └── win7-runtime/                 # 自组装运行时（含 .build-manifest 版本清单）
 ├── dist/                   # 构建临时目录（.gitignore）
@@ -827,9 +790,9 @@ C:\DentalClinic\
 | Composer vendor | ~80 MB |
 | OCR Python wheels | ~200 MB |
 | 自组装运行时 PHP+MySQL+Nginx（仅 Windows） | ~300 MB |
-| 前置组件 VC++ / WMF 5.1 / .NET 4.8（仅 Windows） | ~210 MB |
-| **完整 Windows 安装包（含运行时 + 前置 + OCR）** | **~660 MB** |
-| **完整 Windows 安装包（含运行时 + 前置，无 OCR）** | **~460 MB** |
+| 前置组件 VC++（仅 Windows） | ~25 MB |
+| **完整 Windows 安装包（含运行时 + OCR）** | **~420 MB** |
+| **完整 Windows 安装包（含运行时，无 OCR）** | **~220 MB** |
 | **Linux/macOS 安装包（含 OCR）** | **~330 MB** |
 | **Linux/macOS 安装包（无 OCR）** | **~130 MB** |
 | **升级包** | **~50 MB** |

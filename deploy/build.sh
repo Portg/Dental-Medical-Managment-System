@@ -897,6 +897,16 @@ RSYNC_EXCLUDES=(
     --exclude='storage/framework/cache/*'
     --exclude='storage/framework/sessions/*'
     --exclude='storage/framework/views/*'
+    # storage/app/ 是运行期产物目录，里面全是**构建机本地的业务数据**，一件都不该进包：
+    #   storage/app/<备份名>/*.zip     spatie/laravel-backup 的输出，zip 里是整库 dump
+    #                                  （db-dumps/mysql-*.sql，含账号密码哈希与患者手机号）
+    #   storage/app/work_log_images/   工作日志上传的原图
+    # 2026-08-06 那次 win/xampp 全量包就这样带出去了 3 个整库转储和 2 张工作日志照片 ——
+    # 排除清单当时覆盖了 storage/logs 和 storage/framework，独独漏了 storage/app。
+    # 目录结构不用担心：下面 UPGRADE == false 分支会把 storage/app/public 等重新 mkdir 出来。
+    # 注意这和 --init-db-from-local 是两件事：后者是刻意导出当前库作初始数据，
+    # 走的是 database/schema/mysql-schema.sql，不依赖 storage/app 里的任何东西。
+    --exclude='storage/app/*'
     --exclude='.claude/'
     # AI/编辑器工具目录：装到诊所机器上没有任何用途，而且带的是内部提示词与配置
     --exclude='.gstack/'
@@ -1326,16 +1336,70 @@ echo    Dental Clinic Management System - Installer
 echo  =======================================================
 echo.
 
+REM 判据是「目录到底在不在」，不是 errorlevel。
+REM mkdir 被 if not exist 挡掉时**不会重置 errorlevel**，它保留上一条命令的值；
+REM 于是「安装目录已存在」这条分支会把之前任何一个非零 errorlevel
+REM 误报成 "Failed to create install directory"，重装直接死在这里。
+REM 目录不存在时 mkdir 会跑、errorlevel 被重置，所以首次安装看不出问题。
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" >nul 2>&1
-if errorlevel 1 (
+if not exist "%INSTALL_DIR%" (
     echo  [ERROR] Failed to create install directory:
     echo          %INSTALL_DIR%
     exit /b 1
 )
 
+REM ═══════════════════════════════════════════════════════════════
+REM  setup.bat 自己的日志
+REM
+REM  此前 setup.bat 一行日志都不写：它在调用 install-win.bat 之前失败的话，
+REM  磁盘上什么都没有 —— prereq.log 和 install-*.log 都还没开始写。
+REM  现场只能说「报错了」，看不到是哪一步、哪个文件。为此反复折腾了好几轮。
+REM  从这里开始每一步都落盘到 logs\setup.log，xcopy 的真实错误也进去。
+REM ═══════════════════════════════════════════════════════════════
+if not exist "%INSTALL_DIR%\logs" mkdir "%INSTALL_DIR%\logs" >nul 2>&1
+set "SETUP_LOG=%INSTALL_DIR%\logs\setup.log"
+>"%SETUP_LOG%" echo ===== setup.bat start =====
+call :log "INSTALL_DIR = %INSTALL_DIR%"
+call :log "PKG_DIR     = %PKG_DIR%"
+call :log "IN_PLACE    = %IN_PLACE%"
+
 echo  [1/3] Stopping running services...
 REM 只调用本系统已有的停止脚本；绝不按进程名结束目标机的其他 PHP/Nginx。
-if exist "%INSTALL_DIR%\stop-win.bat" call "%INSTALL_DIR%\stop-win.bat" "%INSTALL_DIR%" --background >nul 2>&1
+REM
+REM 下面刻意**不用 if (...) 包多条语句**：
+REM   - ( ) 块里的 %ERRORLEVEL% 在 DisableDelayedExpansion 下于进块前就展开完，
+REM     记下来的是上一条命令的退出码，不是刚跑的那条；
+REM   - ( ) 块里放 :label / goto 在 cmd 里行为是坏的。
+REM 所以一律用 goto 跳过，退出码在顶层逐行读。
+if not exist "%INSTALL_DIR%\stop-win.bat" goto :no_stop_script
+call :log "calling stop-win.bat"
+call "%INSTALL_DIR%\stop-win.bat" "%INSTALL_DIR%" --background >>"%SETUP_LOG%" 2>&1
+call :log_rc "stop-win.bat" %ERRORLEVEL%
+goto :after_stop_script
+:no_stop_script
+call :log "stop-win.bat not present (first install)"
+:after_stop_script
+
+REM 内置数据库与 Apache 都是 auto-start 服务，而它们的文件就在待覆盖的运行时
+REM 目录里（xampp\mysql\data、xampp\php\php8ts.dll、xampp\apache\logs\*）。
+REM 进程还活着，xcopy 就会撞上被占用的文件，而那类失败以前只会得到一句
+REM 「could not be copied」，看不出是谁占着。
+REM 这里各补一次 net stop：它是**同步**的（sc stop 是异步的），返回即已停止；
+REM 服务不存在或已停止时返回非零，属正常，不当失败。
+REM 只停本系统注册的这两个服务名，绝不按进程名批量终止 —— 目标机上可能还有
+REM 别人的 Apache / MySQL。
+sc query DentalClinicApache >nul 2>&1
+if errorlevel 1 goto :no_apache_service
+call :log "stopping DentalClinicApache (net stop is synchronous)"
+net stop DentalClinicApache >>"%SETUP_LOG%" 2>&1
+call :log_rc "net stop DentalClinicApache" %ERRORLEVEL%
+:no_apache_service
+sc query DentalClinicMySQL >nul 2>&1
+if errorlevel 1 goto :no_db_service
+call :log "stopping DentalClinicMySQL (net stop is synchronous)"
+net stop DentalClinicMySQL >>"%SETUP_LOG%" 2>&1
+call :log_rc "net stop DentalClinicMySQL" %ERRORLEVEL%
+:no_db_service
 timeout /t 2 /nobreak >nul 2>&1
 
 REM 应用代码的目标目录随运行时形态而变：
@@ -1428,8 +1492,11 @@ call "%INSTALL_DIR%\install-win.bat" "%INSTALL_DIR%" %MYSQL_INSTALL_ARGS%
 set "SETUP_RC=%ERRORLEVEL%"
 
 REM 无论成败都把日志位置说清楚 —— 窗口关掉之后就找不回来了
+call :log_rc "install-win.bat" %SETUP_RC%
+call :log "===== setup.bat end ====="
 echo.
 echo  Logs:
+echo    %INSTALL_DIR%\logs\setup.log       file copying (this script)
 echo    %INSTALL_DIR%\logs\install-*.log   configuration
 echo    %INSTALL_DIR%\logs\prereq.log      PowerShell bootstrap
 if "%RUNTIME_DIR_NAME%"=="xampp" (
@@ -1440,31 +1507,52 @@ if "%RUNTIME_DIR_NAME%"=="xampp" (
 echo.
 exit /b %SETUP_RC%
 
-:copy_dir
-xcopy "%~1" "%~2\" /E /I /H /Y /Q >nul 2>&1
-if errorlevel 1 (
-    echo  [ERROR] Failed to copy %~3.
-    echo          Source: %~1
-    echo          Target: %~2
-    exit /b 1
-)
+:log
+>>"%SETUP_LOG%" echo [%DATE% %TIME%] %~1
 exit /b 0
 
-:copy_file
-copy "%~1" "%~2" /Y >nul 2>&1
-if errorlevel 1 (
-    echo  [ERROR] Failed to copy %~3.
-    echo          Source: %~1
-    echo          Target: %~2
-    exit /b 1
-)
+:log_rc
+REM 退出码由调用方在顶层读好再传进来 —— 见上面关于 ( ) 块里 %ERRORLEVEL% 的说明
+>>"%SETUP_LOG%" echo [%DATE% %TIME%] %~1 returned %~2
 exit /b 0
+
+REM xcopy 的错误必须留下来。
+REM 原来是 /Q + >nul 2>&1：文件名和错误信息全丢，失败时只剩一句
+REM 「could not be copied」，根本不知道是哪个文件被谁占着。
+REM 现在保留 /Q（不然 2 万个文件名会把日志刷爆），但 stderr 进日志 ——
+REM xcopy 的 "Access denied"/"Sharing violation" 都在 stderr 上，/Q 不影响它。
+:copy_dir
+call :log "xcopy %~1 -> %~2"
+xcopy "%~1" "%~2\" /E /I /H /Y /Q >nul 2>>"%SETUP_LOG%"
+if errorlevel 1 goto :copy_dir_failed
+exit /b 0
+:copy_dir_failed
+echo  [ERROR] Failed to copy %~3.
+echo          Source: %~1
+echo          Target: %~2
+call :log "FAILED: xcopy %~1 -> %~2"
+exit /b 1
+
+:copy_file
+copy "%~1" "%~2" /Y >nul 2>>"%SETUP_LOG%"
+if errorlevel 1 goto :copy_file_failed
+exit /b 0
+:copy_file_failed
+echo  [ERROR] Failed to copy %~3.
+echo          Source: %~1
+echo          Target: %~2
+call :log "FAILED: copy %~1 -> %~2"
+exit /b 1
 
 :copy_failed
 echo.
 echo  Setup stopped because package files could not be copied.
 echo  Close programs using C:\DentalClinic files, then run setup.bat as Administrator.
 echo.
+echo  What exactly failed is recorded in:
+echo    %SETUP_LOG%
+echo.
+call :log "===== setup.bat aborted at copy stage ====="
 exit /b 1
 SHORTCUT_BAT
         info "创建 setup.bat（双击即可安装）"
@@ -1737,8 +1825,11 @@ echo.
 echo  Install path: %INSTALL_DIR%
 echo.
 
+REM 同上：判目录存在，不判 errorlevel。
+REM 这一处更容易踩到 —— 上面那行 set /p 用户直接回车（接受默认路径）时
+REM 就会把 errorlevel 置成 1，安装目录又已存在的话必然误报。
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
-if errorlevel 1 (
+if not exist "%INSTALL_DIR%" (
     echo  [ERROR] Failed to create install directory.
     pause
     exit /b 1

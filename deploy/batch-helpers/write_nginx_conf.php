@@ -1,11 +1,12 @@
 <?php
 
-if ($argc < 3) {
-    fwrite(STDERR, "Usage: php write_nginx_conf.php <target> <root>\n");
+if ($argc < 4) {
+    fwrite(STDERR, "Usage: php write_nginx_conf.php <target> <root> <nginx_dir>\n");
     exit(1);
 }
 
-[$script, $target, $root] = $argv;
+[$script, $target, $root, $nginxDir] = $argv;
+$nginxDir = str_replace('\\', '/', $nginxDir);
 
 $conf = <<<NGINX
 server {
@@ -22,7 +23,7 @@ server {
     location ~ \.php\$ {
         fastcgi_pass 127.0.0.1:9000;
         fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        include fastcgi_params;
+        include "{$nginxDir}/conf/fastcgi_params";
     }
 
     location ~ /\.ht {

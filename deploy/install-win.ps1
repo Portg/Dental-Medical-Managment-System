@@ -425,6 +425,17 @@ function Get-FirstDirectoryMatch {
     return $null
 }
 
+# 必须捕获输出，不能裸执行。
+#
+# Windows PowerShell **2.0 的 Start-Transcript 不记录原生程序的输出**，
+# 所以 `& php.exe artisan ...` 打的东西一个字都不会进安装日志。
+# 2026-08-06 那次装机就是这样：日志里 [9/19] 下面直接跳到失败横幅，
+# 只有一句 "Command failed: ...artisan key:generate"，artisan 到底说了什么
+# 完全看不到，只能让现场再跑一遍——这是不该发生的来回。
+#
+# 现在与 Invoke-NativeQuiet 一致：合并 stdout/stderr 捕获下来，
+# 成功时原样打出（进 transcript），失败时既走 [诊断] 又塞进异常消息，
+# 让失败横幅上的 Error 行自带原因。
 function Invoke-External {
     param(
         [string]$FilePath,
@@ -434,15 +445,33 @@ function Invoke-External {
 
     $savedPreference = $ErrorActionPreference
     $exitCode = 1
+    $output = @()
     try {
         $ErrorActionPreference = "Continue"
-        & $FilePath @Arguments
-        $exitCode = $LASTEXITCODE
+        $output = @(& $FilePath @Arguments 2>&1 | ForEach-Object { "$_" })
+        # $LASTEXITCODE 只在原生命令执行后才被设置；没被设置时按成功处理，
+        # 否则会拿上一条命令的退出码误报（同 Invoke-NativeQuiet 的处理）。
+        $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+    } catch {
+        # 进程根本起不来（CreateProcess 失败，例如被安全软件拦截）。
+        $exitCode = -1
+        $output = @("无法启动进程: " + $_.Exception.Message)
     } finally {
         $ErrorActionPreference = $savedPreference
     }
+
+    foreach ($line in $output) {
+        if ("$line".Trim().Length -gt 0) { Write-Host ("        | {0}" -f $line) }
+    }
+
     if (-not $IgnoreExitCode -and $exitCode -ne 0) {
-        throw "Command failed: $FilePath $($Arguments -join ' ')"
+        Write-NativeFailure -FilePath $FilePath -Arguments $Arguments -ExitCode $exitCode -Output $output
+        $detail = ""
+        foreach ($line in $output) {
+            if ("$line".Trim().Length -gt 0) { $detail += [Environment]::NewLine + "    " + $line }
+        }
+        if (-not $detail) { $detail = [Environment]::NewLine + "    （命令没有任何输出）" }
+        throw ("Command failed (exit {0}): {1} {2}{3}" -f $exitCode, $FilePath, (Format-SafeArguments $Arguments), $detail)
     }
     return $exitCode
 }
@@ -517,6 +546,259 @@ function Ensure-PhpIniForBundledRuntime {
 
     $utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
     [System.IO.File]::WriteAllLines($phpIni, $updated, $utf8NoBom)
+}
+
+# ── PHP 扩展 ─────────────────────────────────────────────────────────
+#
+# XAMPP 和 windows.php.net 的 php.ini 里，共享扩展默认大多是注释掉的。
+# 这个应用有两个**硬性**依赖恰好在默认关闭的那批里：
+#
+#   zip  vendor/spatie/laravel-backup/config/backup.php:133 是
+#        'compression_method' => ZipArchive::CM_DEFAULT —— 在**配置加载阶段**
+#        求值，所以缺了它每一条 artisan 命令都会以
+#        "Class \"ZipArchive\" not found" 失败。2026-08-06 22:39 那次装机
+#        就死在 [9/19] key:generate 上，而根因跟 key:generate 本身无关。
+#   gd   phpoffice/phpspreadsheet 的 composer.json 里 ext-gd 是 require
+#        （Excel 导出走它）。
+#
+# bcmath 也被大量用于金额计算（Invoice / Prescription / InventoryCheck），
+# 但它在 Windows 官方构建里是**编译进去的**：ext\ 下没有 php_bcmath.dll，
+# php.ini 里也没有对应的注释行。所以它不需要开，只需要在下面断言里确认存在。
+# intl 全仓库没有用到（没有 IntlDateFormatter / NumberFormatter），不开——
+# 少开一个扩展少一份加载失败的风险。
+$script:PhpExtensionsToEnable = @('zip', 'gd')
+# 断言清单：装不上就早失败，别等到某个业务页面才报错。
+$script:PhpExtensionsRequired = @('zip', 'gd', 'bcmath', 'mbstring', 'openssl', 'curl', 'fileinfo', 'pdo_mysql', 'tokenizer')
+$script:PhpExtensionsWhy = @{
+    'zip'       = 'spatie/laravel-backup 的配置在加载期就用 ZipArchive'
+    'gd'        = 'phpspreadsheet（Excel 导出）的硬性依赖'
+    'bcmath'    = '账单/处方/库存的金额计算'
+    'mbstring'  = '中文字符串处理'
+    'openssl'   = 'APP_KEY 加密与 HTTPS'
+    'curl'      = '外部 HTTP 调用'
+    'fileinfo'  = '上传文件类型识别'
+    'pdo_mysql' = '数据库连接'
+    'tokenizer' = 'Laravel 框架依赖'
+}
+
+function Ensure-PhpExtensions {
+    param(
+        [string]$PhpDir,
+        [string[]]$Required
+    )
+
+    $phpIni = Join-Path $PhpDir "php.ini"
+    if (-not (Test-Path $phpIni)) {
+        return @{ Enabled = @(); MissingDll = @() }
+    }
+    $extDir = Join-Path $PhpDir "ext"
+
+    $lines = @(Get-Content -Path $phpIni -ErrorAction SilentlyContinue)
+    $enabled = New-Object System.Collections.Generic.List[string]
+    $missingDll = New-Object System.Collections.Generic.List[string]
+    $appended = New-Object System.Collections.Generic.List[string]
+
+    foreach ($ext in $Required) {
+        # 没有 DLL 就不写 extension= 行 —— 那只会让 php.exe 每次启动都报
+        # "Unable to load dynamic library"，比不开更糟。
+        if (-not (Test-Path (Join-Path $extDir ("php_" + $ext + ".dll")))) {
+            $missingDll.Add($ext)
+            continue
+        }
+
+        # 已启用？两种写法都算：extension=zip 和 extension=php_zip.dll
+        $alreadyOn = $false
+        foreach ($line in $lines) {
+            if ($line -match ('^\s*extension\s*=\s*"?(php_)?' + [regex]::Escape($ext) + '(\.dll)?"?\s*($|;)')) {
+                $alreadyOn = $true
+                break
+            }
+        }
+        if ($alreadyOn) { continue }
+
+        # 优先把已有的注释行取消注释（保持在原来的 [extensions] 区块里），
+        # 找不到才追加到文件末尾。
+        $uncommented = $false
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match ('^\s*;\s*extension\s*=\s*"?(php_)?' + [regex]::Escape($ext) + '(\.dll)?"?\s*$')) {
+                $lines[$i] = 'extension=' + $ext
+                $uncommented = $true
+                break
+            }
+        }
+        if (-not $uncommented) { $appended.Add('extension=' + $ext) }
+        $enabled.Add($ext)
+    }
+
+    if ($enabled.Count -gt 0) {
+        $out = New-Object System.Collections.Generic.List[string]
+        foreach ($line in $lines) { $out.Add($line) }
+        if ($appended.Count -gt 0) {
+            $out.Add('')
+            $out.Add('; 由 install-win.ps1 追加（php.ini 里没有对应的注释行可取消注释）')
+            foreach ($a in $appended) { $out.Add($a) }
+        }
+        $utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
+        [System.IO.File]::WriteAllLines($phpIni, $out, $utf8NoBom)
+    }
+
+    return @{ Enabled = $enabled.ToArray(); MissingDll = $missingDll.ToArray() }
+}
+
+# 改完 php.ini 之后用 php -m 实测一遍。
+# 早失败一步的价值很大：否则缺扩展只会在某条 artisan 命令或某个业务页面上
+# 冒出一句 "Class ... not found"，跟真正的原因隔着好几层。
+function Assert-PhpExtensions {
+    param(
+        [string]$PhpExe,
+        [string[]]$Required,
+        [hashtable]$Why
+    )
+
+    $probe = Invoke-NativeCapture -FilePath $PhpExe -Arguments @('-m')
+    $loaded = @()
+    foreach ($line in ($probe.Output -split '\r?\n')) {
+        $name = "$line".Trim().ToLower()
+        if ($name -and -not $name.StartsWith('[')) { $loaded += $name }
+    }
+
+    $missing = @()
+    foreach ($ext in $Required) {
+        if ($loaded -notcontains $ext.ToLower()) { $missing += $ext }
+    }
+    if ($missing.Count -eq 0) { return }
+
+    $detail = ""
+    foreach ($ext in $missing) {
+        $reason = if ($Why.ContainsKey($ext)) { $Why[$ext] } else { "应用依赖" }
+        $detail += [Environment]::NewLine + ("    {0} —— {1}" -f $ext, $reason)
+    }
+    Fail-Step ("PHP 缺少必需扩展，装下去会在后续步骤以「Class ... not found」这类信息失败:" +
+               $detail + [Environment]::NewLine +
+               "php.ini: " + (Join-Path (Split-Path -Parent $PhpExe) 'php.ini'))
+}
+
+# ── XAMPP 内置绝对路径重写 ────────────────────────────────────────────
+#
+# XAMPP portable 包里的配置写死了「从盘符根开始」的 \xampp\... 路径：
+#   php.ini      browscap / session.save_path / upload_tmp_dir / curl.cainfo / error_log
+#   httpd.conf   ServerRoot / DocumentRoot / ScriptAlias
+#   httpd-xampp.conf  LoadModule php_module / PHPINIDir / SetEnv PHPRC
+#   httpd-ssl.conf    ErrorLog / TransferLog / SSLSessionCache
+# 官方玩法是把包解到 C:\xampp；我们装到 {安装目录}\xampp，这些路径就全部
+# 指向不存在的 C:\xampp\...。其中 browscap 是**致命**的，不是警告：
+#     Warning: Cannot open "\xampp\php\extras\browscap.ini" for reading
+#     Fatal error: Unable to start standard module in Unknown on line 0
+# php.exe 直接起不来，连 php -v 都失败——2026-08-04 那次装机就卡在
+# [4/19] 探测运行时，错误信息还被误导成「缺 VC++ 运行库」。
+#
+# XAMPP 自带的 setup_xampp.bat 本该干这件事，但它靠相对路径找解释器
+# （set PHP_BIN=php\php.exe），必须以 xampp 目录为当前目录运行；找不到时
+# 只 echo 一句再 pause，退出码仍是 0，调用方永远收到「OK」。
+# 所以这里自己重写：路径确定、可幂等、失败会 Fail-Step。
+#
+# 必须在**任何 php.exe 调用之前**执行。
+function Repair-XamppHardcodedPaths {
+    param([string]$XamppDir)
+
+    $rootBackslash = $XamppDir.TrimEnd('\')
+
+    # 幂等性**只看文件内容**，不留标记文件。
+    #
+    # 第一版在 xampp 根目录写了个 .dental-xampp-root，目录没变就跳过重写。
+    # 那是错的，而且只在「安装目录已存在」时才暴露：setup.bat 用
+    # xcopy /E /I /H /Y 覆盖式铺运行时，php.ini 会被换回包里那份带
+    # \xampp\... 的原始版本，而 xcopy 从不删除目标里多出来的文件 ——
+    # 标记于是存活下来，重写被跳过，php.exe 又死在 browscap 上。
+    # 记录「改过了」的标记跟不上文件在它底下被替换。
+    #
+    # 改成每次都扫一遍：替换规则锚定在路径起点，改完的
+    # C:\DentalClinic\xampp\... 不会再次命中，所以重复执行是零改动、
+    # 逐字节不变。装机、重装、升级走同一条路径，还能自愈。
+    $targets = New-Object System.Collections.Generic.List[string]
+    foreach ($rel in @('php\php.ini', 'mysql\bin\my.ini', 'apache\conf\httpd.conf')) {
+        $candidate = Join-Path $rootBackslash $rel
+        if (Test-Path $candidate) { $targets.Add($candidate) }
+    }
+    $extraConfDir = Join-Path $rootBackslash 'apache\conf\extra'
+    if (Test-Path $extraConfDir) {
+        foreach ($conf in @(Get-ChildItem -Path $extraConfDir -Filter '*.conf' -ErrorAction SilentlyContinue)) {
+            $targets.Add($conf.FullName)
+        }
+    }
+    if ($targets.Count -eq 0) {
+        Fail-Step ("XAMPP 配置文件一个都没找到，安装包可能不完整: " + $rootBackslash)
+    }
+
+    # Latin-1（28591）字节与字符一一对应，读写无损。
+    # 用它而不是 UTF-8/ANSI：替换之外的内容原样保留，
+    # 不会把 XAMPP 配置里的德文注释之类的非 ASCII 字节转坏。
+    #
+    # 代价是写入的路径必须能用 Latin-1 表示，否则会被静默换成 '?'。
+    # 所以先挡住非 ASCII 安装路径 —— 那种路径本来就装不成：
+    # Apache 的 ServerRoot / PHP 的 extension_dir 在 Win7 上都处理不了非 ASCII。
+    if ($rootBackslash -match '[^\x20-\x7E]') {
+        Fail-Step ("安装路径含非 ASCII 字符，Apache / PHP 无法使用: " + $rootBackslash + [Environment]::NewLine +
+                   "请改用纯英文路径重新安装，例如 C:\DentalClinic。")
+    }
+    $latin1 = [System.Text.Encoding]::GetEncoding(28591)
+
+    # 只替换「路径起点」的 xampp：前一个字符必须是引号、等号或空白。
+    # 这样 "/xampp/htdocs/xampp" 里第二个 xampp 不会被误伤；
+    # 重写后的 "C:/DentalClinic/xampp/..." 前面是字母，也不会再次命中。
+    $anchor = "(?<=[`"'=\s])"
+    # Regex.Replace 的替换串里 $ 有特殊含义，安装路径可能带 $。
+    $rootBs  = $rootBackslash.Replace('$', '$$')
+    $rootBs2 = $rootBackslash.Replace('\', '\\').Replace('$', '$$')
+    $rootFs  = $rootBackslash.Replace('\', '/').Replace('$', '$$')
+
+    $changed = 0
+    foreach ($file in $targets) {
+        $text = [System.IO.File]::ReadAllText($file, $latin1)
+        $before = $text
+        # 顺序：先双反斜杠（httpd-xampp.conf 的 SetEnv "\\xampp\\php"），
+        # 再单反斜杠（php.ini），最后正斜杠（Apache / MySQL 配置）。
+        $text = [regex]::Replace($text, ($anchor + '\\{2}xampp(?=\\{2})'), $rootBs2)
+        $text = [regex]::Replace($text, ($anchor + '\\xampp(?=\\)'), $rootBs)
+        $text = [regex]::Replace($text, ($anchor + '/xampp(?=/)'), $rootFs)
+        # httpd-ssl.conf 的 SSLSessionCache 是 "shmcb:/xampp/..." 这种带前缀
+        # 的写法，路径前面不是引号，上面三条锚定规则匹配不到。
+        $text = $text.Replace('shmcb:/xampp/', ('shmcb:' + $rootBackslash.Replace('\', '/') + '/'))
+        if ($text -ne $before) {
+            [System.IO.File]::WriteAllText($file, $text, $latin1)
+            $changed++
+        }
+    }
+
+    # php.ini 是唯一「改漏了就直接崩」的文件，单独复核一遍。
+    $phpIniPath = Join-Path $rootBackslash 'php\php.ini'
+    if (Test-Path $phpIniPath) {
+        # 前导字符集刻意不含冒号：装到盘符根（C:\xampp）时 "C:\xampp\ 是正确结果，
+        # 那个冒号来自盘符而不是路径分隔，含进来会误报。
+        $leftover = @(Select-String -Path $phpIniPath -Pattern '["''=\s][\\/]{1,2}xampp[\\/]' -ErrorAction SilentlyContinue)
+        if ($leftover.Count -gt 0) {
+            Fail-Step ("php.ini 里仍残留 XAMPP 的盘符根路径（\xampp\...），php.exe 会启动失败: " + $phpIniPath +
+                       [Environment]::NewLine + "首个残留行: " + $leftover[0].Line)
+        }
+    }
+
+    # 配置指向的目录不一定存在（php\logs 就不在包里）。缺了 error_log
+    # 写不进去、session/upload 落不了盘，都是装完才发现的问题。
+    foreach ($rel in @('tmp', 'php\logs', 'apache\logs', 'apache\conf\extra')) {
+        $dir = Join-Path $rootBackslash $rel
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
+    }
+
+    # 清掉第一版留下的标记文件。新代码不读它，但装过旧版的机器上会一直躺着
+    # 一个看不出用途的 .dental-xampp-root，日后排查时容易被当成还在生效。
+    $staleMarker = Join-Path $rootBackslash ".dental-xampp-root"
+    if (Test-Path $staleMarker) {
+        Remove-Item $staleMarker -Force -ErrorAction SilentlyContinue
+    }
+
+    return @{ Changed = $changed; Total = $targets.Count }
 }
 
 function Wait-MySqlReady {
@@ -689,7 +971,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260803-win7-autostart"
+$script:ScriptRev = "20260806-apache-and-phpext"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -729,6 +1011,29 @@ if (Test-Path (Join-Path $XAMPP_DIR "apache\bin\httpd.exe")) {
     $RUNTIME_FLAVOR = "laragon"
     $RUNTIME_ROOT   = $LARAGON_DIR
     $PROJECT_DIR    = Join-Path $LARAGON_DIR "www\dental"
+}
+# artisan 一律走绝对路径。裸写 'artisan' 要靠当前目录，而 Set-Location
+# 在 PowerShell 2.0 下不保证同步到进程工作目录（详见 Generate APP_KEY 那一步的注释）。
+$ARTISAN = Join-Path $PROJECT_DIR "artisan"
+
+# 数据库名称与状态目录都按运行时形态走。
+#
+# xampp 形态用的是 XAMPP 自带的 **MariaDB**，不额外装 MySQL —— 但此前
+# 横幅写「MySQL: bundled runtime」、步骤叫「Start MySQL」，my.ini 和
+# 控制台日志还都落在 $LARAGON_DIR 下，于是一个 xampp 安装会在
+# C:\DentalClinic\ 里凭空长出一个 laragon\ 目录，失败提示也指向
+# C:\DentalClinic\laragon\data\mysql-console.log。看起来就像装了两套数据库。
+# 名字和路径都改成跟着形态走，laragon 分支保持原样不动。
+if ($RUNTIME_FLAVOR -eq "xampp") {
+    $DB_ENGINE_NAME  = "MariaDB"
+    $DB_STATE_DIR    = Join-Path $XAMPP_DIR "mysql"
+    $DB_CONFIG_FILE  = Join-Path $XAMPP_DIR "mysql\my.ini"
+    $DB_RUNTIME_LOG_DIR = Join-Path $XAMPP_DIR "mysql\data"
+} else {
+    $DB_ENGINE_NAME  = "MySQL"
+    $DB_STATE_DIR    = Join-Path $LARAGON_DIR "data"
+    $DB_CONFIG_FILE  = Join-Path $LARAGON_DIR "etc\mysql\my.ini"
+    $DB_RUNTIME_LOG_DIR = Join-Path $LARAGON_DIR "data"
 }
 $NGINX_CONF_DIR = Join-Path $LARAGON_DIR "etc\nginx\sites-enabled"
 $HELPER_DIR = Join-Path $INSTALL_DIR "batch-helpers"
@@ -776,9 +1081,9 @@ Write-Host ("| Install Dir: {0}" -f $INSTALL_DIR)
 Write-Host ("| Project Dir: {0}" -f $PROJECT_DIR)
 Write-Host ("| Install Log: {0}" -f $INSTALL_LOG)
 if ($USE_EXISTING_MYSQL) {
-    Write-Host ("| MySQL:       existing {0}:{1}" -f $DB_HOST, $DB_PORT)
+    Write-Host ("| {0}:{1}existing {2}:{3}" -f $DB_ENGINE_NAME, (" " * (13 - $DB_ENGINE_NAME.Length)), $DB_HOST, $DB_PORT)
 } else {
-    Write-Host "| MySQL:       bundled runtime"
+    Write-Host ("| {0}:{1}bundled runtime" -f $DB_ENGINE_NAME, (" " * (13 - $DB_ENGINE_NAME.Length)))
 }
 Write-Host "+=========================================================+"
 
@@ -813,6 +1118,10 @@ try {
         # 只有内置 MySQL 模式才清理安装目录内的数据目录。
         # 外部 MySQL 模式不得对目标机数据库进程或 datadir 做任何生命周期操作。
         if (-not $USE_EXISTING_MYSQL) {
+            # 刻意只看 laragon 的数据目录：xampp 包自带**已初始化好**的
+            # mysql\data，第 5 步遇到空数据目录会直接 Fail-Step（MariaDB 10.4
+            # 不支持 --initialize-insecure）。把这段清理扩到 xampp 等于先删空
+            # 再自己撞死。xampp 重装时数据目录由 setup.bat 的 xcopy 覆盖。
             $oldMysqlData = Join-Path $LARAGON_DIR "data\mysql"
             if (Test-Path $oldMysqlData) {
                 # 上一次可能在 MySQL 已启动后失败。仅当存在本系统生成的内置
@@ -874,7 +1183,25 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     $PHP_DIR    = Join-Path $XAMPP_DIR "php"
     $PHP_EXE    = Join-Path $PHP_DIR "php.exe"
     if (-not (Test-Path $PHP_EXE)) { Fail-Step "PHP not found: $PHP_EXE" }
+    # 必须排在 Ensure-PhpIniForBundledRuntime 和后面所有 php.exe 调用之前：
+    # XAMPP 原始 php.ini 里的 browscap = "\xampp\php\extras\browscap.ini"
+    # 会让 php.exe 以 "Unable to start standard module" 直接退出。
+    $xamppPathFix = Repair-XamppHardcodedPaths -XamppDir $XAMPP_DIR
+    if ($xamppPathFix.Changed -eq 0) {
+        Write-Host ("        XAMPP 路径重写 .......... 无需改写（{0} 个配置文件已是绝对路径）" -f $xamppPathFix.Total)
+    } else {
+        Write-Host ("        XAMPP 路径重写 .......... OK（改写 {0} / {1} 个配置文件）" -f $xamppPathFix.Changed, $xamppPathFix.Total)
+    }
     Ensure-PhpIniForBundledRuntime -PhpDir $PHP_DIR
+    $extResult = Ensure-PhpExtensions -PhpDir $PHP_DIR -Required $script:PhpExtensionsToEnable
+    if ($extResult.Enabled.Count -gt 0) {
+        Write-Host ("        PHP 扩展启用 ............ {0}" -f ($extResult.Enabled -join ', '))
+    } else {
+        Write-Host "        PHP 扩展 ................ 已就绪，无需改动"
+    }
+    if ($extResult.MissingDll.Count -gt 0) {
+        Write-Host ("        [警告] ext\ 下缺少 DLL: {0}" -f ($extResult.MissingDll -join ', ')) -ForegroundColor Yellow
+    }
     $env:PHPRC = $PHP_DIR
     $env:PHP_INI_SCAN_DIR = ""
     $env:PATH = "$PHP_DIR;$env:PATH"
@@ -929,6 +1256,12 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     }
     if (-not $phpDir) { Fail-Step "PHP not found under $phpBase" }
     Ensure-PhpIniForBundledRuntime -PhpDir $phpDir
+    # 自组装的 PHP 是从 php.ini-production 起步的，共享扩展同样默认全关，
+    # 缺 zip 一样会让每条 artisan 命令挂掉，所以两种形态都要处理。
+    $extResult = Ensure-PhpExtensions -PhpDir $phpDir -Required $script:PhpExtensionsToEnable
+    if ($extResult.Enabled.Count -gt 0) {
+        Write-Host ("        PHP 扩展启用 ............ {0}" -f ($extResult.Enabled -join ', '))
+    }
     $PHP_EXE = Join-Path $phpDir "php.exe"
     $env:PHPRC = $phpDir
     $env:PHP_INI_SCAN_DIR = ""
@@ -1010,7 +1343,17 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         if ($phpVersionInfo.Output) {
             $runtimeHint += " PHP 启动输出: " + $phpVersionInfo.Output
         }
-        $runtimeHint += " 此安装包内置 PHP 8.2（VS16 x64）。php.exe 无法启动最常见的原因是缺少 Visual C++ 2015-2022 (x64) 运行库；安装包根目录已附带 vc_redist.x64.exe，请先运行它。"
+        # 按输出特征区分两类失败，别让所有情况都指向 VC++ ——
+        # 2026-08-04 那次真实原因是 php.ini 的 \xampp\... 路径没重写，
+        # 报错却写着「请先运行 vc_redist.x64.exe」，排查方向被带偏了一整轮。
+        if ($phpVersionInfo.Output -match 'Unable to start standard module|Cannot open .*\.ini') {
+            # $PHP_DIR 只在 xampp 分支定义，两个分支都会设 $env:PHPRC，用它。
+            $runtimeHint += " 这是 php.ini 里的路径指向了不存在的文件（典型是 browscap / extension_dir）。" +
+                            " 请确认 " + (Join-Path "$env:PHPRC" 'php.ini') + " 里的路径都是完整绝对路径（形如 " + $RUNTIME_ROOT + "\...），" +
+                            "不是 XAMPP 原始包里的 \xampp\... 写法。"
+        } else {
+            $runtimeHint += " 此安装包内置 PHP 8.2（VS16 x64）。php.exe 无法启动最常见的原因是缺少 Visual C++ 2015-2022 (x64) 运行库；安装包根目录已附带 vc_redist.x64.exe，请先运行它。"
+        }
         Fail-Step $runtimeHint
     }
     $phpVersion = [Version]$script:PhpVer
@@ -1024,6 +1367,8 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         Fail-Step "检测到 PHP $($script:PhpVer)。此为 Windows 7 专用安装包，运行时必须是 PHP 8.2.x —— PHP 8.3 起最低要求 Windows 8/Server 2012。请使用配套的 Win7 构建产物重新安装。"
     }
     Write-Host ("        PHP version ............. {0}" -f $script:PhpVer)
+    Assert-PhpExtensions -PhpExe $PHP_EXE -Required $script:PhpExtensionsRequired -Why $script:PhpExtensionsWhy
+    Write-Host ("        PHP 扩展校验 ............ OK（{0}）" -f ($script:PhpExtensionsRequired -join ', '))
 
     if (-not (Test-Path (Join-Path $PROJECT_DIR "artisan"))) {
         Fail-Step "Project is incomplete. artisan not found in $PROJECT_DIR"
@@ -1034,7 +1379,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     Write-Host "        Project files ........... OK"
 
     $script:Step++
-    Write-Section "Start MySQL"
+    Write-Section ("Start {0}" -f $DB_ENGINE_NAME)
     $rootConnArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_ADMIN_USER)
     if ($USE_EXISTING_MYSQL) {
         Remove-Item $BUNDLED_MYSQL_MARKER -Force -ErrorAction SilentlyContinue
@@ -1083,9 +1428,9 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         $mysqlProbeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password ""
         if ($mysqlProbeExit -ne 0) {
         if (-not (Test-Path $MYSQLD_EXE)) { Fail-Step "mysqld.exe not found." }
-        $MYSQL_CONSOLE_LOG = Join-Path $LARAGON_DIR "data\mysql-console.log"
-        $MYSQL_STDERR_LOG  = Join-Path $LARAGON_DIR "data\mysql-stderr.log"
-        $MYSQL_DATA_ROOT = Join-Path $LARAGON_DIR "data"
+        $MYSQL_CONSOLE_LOG = Join-Path $DB_RUNTIME_LOG_DIR "mysql-console.log"
+        $MYSQL_STDERR_LOG  = Join-Path $DB_RUNTIME_LOG_DIR "mysql-stderr.log"
+        $MYSQL_DATA_ROOT = $DB_STATE_DIR
 
         # 覆盖安装时先停止本系统注册的服务（它可能仍使用旧端口或旧配置）。
         # 绝不能按进程名批量终止 mysqld.exe，否则会误停目标机原有的
@@ -1113,7 +1458,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             Fail-Step $portMessage
         }
 
-        $mysqlIni = Join-Path $LARAGON_DIR "etc\mysql\my.ini"
+        $mysqlIni = $DB_CONFIG_FILE
         if (-not (Test-Path $MYSQL_DATA_ROOT)) {
             New-Item -ItemType Directory -Path $MYSQL_DATA_ROOT -Force | Out-Null
         }
@@ -1222,7 +1567,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     if ($USE_EXISTING_MYSQL) {
         Write-Host "        MySQL lifecycle ......... external (not managed)"
     } else {
-        Write-Host "        MySQL started ........... OK"
+        Write-Host ("        {0} started{1}OK" -f $DB_ENGINE_NAME, ("." * (17 - $DB_ENGINE_NAME.Length) + " "))
     }
 
     $script:Step++
@@ -1290,13 +1635,13 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             $passwordSentinel = '__DENTAL_DB_PASSWORD_FROM_ENV__'
         }
         if (Test-Path $ENV_TEMPLATE) {
-            Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'install_render_env.php'), $ENV_TEMPLATE, $ENV_TARGET, $DB_HOST, $DB_PORT, $DB_NAME, $DB_USER, $passwordSentinel, $APP_URL, $OCR_PYTHON_PATH)
+            Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'install_render_env.php'), $ENV_TEMPLATE, $ENV_TARGET, $DB_HOST, $DB_PORT, $DB_NAME, $DB_USER, $passwordSentinel, $APP_URL, $OCR_PYTHON_PATH) | Out-Null
             Write-Host "        .env created from .env.deploy"
         } else {
             if (-not (Test-Path $ENV_TARGET)) {
                 Copy-Item (Join-Path $PROJECT_DIR ".env.example") $ENV_TARGET -Force
             }
-            Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'install_update_env.php'), $ENV_TARGET, $APP_URL, $DB_HOST, $DB_PORT, $DB_NAME, $DB_USER, $passwordSentinel)
+            Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'install_update_env.php'), $ENV_TARGET, $APP_URL, $DB_HOST, $DB_PORT, $DB_NAME, $DB_USER, $passwordSentinel) | Out-Null
             Write-Host "        .env created from .env.example"
         }
     } finally {
@@ -1309,9 +1654,17 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
 
     $script:Step++
     Write-Section "Generate APP_KEY"
+    # Set-Location 只改 PowerShell 的 location，**不改进程真正的工作目录**
+    # （[Environment]::CurrentDirectory）。原生子进程继承的是后者，PowerShell 2.0
+    # 下两者不保证同步。此前这里往下 13 处 artisan 调用全都写成相对的 'artisan'，
+    # 一旦不同步就是 "Could not open input file: artisan" —— 退出码 1、错误在
+    # stderr、而 PS2 的 transcript 不记原生输出，现场只能看到一句 Command failed。
+    # 现在 artisan 一律用绝对路径（$ARTISAN），两个当前目录也都摆正，
+    # 双保险：不依赖 cwd，即使依赖也是对的。
     Set-Location $PROJECT_DIR
+    try { [Environment]::CurrentDirectory = $PROJECT_DIR } catch {}
     if (-not (Select-String -Path $ENV_TARGET -Pattern '^APP_KEY=base64:' -Quiet -ErrorAction SilentlyContinue)) {
-        Invoke-External -FilePath $PHP_EXE -Arguments @('artisan', 'key:generate', '--force', '--no-interaction')
+        Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'key:generate', '--force', '--no-interaction') | Out-Null
     }
     Write-Host "        APP_KEY ................. OK"
 
@@ -1328,10 +1681,10 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         $mysqlImport += ' "' + $DB_NAME + '" < "' + $schemaSql + '"'
         $schemaExit = Invoke-MySqlCmdLine -CommandLine $mysqlImport -Password $DB_PASS
         if ($schemaExit -ne 0) {
-            Invoke-External -FilePath $PHP_EXE -Arguments @('artisan', 'migrate', '--force', '--no-interaction')
+            Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'migrate', '--force', '--no-interaction') | Out-Null
         }
     } else {
-        Invoke-External -FilePath $PHP_EXE -Arguments @('artisan', 'migrate', '--force', '--no-interaction')
+        Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'migrate', '--force', '--no-interaction') | Out-Null
     }
     Write-Host "        Database schema ......... OK"
 
@@ -1340,7 +1693,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     $seedArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_USER, '-D', $DB_NAME, '-N', '-e', 'SELECT 1 FROM users LIMIT 1')
     $seedProbeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments $seedArgs -Password $DB_PASS
     if ($seedProbeExit -ne 0) {
-        Invoke-External -FilePath $PHP_EXE -Arguments @('artisan', 'db:seed', '--force', '--no-interaction')
+        Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'db:seed', '--force', '--no-interaction') | Out-Null
         Write-Host "        Seed data initialized .... OK"
     } else {
         Write-Host "        Existing data found ...... skipped"
@@ -1350,12 +1703,12 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     # MenuItemsSeeder 不在 DatabaseSeeder 中，且它是侧边栏菜单的唯一定义。
     # 按 title_key 幂等 upsert —— 既有项就地更新、未定义项只报告不删除，
     # 因此对随包导入了菜单数据的库同样安全。
-    Invoke-External -FilePath $PHP_EXE -Arguments @('artisan', 'db:seed', '--class=MenuItemsSeeder', '--force', '--no-interaction')
+    Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'db:seed', '--class=MenuItemsSeeder', '--force', '--no-interaction') | Out-Null
     Write-Host "        Sidebar menu synced ...... OK"
 
     $script:Step++
     Write-Section "Create storage link"
-    $storageLinkExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @('artisan', 'storage:link', '--force', '--no-interaction')
+    $storageLinkExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'storage:link', '--force', '--no-interaction')
     if ($storageLinkExit -ne 0 -and -not (Test-Path (Join-Path $PROJECT_DIR 'public\storage'))) {
         Invoke-CmdLine ('mklink /D "' + (Join-Path $PROJECT_DIR 'public\storage') + '" "' + (Join-Path $PROJECT_DIR 'storage\app\public') + '"') | Out-Null
     }
@@ -1375,19 +1728,19 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     # 回退本身是对的（宁可没有缓存也不要坏缓存），但必须说出来。
     $degraded = @()
 
-    $configCacheExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @('artisan', 'config:cache', '--no-interaction')
+    $configCacheExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'config:cache', '--no-interaction')
     if ($configCacheExit -ne 0) {
-        Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @('artisan', 'config:clear', '--no-interaction') | Out-Null
+        Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'config:clear', '--no-interaction') | Out-Null
         $degraded += 'config'
     }
 
-    $routeCacheExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @('artisan', 'route:cache', '--no-interaction')
+    $routeCacheExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'route:cache', '--no-interaction')
     if ($routeCacheExit -ne 0) {
-        Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @('artisan', 'route:clear', '--no-interaction') | Out-Null
+        Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'route:clear', '--no-interaction') | Out-Null
         $degraded += 'route'
     }
 
-    $viewCacheExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @('artisan', 'view:cache', '--no-interaction')
+    $viewCacheExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'view:cache', '--no-interaction')
     if ($viewCacheExit -ne 0) { $degraded += 'view' }
 
     if ($degraded.Count -eq 0) {
@@ -1412,7 +1765,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     if ($SKIP_OCR) {
         Write-Host "        OCR ..................... skipped（工作日志改为手工录入）"
         if (Test-Path $ENV_TARGET) {
-            Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false')
+            Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false') | Out-Null
         }
     } else {
         $OCR_VENV = Join-Path $PROJECT_DIR "scripts\venv"
@@ -1511,13 +1864,13 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             if (Test-Path $ENV_TARGET) {
                 # 必须就地替换：.env 模板里已有 OCR_ENABLED=true，
                 # 而 Laravel 的 Env 取首次出现的值，追加无效。
-                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false')
+                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false') | Out-Null
             }
         }
 
         if ($ocrReady -and (Test-Path $ENV_TARGET)) {
             if (Select-String -Path $ENV_TARGET -Pattern '^OCR_PYTHON_PATH=' -Quiet -ErrorAction SilentlyContinue) {
-                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'update_ocr_env_path.php'), $ENV_TARGET, $ocrPythonExe)
+                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'update_ocr_env_path.php'), $ENV_TARGET, $ocrPythonExe) | Out-Null
             } else {
                 Add-Content -Path $ENV_TARGET -Value ""
                 Add-Content -Path $ENV_TARGET -Value "# OCR Service"
@@ -1534,7 +1887,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             # 这里再降级就没人写 .env，配置里仍是模板里的 OCR_ENABLED=true，
             # 结果是系统以为 OCR 可用、实际每次调用都失败。
             if (Test-Path $ENV_TARGET) {
-                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false')
+                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false') | Out-Null
             }
         }
 
@@ -1560,7 +1913,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                 Write-Host "        [警告] OCR 服务健康检查未通过，已关闭 OCR，安装继续。" -ForegroundColor Yellow
                 if ($ocrServerLog) { Write-Host $ocrServerLog -ForegroundColor DarkYellow }
                 if (Test-Path $ENV_TARGET) {
-                    Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false')
+                    Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_ENABLED', 'false') | Out-Null
                 }
             }
         }
@@ -1577,21 +1930,16 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     if ($RUNTIME_FLAVOR -eq "xampp") {
         # ── Apache（XAMPP）──────────────────────────────────────────────
         #
-        # 顺序很重要：先跑 setup_xampp.bat，再写 vhost。
-        # XAMPP 的配置里写死了 /xampp/... 这种从盘符根开始的绝对路径，
-        # setup_xampp.bat 负责把它们重写到实际安装目录；先写 vhost 会被它覆盖或错配。
-        $setupXampp = Join-Path $XAMPP_DIR "setup_xampp.bat"
-        if (Test-Path $setupXampp) {
-            # 该脚本交互式会问「是否继续」，管道喂一个换行让它走默认分支
-            $setupExit = Invoke-NativeQuiet -FilePath "cmd.exe" -Arguments @('/c', "echo. | `"$setupXampp`"")
-            if ($setupExit -eq 0) {
-                Write-Host "        XAMPP 路径重写 .......... OK"
-            } else {
-                Write-Host "        XAMPP 路径重写 .......... warning（Apache 可能因内置绝对路径而起不来）"
-            }
-        } else {
-            Write-Host "        XAMPP 路径重写 .......... 跳过（未找到 setup_xampp.bat）"
-        }
+        # 顺序很重要：先把 XAMPP 写死的 /xampp/... 绝对路径改到实际安装目录，
+        # 再写 vhost —— 否则 vhost 会被覆盖或与 ServerRoot 错配。
+        # 这一步已经在「Detect runtime」里做过（php.exe 启动就依赖它，见
+        # Repair-XamppHardcodedPaths 的注释）；这里只是幂等地再确认一次，
+        # 有标记文件就直接跳过。
+        #
+        # 不用 XAMPP 自带的 setup_xampp.bat：它用相对路径找 php.exe，
+        # 必须 cd 到 xampp 目录才生效，找不到时只 echo + pause，退出码仍是 0，
+        # 调用方拿到的永远是「OK」。
+        Repair-XamppHardcodedPaths -XamppDir $XAMPP_DIR | Out-Null
 
         $apacheLogDir = Join-Path $APACHE_DIR 'logs'
         if (-not (Test-Path $apacheLogDir)) { New-Item -ItemType Directory -Path $apacheLogDir -Force | Out-Null }
@@ -1601,7 +1949,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         # 这条约束在 write_apache_vhost.php 里实现，用真 Apache 校验过。
         $apacheRoot   = (Join-Path $PROJECT_DIR 'public').Replace('\', '/')
         $vhostFile    = Join-Path $APACHE_DIR 'conf\extra\dental-vhost.conf'
-        Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'write_apache_vhost.php'), $vhostFile, $apacheRoot, '80')
+        Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'write_apache_vhost.php'), $vhostFile, $apacheRoot, '80') | Out-Null
 
         # 幂等地把 Include 追加进 httpd.conf
         $httpdConf = Join-Path $APACHE_DIR 'conf\httpd.conf'
@@ -1622,15 +1970,58 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         } else {
             Write-Host "        Apache config ........... warning（httpd -t 未通过，详见上方诊断）"
         }
+
+        # ── 把 Apache 注册成 Windows 服务 ────────────────────────────
+        #
+        # 在这之前 $APACHE_EXE 全文只用于 httpd -t，**Apache 从来没被启动过**：
+        # start-win.bat 的 WEB_MODE 只有 laragon / nginx / php-builtin 三种，
+        # xampp 装完会退到 `php.exe -S`（PHP 内置开发服务器，单线程），
+        # 等于换了 XAMPP 却没用上 Apache + mod_php。
+        #
+        # 用具名服务而不是裸进程，理由和 DentalClinicMySQL 一致：
+        # 可以精确停这一个实例，绝不牵连目标机上其他 Apache；
+        # 而 httpd 的 -k stop 在 Windows 上本来就是按服务名工作的。
+        $apacheService = 'DentalClinicApache'
+        # 先卸旧的：服务的 binPath 里带着 httpd.exe 与 conf 的绝对路径，
+        # 换安装目录或重装后必须刷新，否则服务指向的还是上一次的路径。
+        $apacheSvcExists = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('query', $apacheService) -Probe
+        if ($apacheSvcExists -eq 0) {
+            Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('stop', $apacheService) -Probe | Out-Null
+            Invoke-NativeQuiet -FilePath $APACHE_EXE -Arguments @('-k', 'uninstall', '-n', $apacheService) -Probe | Out-Null
+        }
+        $apacheInstallExit = Invoke-NativeQuiet -FilePath $APACHE_EXE -Arguments @('-k', 'install', '-n', $apacheService, '-f', $httpdConf)
+        if ($apacheInstallExit -eq 0) {
+            Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('config', $apacheService, 'start=', 'auto') -Probe | Out-Null
+            Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('description', $apacheService, 'DentalClinic Apache (mod_php) web server') -Probe | Out-Null
+            Write-Host ("        Apache service .......... OK ({0})" -f $apacheService)
+
+            $apacheStartExit = Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('start', $apacheService) -Probe
+            # net start 对「已在运行」返回非零，所以真正的判据是端口是否响应。
+            $apacheUp = $false
+            for ($i = 0; $i -lt 10; $i++) {
+                if (Test-HttpEndpoint -Url 'http://127.0.0.1/' -TimeoutMs 2000) { $apacheUp = $true; break }
+                Start-Sleep -Seconds 2
+            }
+            if ($apacheUp) {
+                Write-Host "        Apache started .......... OK (http://127.0.0.1/)"
+            } else {
+                $apacheErrorLog = Join-Path $APACHE_DIR 'logs\error.log'
+                Write-Host ("        Apache started .......... warning（80 端口无响应，net start 返回 {0}）" -f $apacheStartExit) -ForegroundColor Yellow
+                $apacheTail = Get-LastLogLines -Paths @($apacheErrorLog)
+                if ($apacheTail) { Write-Host $apacheTail }
+            }
+        } else {
+            Write-Host "        Apache service .......... warning（注册失败，详见上方诊断）" -ForegroundColor Yellow
+        }
     } elseif ($NGINX_DIR) {
         if (-not (Test-Path $NGINX_CONF_DIR)) { New-Item -ItemType Directory -Path $NGINX_CONF_DIR -Force | Out-Null }
         $nginxRuntimeLogDir = Join-Path $PROJECT_DIR 'storage\logs'
         if (-not (Test-Path $nginxRuntimeLogDir)) { New-Item -ItemType Directory -Path $nginxRuntimeLogDir -Force | Out-Null }
         $nginxRoot = (Join-Path $PROJECT_DIR 'public').Replace('\', '/')
         $nginxConfFile = Join-Path $NGINX_CONF_DIR "auto.dental.conf"
-        Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'write_nginx_conf.php'), $nginxConfFile, $nginxRoot, $NGINX_DIR)
+        Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'write_nginx_conf.php'), $nginxConfFile, $nginxRoot, $NGINX_DIR) | Out-Null
         $nginxMainConf = Join-Path $LARAGON_DIR 'etc\nginx\nginx.conf'
-        Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'write_nginx_main_conf.php'), $nginxMainConf, $NGINX_DIR, $NGINX_CONF_DIR, $nginxRuntimeLogDir)
+        Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'write_nginx_main_conf.php'), $nginxMainConf, $NGINX_DIR, $NGINX_CONF_DIR, $nginxRuntimeLogDir) | Out-Null
         $nginxCheckExit = Invoke-NativeQuiet -FilePath $NGINX_EXE -Arguments @('-t', '-p', ($NGINX_DIR + '\'), '-c', $nginxMainConf)
         if ($nginxCheckExit -eq 0) {
             Write-Host "        Nginx config ............ OK"
@@ -1651,7 +2042,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         Write-Host "        Windows service ......... skipped (mysqld not found)"
     } else {
         $svcName = "DentalClinicMySQL"
-        $mysqlIni = Join-Path $LARAGON_DIR "etc\mysql\my.ini"
+        $mysqlIni = $DB_CONFIG_FILE
         $serviceQueryExit = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('query', $svcName) -Probe
         if ($serviceQueryExit -eq 0) {
             Write-Host "        Service already exists ... skipped"
@@ -1721,14 +2112,14 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     Write-Section "Final validation"
     # 必须重跑：OCR 步骤若把 OCR_ENABLED 改为 false，只有这次 config:cache
     # 能让它进入配置缓存。请勿删除（详见「Optimize caches」步骤的说明）。
-    Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @('artisan', 'config:cache', '--no-interaction') | Out-Null
-    Invoke-External -FilePath $PHP_EXE -Arguments @('artisan', '--version')
+    Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'config:cache', '--no-interaction') | Out-Null
+    Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, '--version') | Out-Null
 
     $validationArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_USER, '-D', $DB_NAME, '-e', 'SELECT 1 FROM users LIMIT 1')
     $databaseCheckExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments $validationArgs -Password $DB_PASS
     if ($databaseCheckExit -eq 0) { Write-Host "        Database check .......... OK" } else { Write-Host "        Database check .......... warning" }
 
-    $routeCheckExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @('artisan', 'route:list', '--compact', '--no-interaction')
+    $routeCheckExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'route:list', '--compact', '--no-interaction')
     if ($routeCheckExit -eq 0) { Write-Host "        Route check ............. OK" } else { Write-Host "        Route check ............. warning" }
 
     Write-Host ""
@@ -1759,10 +2150,12 @@ catch {
     Write-Host ""
     Write-Host "排查用日志:"
     Write-Host ("  安装全过程: {0}" -f $INSTALL_LOG)
+    # 数据库日志目录跟着运行时形态走。写死 $LARAGON_DIR 的话，xampp 安装
+    # 失败时会指着一个根本不存在的 C:\DentalClinic\laragon\data\... 让人去看。
     foreach ($extra in @(
-        (Join-Path $LARAGON_DIR "data\mysql-error.log"),
-        (Join-Path $LARAGON_DIR "data\mysql-console.log"),
-        (Join-Path $LARAGON_DIR "data\mysql-stderr.log"),
+        (Join-Path $DB_RUNTIME_LOG_DIR "mysql-error.log"),
+        (Join-Path $DB_RUNTIME_LOG_DIR "mysql-console.log"),
+        (Join-Path $DB_RUNTIME_LOG_DIR "mysql-stderr.log"),
         (Join-Path $PROJECT_DIR "storage\logs\ocr-install.log"),
         (Join-Path $PROJECT_DIR "storage\logs\laravel.log")
     )) {

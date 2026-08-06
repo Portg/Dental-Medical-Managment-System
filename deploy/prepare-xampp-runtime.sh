@@ -168,11 +168,25 @@ MOD_PHP="$(ls "$XAMPP_RUNTIME_DIR"/xampp/php/php*apache*.dll 2>/dev/null | head 
     && ok "PHP 运行时: php8ts.dll（线程安全，mod_php 要求）" \
     || fatal "找不到 php8ts.dll —— PHP 不是 TS 构建，mod_php 无法工作"
 
-# XAMPP 的配置文件里写的是 /xampp/... 这种从盘符根开始的绝对路径，
-# 装到 C:\DentalClinic\xampp 之后必须用它自带的 setup_xampp.bat 重写，否则 Apache 起不来。
-[[ -f "$XAMPP_RUNTIME_DIR/xampp/setup_xampp.bat" ]] \
-    && ok "setup_xampp.bat 就位（安装时用它重写内置绝对路径）" \
-    || fatal "找不到 setup_xampp.bat —— 无法把 XAMPP 内置的 /xampp/... 路径改写到实际安装目录"
+# XAMPP 的配置文件里写的是 /xampp/... 这种从盘符根开始的绝对路径。
+# 装到 C:\DentalClinic\xampp 之后由 install-win.ps1 的 Repair-XamppHardcodedPaths 重写
+# （不用 XAMPP 自带的 setup_xampp.bat：它靠相对路径找 php.exe，失败还返回 0）。
+# 这里只校验「重写目标存在 + 被引用的文件真的在包里」。
+XAMPP_PATH_TARGETS=0
+for rel in xampp/php/php.ini xampp/mysql/bin/my.ini xampp/apache/conf/httpd.conf \
+           xampp/apache/conf/extra/httpd-xampp.conf xampp/apache/conf/extra/httpd-ssl.conf; do
+    [[ -f "$XAMPP_RUNTIME_DIR/$rel" ]] && XAMPP_PATH_TARGETS=$((XAMPP_PATH_TARGETS + 1))
+done
+[[ "$XAMPP_PATH_TARGETS" -ge 4 ]] \
+    && ok "待重写的配置文件就位（$XAMPP_PATH_TARGETS 个，安装时改写内置 /xampp/... 路径）" \
+    || fatal "待重写的配置文件不全（只找到 $XAMPP_PATH_TARGETS 个），包结构与预期不符"
+
+# php.ini 的 browscap 指向 php/extras/browscap.ini。这个文件缺失不是警告，
+# 而是 php.exe 直接 "Unable to start standard module" 起不来 ——
+# 2026-08-04 那次装机就死在这里（当时是路径没重写，文件其实在）。
+[[ -f "$XAMPP_RUNTIME_DIR/xampp/php/extras/browscap.ini" ]] \
+    && ok "browscap.ini 就位（php.ini 引用它，缺失会让 php.exe 启动失败）" \
+    || fatal "找不到 php/extras/browscap.ini —— php.ini 引用了它，php.exe 会以 Unable to start standard module 退出"
 
 info "体积: $(du -sh "$XAMPP_RUNTIME_DIR" | awk '{print $1}')"
 

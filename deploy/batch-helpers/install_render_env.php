@@ -8,6 +8,16 @@ if ($argc < 9) {
 [$script, $template, $target, $dbHost, $dbPort, $dbName, $dbUser, $dbPass, $appUrl] = $argv;
 $ocrPythonPath = $argv[9] ?? '';
 
+if ($dbPass === '__DENTAL_DB_PASSWORD_EMPTY__') {
+    $dbPass = '';
+} elseif ($dbPass === '__DENTAL_DB_PASSWORD_FROM_ENV__') {
+    $dbPass = getenv('DENTAL_DB_PASSWORD');
+    if ($dbPass === false) {
+        fwrite(STDERR, "DENTAL_DB_PASSWORD is not set\n");
+        exit(1);
+    }
+}
+
 $tpl = @file_get_contents($template);
 if ($tpl === false) {
     fwrite(STDERR, "Failed to read template: {$template}\n");

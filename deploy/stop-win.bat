@@ -16,6 +16,27 @@ set "NGINX_STOPPED=0"
 set "PHPCGI_STOPPED=0"
 set "MYSQL_STOPPED=0"
 set "GRACEFUL_TIMEOUT=10"
+set "BACKGROUND_MODE=0"
+if /I "%~1"=="--background" set "BACKGROUND_MODE=1"
+if /I "%~2"=="--background" set "BACKGROUND_MODE=1"
+set "INSTALL_DIR=%~dp0"
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+REM 运行时形态判定，与 install-win.ps1 / setup.bat / start-win.bat 同一条判据。
+set "XAMPP_DIR=%INSTALL_DIR%\xampp"
+set "LARAGON_DIR=%INSTALL_DIR%\laragon"
+set "RUNTIME_FLAVOR=laragon"
+if exist "%XAMPP_DIR%\apache\bin\httpd.exe" set "RUNTIME_FLAVOR=xampp"
+set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
+if "%RUNTIME_FLAVOR%"=="xampp" set "PROJECT_DIR=%XAMPP_DIR%\htdocs\dental"
+set "EXTERNAL_MYSQL_MARKER=%INSTALL_DIR%\existing-mysql.conf"
+set "APACHE_SERVICE=DentalClinicApache"
+set "APACHE_STOPPED=0"
+
+REM 阻止每分钟运行的健康检查在停止过程中把组件重新拉起。
+>"%INSTALL_DIR%\services-stopped.flag" echo stopped
+schtasks /end /tn "DentalClinic-ServiceWatchdog" >nul 2>&1
+schtasks /end /tn "DentalClinic-AutoStart" >nul 2>&1
+schtasks /end /tn "DentalClinic-QueueWorker" >nul 2>&1
 
 echo.
 echo  +=====================================================+
@@ -112,6 +133,24 @@ REM  Step 3/5: 停止 Nginx / PHP 内置服务器
 REM ══════════════════════════════════════════════════════════════
 echo  [3/5] 停止 Web 服务器...
 
+REM ─ 停止 Apache（xampp 形态）─
+REM 只停本系统注册的那一个服务实例，绝不按 httpd.exe 进程名批量终止 ——
+REM 目标机上可能还有别人的 Apache，这跟本文件对 mysqld 的原则一致。
+REM net stop 是同步的，返回即已停止；服务不存在/已停止时返回非零，属正常。
+REM 这一步必须在 setup.bat 覆盖文件之前生效，否则 httpd.exe 会占着
+REM php8ts.dll / apache\logs\* 让 xcopy 失败。
+if not "%RUNTIME_FLAVOR%"=="xampp" goto :apache_skip
+sc query %APACHE_SERVICE% >nul 2>&1
+if errorlevel 1 goto :apache_no_svc
+echo        停止 Apache 服务 ^(%APACHE_SERVICE%^)...
+net stop %APACHE_SERVICE% >nul 2>&1
+echo        Apache 已停止                                   [OK]
+set "APACHE_STOPPED=1"
+goto :apache_skip
+:apache_no_svc
+echo        未注册 %APACHE_SERVICE% 服务，跳过               [跳过]
+:apache_skip
+
 REM ─ 停止 Nginx ─
 tasklist /FI "IMAGENAME eq nginx.exe" 2>nul | findstr /I "nginx.exe" >nul
 if !ERRORLEVEL! equ 0 (
@@ -203,73 +242,80 @@ REM  Step 4/5: 停止 MySQL
 REM ══════════════════════════════════════════════════════════════
 echo  [4/5] 停止 MySQL...
 
-REM 检查 MySQL 是否在运行
-tasklist /FI "IMAGENAME eq mysqld.exe" 2>nul | findstr /I "mysqld.exe" >nul
-if !ERRORLEVEL! neq 0 (
-    echo        MySQL 未运行                                    [跳过]
+REM 现有 MySQL 由目标机管理；绝不调用 mysqladmin、net stop 或 taskkill。
+if exist "%EXTERNAL_MYSQL_MARKER%" (
+    echo        现有 MySQL 不属于本系统、保持运行             [跳过]
     goto :mysql_done
 )
 
-REM 优先使用 mysqladmin 优雅关闭
+REM 从 .env 读取本系统端口。隔离包为 3307，所有关闭和探测都带明确端口，
+REM 绝不按 mysqld.exe 进程名批量终止，避免影响 3306 上的原有 MySQL。
+set "APP_DB_HOST=127.0.0.1"
+set "APP_DB_PORT=3306"
+set "APP_DB_USER=root"
+set "APP_DB_PASS="
+if exist "%PROJECT_DIR%\.env" (
+    for /f "usebackq tokens=1,* delims==" %%A in ("%PROJECT_DIR%\.env") do (
+        if /i "%%A"=="DB_HOST" set "APP_DB_HOST=%%B"
+        if /i "%%A"=="DB_PORT" set "APP_DB_PORT=%%B"
+        if /i "%%A"=="DB_USERNAME" set "APP_DB_USER=%%B"
+        if /i "%%A"=="DB_PASSWORD" set "APP_DB_PASS=%%B"
+    )
+)
+
 set "MYSQLADMIN_EXE="
-where mysqladmin >nul 2>&1 && for /f "tokens=*" %%P in ('where mysqladmin 2^>nul') do (
-    set "MYSQLADMIN_EXE=%%P"
-    goto :found_mysqladmin
+for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do (
+    if exist "%%D\bin\mysqladmin.exe" set "MYSQLADMIN_EXE=%%D\bin\mysqladmin.exe"
+)
+if not defined MYSQLADMIN_EXE for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do (
+    if exist "%%D\bin\mysqladmin.exe" set "MYSQLADMIN_EXE=%%D\bin\mysqladmin.exe"
 )
 
-REM 搜索 Laragon 目录（兼容不同 MySQL 目录命名）
-for %%L in (
-    "%~dp0laragon"
-    "%~dp0..\laragon"
-    "C:\DentalClinic\laragon"
-    "C:\laragon"
-) do (
-    for /d %%D in ("%%~L\bin\mysql\mysql-*") do (
-        if exist "%%D\bin\mysqladmin.exe" (
-            set "MYSQLADMIN_EXE=%%D\bin\mysqladmin.exe"
-            goto :found_mysqladmin
-        )
-    )
-    for /d %%D in ("%%~L\bin\mysql\*") do (
-        if exist "%%D\bin\mysqladmin.exe" (
-            set "MYSQLADMIN_EXE=%%D\bin\mysqladmin.exe"
-            goto :found_mysqladmin
-        )
-    )
-)
-
-:found_mysqladmin
+set "MYSQL_PWD=!APP_DB_PASS!"
 if defined MYSQLADMIN_EXE (
-    echo        使用 mysqladmin 优雅关闭 MySQL...
-    "%MYSQLADMIN_EXE%" -u root shutdown >nul 2>&1
+    "!MYSQLADMIN_EXE!" -h !APP_DB_HOST! -P !APP_DB_PORT! -u !APP_DB_USER! ping >nul 2>&1
+    if !ERRORLEVEL! neq 0 (
+        echo        内置 MySQL 未运行                              [跳过]
+        goto :mysql_done
+    )
+
+    echo        优雅关闭 DentalClinicMySQL ^(!APP_DB_HOST!:!APP_DB_PORT!^)...
+    "!MYSQLADMIN_EXE!" -h !APP_DB_HOST! -P !APP_DB_PORT! -u !APP_DB_USER! shutdown >nul 2>&1
     if !ERRORLEVEL! equ 0 (
-        REM 等待 mysqld 进程退出
         set /a "WAIT=0"
-        :wait_mysql_shutdown
-        timeout /t 2 /nobreak >nul
-        tasklist /FI "IMAGENAME eq mysqld.exe" 2>nul | findstr /I "mysqld.exe" >nul
-        if !ERRORLEVEL! neq 0 (
-            echo        MySQL 已优雅关闭                              [OK]
-            set "MYSQL_STOPPED=1"
-            goto :mysql_done
-        )
-        set /a "WAIT+=2"
-        if !WAIT! geq %GRACEFUL_TIMEOUT% (
-            echo        优雅关闭超时，强制终止...
-            goto :mysql_force_kill
-        )
         goto :wait_mysql_shutdown
     )
-    echo        mysqladmin shutdown 失败，使用 taskkill...
 )
 
-:mysql_force_kill
-echo        强制终止 MySQL 进程...
-taskkill /IM mysqld.exe /F >nul 2>&1
+REM mysqladmin 失败时只停止本系统注册的服务，不操作其他 MySQL 服务。
+echo        通过 DentalClinicMySQL 服务停止...
+net stop DentalClinicMySQL >nul 2>&1
+if defined MYSQLADMIN_EXE (
+    set /a "WAIT=0"
+    goto :wait_mysql_shutdown
+)
+echo        已发送服务停止请求                              [OK]
 set "MYSQL_STOPPED=1"
-echo        MySQL 已强制停止                                [OK]
+goto :mysql_done
+
+:wait_mysql_shutdown
+timeout /t 2 /nobreak >nul
+"!MYSQLADMIN_EXE!" -h !APP_DB_HOST! -P !APP_DB_PORT! -u !APP_DB_USER! ping >nul 2>&1
+if !ERRORLEVEL! neq 0 (
+    echo        内置 MySQL 已停止                              [OK]
+    set "MYSQL_STOPPED=1"
+    goto :mysql_done
+)
+set /a "WAIT+=2"
+if !WAIT! geq %GRACEFUL_TIMEOUT% (
+    echo        [警告] !APP_DB_HOST!:!APP_DB_PORT! 仍在监听；为保护其他 MySQL，未强制终止进程
+    goto :mysql_done
+)
+goto :wait_mysql_shutdown
 
 :mysql_done
+set "MYSQL_PWD="
+set "APP_DB_PASS="
 echo.
 
 REM ══════════════════════════════════════════════════════════════
@@ -317,5 +363,5 @@ echo  |  所有服务已处理完毕                                 |
 echo  +=====================================================+
 echo.
 
+if not "%BACKGROUND_MODE%"=="1" pause
 endlocal
-pause
