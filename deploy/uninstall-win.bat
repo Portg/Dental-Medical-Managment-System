@@ -133,11 +133,15 @@ echo.
 echo  [1/%TOTAL_STEPS%] 停止所有服务...
 
 REM 调用 stop 脚本（如果存在）
+set "DO_MANUAL_KILL=0"
 if exist "%INSTALL_DIR%\stop-win.bat" (
     call "%INSTALL_DIR%\stop-win.bat" >nul 2>&1
     echo        通过 stop-win.bat 停止服务                      [OK]
 ) else (
-    REM 手动停止进程
+    set "DO_MANUAL_KILL=1"
+)
+
+if "!DO_MANUAL_KILL!"=="1" (
     echo        停止队列工作进程...
     for /f "tokens=2" %%P in ('wmic process where "commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
         taskkill /PID %%P /F >nul 2>&1
@@ -146,10 +150,10 @@ if exist "%INSTALL_DIR%\stop-win.bat" (
     for /f "tokens=2" %%P in ('wmic process where "commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
         taskkill /PID %%P /F >nul 2>&1
     )
-    echo        停止 Nginx...
-    taskkill /IM nginx.exe /F >nul 2>&1
-    echo        停止 PHP-CGI...
-    taskkill /IM php-cgi.exe /F >nul 2>&1
+    echo        停止 Nginx（仅本安装目录）...
+    call :kill_by_cmdline nginx.exe "%INSTALL_DIR%"
+    echo        停止 PHP-CGI（仅本安装目录）...
+    call :kill_by_cmdline php-cgi.exe "%INSTALL_DIR%"
 )
 
 REM 停止 Apache 服务（xampp 形态）。只动本系统注册的这一个实例。
@@ -424,3 +428,21 @@ echo    uninstall-win.bat --yes            静默完全卸载
 echo    uninstall-win.bat --cleanup-only   仅清运行时产物
 echo.
 exit /b 0
+
+REM ── 仅终止 CommandLine 含指定安装目录的进程 ──
+:kill_by_cmdline
+set "KILL_HIT=0"
+set "KILL_IMG=%~1"
+set "KILL_DIR=%~2"
+if "%KILL_DIR%"=="" goto :eof
+set "KILL_LIKE=%KILL_DIR:\=\\%"
+REM 不用 /value + delims== ：那样 tokens=2 会把行尾的 CR 一起吃进去
+REM （wmic 的输出带 CR），taskkill /PID 拿到 "1234<CR>" 会失败。
+REM 表格格式下 PID 后面跟空格，tokens=* 配 findstr /R "^[0-9]" 取到的是干净数字。
+for /f "usebackq tokens=1" %%P in (`wmic process where "name='%KILL_IMG%' and CommandLine like '%%%KILL_LIKE%%%'" get ProcessId 2^>nul ^| findstr /R "^[0-9][0-9]*"`) do (
+    if not "%%P"=="" (
+        taskkill /PID %%P /F >nul 2>&1
+        set "KILL_HIT=1"
+    )
+)
+goto :eof

@@ -326,7 +326,7 @@ dental-clinic-1.0.0-win/
 ├── upgrade-win.bat           ← 升级脚本
 ├── start-win.bat             ← 启动服务
 ├── stop-win.bat              ← 停止服务
-├── laragon-startup.bat       ← 桌面快捷方式入口
+├── laragon-startup.bat       ← 兼容入口（转发 start-win.bat）
 ├── check.sh / backup-restore.sh / export-data.sh  ← 运维工具
 ├── .env.deploy               ← 环境变量模板
 ├── VERSION                   ← 版本号
@@ -376,7 +376,7 @@ dental-clinic-1.0.0-win-upgrade/
 2. 解压到任意位置
 3. 双击「一键安装.bat」
 4. 等待自动完成（约 3-5 分钟）
-5. 浏览器自动打开 http://localhost/dental
+5. 浏览器自动打开 http://localhost
 ```
 
 #### 推荐标准流程（自组装运行时 + 还原基础数据 + 替换部署包）
@@ -403,9 +403,9 @@ dental-clinic-1.0.0-win-upgrade/
 说明：
 - 默认安装会把 `PHP / MySQL / Nginx / Composer / Python(OCR)` 一并处理。
 - 只有显式使用 `--no-ocr` 时，安装器才允许跳过 OCR 依赖。
-- 如果 OCR 依赖安装或健康检查失败，安装会直接中断，不再以“安装完成但功能不可用”的状态结束。
+- 如果 OCR 依赖安装或健康检查失败，安装**不会中断**：会把 `.env` 中 `OCR_ENABLED` 就地改为 `false` 并继续，工作日志改为手工录入。
 
-#### install-win.bat 内部流程（18 步）
+#### install-win.bat 内部流程（19 步）
 
 ```
 用法: install-win.bat [安装目录] [选项]
@@ -625,7 +625,7 @@ Step 4 备份完成后，后续任何步骤失败都会自动触发回滚：
 #### Windows
 
 ```bat
-REM 方式 1: 双击桌面快捷方式（指向 laragon-startup.bat）
+REM 方式 1: 双击桌面快捷方式（指向 start-win.bat）
 
 REM 方式 2: 脚本启动
 start-win.bat [安装目录]
@@ -712,7 +712,13 @@ deploy/
 ├── yakpro-po.cnf           # PHP 源码混淆配置
 │
 │  ── 安装 ──────────────────────────────
-├── install-win.bat         # Windows 安装脚本 (18 步)
+├── install-win.bat         # Windows 安装脚本 (19 步)
+├── install-win.ps1         # 主安装逻辑（PS2 兼容）
+├── upgrade-win.bat         # 升级
+├── start-win.bat           # 启服务（桌面快捷方式目标）
+├── stop-win.bat            # 停服务
+├── uninstall-win.bat       # 卸载
+├── laragon-startup.bat     # 兼容入口（转发 start-win.bat）
 ├── install-linux.sh        # Linux/macOS 安装脚本 (12 步)
 │
 │  ── 升级 ──────────────────────────────
@@ -724,7 +730,7 @@ deploy/
 ├── stop-win.bat            # Windows 停止所有服务 (队列→OCR→Nginx→MySQL)
 ├── start-linux.sh          # Linux/macOS 启动
 ├── stop-linux.sh           # Linux/macOS 停止
-├── laragon-startup.bat     # Laragon 启动入口（桌面快捷方式目标）
+├── laragon-startup.bat     # 兼容入口（转发 start-win.bat）
 │
 │  ── 运维 ──────────────────────────────
 ├── check.sh                # 健康检查 (10 项检测)

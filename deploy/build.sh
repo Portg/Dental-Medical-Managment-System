@@ -1323,6 +1323,21 @@ case "$TARGET" in
 setlocal EnableExtensions DisableDelayedExpansion
 chcp 936 >nul 2>&1
 
+REM 需要管理员：不足则弹出 UAC（Inno 已是 admin 时会直接通过）
+REM 判据与提升都放在顶层：( ) 块内的 %ERRORLEVEL% 在 DisableDelayedExpansion
+REM 下于进块前就展开完，取到的是 net session 失败留下的 1，于是提升后的子进程
+REM 即使装成功也会被报成失败。install-win.bat 用的是延迟展开形式（该文件
+REM 启用了延迟展开），这里没有延迟展开，只能靠摊平到顶层逐行读。
+net session >nul 2>&1
+if not errorlevel 1 goto :have_admin
+echo.
+echo  需要管理员权限，请在 UAC 提示中选择「是」...
+echo.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -LiteralPath '%~f0' -Verb RunAs -Wait"
+set "ELEV_RC=%ERRORLEVEL%"
+exit /b %ELEV_RC%
+:have_admin
+
 set "INSTALL_DIR=C:\DentalClinic"
 set "PKG_DIR=%~dp0"
 if "%PKG_DIR:~-1%"=="\" set "PKG_DIR=%PKG_DIR:~0,-1%"
@@ -1845,6 +1860,16 @@ if [[ "$TARGET" == "win" ]] && [[ -n "$LARAGON_INSTALLER_EXE" ]]; then
 setlocal EnableExtensions DisableDelayedExpansion
 chcp 936 >nul 2>&1
 
+REM 同上：块内 %ERRORLEVEL% 在 DisableDelayedExpansion 下取不到 powershell
+REM 的实际退出码，必须摊平到顶层。
+net session >nul 2>&1
+if not errorlevel 1 goto :have_admin
+echo  需要管理员权限，请在 UAC 提示中选择「是」...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -LiteralPath '%~f0' -Verb RunAs -Wait"
+set "ELEV_RC=%ERRORLEVEL%"
+exit /b %ELEV_RC%
+:have_admin
+
 echo.
 echo  =======================================================
 echo    Dental Clinic Management System - Laragon Installer
@@ -2113,6 +2138,25 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
     fi
     if [[ -f "$DIST_DIR/start-win.bat" ]] && ! grep -qF 'PHP FastCGI' "$DIST_DIR/start-win.bat"; then
         error "  ✗ start-win.bat 未启动 PHP FastCGI，Nginx 将无法执行 PHP"
+        ASSERT_FAIL=true
+    fi
+    # 打包后 .bat 为 GBK；任何 chcp 65001 都会在中文 Win7 上拆坏多字节命令
+    while IFS= read -r -d '' _bat_chk; do
+        if grep -qE 'chcp[[:space:]]+65001' "$_bat_chk"; then
+            error "  ✗ $(basename "$_bat_chk") 仍含 chcp 65001（必须与 GBK 打包一致用 936）"
+            ASSERT_FAIL=true
+        fi
+    done < <(find "$DIST_DIR" -maxdepth 1 -name '*.bat' -print0 2>/dev/null)
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && grep -qE '\[System\.IO\.File\]::WriteAllLines' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 仍调用 File.WriteAllLines（.NET 4+ Encoding 重载，Win7 纯净机可能失败）"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && ! grep -qF 'APP_KEY preserved' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 未保留已有 APP_KEY 的合并路径"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/laragon-startup.bat" ]] && grep -qF 'localhost/dental' "$DIST_DIR/laragon-startup.bat"; then
+        error "  ✗ laragon-startup.bat 仍打开 /dental（站点 root 已是 public）"
         ASSERT_FAIL=true
     fi
     if [[ ! -f "$DIST_DIR/batch-helpers/write_nginx_main_conf.php" ]] || ! grep -qF 'worker_processes' "$DIST_DIR/batch-helpers/write_nginx_main_conf.php"; then

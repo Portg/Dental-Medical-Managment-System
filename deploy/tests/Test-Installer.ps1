@@ -97,7 +97,11 @@ if ($flavorBlock) {
 }
 
 Section "7. 路径重写函数（真执行）"
-$wanted = @('Fail-Step', 'Repair-XamppHardcodedPaths')
+# 必须把被测函数**依赖的**函数一起抽出来。Cursor 把写文件抽成
+# Write-Utf8NoBomFile 之后，只抽 Repair-* / Ensure-* 会在运行时报
+# 「不是 cmdlet」并让整个 harness 中断 —— 那是 harness 自身的漏洞，
+# 不是被测代码的问题。新增写文件类辅助函数时记得加进这个清单。
+$wanted = @('Fail-Step', 'Repair-XamppHardcodedPaths', 'Write-Utf8NoBomFile')
 $funcs = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true) |
          Where-Object { $wanted -contains $_.Name }
 foreach ($f in $funcs) { Invoke-Expression $f.Extent.Text }
@@ -162,9 +166,10 @@ Section "7b. PHP 扩展启用（真的改一份 php.ini 副本）"
 # 2026-08-06 22:39 那次装机死在 [9/19] key:generate，真因是 XAMPP 的 php.ini
 # 默认注释掉了 zip，而 spatie/laravel-backup 的 config 在加载期就用
 # ZipArchive::CM_DEFAULT。这一组把「该开的开了、没 DLL 的不写、可重复执行」钉住。
+$extWanted = @('Ensure-PhpExtensions', 'Write-Utf8NoBomFile')
 $extFuncs = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true) |
-            Where-Object { $_.Name -eq 'Ensure-PhpExtensions' }
-Check "取到 Ensure-PhpExtensions" ($extFuncs.Count -eq 1) "没找到"
+            Where-Object { $extWanted -contains $_.Name }
+Check "取到 Ensure-PhpExtensions 及其依赖" ($extFuncs.Count -eq $extWanted.Count) "只找到 $($extFuncs.Count)/$($extWanted.Count)"
 foreach ($f in $extFuncs) { Invoke-Expression $f.Extent.Text }
 
 # 从脚本里读出两份清单和原因表，避免测试和实现各写一遍
@@ -328,6 +333,24 @@ foreach ($kv in (Get-BatSources).GetEnumerator()) {
     Check ("$($kv.Key) 控制流括号收支平衡") ($net -eq 0) "净值 $net"
 }
 
+Section "8b4. 数值比较两侧引号必须一致"
+# cmd 只在两侧都无引号且都像数字时做数值比较；一侧带引号就退化成字符串比较。
+# `if "2" geq 10` 里 '"'(0x22) < '1'(0x31) → 恒 false，超时分支永不触发。
+# code-review 在 stop-win.bat 抓到过一处（改动前是正确的无引号写法）。
+$mixedQuote = @()
+foreach ($kv in (Get-BatSources).GetEnumerator()) {
+    for ($i = 0; $i -lt $kv.Value.Count; $i++) {
+        $l = $kv.Value[$i]
+        if ($l -match '(?i)^\s*(rem\b|::)') { continue }
+        $m = [regex]::Match($l, '(?i)if\s+(\S+)\s+(geq|leq|gtr|lss)\s+(\S+)')
+        if (-not $m.Success) { continue }
+        if ($m.Groups[1].Value.StartsWith('"') -ne $m.Groups[3].Value.StartsWith('"')) {
+            $mixedQuote += ("{0}:{1}" -f $kv.Key, ($i + 1))
+        }
+    }
+}
+Check "数值比较没有一侧带引号" ($mixedQuote.Count -eq 0) ($mixedQuote -join ', ')
+
 Section "8c. setup.bat 必须留下自己的日志"
 $setupTpl = (Get-BatSources)['build.sh:SHORTCUT_BAT']
 Check "取到 setup.bat 模板" ($setupTpl -and $setupTpl.Count -gt 0) "没取到"
@@ -422,6 +445,26 @@ foreach ($kv in (Get-BatSources).GetEnumerator()) {
     Check ("$($kv.Key) 的 echo 行没有裸管道") ($n -eq 0) "$n 处"
 }
 
+Section "8i. bat 代码页与入口一致性"
+foreach ($f in @('start-win.bat', 'stop-win.bat', 'upgrade-win.bat', 'uninstall-win.bat', 'install-win.bat', 'laragon-startup.bat', 'post-install.bat')) {
+    $p = Join-Path $repo $f
+    if (-not (Test-Path $p)) { continue }
+    $batText = [System.IO.File]::ReadAllText($p)
+    Check ("$f 使用 chcp 936") ($batText -match 'chcp\s+936') "未找到 chcp 936"
+    Check ("$f 不含 chcp 65001") ($batText -notmatch 'chcp\s+65001') "仍含 65001"
+}
+$startup = Join-Path $repo 'laragon-startup.bat'
+if (Test-Path $startup) {
+    $st = [System.IO.File]::ReadAllText($startup)
+    Check "laragon-startup 转发 start-win.bat" ($st -match 'start-win\.bat') "未调用 start-win.bat"
+    Check "laragon-startup 不含 /dental" ($st -notmatch 'localhost/dental') "仍打开 /dental"
+}
+Check "install-win.ps1 无 File.WriteAllLines 调用" ($text -notmatch '\[System\.IO\.File\]::WriteAllLines') "仍用 .NET 4 API"
+Check "install-win.ps1 保留 APP_KEY" ($text -match 'APP_KEY preserved') "缺少保留路径"
+Check "install-win.ps1 生成随机 DB 密码" ($text -match 'New-RandomDbPassword') "缺少随机密码"
+Check "install-win.ps1 经 SQL 文件设密" ($text -match 'Invoke-MySqlSqlText') "密码仍可能拼进 -e"
+Check "MySQL 服务会刷新重建" ($text -match 'removed for refresh') "仍跳过已存在服务"
+
 Section "8g. 需要 cmd 解析的命令必须走 Invoke-CmdLine"
 # PowerShell 的原生参数数组会吞掉参数值里的内层引号。
 # sc.exe 的 binPath= 和 schtasks 的 /tr 都是「一个参数里再带引号」的形式，
@@ -433,6 +476,18 @@ Check "LogCleanup 任务指向独立 .bat" ($text -match 'clean-logs\.bat') "仍
 Check "LogCleanup 的 schtasks 走 Invoke-CmdLine" ($text -match 'Invoke-CmdLine -CommandLine \(.schtasks\.exe /create /tn "DentalClinic-LogCleanup"') "仍走参数数组"
 Check "route:list 不再传 --compact（Laravel 11 无此选项）" `
       (-not ($text -match "'route:list', '--compact'")) "仍在传 --compact"
+
+Section "8g2. 内置库 root 密码收紧必须覆盖全部 host 并回连验证"
+# 只改 'root'@'localhost' 会导致两种结局二选一：装机在导 schema 时 ERROR 1045，
+# 或者其余 host 仍可空密直连、加固形同虚设。判据是「枚举 + 回连验证」。
+Check "枚举实际存在的 root host（不写死单个 host）" `
+      ($text -match "SELECT Host FROM mysql\.user WHERE User='root'") "仍在猜 host"
+Check "设密后用新密码回连验证" `
+      ($text -match '(?s)\$DB_ADMIN_PASS = \$DB_PASS.*?\$verifyExit = Invoke-MySqlQuiet') "没有回连验证"
+Check "回连失败会 Fail-Step（不静默继续）" `
+      ($text -match '(?s)\$verifyExit -ne 0\) \{\s*\r?\n\s*Fail-Step') "失败未阻断"
+Check "非本机 host 的残留 root 账号会被删除" ($text -match "DROP USER IF EXISTS 'root'@'") "未清理残留账号"
+Check "随机密码用拒绝采样（无取模偏置）" ($text -match '256 % \$chars\.Length') "仍是直接取模"
 
 Section "8h. OCR requirements 必须能被 pip 在 GBK 区域下解码"
 # pip 的 auto_decode 只认前两行的 coding 声明或 BOM，否则按系统区域编码解码。

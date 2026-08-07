@@ -86,7 +86,9 @@ fi
 # 路径里含 ! 时延迟展开会把它吃掉，所以模板是刻意禁用的。
 # 在这种模板里写 !RUNTIME_DIR_NAME! 会变成字面量，直接把包做废。
 if grep -q 'DisableDelayedExpansion' "$setup_template"; then
-    if grep -qE '![A-Z_]+!' "$setup_template"; then
+    # 只看可执行行：REM 注释里提到 !VAR! 是无害的，扫进去会误报
+    # （2026-08-07 就误报过一次，注释里解释延迟展开而已）。
+    if grep -vE '^[[:space:]]*(REM|::)' "$setup_template" | grep -qE '![A-Z_]+!'; then
         fail 'setup.bat 声明了 DisableDelayedExpansion 却使用了 !VAR! 延迟展开语法'
     fi
 fi

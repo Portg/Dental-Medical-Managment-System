@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 setlocal enabledelayedexpansion
 title 牙科诊所管理系统 - 停止服务
 
@@ -202,8 +202,8 @@ if !ERRORLEVEL! neq 0 (
 )
 set /a "WAIT+=2"
 if !WAIT! geq %GRACEFUL_TIMEOUT% (
-    echo        优雅关闭超时，强制终止 Nginx...
-    taskkill /IM nginx.exe /F >nul 2>&1
+    echo        优雅关闭超时，强制终止本安装目录下的 Nginx...
+    call :kill_by_cmdline nginx.exe "%INSTALL_DIR%"
     echo        Nginx 已强制停止                              [OK]
     set "NGINX_STOPPED=1"
     goto :nginx_done
@@ -214,11 +214,10 @@ echo        Nginx 未运行                                    [跳过]
 
 :nginx_done
 
-REM ─ 停止 PHP-CGI（FastCGI 模式）─
-tasklist /FI "IMAGENAME eq php-cgi.exe" 2>nul | findstr /I "php-cgi.exe" >nul
-if !ERRORLEVEL! equ 0 (
-    echo        终止 PHP-CGI 进程...
-    taskkill /IM php-cgi.exe /F >nul 2>&1
+REM ─ 停止 PHP-CGI（仅本安装目录下的进程，避免误伤同机其他栈）─
+set "PHPCGI_STOPPED=0"
+call :kill_by_cmdline php-cgi.exe "%INSTALL_DIR%"
+if "!KILL_HIT!"=="1" (
     set "PHPCGI_STOPPED=1"
     echo        PHP-CGI 已停止                                [OK]
 )
@@ -373,3 +372,22 @@ echo.
 
 if not "%BACKGROUND_MODE%"=="1" pause
 endlocal
+exit /b 0
+
+REM ── 仅终止 CommandLine 含指定安装目录的进程（WMI LIKE 需转义反斜杠）──
+:kill_by_cmdline
+set "KILL_HIT=0"
+set "KILL_IMG=%~1"
+set "KILL_DIR=%~2"
+if "%KILL_DIR%"=="" goto :eof
+set "KILL_LIKE=%KILL_DIR:\=\\%"
+REM 不用 /value + delims== ：那样 tokens=2 会把行尾的 CR 一起吃进去
+REM （wmic 的输出带 CR），taskkill /PID 拿到 "1234<CR>" 会失败。
+REM 表格格式下 PID 后面跟空格，tokens=* 配 findstr /R "^[0-9]" 取到的是干净数字。
+for /f "usebackq tokens=1" %%P in (`wmic process where "name='%KILL_IMG%' and CommandLine like '%%%KILL_LIKE%%%'" get ProcessId 2^>nul ^| findstr /R "^[0-9][0-9]*"`) do (
+    if not "%%P"=="" (
+        taskkill /PID %%P /F >nul 2>&1
+        set "KILL_HIT=1"
+    )
+)
+goto :eof

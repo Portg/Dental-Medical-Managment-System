@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 setlocal enabledelayedexpansion
 title 牙科诊所管理系统 - 启动服务
 
@@ -137,7 +137,7 @@ if not exist "%PROJECT_DIR%\artisan" (
 )
 
 if not defined PHP_EXE (
-    echo  [错误] 未找到 PHP，请安装 PHP 7.4（Win7 版）或 Laragon
+    echo  [错误] 未找到 PHP，请确认本安装包内置 PHP 8.2 已正确解压
     goto :error
 )
 

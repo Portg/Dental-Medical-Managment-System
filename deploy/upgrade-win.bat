@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 setlocal enabledelayedexpansion
 title 牙科诊所管理系统 - 升级工具
 
@@ -153,7 +153,7 @@ if not exist "%INSTALL_DIR%" (
 if not exist "%PROJECT_DIR%\artisan" (
     echo  [错误] 项目文件不完整，未找到 artisan
     echo         期望路径: %PROJECT_DIR%\artisan
-    echo         如果这是首次安装，请运行 post-install.bat
+    echo         如果这是首次安装，请运行 setup.bat 或 install-win.bat
     goto :abort_no_rollback
 )
 if not defined PHP (

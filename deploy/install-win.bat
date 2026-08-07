@@ -20,6 +20,7 @@ REM ═════════════════════════�
 set "UNATTENDED=0"
 set "SELFTEST=0"
 set "PS_ARGS="
+set "ORIG_ARGS=%*"
 
 :parse_args
 if "%~1"=="" goto :args_done
@@ -48,6 +49,34 @@ if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>&1
 set "PREREQ_LOG=%LOG_DIR%\prereq.log"
 
 call :log "===== install-win.bat 启动 (unattended=%UNATTENDED%) ====="
+
+REM ═══════════════════════════════════════════════════════════════
+REM  管理员权限：install-win.ps1 必须管理员。非 unattended 时尝试 UAC 提升。
+REM  Inno 以 PrivilegesRequired=admin 调用时已是提升进程，net session 会成功。
+REM ═══════════════════════════════════════════════════════════════
+net session >nul 2>&1
+if errorlevel 1 (
+    if "%UNATTENDED%"=="1" (
+        call :log "[ERROR] 需要管理员权限（unattended 模式无法弹出 UAC）"
+        echo.
+        echo  安装需要管理员权限。请右键「以管理员身份运行」后重试。
+        echo.
+        exit /b 1
+    )
+    if "%SELFTEST%"=="1" goto :after_admin_check
+    call :log "当前非管理员，请求 UAC 提升..."
+    echo  需要管理员权限，请在 UAC 提示中选择「是」...
+    "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -LiteralPath '%~f0' -Verb RunAs -ArgumentList '%ORIG_ARGS%' -Wait"
+    set "ELEV_EXIT=!ERRORLEVEL!"
+    if not "!ELEV_EXIT!"=="0" if not "!ELEV_EXIT!"=="1" (
+        echo.
+        echo  无法自动提升。请右键本脚本，选择「以管理员身份运行」。
+        echo.
+        exit /b 1
+    )
+    exit /b !ELEV_EXIT!
+)
+:after_admin_check
 
 if not exist "%PS_EXE%" (
     call :log "[ERROR] PowerShell not found: %PS_EXE%"

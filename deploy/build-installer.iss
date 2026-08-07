@@ -14,7 +14,10 @@
   #define MyAppVersion "1.0.0"
 #endif
 #define MyAppPublisher "Dental Clinic"
-#define MyAppURL "http://localhost/dental"
+; 本 .iss 面向 build.sh --runtime laragon（默认）产出的包：
+; 项目代码装到 {app}\laragon\www\dental，运行时在 {app}\laragon。
+; --runtime xampp 的 ZIP 包请用 setup.bat 安装，不要用本 Inno 脚本。
+#define MyAppURL "http://localhost"
 
 [Setup]
 AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
@@ -61,6 +64,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopShortcut}"; GroupDescription
 ; 项目代码（由 build.sh --target win 构建）
 ; 排除 laragon / vc_redist，它们属于运行环境与前置安装包，
 ; 各有独立的 DestDir，不该被复制进项目目录。
+; DestDir 固定为 laragon\www\dental —— 本 .iss 仅支持 --runtime laragon（默认）全量包。
+; --runtime xampp 请用 ZIP + setup.bat，不要用本 Inno 脚本。
 Source: "dist\*"; DestDir: "{app}\laragon\www\dental"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.bat,*.sh,ocr-wheels,laragon,vc_redist.x64.exe,python-installer.exe"
 
 ; ⚠ 这些运行时目录**不得**再加 Check: DirExists(ExpandConstant('{src}\dist\...'))。

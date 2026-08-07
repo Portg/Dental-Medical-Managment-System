@@ -206,6 +206,34 @@ function Read-PlainTextPassword {
 
 # mysql.exe 支持 MYSQL_PWD。用临时环境变量传递密码，避免密码出现在
 # 命令行、进程列表和异常日志中；命令结束后立即恢复原环境。
+# 与 Invoke-MySqlQuiet 同样用 MYSQL_PWD 传密码，但需要**读回输出**。
+# 用于枚举 root 账号的 host —— 只有查得到实际有哪些账号，才能保证
+# 「收紧 root」不漏 host（见 Configure database user 那一步的注释）。
+function Invoke-MySqlCapture {
+    param(
+        [string]$FilePath,
+        [string[]]$Arguments = @(),
+        [string]$Password = ""
+    )
+
+    $hadOldPassword = Test-Path Env:MYSQL_PWD
+    $oldPassword = $env:MYSQL_PWD
+    try {
+        if ([string]::IsNullOrEmpty($Password)) {
+            Remove-Item Env:MYSQL_PWD -ErrorAction SilentlyContinue
+        } else {
+            $env:MYSQL_PWD = $Password
+        }
+        return (Invoke-NativeCapture -FilePath $FilePath -Arguments $Arguments)
+    } finally {
+        if ($hadOldPassword) {
+            $env:MYSQL_PWD = $oldPassword
+        } else {
+            Remove-Item Env:MYSQL_PWD -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Invoke-MySqlQuiet {
     param(
         [string]$FilePath,
@@ -400,8 +428,19 @@ function Set-IniValue {
         $updated.Add($Key + '=' + $Value)
     }
 
+    # 带 Encoding 的多行写入 API是 .NET 4+；纯净 Win7 只有 CLR 2 / .NET 3.5。
+    # File.WriteAllText 带 Encoding 自 .NET 2.0 起可用。
+    Write-Utf8NoBomFile -Path $Path -Lines $updated
+}
+
+function Write-Utf8NoBomFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        $Lines
+    )
     $utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
-    [System.IO.File]::WriteAllLines($Path, $updated, $utf8NoBom)
+    $content = (@($Lines) -join [Environment]::NewLine) + [Environment]::NewLine
+    [System.IO.File]::WriteAllText($Path, $content, $utf8NoBom)
 }
 
 function Get-FirstDirectoryMatch {
@@ -544,8 +583,7 @@ function Ensure-PhpIniForBundledRuntime {
         $updated.Add('extension_dir = "' + $extensionDir + '"')
     }
 
-    $utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
-    [System.IO.File]::WriteAllLines($phpIni, $updated, $utf8NoBom)
+    Write-Utf8NoBomFile -Path $phpIni -Lines $updated
 }
 
 # ── PHP 扩展 ─────────────────────────────────────────────────────────
@@ -638,8 +676,7 @@ function Ensure-PhpExtensions {
             $out.Add('; 由 install-win.ps1 追加（php.ini 里没有对应的注释行可取消注释）')
             foreach ($a in $appended) { $out.Add($a) }
         }
-        $utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
-        [System.IO.File]::WriteAllLines($phpIni, $out, $utf8NoBom)
+        Write-Utf8NoBomFile -Path $phpIni -Lines $out
     }
 
     return @{ Enabled = $enabled.ToArray(); MissingDll = $missingDll.ToArray() }
@@ -915,7 +952,57 @@ function Ensure-Admin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Fail-Step "Administrator privileges are required. Please run this script as Administrator."
+        Fail-Step "需要管理员权限。请右键「以管理员身份运行」setup.bat 或 install-win.bat 后重试。"
+    }
+}
+
+function New-RandomDbPassword {
+    # 避免易混淆字符与 mysql -e / .env 解析敏感字符
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+    $rng = New-Object System.Security.Cryptography.RNGCryptoServiceProvider
+    $sb = New-Object System.Text.StringBuilder 20
+    # 取模会有偏置（256 % 57 != 0，前 28 个字符出现概率偏高），改用拒绝采样：
+    # 只接受落在 [0, limit) 的字节，limit 是 256 对字符表长度取整后的最大整数倍。
+    $limit = 256 - (256 % $chars.Length)
+    $one = New-Object byte[] 1
+    while ($sb.Length -lt 20) {
+        $rng.GetBytes($one)
+        if ([int]$one[0] -ge $limit) { continue }
+        [void]$sb.Append($chars[[int]($one[0] % $chars.Length)])
+    }
+    return $sb.ToString()
+}
+
+function Escape-MySqlString {
+    param([string]$Value)
+    if ($null -eq $Value) { return '' }
+    return (($Value -replace '\\', '\\') -replace "'", "''")
+}
+
+function Invoke-MySqlSqlText {
+    param(
+        [string]$FilePath,
+        [string[]]$ConnArgs,
+        [string]$Password,
+        [string]$SqlText
+    )
+    $tmp = Join-Path $env:TEMP ('dental-mysql-' + [Guid]::NewGuid().ToString('N') + '.sql')
+    try {
+        $utf8NoBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
+        [System.IO.File]::WriteAllText($tmp, $SqlText, $utf8NoBom)
+        $argLine = ''
+        foreach ($a in $ConnArgs) {
+            if ($argLine.Length -gt 0) { $argLine += ' ' }
+            if ($a -match '[\s"]') {
+                $argLine += '"' + ($a -replace '"', '\"') + '"'
+            } else {
+                $argLine += $a
+            }
+        }
+        $cmd = '"' + $FilePath + '" ' + $argLine + ' < "' + $tmp + '"'
+        return (Invoke-MySqlCmdLine -CommandLine $cmd -Password $Password)
+    } finally {
+        Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -971,7 +1058,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260807-pipes-svc-ocr"
+$script:ScriptRev = "20260807-root-hosts-uac"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1580,16 +1667,111 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     $mysqlConnArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_USER)
     if ($USE_EXISTING_MYSQL -and $DB_USER -eq $DB_ADMIN_USER) {
         Write-Host ("        Using existing user ...... {0}" -f $DB_USER)
+    } elseif (-not $USE_EXISTING_MYSQL -and [string]::IsNullOrEmpty($DB_PASS)) {
+        # 内置库默认生成随机 root 密码写入 .env，避免本机任意进程空密直连
+        # ── 收紧内置库的 root：给**所有**本机 root 账号设同一个随机密码 ──
+        #
+        # 只改 'root'@'localhost' 是不够的。XAMPP 随包的权限表里 root 有四个
+        # host，全部全权限、全部空密码（从 mysql\data\mysql\global_priv 里
+        # 实测得到）：localhost / 127.0.0.1 / ::1 / <XAMPP 打包机的主机名>。
+        # 而两个 my.ini 都没有 skip-name-resolve，127.0.0.1 的 TCP 连接会做
+        # 反向解析，既可能命中 root@localhost 也可能命中 root@127.0.0.1 ——
+        # 两者都是「最具体」host，优先级由实现决定。于是只改 localhost 时：
+        #   命中 127.0.0.1（仍空密码）→ 客户端送了密码就是 ERROR 1045，
+        #                              装机死在后面导 schema 那一步；
+        #   命中 localhost（已设密码）→ 装机能过，但其余 host 仍可空密直连，
+        #                              加固形同虚设。
+        # 所以这里不猜 host，而是先查出实际有哪些 root 账号再逐个处理，
+        # 最后用新密码**实际回连一次**验证 —— 有这道验证就不会漏 host。
+        $DB_PASS = New-RandomDbPassword
+        $DB_USER = 'root'
+        $mysqlConnArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', 'root')
+        $escapedPass = Escape-MySqlString $DB_PASS
+
+        $hostProbe = Invoke-MySqlCapture -FilePath $MYSQL_EXE `
+                        -Arguments ($rootConnArgs + @('-N', '-B', '-e', "SELECT Host FROM mysql.user WHERE User='root';")) `
+                        -Password $DB_ADMIN_PASS
+        $rootHosts = @()
+        if ($hostProbe.ExitCode -eq 0) {
+            foreach ($line in ($hostProbe.Output -split '\r?\n')) {
+                $h = "$line".Trim()
+                if ($h) { $rootHosts += $h }
+            }
+        }
+        # 查不到就退回三个标准本机 host（比只改 localhost 仍然安全得多）
+        if ($rootHosts.Count -eq 0) {
+            Write-Host "        [警告] 无法枚举 root 账号，按标准本机 host 处理" -ForegroundColor Yellow
+            $rootHosts = @('localhost', '127.0.0.1', '::1')
+        }
+
+        # 本机 host 设密码；其余（打包机主机名残留）直接删掉 —— 那种账号
+        # 在诊所机器上永远解析不到，留着只是个全权限空密的死账号。
+        $localHosts = @('localhost', '127.0.0.1', '::1')
+        $stmts = @()
+        $droppedHosts = @()
+        foreach ($h in $rootHosts) {
+            $eh = Escape-MySqlString $h
+            if ($localHosts -contains $h.ToLower()) {
+                # IF EXISTS：MariaDB 10.1.3+ / MySQL 5.7.6+ 都支持，
+                # 账号不存在时不会让整批 SQL 失败。
+                $stmts += ("ALTER USER IF EXISTS 'root'@'" + $eh + "' IDENTIFIED BY '" + $escapedPass + "';")
+            } else {
+                $stmts += ("DROP USER IF EXISTS 'root'@'" + $eh + "';")
+                $droppedHosts += $h
+            }
+        }
+        $stmts += 'FLUSH PRIVILEGES;'
+        $setPassExit = Invoke-MySqlSqlText -FilePath $MYSQL_EXE -ConnArgs $rootConnArgs -Password $DB_ADMIN_PASS -SqlText ($stmts -join [Environment]::NewLine)
+
+        if ($setPassExit -ne 0) {
+            # 老版本回退：没有 ALTER USER IF EXISTS 时用 SET PASSWORD FOR。
+            # 它不支持 IF EXISTS，所以逐条执行、各自容错。
+            $anySet = $false
+            foreach ($h in $rootHosts) {
+                if (-not ($localHosts -contains $h.ToLower())) { continue }
+                $eh = Escape-MySqlString $h
+                $legacySql = "SET PASSWORD FOR 'root'@'" + $eh + "' = PASSWORD('" + $escapedPass + "');"
+                if ((Invoke-MySqlSqlText -FilePath $MYSQL_EXE -ConnArgs $rootConnArgs -Password $DB_ADMIN_PASS -SqlText $legacySql) -eq 0) {
+                    $anySet = $true
+                }
+            }
+            if ($anySet) {
+                Invoke-MySqlSqlText -FilePath $MYSQL_EXE -ConnArgs $rootConnArgs -Password $DB_ADMIN_PASS -SqlText 'FLUSH PRIVILEGES;' | Out-Null
+                $setPassExit = 0
+            }
+        }
+        if ($setPassExit -ne 0) {
+            Fail-Step "设置 MySQL root 密码失败。mysql 的输出见安装日志。"
+        }
+
+        $DB_ADMIN_PASS = $DB_PASS
+        # 用新密码实际回连一次。不做这步就无法区分「密码设好了」和
+        # 「设在了一个连接命中不到的 host 上」—— 后者会一路装到导 schema 才炸。
+        $verifyExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password $DB_ADMIN_PASS
+        if ($verifyExit -ne 0) {
+            Fail-Step ("root 密码已设置，但用新密码连不上 {0}:{1}。" -f $DB_HOST, $DB_PORT + [Environment]::NewLine +
+                       ("已处理的 root 账号 host: {0}" -f ($rootHosts -join ', ')) + [Environment]::NewLine +
+                       "通常意味着还存在别的 root@host 未被覆盖，或该账号用了非密码认证插件。")
+        }
+        Write-Host ("        Root password ........... generated for {0} (saved to .env)" -f ($rootHosts -join ', '))
+        if ($droppedHosts.Count -gt 0) {
+            Write-Host ("        Stale root accounts ..... dropped ({0})" -f ($droppedHosts -join ', '))
+        }
     } elseif ([string]::IsNullOrEmpty($DB_PASS)) {
         $DB_USER = "root"
         $mysqlConnArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', 'root')
         Write-Host "        Using root user without password"
     } else {
-        $userExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', "CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';")) -Password $DB_ADMIN_PASS
+        $escapedPass = Escape-MySqlString $DB_PASS
+        $escapedUser = Escape-MySqlString $DB_USER
+        $createSql = "CREATE USER IF NOT EXISTS '$escapedUser'@'localhost' IDENTIFIED BY '$escapedPass';"
+        $userExit = Invoke-MySqlSqlText -FilePath $MYSQL_EXE -ConnArgs $rootConnArgs -Password $DB_ADMIN_PASS -SqlText $createSql
         if ($userExit -ne 0) {
-            $userExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', "ALTER USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';")) -Password $DB_ADMIN_PASS
+            $alterSql = "ALTER USER '$escapedUser'@'localhost' IDENTIFIED BY '$escapedPass';"
+            $userExit = Invoke-MySqlSqlText -FilePath $MYSQL_EXE -ConnArgs $rootConnArgs -Password $DB_ADMIN_PASS -SqlText $alterSql
         }
-        $grantExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', "GRANT ALL PRIVILEGES ON ``$DB_NAME``.* TO '$DB_USER'@'localhost'; FLUSH PRIVILEGES;")) -Password $DB_ADMIN_PASS
+        $grantSql = "GRANT ALL PRIVILEGES ON ``$DB_NAME``.* TO '$escapedUser'@'localhost'; FLUSH PRIVILEGES;"
+        $grantExit = Invoke-MySqlSqlText -FilePath $MYSQL_EXE -ConnArgs $rootConnArgs -Password $DB_ADMIN_PASS -SqlText $grantSql
         if ($userExit -ne 0 -or $grantExit -ne 0) {
             if ($USE_EXISTING_MYSQL) {
                 $DB_USER = $DB_ADMIN_USER
@@ -1597,10 +1779,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                 $mysqlConnArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_ADMIN_USER)
                 Write-Host "        Grant failed; falling back to the existing MySQL account"
             } else {
-                $DB_USER = "root"
-                $DB_PASS = ""
-                $mysqlConnArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', 'root')
-                Write-Host "        Grant failed; falling back to root user"
+                Fail-Step "Failed to create dedicated MySQL user. Refusing to fall back to empty-password root."
             }
         } else {
             Write-Host ("        Dedicated user created .. {0}" -f $DB_USER)
@@ -1634,7 +1813,24 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             $env:DENTAL_DB_PASSWORD = $DB_PASS
             $passwordSentinel = '__DENTAL_DB_PASSWORD_FROM_ENV__'
         }
-        if (Test-Path $ENV_TEMPLATE) {
+
+        # 已有 .env（尤其含 APP_KEY）时只合并连接参数，禁止整文件覆盖导致换 key。
+        $existingEnvHasKey = $false
+        if (Test-Path $ENV_TARGET) {
+            $existingEnvHasKey = [bool](Select-String -Path $ENV_TARGET -Pattern '^APP_KEY=base64:' -Quiet -ErrorAction SilentlyContinue)
+        }
+
+        if ((Test-Path $ENV_TARGET) -and ($existingEnvHasKey -or $SKIP_SCHEMA_IMPORT)) {
+            Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'install_update_env.php'), $ENV_TARGET, $APP_URL, $DB_HOST, $DB_PORT, $DB_NAME, $DB_USER, $passwordSentinel) | Out-Null
+            if ((Test-Path $ENV_TEMPLATE) -and (Test-Path (Join-Path $HELPER_DIR 'merge_missing_env.php'))) {
+                # 模板含 {{占位符}}，不能直接 merge；仅在无模板占位的 .env.example 场景才有意义。
+                # 这里只保证 OCR_PYTHON_PATH 等已有键被 set_env_value 更新。
+            }
+            if ($OCR_PYTHON_PATH -and (Test-Path (Join-Path $HELPER_DIR 'set_env_value.php'))) {
+                Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'set_env_value.php'), $ENV_TARGET, 'OCR_PYTHON_PATH', $OCR_PYTHON_PATH) | Out-Null
+            }
+            Write-Host "        .env updated (APP_KEY preserved)"
+        } elseif (Test-Path $ENV_TEMPLATE) {
             Invoke-External -FilePath $PHP_EXE -Arguments @((Join-Path $HELPER_DIR 'install_render_env.php'), $ENV_TEMPLATE, $ENV_TARGET, $DB_HOST, $DB_PORT, $DB_NAME, $DB_USER, $passwordSentinel, $APP_URL, $OCR_PYTHON_PATH) | Out-Null
             Write-Host "        .env created from .env.deploy"
         } else {
@@ -2057,45 +2253,58 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         $mysqlIni = $DB_CONFIG_FILE
         $serviceQueryExit = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('query', $svcName) -Probe
         if ($serviceQueryExit -eq 0) {
-            Write-Host "        Service already exists ... skipped"
-        } else {
-            $nssmExe = $null
-            if (Test-Path (Join-Path $INSTALL_DIR 'nssm.exe')) { $nssmExe = Join-Path $INSTALL_DIR 'nssm.exe' }
-            elseif (Test-Path (Join-Path $LARAGON_DIR 'bin\nssm\nssm.exe')) { $nssmExe = Join-Path $LARAGON_DIR 'bin\nssm\nssm.exe' }
-            elseif (Test-CommandExists 'nssm') { $nssmExe = 'nssm' }
+            # 与 Apache 对称：已存在则停掉并删除，按当前 my.ini / basedir 重建，
+            # 避免重装换端口或安装目录后仍指向旧 binPath。
+            Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('stop', $svcName) -Probe | Out-Null
+            Start-Sleep -Seconds 2
+            $nssmExeExisting = $null
+            if (Test-Path (Join-Path $INSTALL_DIR 'nssm.exe')) { $nssmExeExisting = Join-Path $INSTALL_DIR 'nssm.exe' }
+            elseif (Test-Path (Join-Path $LARAGON_DIR 'bin\nssm\nssm.exe')) { $nssmExeExisting = Join-Path $LARAGON_DIR 'bin\nssm\nssm.exe' }
+            elseif (Test-CommandExists 'nssm') { $nssmExeExisting = 'nssm' }
+            if ($nssmExeExisting) {
+                Invoke-NativeQuiet -FilePath $nssmExeExisting -Arguments @('remove', $svcName, 'confirm') -Probe | Out-Null
+            }
+            Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('delete', $svcName) -Probe | Out-Null
+            Start-Sleep -Seconds 1
+            Write-Host "        Old MySQL service ....... removed for refresh"
+        }
 
-            if ($nssmExe) {
-                $serviceCreateExit = Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('install', $svcName, $MYSQLD_EXE, "--defaults-file=$mysqlIni")
-                if ($serviceCreateExit -eq 0) {
-                    Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('set', $svcName, 'DisplayName', 'DentalClinic MySQL') | Out-Null
-                    Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('set', $svcName, 'Start', 'SERVICE_AUTO_START') | Out-Null
-                    Write-Host "        Service registration .... OK (NSSM)"
-                } else {
-                    Write-Host "        Service registration .... warning"
-                }
+        $nssmExe = $null
+        if (Test-Path (Join-Path $INSTALL_DIR 'nssm.exe')) { $nssmExe = Join-Path $INSTALL_DIR 'nssm.exe' }
+        elseif (Test-Path (Join-Path $LARAGON_DIR 'bin\nssm\nssm.exe')) { $nssmExe = Join-Path $LARAGON_DIR 'bin\nssm\nssm.exe' }
+        elseif (Test-CommandExists 'nssm') { $nssmExe = 'nssm' }
+
+        if ($nssmExe) {
+            $serviceCreateExit = Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('install', $svcName, $MYSQLD_EXE, "--defaults-file=$mysqlIni")
+            if ($serviceCreateExit -eq 0) {
+                Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('set', $svcName, 'DisplayName', 'DentalClinic MySQL') | Out-Null
+                Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('set', $svcName, 'Start', 'SERVICE_AUTO_START') | Out-Null
+                Write-Host "        Service registration .... OK (NSSM)"
             } else {
-                # sc.exe 的 binPath= 必须是**一个**参数，值里的引号要转义。
-                # 之前经 PowerShell 的原生参数数组传，内层引号会被吞掉，sc 把
-                # --defaults-file 当成独立选项，报 1639（参数错误）并打出用法帮助。
-                # 2026-08-06 23:24 那次装机就没能注册上 DentalClinicMySQL ——
-                # 安装当场看不出问题（mysqld 已被直接拉起），但目标机重启后
-                # 数据库不会自启，start-win.bat 的 net start 也无从下手。
-                # 改走 cmd /c，用 cmd 自己的解析规则，引号用 \" 转义。
-                # DisplayName 的值带空格，同样必须加引号。
-                $binPathInner = '"' + $MYSQLD_EXE + '"'
-                if (Test-Path $mysqlIni) {
-                    $binPathInner += ' --defaults-file="' + $mysqlIni + '"'
-                }
-                $scCmdLine = 'sc.exe create ' + $svcName +
-                             ' binPath= "' + ($binPathInner -replace '"', '\"') + '"' +
-                             ' DisplayName= "DentalClinic MySQL" start= auto'
-                $serviceCreateExit = Invoke-CmdLine -CommandLine $scCmdLine
-                if ($serviceCreateExit -eq 0) {
-                    Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('description', $svcName, 'DentalClinic MySQL database service') | Out-Null
-                    Write-Host "        Service registration .... OK (sc.exe)"
-                } else {
-                    Write-Host "        Service registration .... warning"
-                }
+                Write-Host "        Service registration .... warning"
+            }
+        } else {
+            # sc.exe 的 binPath= 必须是**一个**参数，值里的引号要转义。
+            # 之前经 PowerShell 的原生参数数组传，内层引号会被吞掉，sc 把
+            # --defaults-file 当成独立选项，报 1639（参数错误）并打出用法帮助。
+            # 2026-08-06 23:24 那次装机就没能注册上 DentalClinicMySQL ——
+            # 安装当场看不出问题（mysqld 已被直接拉起），但目标机重启后
+            # 数据库不会自启，start-win.bat 的 net start 也无从下手。
+            # 改走 cmd /c，用 cmd 自己的解析规则，引号用 \" 转义。
+            # DisplayName 的值带空格，同样必须加引号。
+            $binPathInner = '"' + $MYSQLD_EXE + '"'
+            if (Test-Path $mysqlIni) {
+                $binPathInner += ' --defaults-file="' + $mysqlIni + '"'
+            }
+            $scCmdLine = 'sc.exe create ' + $svcName +
+                         ' binPath= "' + ($binPathInner -replace '"', '\"') + '"' +
+                         ' DisplayName= "DentalClinic MySQL" start= auto'
+            $serviceCreateExit = Invoke-CmdLine -CommandLine $scCmdLine
+            if ($serviceCreateExit -eq 0) {
+                Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('description', $svcName, 'DentalClinic MySQL database service') | Out-Null
+                Write-Host "        Service registration .... OK (sc.exe)"
+            } else {
+                Write-Host "        Service registration .... warning"
             }
         }
     }
