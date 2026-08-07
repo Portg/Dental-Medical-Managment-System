@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+# 这一行必须留在最前面：pip 前两行没 coding 声明也没 BOM 时会按系统
+# 区域编码解码，中文 Windows 上是 GBK，下面的中文注释会让它抛
+# UnicodeDecodeError。
 # ═══════════════════════════════════════════════════════════════════
 #  OCR 依赖 — Windows 7 版（win7/deploy-only 分支）
 #

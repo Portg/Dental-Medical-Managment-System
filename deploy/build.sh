@@ -947,6 +947,7 @@ if [[ "$UPGRADE" == true ]]; then
     )
 fi
 
+
 rsync -a \
     "${RSYNC_EXCLUDES[@]}" \
     "$PROJECT_ROOT/" \
@@ -1609,7 +1610,35 @@ if [[ -f "$OCR_REQUIREMENTS" ]]; then
         [[ -f "$OCR_SCRIPTS_DIR/$required" ]] || fatal "OCR 脚本缺失: scripts/$required"
     done
 
-    if [[ "$TARGET" == "win" ]] && [[ "$SKIP_OCR" == false ]]; then
+    # 锁文件必须能被 pip 在**中文 Windows（GBK 区域）**下读出来。
+    # pip 的 auto_decode 只认前两行的 coding 声明或 BOM，否则按区域编码解码；
+    # 非 ASCII 且无声明 = 目标机上 UnicodeDecodeError，离线安装整个失败。
+    for lock in "$OCR_SCRIPTS_DIR/requirements-lock.txt" "$OCR_SCRIPTS_DIR/requirements.txt"; do
+        [[ -f "$lock" ]] || continue
+        if ! python3 - "$lock" <<'LOCKCHK'
+import sys, codecs, re
+p = sys.argv[1]
+data = open(p, 'rb').read()
+BOMS = [(codecs.BOM_UTF8, 'utf-8'), (codecs.BOM_UTF16, 'utf-16'),
+        (codecs.BOM_UTF16_BE, 'utf-16-be'), (codecs.BOM_UTF16_LE, 'utf-16-le')]
+ENC = re.compile(rb"coding[:=]\s*([-\w.]+)")
+for bom, enc in BOMS:
+    if data.startswith(bom):
+        data[len(bom):].decode(enc); sys.exit(0)
+for line in data.split(b'\n')[:2]:
+    if line[0:1] == b'#' and ENC.search(line):
+        data.decode(ENC.search(line).groups()[0].decode('ascii')); sys.exit(0)
+data.decode('gbk')   # 模拟中文 Windows 的回退路径
+LOCKCHK
+        then
+            fatal "$(basename "$lock") 在 GBK 区域下无法被 pip 解码 —— 请把首行改成 '# -*- coding: utf-8 -*-' 或改为纯 ASCII"
+        fi
+    done
+    info "OCR requirements 文件可被 pip 在 GBK 区域下解码"
+
+    # 升级包不带 Python 安装器：upgrade-win.bat 全文不引用它（也不装 Python），
+    # 而它占 27MB。OCR 运行时由全量安装建立，升级只更新 scripts/ 里的 .py。
+    if [[ "$TARGET" == "win" ]] && [[ "$SKIP_OCR" == false ]] && [[ "$UPGRADE" == false ]]; then
         # Win7 版：Python 3.8.10 是官方最后一个提供 Windows 7 安装器的版本
         # （3.9 起最低要求 Windows 8.1），切勿升级。
         PYTHON_INSTALLER_URL="${PYTHON_DOWNLOAD_URL:-https://www.python.org/ftp/python/3.8.10/python-3.8.10-amd64.exe}"
@@ -1640,7 +1669,10 @@ if [[ -f "$OCR_REQUIREMENTS" ]]; then
     fi
 
     # OCR wheels 打包（默认打包，--skip-ocr 跳过）
-    if [[ "$SKIP_OCR" == true ]]; then
+    # 升级包同样不带：342MB，而 upgrade-win.bat 不跑 pip，带了也没人用。
+    if [[ "$UPGRADE" == true ]]; then
+        info "跳过 OCR wheels 打包（升级包不重建 OCR 运行时依赖）"
+    elif [[ "$SKIP_OCR" == true ]]; then
         info "跳过 OCR wheels 打包（--skip-ocr）"
     else
         OCR_WHEELS_DIR="$DIST_DIR/ocr-wheels"
@@ -1734,6 +1766,11 @@ for f in sorted(wheels_dir.iterdir()):
 if not pins:
     sys.exit(1)
 header = (
+    # 第一行必须是 coding 声明：pip 读 requirements 文件时，前两行没有
+    # coding 声明也没有 BOM 就回退到系统区域编码。中文 Windows 上那是 GBK，
+    # 下面的中文注释（UTF-8）会让 pip 抛 UnicodeDecodeError，离线安装全崩。
+    # 2026-08-06 那次装机的 OCR 就是这样失败的。
+    "# -*- coding: utf-8 -*-\n"
     "# OCR 依赖锁定文件 —— Windows 7 / Python 3.8.10 / win_amd64\n"
     "# 由 deploy/build.sh 在 pip download 成功后自动生成，请勿手工编辑。\n"
     "# 升级依赖：删除本文件与 deploy/.cache/ocr-wheels-win/ 后重新构建。\n"

@@ -105,6 +105,15 @@ foreach ($f in $funcs) { Invoke-Expression $f.Extent.Text }
 $sandbox = Join-Path ([System.IO.Path]::GetTempPath()) ("inst-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
 $root = $sandbox + '/C:\DentalClinic\xampp'
 $src = Join-Path $repo 'dist/xampp'
+# dist/ 可能是升级包的产物（--upgrade 不带运行时），此时这一节没有素材可测。
+# 必须显式说「跳过」而不是崩掉，也不能静默当成通过。
+$haveRuntime = (Test-Path (Join-Path $src 'php/php.ini'))
+if (-not $haveRuntime) {
+    Write-Host "  跳过  dist/ 里没有 xampp 运行时（当前是升级包构建产物）"
+    Write-Host "        需要全量构建产物才能测路径重写与扩展启用："
+    Write-Host "        ./deploy/build.sh --target win --runtime xampp --keep-dist"
+}
+if ($haveRuntime) {
 foreach ($rel in @('php', 'php/extras', 'mysql/bin', 'apache/conf/extra')) {
     New-Item -ItemType Directory -Path (Join-Path $root $rel) -Force | Out-Null
 }
@@ -146,6 +155,8 @@ Check "重装后自愈 (Changed=$($r3.Changed), 残留 $(Total-Work) 处)" ($r3.
 $bc = ([System.IO.File]::ReadAllText((Join-Path $root 'php\php.ini')) -split "`r?`n" | Where-Object { $_ -match '^\s*browscap\s*=' })
 Check "browscap 指向的文件真实存在" (Test-Path ($root + '\php\extras\browscap.ini')) "不存在"
 Check "browscap 是绝对路径" ($bc -like '*C:\DentalClinic\xampp\php\extras\browscap.ini"') "实际: $bc"
+
+}
 
 Section "7b. PHP 扩展启用（真的改一份 php.ini 副本）"
 # 2026-08-06 22:39 那次装机死在 [9/19] key:generate，真因是 XAMPP 的 php.ini
@@ -270,16 +281,12 @@ foreach ($kv in (Get-BatSources).GetEnumerator()) {
 }
 # 本次改动的两个模板必须干净；stop-win/start-win/uninstall-win 里的既有问题
 # 只报出来不当失败（属另一件事，不在这次范围内，避免顺手大改）。
-$isTemplate = { param($x) $x -like 'build.sh:*' }
-$tplErr   = @($errlvlInBlock | Where-Object { & $isTemplate $_ })
-$tplLabel = @($labelInBlock  | Where-Object { & $isTemplate $_ })
-Check "模板：括号块内没有读 %ERRORLEVEL%" ($tplErr.Count -eq 0) ($tplErr -join ', ')
-Check "模板：括号块内没有 :label" ($tplLabel.Count -eq 0) ($tplLabel -join ', ')
-$legacy = @(@($errlvlInBlock + $labelInBlock) | Where-Object { -not (& $isTemplate $_) })
-if ($legacy.Count -gt 0) {
-    Write-Host ("  注意  既有 .bat 里还有 " + $legacy.Count + " 处同类写法（本次未改，另行处理）:")
-    Write-Host ("        " + ($legacy -join ', '))
-}
+# 这两条以前对既有 .bat 只是「注意」不算失败。2026-08-06 之后升级为硬失败：
+# 那 5 处块内标签全在 stop-win.bat / start-win.bat 里，而这两个脚本因为横幅
+# 的裸管道从来没跑通过 —— 隐患一直被掩着。裸管道修好后它们开始真正执行，
+# 块内标签就会立刻变成实际故障，所以不能再放过。
+Check "括号块内没有读 %ERRORLEVEL%" ($errlvlInBlock.Count -eq 0) ($errlvlInBlock -join ', ')
+Check "括号块内没有 :label" ($labelInBlock.Count -eq 0) ($labelInBlock -join ', ')
 
 Section "8c. setup.bat 必须留下自己的日志"
 $setupTpl = (Get-BatSources)['build.sh:SHORTCUT_BAT']
@@ -323,6 +330,86 @@ Check "start-win.bat 的 MYSQL_INI 指向 xampp\mysql\my.ini（与 `$DB_CONFIG_F
       ($startBat -match 'MYSQL_INI=%XAMPP_DIR%\\mysql\\my\.ini' -and $psText -match 'DB_CONFIG_FILE\s*=\s*Join-Path \$XAMPP_DIR "mysql\\my\.ini"') "两处不一致"
 # xampp 用 mod_php，不该再去起 php-cgi
 Check "start-win.bat 在 xampp 下清空 PHP_CGI_EXE（mod_php 不需要）" ($startBat -match 'PHP_CGI_EXE=""|set "PHP_CGI_EXE="') "仍会尝试 php-cgi"
+
+Section "8e. 升级包路径（upgrade-win.bat）"
+$upgBat = [System.IO.File]::ReadAllText((Join-Path $repo 'upgrade-win.bat'))
+Check "upgrade-win.bat 有运行时形态判定" ($upgBat -match 'RUNTIME_FLAVOR=xampp') "没有，xampp 升级会报『未找到 artisan』"
+Check "upgrade-win.bat 的 PROJECT_DIR 按形态分流" `
+      ($upgBat -match 'RUNTIME_FLAVOR%"=="xampp" set "PROJECT_DIR=%XAMPP_DIR%\\htdocs\\dental') "没有分流"
+Check "upgrade-win.bat 在 xampp 下用扁平的 PHP/MySQL 路径" `
+      ($upgBat -match 'PHP_DIR=%XAMPP_DIR%\\php' -and $upgBat -match 'MYSQL_DIR=%XAMPP_DIR%\\mysql') "仍只按 laragon 布局探测"
+Check "部署脚本不被复制进项目目录" ($upgBat -match 'echo install-win\.ps1>>') "会污染 htdocs\dental"
+Check "升级会刷新 %INSTALL_DIR% 下的部署脚本" ($upgBat -match '刷新部署脚本') "脚本修复送不到目标机"
+# 三个脚本对形态的判据必须完全一致，否则会出现「装的是 xampp、升级当成 laragon」
+$flavorProbe = 'if exist "%XAMPP_DIR%\apache\bin\httpd.exe" set "RUNTIME_FLAVOR=xampp"'
+foreach ($f in @('start-win.bat', 'stop-win.bat', 'upgrade-win.bat')) {
+    $c = [System.IO.File]::ReadAllText((Join-Path $repo $f))
+    Check ("$f 用同一条形态判据") ($c.Contains($flavorProbe)) "判据不一致"
+}
+
+Section "8f. echo 行不得有裸管道（会中止整个批处理）"
+# 2026-08-06 23:19 的 setup.log：调 stop-win.bat 后只打出第一行横幅，接着
+# 「The syntax of the command is incorrect.」然后什么都没有了。原因是
+#   echo  |   牙科诊所管理系统 - 停止服务   |
+# 里的 | 是未转义的管道，行尾那个使右侧为空 → 语法错误 → cmd 中止批处理。
+# start/stop/uninstall/upgrade-win.bat 因此从来没跑通过。
+$INTENT_CMDS = @('findstr', 'find', 'more', 'sort', 'clip', 'nul', 'tasklist', 'wmic', 'ping')
+function Count-NakedPipes($lines) {
+    $naked = 0
+    foreach ($l in $lines) {
+        if (-not $l.Trim().ToLower().StartsWith('echo')) { continue }
+        for ($j = 0; $j -lt $l.Length; $j++) {
+            if ($l[$j] -ne '|') { continue }
+            if ($j -gt 0 -and $l[$j - 1] -eq '^') { continue }   # 已转义
+            $rest = $l.Substring($j + 1).TrimStart()
+            $word = ($rest -split ' ')[0].ToLower().TrimStart('/')
+            $isIntent = $false
+            foreach ($c in $INTENT_CMDS) { if ($word.StartsWith($c)) { $isIntent = $true; break } }
+            if (-not $isIntent) { $naked++ }
+        }
+    }
+    return $naked
+}
+foreach ($f in @('start-win.bat', 'stop-win.bat', 'uninstall-win.bat', 'upgrade-win.bat', 'install-win.bat')) {
+    $p = Join-Path $repo $f
+    if (-not (Test-Path $p)) { continue }
+    $n = Count-NakedPipes ([System.IO.File]::ReadAllLines($p))
+    Check ("$f 的 echo 行没有裸管道") ($n -eq 0) "$n 处"
+}
+foreach ($kv in (Get-BatSources).GetEnumerator()) {
+    if ($kv.Key -notlike 'build.sh:*') { continue }
+    $n = Count-NakedPipes $kv.Value
+    Check ("$($kv.Key) 的 echo 行没有裸管道") ($n -eq 0) "$n 处"
+}
+
+Section "8g. 需要 cmd 解析的命令必须走 Invoke-CmdLine"
+# PowerShell 的原生参数数组会吞掉参数值里的内层引号。
+# sc.exe 的 binPath= 和 schtasks 的 /tr 都是「一个参数里再带引号」的形式，
+# 直接经参数数组传会分别得到 1639 和「Invalid argument/option - '/c'」。
+Check "sc.exe create 走 Invoke-CmdLine" ($text -match 'Invoke-CmdLine -CommandLine \$scCmdLine') "仍走参数数组"
+Check "binPath 的内层引号被转义" ($text -match "binPathInner -replace") "没有转义"
+Check "DisplayName 的值加了引号" ($text -match 'DisplayName= "DentalClinic MySQL"') "带空格的值未加引号"
+Check "LogCleanup 任务指向独立 .bat" ($text -match 'clean-logs\.bat') "仍在 /tr 里套多层引号"
+Check "LogCleanup 的 schtasks 走 Invoke-CmdLine" ($text -match 'Invoke-CmdLine -CommandLine \(.schtasks\.exe /create /tn "DentalClinic-LogCleanup"') "仍走参数数组"
+Check "route:list 不再传 --compact（Laravel 11 无此选项）" `
+      (-not ($text -match "'route:list', '--compact'")) "仍在传 --compact"
+
+Section "8h. OCR requirements 必须能被 pip 在 GBK 区域下解码"
+# pip 的 auto_decode 只认前两行的 coding 声明或 BOM，否则按系统区域编码解码。
+# 中文 Windows 上那是 GBK，UTF-8 的中文注释会让它抛 UnicodeDecodeError，
+# 离线安装整个失败（2026-08-06 那次 OCR 就是这样降级的）。
+$gbk = [System.Text.Encoding]::GetEncoding(936)
+foreach ($rel in @('scripts/requirements-lock.txt', 'scripts/requirements.txt')) {
+    $p = Join-Path (Split-Path -Parent $repo) $rel
+    if (-not (Test-Path $p)) { continue }
+    $bytes = [System.IO.File]::ReadAllBytes($p)
+    $head = [System.Text.Encoding]::ASCII.GetString($bytes, 0, [Math]::Min(200, $bytes.Length))
+    $hasDecl = ($head -split "`n")[0..1] -match 'coding[:=]'
+    $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+    $pureAscii = -not (@($bytes | Where-Object { $_ -gt 127 }).Count -gt 0)
+    Check ("$rel 有 coding 声明/BOM 或纯 ASCII") ($hasDecl -or $hasBom -or $pureAscii) `
+          "非 ASCII 且无声明 —— 目标机上 pip 会 UnicodeDecodeError"
+}
 
 Section "9. 打进包的 .env 模板不含真凭据"
 $envDeploy = Join-Path $repo 'dist/.env.deploy'

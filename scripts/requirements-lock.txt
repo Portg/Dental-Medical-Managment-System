@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+# 这一行必须留在最前面：pip 读 requirements 文件时若前两行没有 coding
+# 声明也没有 BOM，就回退到系统区域编码解码。中文 Windows 上那是 GBK，
+# 下面的中文注释（UTF-8）会让 pip 直接抛 UnicodeDecodeError，离线安装全崩。
 # ═══════════════════════════════════════════════════════════════════
 #  OCR 依赖锁定文件 —— Windows 7 / Python 3.8.10 / win_amd64
 #

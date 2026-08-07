@@ -96,19 +96,17 @@ if "%RUNTIME_FLAVOR%"=="xampp" (
 )
 
 REM 如果 Laragon 内没有，尝试系统 PATH
-if not defined PHP_EXE (
-    where php >nul 2>&1 && for /f "tokens=*" %%P in ('where php 2^>nul') do (
-        set "PHP_EXE=%%P"
-        goto :found_sys_php
-    )
-    :found_sys_php
+REM 原来靠 goto :found_sys_php 跳出 for 来只取第一条结果，但那个标签在 ( ) 块内 ——
+REM cmd 里块内 :label 会让 goto 丢掉块上下文。改成用 if not defined
+REM 守卫：defined 在执行时求值，天然只有第一次匹配会赋值，不需要 goto。
+if not defined PHP_EXE for /f "tokens=*" %%P in ('where php 2^>nul') do (
+    if not defined PHP_EXE set "PHP_EXE=%%P"
 )
-if not defined MYSQL_EXE (
-    where mysql >nul 2>&1 && for /f "tokens=*" %%P in ('where mysql 2^>nul') do (
-        set "MYSQL_EXE=%%P"
-        goto :found_sys_mysql
-    )
-    :found_sys_mysql
+REM 原来靠 goto :found_sys_mysql 跳出 for 来只取第一条结果，但那个标签在 ( ) 块内 ——
+REM cmd 里块内 :label 会让 goto 丢掉块上下文。改成用 if not defined
+REM 守卫：defined 在执行时求值，天然只有第一次匹配会赋值，不需要 goto。
+if not defined MYSQL_EXE for /f "tokens=*" %%P in ('where mysql 2^>nul') do (
+    if not defined MYSQL_EXE set "MYSQL_EXE=%%P"
 )
 REM ── 状态变量 ────────────────────────────────────────────────────
 set "LARAGON_MODE=0"
@@ -125,9 +123,9 @@ set "MYSQL_WAIT_MAX=30"
 REM ── 横幅 ────────────────────────────────────────────────────────
 echo.
 echo  +=====================================================+
-echo  |       牙科诊所管理系统 - 启动服务                   |
+echo  ^|       牙科诊所管理系统 - 启动服务                   ^|
 echo  +=====================================================+
-echo  |  安装目录: %INSTALL_DIR%
+echo  ^|  安装目录: %INSTALL_DIR%
 echo  +=====================================================+
 echo.
 
@@ -476,43 +474,43 @@ REM ═════════════════════════�
 echo  [6/6] 服务状态汇总
 echo.
 echo  +=====================================================+
-echo  |              服务状态汇总                           |
+echo  ^|              服务状态汇总                           ^|
 echo  +=====================================================+
-echo  |                                                     |
+echo  ^|                                                     ^|
 
 if "%MYSQL_OK%"=="1" (
-    echo  |  MySQL .................. 运行中                   |
+    echo  ^|  MySQL .................. 运行中                   ^|
 ) else (
-    echo  |  MySQL .................. 未启动                   |
+    echo  ^|  MySQL .................. 未启动                   ^|
 )
 
 if "%WEB_MODE%"=="apache" (
-    echo  |  Web 服务器 ............. Apache + mod_php         |
+    echo  ^|  Web 服务器 ............. Apache + mod_php         ^|
 ) else if "%WEB_MODE%"=="laragon" (
-    echo  |  Web 服务器 ............. Laragon Nginx            |
+    echo  ^|  Web 服务器 ............. Laragon Nginx            ^|
 ) else if "%WEB_MODE%"=="nginx" (
-    echo  |  Web 服务器 ............. Nginx                    |
+    echo  ^|  Web 服务器 ............. Nginx                    ^|
 ) else if "%WEB_MODE%"=="php-builtin" (
-    echo  |  Web 服务器 ............. PHP 内置 (:%APP_PORT%^)       |
+    echo  ^|  Web 服务器 ............. PHP 内置 (:%APP_PORT%^)       ^|
 ) else (
-    echo  |  Web 服务器 ............. 未启动                   |
+    echo  ^|  Web 服务器 ............. 未启动                   ^|
 )
 
 if "%OCR_OK%"=="1" (
-    echo  |  OCR 服务 ............... 运行中 (:%OCR_PORT%^)        |
+    echo  ^|  OCR 服务 ............... 运行中 (:%OCR_PORT%^)        ^|
 ) else (
-    echo  |  OCR 服务 ............... 未启动                   |
+    echo  ^|  OCR 服务 ............... 未启动                   ^|
 )
 
 if "%QUEUE_OK%"=="1" (
-    echo  |  队列工作进程 ........... 运行中                   |
+    echo  ^|  队列工作进程 ........... 运行中                   ^|
 ) else (
-    echo  |  队列工作进程 ........... 未启动                   |
+    echo  ^|  队列工作进程 ........... 未启动                   ^|
 )
 
-echo  |                                                     |
-echo  |  访问地址: %APP_URL%
-echo  |  停止服务: 运行 stop-win.bat                        |
+echo  ^|                                                     ^|
+echo  ^|  访问地址: %APP_URL%
+echo  ^|  停止服务: 运行 stop-win.bat                        ^|
 echo  +=====================================================+
 echo.
 goto :done
@@ -520,8 +518,8 @@ goto :done
 :error
 echo.
 echo  +=====================================================+
-echo  |  启动失败！请检查以上错误信息                       |
-echo  |  修复问题后可重新运行此脚本                         |
+echo  ^|  启动失败！请检查以上错误信息                       ^|
+echo  ^|  修复问题后可重新运行此脚本                         ^|
 echo  +=====================================================+
 echo.
 

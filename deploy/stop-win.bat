@@ -40,7 +40,7 @@ schtasks /end /tn "DentalClinic-QueueWorker" >nul 2>&1
 
 echo.
 echo  +=====================================================+
-echo  |       牙科诊所管理系统 - 停止服务                   |
+echo  ^|       牙科诊所管理系统 - 停止服务                   ^|
 echo  +=====================================================+
 echo.
 
@@ -56,31 +56,34 @@ for /f "tokens=2" %%P in ('wmic process where "commandline like '%%queue:work%%'
     taskkill /PID %%P >nul 2>&1
 )
 
-if "!QUEUE_FOUND!"=="1" (
-    REM 等待优雅关闭
-    set /a "WAIT=0"
-    :wait_queue_stop
-    timeout /t 2 /nobreak >nul
-    wmic process where "commandline like '%%queue:work%%'" get processid 2>nul | findstr /R "[0-9]" >nul 2>&1
-    if !ERRORLEVEL! neq 0 (
-        echo        队列工作进程已停止                            [OK]
-        set "QUEUE_STOPPED=1"
-        goto :queue_done
-    )
-    set /a "WAIT+=2"
-    if !WAIT! geq %GRACEFUL_TIMEOUT% (
-        echo        优雅关闭超时，强制终止...
-        for /f "tokens=2" %%P in ('wmic process where "commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
-            taskkill /PID %%P /F >nul 2>&1
-        )
-        echo        队列工作进程已强制停止                        [OK]
-        set "QUEUE_STOPPED=1"
-        goto :queue_done
-    )
-    goto :wait_queue_stop
-) else (
-    echo        队列工作进程未运行                              [跳过]
+REM 等待循环与标签必须放在**顶层**：cmd 里 ( ) 块内的 :label 会让
+REM goto 丢掉块上下文，跳过去之后就按文件顺序线性往下跑，块结构失效。
+REM 本文件此前从没跑通过（第 43 行横幅的裸管道会中止批处理），
+REM 所以这几段等待逻辑从未真正执行，问题一直没暴露。
+if not "!QUEUE_FOUND!"=="1" goto :queue_not_running
+REM 等待优雅关闭
+set /a "WAIT=0"
+:wait_queue_stop
+timeout /t 2 /nobreak >nul
+wmic process where "commandline like '%%queue:work%%'" get processid 2>nul | findstr /R "[0-9]" >nul 2>&1
+if !ERRORLEVEL! neq 0 (
+    echo        队列工作进程已停止                            [OK]
+    set "QUEUE_STOPPED=1"
+    goto :queue_done
 )
+set /a "WAIT+=2"
+if !WAIT! geq %GRACEFUL_TIMEOUT% (
+    echo        优雅关闭超时，强制终止...
+    for /f "tokens=2" %%P in ('wmic process where "commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+        taskkill /PID %%P /F >nul 2>&1
+    )
+    echo        队列工作进程已强制停止                        [OK]
+    set "QUEUE_STOPPED=1"
+    goto :queue_done
+)
+goto :wait_queue_stop
+:queue_not_running
+echo        队列工作进程未运行                              [跳过]
 
 :queue_done
 REM 也终止通过 start /min 标题创建的窗口
@@ -99,31 +102,34 @@ for /f "tokens=2" %%P in ('wmic process where "commandline like '%%ocr_server%%'
     taskkill /PID %%P >nul 2>&1
 )
 
-if "!OCR_FOUND!"=="1" (
-    REM 等待优雅关闭
-    set /a "WAIT=0"
-    :wait_ocr_stop
-    timeout /t 2 /nobreak >nul
-    wmic process where "commandline like '%%ocr_server%%'" get processid 2>nul | findstr /R "[0-9]" >nul 2>&1
-    if !ERRORLEVEL! neq 0 (
-        echo        OCR 服务已停止                                [OK]
-        set "OCR_STOPPED=1"
-        goto :ocr_done
-    )
-    set /a "WAIT+=2"
-    if !WAIT! geq %GRACEFUL_TIMEOUT% (
-        echo        优雅关闭超时，强制终止...
-        for /f "tokens=2" %%P in ('wmic process where "commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
-            taskkill /PID %%P /F >nul 2>&1
-        )
-        echo        OCR 服务已强制停止                            [OK]
-        set "OCR_STOPPED=1"
-        goto :ocr_done
-    )
-    goto :wait_ocr_stop
-) else (
-    echo        OCR 服务未运行                                  [跳过]
+REM 等待循环与标签必须放在**顶层**：cmd 里 ( ) 块内的 :label 会让
+REM goto 丢掉块上下文，跳过去之后就按文件顺序线性往下跑，块结构失效。
+REM 本文件此前从没跑通过（第 43 行横幅的裸管道会中止批处理），
+REM 所以这几段等待逻辑从未真正执行，问题一直没暴露。
+if not "!OCR_FOUND!"=="1" goto :ocr_not_running
+REM 等待优雅关闭
+set /a "WAIT=0"
+:wait_ocr_stop
+timeout /t 2 /nobreak >nul
+wmic process where "commandline like '%%ocr_server%%'" get processid 2>nul | findstr /R "[0-9]" >nul 2>&1
+if !ERRORLEVEL! neq 0 (
+    echo        OCR 服务已停止                                [OK]
+    set "OCR_STOPPED=1"
+    goto :ocr_done
 )
+set /a "WAIT+=2"
+if !WAIT! geq %GRACEFUL_TIMEOUT% (
+    echo        优雅关闭超时，强制终止...
+    for /f "tokens=2" %%P in ('wmic process where "commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+        taskkill /PID %%P /F >nul 2>&1
+    )
+    echo        OCR 服务已强制停止                            [OK]
+    set "OCR_STOPPED=1"
+    goto :ocr_done
+)
+goto :wait_ocr_stop
+:ocr_not_running
+echo        OCR 服务未运行                                  [跳过]
 
 :ocr_done
 echo.
@@ -153,56 +159,56 @@ echo        未注册 %APACHE_SERVICE% 服务，跳过               [跳过]
 
 REM ─ 停止 Nginx ─
 tasklist /FI "IMAGENAME eq nginx.exe" 2>nul | findstr /I "nginx.exe" >nul
-if !ERRORLEVEL! equ 0 (
-    echo        发现 Nginx，发送 quit 信号...
-    REM Nginx 优雅停止: nginx -s quit
-    set "NGINX_QUIT=0"
-    REM 搜索 Laragon 常见路径（含安装目录和系统路径）
-    for %%L in (
-        "%~dp0laragon"
-        "%~dp0..\laragon"
-        "C:\DentalClinic\laragon"
-        "C:\laragon"
-    ) do (
-        for /d %%D in ("%%~L\bin\nginx\nginx-*") do (
-            if exist "%%D\nginx.exe" (
-                "%%D\nginx.exe" -s quit >nul 2>&1
-                set "NGINX_QUIT=1"
-            )
-        )
-        if "!NGINX_QUIT!"=="0" for /d %%D in ("%%~L\bin\nginx\*") do (
-            if exist "%%D\nginx.exe" (
-                "%%D\nginx.exe" -s quit >nul 2>&1
-                set "NGINX_QUIT=1"
-            )
+REM 同上：等待循环与标签摊到顶层，块内 :label 在 cmd 里行为是坏的。
+if !ERRORLEVEL! neq 0 goto :nginx_not_running
+echo        发现 Nginx，发送 quit 信号...
+REM Nginx 优雅停止: nginx -s quit
+set "NGINX_QUIT=0"
+REM 搜索 Laragon 常见路径（含安装目录和系统路径）
+for %%L in (
+    "%~dp0laragon"
+    "%~dp0..\laragon"
+    "C:\DentalClinic\laragon"
+    "C:\laragon"
+) do (
+    for /d %%D in ("%%~L\bin\nginx\nginx-*") do (
+        if exist "%%D\nginx.exe" (
+            "%%D\nginx.exe" -s quit >nul 2>&1
+            set "NGINX_QUIT=1"
         )
     )
-    if "!NGINX_QUIT!"=="0" (
-        where nginx >nul 2>&1 && nginx -s quit >nul 2>&1
+    if "!NGINX_QUIT!"=="0" for /d %%D in ("%%~L\bin\nginx\*") do (
+        if exist "%%D\nginx.exe" (
+            "%%D\nginx.exe" -s quit >nul 2>&1
+            set "NGINX_QUIT=1"
+        )
     )
-
-    REM 等待 Nginx 停止
-    set /a "WAIT=0"
-    :wait_nginx_stop
-    timeout /t 2 /nobreak >nul
-    tasklist /FI "IMAGENAME eq nginx.exe" 2>nul | findstr /I "nginx.exe" >nul
-    if !ERRORLEVEL! neq 0 (
-        echo        Nginx 已停止                                  [OK]
-        set "NGINX_STOPPED=1"
-        goto :nginx_done
-    )
-    set /a "WAIT+=2"
-    if !WAIT! geq %GRACEFUL_TIMEOUT% (
-        echo        优雅关闭超时，强制终止 Nginx...
-        taskkill /IM nginx.exe /F >nul 2>&1
-        echo        Nginx 已强制停止                              [OK]
-        set "NGINX_STOPPED=1"
-        goto :nginx_done
-    )
-    goto :wait_nginx_stop
-) else (
-    echo        Nginx 未运行                                    [跳过]
 )
+if "!NGINX_QUIT!"=="0" (
+    where nginx >nul 2>&1 && nginx -s quit >nul 2>&1
+)
+
+REM 等待 Nginx 停止
+set /a "WAIT=0"
+:wait_nginx_stop
+timeout /t 2 /nobreak >nul
+tasklist /FI "IMAGENAME eq nginx.exe" 2>nul | findstr /I "nginx.exe" >nul
+if !ERRORLEVEL! neq 0 (
+    echo        Nginx 已停止                                  [OK]
+    set "NGINX_STOPPED=1"
+    goto :nginx_done
+)
+set /a "WAIT+=2"
+if !WAIT! geq %GRACEFUL_TIMEOUT% (
+    echo        优雅关闭超时，强制终止 Nginx...
+    taskkill /IM nginx.exe /F >nul 2>&1
+    echo        Nginx 已强制停止                              [OK]
+    set "NGINX_STOPPED=1"
+    goto :nginx_done
+)
+goto :wait_nginx_stop
+:nginx_not_running
+echo        Nginx 未运行                                    [跳过]
 
 :nginx_done
 
@@ -324,42 +330,42 @@ REM ═════════════════════════�
 echo  [5/5] 确认状态
 echo.
 echo  +=====================================================+
-echo  |              服务停止状态汇总                        |
+echo  ^|              服务停止状态汇总                        ^|
 echo  +=====================================================+
-echo  |                                                     |
+echo  ^|                                                     ^|
 
 if "%QUEUE_STOPPED%"=="1" (
-    echo  |  队列工作进程 ........... 已停止                   |
+    echo  ^|  队列工作进程 ........... 已停止                   ^|
 ) else (
-    echo  |  队列工作进程 ........... 未运行                   |
+    echo  ^|  队列工作进程 ........... 未运行                   ^|
 )
 
 if "%OCR_STOPPED%"=="1" (
-    echo  |  OCR 服务 ............... 已停止                   |
+    echo  ^|  OCR 服务 ............... 已停止                   ^|
 ) else (
-    echo  |  OCR 服务 ............... 未运行                   |
+    echo  ^|  OCR 服务 ............... 未运行                   ^|
 )
 
 if "%NGINX_STOPPED%"=="1" (
-    echo  |  Nginx .................. 已停止                   |
+    echo  ^|  Nginx .................. 已停止                   ^|
 ) else (
-    echo  |  Nginx .................. 未运行                   |
+    echo  ^|  Nginx .................. 未运行                   ^|
 )
 
 if "%PHPCGI_STOPPED%"=="1" (
-    echo  |  PHP 服务 ............... 已停止                   |
+    echo  ^|  PHP 服务 ............... 已停止                   ^|
 ) else (
-    echo  |  PHP 服务 ............... 未运行                   |
+    echo  ^|  PHP 服务 ............... 未运行                   ^|
 )
 
 if "%MYSQL_STOPPED%"=="1" (
-    echo  |  MySQL .................. 已停止                   |
+    echo  ^|  MySQL .................. 已停止                   ^|
 ) else (
-    echo  |  MySQL .................. 未运行                   |
+    echo  ^|  MySQL .................. 未运行                   ^|
 )
 
-echo  |                                                     |
-echo  |  所有服务已处理完毕                                 |
+echo  ^|                                                     ^|
+echo  ^|  所有服务已处理完毕                                 ^|
 echo  +=====================================================+
 echo.
 

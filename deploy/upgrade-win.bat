@@ -40,8 +40,16 @@ if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 set "UPGRADE_PKG_DIR=%SCRIPT_DIR%"
 
 REM 关键路径
+REM 运行时形态判定，与 install-win.ps1 / setup.bat / start-win.bat 同一条判据。
+REM 此前这里把 PROJECT_DIR 写死成 laragon\www\dental、PHP 只在
+REM laragon\bin\php\* 下找，xampp 安装跑到「检查项目完整性」就会报
+REM 「项目文件不完整，未找到 artisan」退出 —— 升级包对 xampp 完全不可用。
+set "XAMPP_DIR=%INSTALL_DIR%\xampp"
 set "LARAGON_DIR=%INSTALL_DIR%\laragon"
+set "RUNTIME_FLAVOR=laragon"
+if exist "%XAMPP_DIR%\apache\bin\httpd.exe" set "RUNTIME_FLAVOR=xampp"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
+if "%RUNTIME_FLAVOR%"=="xampp" set "PROJECT_DIR=%XAMPP_DIR%\htdocs\dental"
 set "BACKUP_BASE=%INSTALL_DIR%\backups"
 set "ENV_PATCH=%UPGRADE_PKG_DIR%\env.patch"
 set "HELPER_DIR=%UPGRADE_PKG_DIR%\batch-helpers"
@@ -61,6 +69,13 @@ if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do se
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql*") do set "MYSQL_DIR=%%D"
 if not defined MYSQL_DIR for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do if exist "%%D\bin\mysql.exe" set "MYSQL_DIR=%%D"
 
+REM xampp 的布局是扁平的（没有版本号子目录），上面按 laragon 布局的探测
+REM 对它全不适用，直接覆盖成确定路径。
+if "%RUNTIME_FLAVOR%"=="xampp" (
+    set "PHP_DIR=%XAMPP_DIR%\php"
+    set "MYSQL_DIR=%XAMPP_DIR%\mysql"
+)
+
 if defined PHP_DIR (
     set "PHP=%PHP_DIR%\php.exe"
 ) else (
@@ -74,8 +89,14 @@ if defined MYSQL_DIR (
     where mysql >nul 2>&1 && set "MYSQL=mysql"
 )
 
+REM 找不到就必须**清空**，不能留着一个指向不存在文件的值。
+REM 此前无论如何都先设成 laragon 路径，xampp 安装下该文件不存在、
+REM where composer 也找不到时，COMPOSER 仍然「已定义」，于是下面
+REM `if defined COMPOSER` 成立 → 执行 php <不存在>.phar install → 失败
+REM → goto :rollback。也就是说 xampp 的每次升级都会回滚。
 set "COMPOSER=%LARAGON_DIR%\bin\composer\composer.phar"
 if not exist "%COMPOSER%" (
+    set "COMPOSER="
     where composer >nul 2>&1 && set "COMPOSER=composer"
 )
 
@@ -111,10 +132,10 @@ set "DB_PORT=3306"
 
 echo.
 echo  +=========================================================+
-echo  |         牙科诊所管理系统 - 升级工具                     |
+echo  ^|         牙科诊所管理系统 - 升级工具                     ^|
 echo  +=========================================================+
-echo  |  安装目录:  %INSTALL_DIR%
-echo  |  升级包:    %UPGRADE_PKG_DIR%
+echo  ^|  安装目录:  %INSTALL_DIR%
+echo  ^|  升级包:    %UPGRADE_PKG_DIR%
 echo  +=========================================================+
 echo.
 
@@ -122,7 +143,7 @@ REM ═════════════════════════�
 REM  Step 1: 环境检测
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 1] 检测运行环境                                   |
+echo  ^| [Step 1] 检测运行环境                                   ^|
 echo  +----------------------------------------------------------+
 
 if not exist "%INSTALL_DIR%" (
@@ -160,7 +181,7 @@ REM ═════════════════════════�
 REM  Step 2: 版本检查
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 2] 读取当前版本                                   |
+echo  ^| [Step 2] 读取当前版本                                   ^|
 echo  +----------------------------------------------------------+
 
 set "CURRENT_VERSION=0.0.0"
@@ -175,7 +196,7 @@ REM ═════════════════════════�
 REM  Step 3: 读取升级包版本 & 比较
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 3] 读取升级包版本并校验                           |
+echo  ^| [Step 3] 读取升级包版本并校验                           ^|
 echo  +----------------------------------------------------------+
 
 if not exist "%UPGRADE_PKG_DIR%\VERSION" (
@@ -237,7 +258,7 @@ REM ═════════════════════════�
 REM  Step 4: 自动备份
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 4] 自动备份                                       |
+echo  ^| [Step 4] 自动备份                                       ^|
 echo  +----------------------------------------------------------+
 
 set "BACKUP_DIR=%BACKUP_BASE%\upgrade_%TIMESTAMP%"
@@ -325,7 +346,7 @@ REM ═════════════════════════�
 REM  Step 5: 进入维护模式
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 5] 进入维护模式                                   |
+echo  ^| [Step 5] 进入维护模式                                   ^|
 echo  +----------------------------------------------------------+
 
 cd /d "%PROJECT_DIR%"
@@ -342,7 +363,7 @@ REM ═════════════════════════�
 REM  Step 6: 代码更新
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 6] 更新代码文件                                   |
+echo  ^| [Step 6] 更新代码文件                                   ^|
 echo  +----------------------------------------------------------+
 
 REM 保留 .env 和 storage/app/ — 先暂存
@@ -364,6 +385,17 @@ echo storage\logs\>> "%BACKUP_DIR%\_copy_exclude.txt"
 echo vendor\>> "%BACKUP_DIR%\_copy_exclude.txt"
 echo node_modules\>> "%BACKUP_DIR%\_copy_exclude.txt"
 echo .git\>> "%BACKUP_DIR%\_copy_exclude.txt"
+REM 部署脚本属于 %INSTALL_DIR%，不属于项目目录 —— 它们下面会被单独刷新。
+REM 不排除的话 install-win.ps1 / start-win.bat 这些会被倒进
+REM xampp\htdocs\dental\ 里，纯属垃圾。
+echo install-win.bat>> "%BACKUP_DIR%\_copy_exclude.txt"
+echo install-win.ps1>> "%BACKUP_DIR%\_copy_exclude.txt"
+echo upgrade-win.bat>> "%BACKUP_DIR%\_copy_exclude.txt"
+echo start-win.bat>> "%BACKUP_DIR%\_copy_exclude.txt"
+echo stop-win.bat>> "%BACKUP_DIR%\_copy_exclude.txt"
+echo uninstall-win.bat>> "%BACKUP_DIR%\_copy_exclude.txt"
+echo setup.bat>> "%BACKUP_DIR%\_copy_exclude.txt"
+echo laragon-startup.bat>> "%BACKUP_DIR%\_copy_exclude.txt"
 
 echo        复制升级包文件到项目目录...
 xcopy "%UPGRADE_PKG_DIR%\*" "%PROJECT_DIR%\" /E /H /Y /Q /EXCLUDE:%BACKUP_DIR%\_copy_exclude.txt >nul 2>&1
@@ -383,6 +415,20 @@ if exist "%TEMP_PRESERVE%\storage\app" (
 )
 rmdir /s /q "%TEMP_PRESERVE%" >nul 2>&1
 
+REM 刷新 %INSTALL_DIR% 下的部署脚本。
+REM 此前升级完全不碰它们，于是 start-win.bat / stop-win.bat 这类脚本层面的
+REM 修复永远送不到目标机 —— 只能靠重跑全量包。
+REM 注意 install-win.ps1 里的修复（php.ini 开扩展、Apache 服务注册、
+REM XAMPP 路径重写）本脚本**不执行**，换了文件也不会自动生效；
+REM 那些只能由全量安装（install-win.bat）应用。
+echo        刷新部署脚本...
+for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
+    if exist "%UPGRADE_PKG_DIR%\%%F" copy "%UPGRADE_PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>&1
+)
+if exist "%UPGRADE_PKG_DIR%\batch-helpers" (
+    xcopy "%UPGRADE_PKG_DIR%\batch-helpers\*" "%INSTALL_DIR%\batch-helpers\" /E /I /H /Y /Q >nul 2>&1
+)
+
 echo        代码文件更新完成
 echo.
 
@@ -390,7 +436,7 @@ REM ═════════════════════════�
 REM  Step 7: 环境变量合并
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 7] 合并环境变量                                   |
+echo  ^| [Step 7] 合并环境变量                                   ^|
 echo  +----------------------------------------------------------+
 
 if exist "!ENV_PATCH!" (
@@ -420,7 +466,7 @@ REM ═════════════════════════�
 REM  Step 8: 数据库迁移
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 8] 安装依赖 ^& 数据库迁移                          |
+echo  ^| [Step 8] 安装依赖 ^& 数据库迁移                          ^|
 echo  +----------------------------------------------------------+
 
 cd /d "%PROJECT_DIR%"
@@ -440,7 +486,20 @@ if defined COMPOSER (
     )
     echo        PHP 依赖安装完成
 ) else (
-    echo        [警告] Composer 不可用，跳过依赖安装
+    REM XAMPP 不带 composer。此时 vendor 无法在目标机重建，
+    REM 只能用包里那份 —— 否则 composer.lock 有变化的版本升上去就是坏的。
+    REM （vendor\ 被 _copy_exclude.txt 排除，正常路径是由 composer 重建。）
+    if exist "%UPGRADE_PKG_DIR%\vendor" (
+        echo        Composer 不可用，改用包内 vendor...
+        xcopy "%UPGRADE_PKG_DIR%\vendor\*" "%PROJECT_DIR%\vendor\" /E /I /H /Y /Q >nul 2>&1
+        if !ERRORLEVEL! neq 0 (
+            echo  [错误] 包内 vendor 复制失败
+            goto :rollback
+        )
+        echo        已用包内 vendor 覆盖
+    ) else (
+        echo        [警告] Composer 不可用且包内无 vendor，跳过依赖安装
+    )
 )
 
 echo        运行数据库迁移...
@@ -470,7 +529,7 @@ REM ═════════════════════════�
 REM  Step 9: 缓存清理与重建
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 9] 缓存清理与重建                                 |
+echo  ^| [Step 9] 缓存清理与重建                                 ^|
 echo  +----------------------------------------------------------+
 
 cd /d "%PROJECT_DIR%"
@@ -510,7 +569,7 @@ REM ═════════════════════════�
 REM  Step 10: 健康检查 & 退出维护模式
 REM ═══════════════════════════════════════════════════════════════
 echo  +----------------------------------------------------------+
-echo  | [Step 10] 健康检查                                      |
+echo  ^| [Step 10] 健康检查                                      ^|
 echo  +----------------------------------------------------------+
 
 cd /d "%PROJECT_DIR%"
@@ -568,21 +627,21 @@ REM  升级成功
 REM ═══════════════════════════════════════════════════════════════
 echo.
 echo  +=========================================================+
-echo  |                    升级成功！                            |
+echo  ^|                    升级成功！                            ^|
 echo  +=========================================================+
-echo  |                                                         |
-echo  |  版本变更: !CURRENT_VERSION! → !NEW_VERSION!
-echo  |                                                         |
-echo  |  备份位置: %BACKUP_DIR%
-echo  |    .env:     !ENV_BACKUP_FILE!
-echo  |    数据库:   !DB_BACKUP_FILE!
-echo  |    应用文件: !FILES_BACKUP_DIR!
-echo  |                                                         |
-echo  |  如需回滚，请手动恢复备份文件:                          |
-echo  |    1. 恢复应用文件                                      |
-echo  |    2. 恢复 .env                                         |
-echo  |    3. mysql !DB_NAME! ^< backup_*.sql                    |
-echo  |                                                         |
+echo  ^|                                                         ^|
+echo  ^|  版本变更: !CURRENT_VERSION! → !NEW_VERSION!
+echo  ^|                                                         ^|
+echo  ^|  备份位置: %BACKUP_DIR%
+echo  ^|    .env:     !ENV_BACKUP_FILE!
+echo  ^|    数据库:   !DB_BACKUP_FILE!
+echo  ^|    应用文件: !FILES_BACKUP_DIR!
+echo  ^|                                                         ^|
+echo  ^|  如需回滚，请手动恢复备份文件:                          ^|
+echo  ^|    1. 恢复应用文件                                      ^|
+echo  ^|    2. 恢复 .env                                         ^|
+echo  ^|    3. mysql !DB_NAME! ^< backup_*.sql                    ^|
+echo  ^|                                                         ^|
 echo  +=========================================================+
 echo.
 goto :done
@@ -593,7 +652,7 @@ REM ═════════════════════════�
 :rollback
 echo.
 echo  +=========================================================+
-echo  |  [错误] 升级失败！正在自动回滚...                       |
+echo  ^|  [错误] 升级失败！正在自动回滚...                       ^|
 echo  +=========================================================+
 echo.
 
@@ -667,12 +726,12 @@ if "!MAINTENANCE_MODE!"=="1" (
 
 echo.
 echo  +=========================================================+
-echo  |  回滚完成 -- 系统已恢复到升级前状态                     |
+echo  ^|  回滚完成 -- 系统已恢复到升级前状态                     ^|
 echo  +=========================================================+
-echo  |  版本: !CURRENT_VERSION!
-echo  |  备份保留在: %BACKUP_DIR%
-echo  |                                                         |
-echo  |  请检查错误信息后重新尝试升级                           |
+echo  ^|  版本: !CURRENT_VERSION!
+echo  ^|  备份保留在: %BACKUP_DIR%
+echo  ^|                                                         ^|
+echo  ^|  请检查错误信息后重新尝试升级                           ^|
 echo  +=========================================================+
 echo.
 goto :done
@@ -688,8 +747,8 @@ exit /b %ERRORLEVEL%
 :abort_no_rollback
 echo.
 echo  +=========================================================+
-echo  |  升级中止 -- 未进行任何修改                             |
-echo  |  请检查以上错误信息后重试                               |
+echo  ^|  升级中止 -- 未进行任何修改                             ^|
+echo  ^|  请检查以上错误信息后重试                               ^|
 echo  +=========================================================+
 echo.
 

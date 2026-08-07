@@ -971,7 +971,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260806-apache-and-phpext"
+$script:ScriptRev = "20260807-pipes-svc-ocr"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1752,8 +1752,20 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
 
     $script:Step++
     Write-Section "Configure log cleanup task"
-    $logTask = 'forfiles /p "' + (Join-Path $PROJECT_DIR 'storage\logs') + '" /s /m *.log /d -30 /c "cmd /c del @path" 2>nul'
-    $logTaskExit = Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/create', '/tn', 'DentalClinic-LogCleanup', '/tr', $logTask, '/sc', 'weekly', '/d', 'MON', '/st', '03:00', '/ru', 'SYSTEM', '/f')
+    # /tr 的值里本来套着三层引号（forfiles 的 /p 一层、/c 一层），经 PowerShell
+    # 的原生参数数组传出去内层引号会被吞，schtasks 于是把 /c 当成自己的选项，
+    # 报 ERROR: Invalid argument/option - '/c'。原字符串里还混了 2>nul —— 那是
+    # shell 重定向，塞进任务命令里也不会生效。
+    # 改成把清理逻辑写进一个 .bat，任务只指向该文件，引号层级降到一层。
+    $logCleanupBat = Join-Path $INSTALL_DIR 'clean-logs.bat'
+    @(
+        '@echo off',
+        'REM 由 install-win.ps1 生成：清理 30 天前的应用日志。',
+        'REM 单独成文件是为了避开 schtasks /tr 的多层引号转义。',
+        ('forfiles /p "' + (Join-Path $PROJECT_DIR 'storage\logs') + '" /s /m *.log /d -30 /c "cmd /c del @path" >nul 2>&1'),
+        'exit /b 0'
+    ) | Set-Content -Path $logCleanupBat -Encoding Ascii
+    $logTaskExit = Invoke-CmdLine -CommandLine ('schtasks.exe /create /tn "DentalClinic-LogCleanup" /tr "\"' + $logCleanupBat + '\"" /sc weekly /d MON /st 03:00 /ru SYSTEM /f')
     if ($logTaskExit -eq 0) {
         Write-Host "        Log cleanup task ........ OK"
     } else {
@@ -2062,11 +2074,22 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                     Write-Host "        Service registration .... warning"
                 }
             } else {
+                # sc.exe 的 binPath= 必须是**一个**参数，值里的引号要转义。
+                # 之前经 PowerShell 的原生参数数组传，内层引号会被吞掉，sc 把
+                # --defaults-file 当成独立选项，报 1639（参数错误）并打出用法帮助。
+                # 2026-08-06 23:24 那次装机就没能注册上 DentalClinicMySQL ——
+                # 安装当场看不出问题（mysqld 已被直接拉起），但目标机重启后
+                # 数据库不会自启，start-win.bat 的 net start 也无从下手。
+                # 改走 cmd /c，用 cmd 自己的解析规则，引号用 \" 转义。
+                # DisplayName 的值带空格，同样必须加引号。
+                $binPathInner = '"' + $MYSQLD_EXE + '"'
                 if (Test-Path $mysqlIni) {
-                    $serviceCreateExit = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('create', $svcName, ('binPath= "' + $MYSQLD_EXE + '" --defaults-file="' + $mysqlIni + '"'), 'DisplayName= DentalClinic MySQL', 'start= auto')
-                } else {
-                    $serviceCreateExit = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('create', $svcName, ('binPath= "' + $MYSQLD_EXE + '"'), 'DisplayName= DentalClinic MySQL', 'start= auto')
+                    $binPathInner += ' --defaults-file="' + $mysqlIni + '"'
                 }
+                $scCmdLine = 'sc.exe create ' + $svcName +
+                             ' binPath= "' + ($binPathInner -replace '"', '\"') + '"' +
+                             ' DisplayName= "DentalClinic MySQL" start= auto'
+                $serviceCreateExit = Invoke-CmdLine -CommandLine $scCmdLine
                 if ($serviceCreateExit -eq 0) {
                     Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('description', $svcName, 'DentalClinic MySQL database service') | Out-Null
                     Write-Host "        Service registration .... OK (sc.exe)"
@@ -2119,7 +2142,10 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     $databaseCheckExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments $validationArgs -Password $DB_PASS
     if ($databaseCheckExit -eq 0) { Write-Host "        Database check .......... OK" } else { Write-Host "        Database check .......... warning" }
 
-    $routeCheckExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'route:list', '--compact', '--no-interaction')
+    # Laravel 11 的 route:list 没有 --compact（它在 8.x 存在过），传了会抛
+    # 「The "--compact" option does not exist.」并往 laravel.log 写一条 ERROR。
+    # 这里只是想确认路由能枚举出来，不需要任何格式选项。
+    $routeCheckExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'route:list', '--no-interaction')
     if ($routeCheckExit -eq 0) { Write-Host "        Route check ............. OK" } else { Write-Host "        Route check ............. warning" }
 
     Write-Host ""
