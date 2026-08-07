@@ -158,8 +158,10 @@ echo        未注册 %APACHE_SERVICE% 服务，跳过               [跳过]
 :apache_skip
 
 REM ─ 停止 Nginx ─
-tasklist /FI "IMAGENAME eq nginx.exe" 2>nul | findstr /I "nginx.exe" >nul
 REM 同上：等待循环与标签摊到顶层，块内 :label 在 cmd 里行为是坏的。
+REM 注释必须放在探测命令**之前**：命令与 errorlevel 判断之间不留任何东西，
+REM 免得依赖「REM 到底会不会重置 errorlevel」这种记忆性结论。
+tasklist /FI "IMAGENAME eq nginx.exe" 2>nul | findstr /I "nginx.exe" >nul
 if !ERRORLEVEL! neq 0 goto :nginx_not_running
 echo        发现 Nginx，发送 quit 信号...
 REM Nginx 优雅停止: nginx -s quit

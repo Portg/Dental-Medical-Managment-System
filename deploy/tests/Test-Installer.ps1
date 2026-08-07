@@ -254,7 +254,10 @@ function Get-BatSources {
             $buf.Add($l)
         } elseif ($l -match "<<'([A-Z_]*BAT)'") { $cur = $Matches[1] }
     }
-    foreach ($f in @('install-win.bat', 'start-win.bat', 'stop-win.bat', 'uninstall-win.bat')) {
+    # upgrade-win.bat 一定要在这个清单里：它和其他 .bat 有完全相同的陷阱
+    # （裸管道 61 处、COMPOSER 无条件 defined），漏掉它等于 8b/8b2/8b3 三节
+    # 都不查升级路径 —— 本次 code-review 就是这样发现这个覆盖漏洞的。
+    foreach ($f in @('install-win.bat', 'start-win.bat', 'stop-win.bat', 'uninstall-win.bat', 'upgrade-win.bat')) {
         $p = Join-Path $repo $f
         if (Test-Path $p) { $out[$f] = [System.IO.File]::ReadAllLines($p) }
     }
@@ -287,6 +290,43 @@ foreach ($kv in (Get-BatSources).GetEnumerator()) {
 # 块内标签就会立刻变成实际故障，所以不能再放过。
 Check "括号块内没有读 %ERRORLEVEL%" ($errlvlInBlock.Count -eq 0) ($errlvlInBlock -join ', ')
 Check "括号块内没有 :label" ($labelInBlock.Count -eq 0) ($labelInBlock -join ', ')
+
+Section "8b2. errorlevel 判断与被判断的命令之间不得有任何东西"
+# 不去争论 REM 到底会不会重置 errorlevel —— 直接要求两者相邻，
+# 这样结论不依赖任何记忆性知识。code-review 时在 stop-win.bat 抓到过一处。
+$errAfterComment = @()
+foreach ($kv in (Get-BatSources).GetEnumerator()) {
+    $ls = $kv.Value
+    for ($i = 0; $i -lt $ls.Count; $i++) {
+        if ($ls[$i] -notmatch '(?i)^\s*if\s+(errorlevel\s+\d|!ERRORLEVEL!|%ERRORLEVEL%)') { continue }
+        $j = $i - 1
+        while ($j -ge 0 -and -not $ls[$j].Trim()) { $j-- }
+        if ($j -ge 0 -and $ls[$j] -match '(?i)^\s*(rem\b|::)') { $errAfterComment += ("{0}:{1}" -f $kv.Key, ($i + 1)) }
+    }
+}
+Check "errorlevel 判断紧跟在命令之后（中间无注释）" ($errAfterComment.Count -eq 0) ($errAfterComment -join ', ')
+
+Section "8b3. 括号块必须收支平衡（排除 echo 文本）"
+# echo 行里 ( 常作字面量出现、) 写成 ^)，天生不平衡且无害，所以排除掉；
+# 剩下的控制流部分净值必须为 0。这条能在结构性手术（把块摊平成 goto）
+# 之后立刻发现括号被改坏 —— 本次审核就是用它确认三处循环摊平没破坏结构。
+foreach ($kv in (Get-BatSources).GetEnumerator()) {
+    $net = 0
+    foreach ($l in $kv.Value) {
+        $s = $l.Trim()
+        if ($s -match '(?i)^(rem\b|::|echo)') { continue }
+        $inQ = $false; $k = 0
+        while ($k -lt $l.Length) {
+            $c = $l[$k]
+            if ($c -eq '^') { $k += 2; continue }
+            if ($c -eq '"') { $inQ = -not $inQ }
+            elseif (-not $inQ -and $c -eq '(') { $net++ }
+            elseif (-not $inQ -and $c -eq ')') { $net-- }
+            $k++
+        }
+    }
+    Check ("$($kv.Key) 控制流括号收支平衡") ($net -eq 0) "净值 $net"
+}
 
 Section "8c. setup.bat 必须留下自己的日志"
 $setupTpl = (Get-BatSources)['build.sh:SHORTCUT_BAT']
