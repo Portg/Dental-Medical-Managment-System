@@ -2483,6 +2483,21 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
             error "  ✗ 数据库服务未通过 Win32_Service.Create 注册并读回校验"
             ASSERT_FAIL=true
         fi
+        if ! grep -qF "\$binPathValue += ' ' + \$svcName" "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ MariaDB 自定义服务名未写入 mysqld ImagePath，SCM 会按默认 MySQL 身份启动失败"
+            ASSERT_FAIL=true
+        fi
+        if ! grep -qF '$serviceStartExit -ne 0' "$DIST_DIR/install-win.ps1" ||
+           ! grep -qF "\$serviceState -ne 'Running'" "$DIST_DIR/install-win.ps1" ||
+           ! grep -qF 'InstallerBundledDbServiceReady' "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ 数据库服务未同时校验 net start、SCM Running 和 SQL 就绪"
+            ASSERT_FAIL=true
+        fi
+        if ! grep -qF 'InstallerRegisteredBundledDbService' "$DIST_DIR/install-win.ps1" ||
+           ! grep -qF '已恢复安装前暂停的计划任务' "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ 安装失败不会完整回滚半成品数据库服务并恢复既有计划任务"
+            ASSERT_FAIL=true
+        fi
         if grep -qF "Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments \$scArguments" "$DIST_DIR/install-win.ps1"; then
             error "  ✗ 数据库服务仍走 Win7 PowerShell 2.0 已实测返回 1639 的 sc.exe 参数数组"
             ASSERT_FAIL=true

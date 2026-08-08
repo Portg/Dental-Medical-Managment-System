@@ -512,6 +512,9 @@ Check "可执行文件路径两侧加引号" ($wmiBlock.Contains("'`"' + `$MYSQL
 Check "有 my.ini 时才带 --defaults-file" `
       ($wmiBlock -match 'Test-Path \$mysqlIni' -and $wmiBlock.Contains('--defaults-file=')) `
       "硬传不存在的 my.ini 会让服务起不来"
+Check "自定义服务名作为 mysqld 最后一个参数" `
+      ($wmiBlock.Contains('$binPathValue += '' '' + $svcName')) `
+      "缺少服务名时 mysqld 会按默认 MySQL 身份接入 SCM，3307 已监听但 net start 仍返回 2"
 Check "服务类型是 own-process 且自动启动" `
       ($wmiBlock -match 'SERVICE_WIN32_OWN_PROCESS' -and $wmiBlock -match "'Automatic'") `
       "服务类型或启动方式不正确"
@@ -527,9 +530,36 @@ Check "读回校验失败不混进 WMI 返回码" `
 Check "读回校验失败会中止安装" `
       ($text -match 'serviceCreateExit -ne 0 -or \$serviceReadBackFailed') `
       "读回不对却继续装下去 —— 那正是 net start 才报 2 的形态"
+Check "服务启动同时要求 net start 成功和 SCM Running" `
+      ($text -match '\$serviceStartExit -ne 0' -and `
+       $text -match '\$serviceState -ne ''Running''' -and `
+       $text -match 'Get-WmiObject -Class Win32_Service') `
+      "只看端口/SQL 会把脱离 SCM 的 mysqld 误判成服务已启动"
+Check "net start 的输出要留进失败消息" `
+      ($text -match 'serviceStartResult = Invoke-NativeCapture' -and `
+       $text -match 'net start 输出') `
+      "只剩一个 exit 码，「系统找不到指定的文件」和「服务没有响应控制功能」分不出来"
+Check "服务起不来时附上 SCM 系统日志" `
+      ($text -match "Get-EventLog -LogName System -Source 'Service Control Manager'") `
+      "SCM 事件里才有真正的 Win32 错误码"
+Check "SCM Running 后仍执行 SQL 就绪探测" `
+      ($text -match '(?s)serviceState -ne ''Running''.*?Wait-MySqlReady') `
+      "服务状态 Running 不代表数据库已经可接受连接"
+Check "失败收尾删除未通过验收的数据库服务" `
+      ($text -match 'InstallerRegisteredBundledDbService' -and `
+       $text -match 'InstallerBundledDbServiceReady' -and `
+       $text -match 'sc\.exe.*''delete'', \$DB_SERVICE_NAME') `
+      "服务启动失败后会留下自动启动但永远报错的半成品服务"
 Check "失败收尾会停止本次注册的 Apache" `
       ($text -match 'InstallerRegisteredApache' -and $text -match "net\.exe.*'stop', 'DentalClinicApache'") `
       "服务注册失败后仍会留下 Apache 占用 80 端口"
+Check "失败收尾恢复本次暂停的计划任务" `
+      ($text -match 'InstallerPausedTasks' -and `
+       $text -match '已恢复安装前暂停的计划任务') `
+      "覆盖安装失败会把上一版 Scheduler/Watchdog 永久留在禁用状态"
+Check "OCR 临时进程等待结果不泄漏 True 到安装日志" `
+      ($text -match 'WaitForExit\(5000\) \| Out-Null') `
+      "安装日志仍会出现无上下文的 True"
 Check "LogCleanup 任务指向独立 .bat" ($text -match 'clean-logs\.bat') "仍在 /tr 里套多层引号"
 Check "LogCleanup 的 schtasks 走 Invoke-CmdLine" ($text -match 'Invoke-CmdLine -CommandLine \(.schtasks\.exe /create /tn "DentalClinic-LogCleanup"') "仍走参数数组"
 Check "route:list 不再传 --compact（Laravel 11 无此选项）" `

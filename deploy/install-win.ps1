@@ -1161,12 +1161,19 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260808-win7-service-wmi"
+$script:ScriptRev = "20260808-service-name-diag"
 # 失败收尾要用：本次安装是否亲手拉起过裸 mysqld（交接给 Windows 服务后清零）。
 $script:InstallerStartedMysqld = $false
+# WMI/NSSM 注册成功不等于服务已经能由 SCM 托管。分别记录“本次注册过”和
+# “已完成 net start + SCM Running + SQL 探测”，失败收尾只删除前者中的半成品。
+$script:InstallerRegisteredBundledDbService = $false
+$script:InstallerBundledDbServiceReady = $false
 # Apache 在数据库服务注册前启动。若后续失败，必须只回滚本次注册的 Web 服务，
 # 否则会留下“80 端口正常、数据库已停”的半安装状态。
 $script:InstallerRegisteredApache = $false
+# 覆盖安装会暂停上一版的 Scheduler / Watchdog。若本轮失败，必须恢复本次确实
+# 找到并暂停的任务，否则一次失败安装会把原有系统的自愈能力永久关掉。
+$script:InstallerPausedTasks = @()
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1385,12 +1392,15 @@ try {
     # scheduler.log 里 snooze:send 连续 FAIL 35 次。真正该看的失败埋在里面。
     #
     # 光 /end 不够 —— 那只结束当前这一次，下一分钟照样再触发，必须 /disable。
-    # 第 18 步「Create scheduled tasks」会重建并显式恢复启用；装到一半失败则
-    # 保持禁用：一个装了一半的系统本来就不该每分钟去连库刷错误日志。
     # 任务不存在（全新安装）时 schtasks 返回非零，属正常，用 -Probe 静音。
+    # 只记录本次确实存在、确实由安装器暂停的任务，catch 才能对称恢复。
     foreach ($pausedTask in @('DentalClinic-Scheduler', 'DentalClinic-ServiceWatchdog')) {
-        Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/end', '/tn', $pausedTask) -Probe | Out-Null
-        Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/change', '/tn', $pausedTask, '/disable') -Probe | Out-Null
+        $taskQueryExit = Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/query', '/tn', $pausedTask) -Probe
+        if ($taskQueryExit -eq 0) {
+            $script:InstallerPausedTasks += $pausedTask
+            Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/end', '/tn', $pausedTask) -Probe | Out-Null
+            Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/change', '/tn', $pausedTask, '/disable') -Probe | Out-Null
+        }
     }
     Write-Host "        计划任务 ................ 安装期间已暂停"
 
@@ -2414,7 +2424,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             try {
                 if (-not $ocrProc.HasExited) {
                     Stop-Process -Id $ocrProc.Id -Force -ErrorAction SilentlyContinue
-                    $ocrProc.WaitForExit(5000)
+                    $ocrProc.WaitForExit(5000) | Out-Null
                 }
             } catch {}
             $ocrProc = $null
@@ -2591,6 +2601,8 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         elseif (Test-Path (Join-Path $LARAGON_DIR 'bin\nssm\nssm.exe')) { $nssmExe = Join-Path $LARAGON_DIR 'bin\nssm\nssm.exe' }
         elseif (Test-CommandExists 'nssm') { $nssmExe = 'nssm' }
 
+        $serviceCreateExit = -1
+        $serviceReadBackFailed = $false
         if ($nssmExe) {
             $serviceCreateExit = Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('install', $svcName, $MYSQLD_EXE, "--defaults-file=$mysqlIni")
             if ($serviceCreateExit -eq 0) {
@@ -2612,11 +2624,14 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             if (Test-Path $mysqlIni) {
                 $binPathValue += ' --defaults-file="' + $mysqlIni + '"'
             }
+            # mysqld 不是普通控制台程序。自定义 Windows 服务名必须作为最后一个
+            # 启动参数传回 mysqld；否则它按默认的 MySQL 身份接入 SCM。结果会是
+            # 3307 已监听、错误日志显示 ready for connections，但
+            # net start DentalClinicMariaDB 仍返回 2。
+            $binPathValue += ' ' + $svcName
 
-            $serviceCreateExit = -1
             # 与 $serviceCreateExit 分开：一个装 WMI 的返回码，一个装我们自己
             # 读回校验的结论。两者混用会让日志里出现不存在的「WMI 返回码」。
-            $serviceReadBackFailed = $false
             try {
                 $serviceClass = [wmiclass]'Win32_Service'
                 $createResult = $serviceClass.Create(
@@ -2676,6 +2691,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         if ($serviceCreateExit -ne 0 -or $serviceReadBackFailed) {
             Fail-Step ("{0} service registration failed. The database would not survive installer exit or reboot." -f $svcName)
         }
+        $script:InstallerRegisteredBundledDbService = $true
 
         # mysqld 在前面的数据库初始化阶段是安装器直接拉起的。服务注册成功并不
         # 会接管这个现有进程；安装窗口退出后它可能随父进程消失，而每分钟一次的
@@ -2704,12 +2720,42 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             Fail-Step "The installer-managed MySQL process did not stop; refusing to start a second instance on the same data directory."
         }
 
-        $serviceStartExit = Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('start', $svcName) -Probe
-        if (-not (Wait-MySqlReady -MySqlExe $MYSQL_EXE -ConnectionArguments $mysqlConnArgs -Password $DB_PASS -TimeoutSeconds 60)) {
+        # net start 的输出必须留下来。这一步失败过三轮（16:24 / 17:24 / 18:43），
+        # 每次日志里都只有一个「exit 2」，而 net.exe 自己那句话（「系统找不到指定的
+        # 文件」还是「服务没有响应控制功能」）指向完全不同的原因 —— 偏偏它被
+        # -Probe 静音掉了，于是每轮都只能靠猜。用 Capture 拿回来：成功时不打印，
+        # 失败时连同 SCM 的系统日志一起进失败消息。
+        $serviceStartResult = Invoke-NativeCapture -FilePath 'net.exe' -Arguments @('start', $svcName)
+        $serviceStartExit = $serviceStartResult.ExitCode
+        $startedService = Get-WmiObject -Class Win32_Service -Filter ("Name='{0}'" -f $svcName) -ErrorAction SilentlyContinue
+        $serviceState = $(if ($startedService) { "$($startedService.State)" } else { '<missing>' })
+        if ($serviceStartExit -ne 0 -or -not $startedService -or $serviceState -ne 'Running') {
             $serviceLog = Get-LastLogLines -Paths @($MYSQL_ERROR_LOG)
-            Fail-Step (("{0} service failed to start (net start exit {1})." -f $svcName, $serviceStartExit) +
+            # SCM 在服务起不来时会往系统日志写 7000/7009/7024 这类事件，里面带的是
+            # 真正的 Win32 错误码 —— 比 net.exe 的退出码具体得多。
+            $scmDetail = ''
+            try {
+                $scmEvents = @(Get-EventLog -LogName System -Source 'Service Control Manager' -Newest 30 -ErrorAction SilentlyContinue |
+                               Where-Object { $_.Message -like ('*' + $svcName + '*') })
+                if ($scmEvents.Count -gt 0) {
+                    $scmLines = @($scmEvents | Select-Object -First 3 | ForEach-Object {
+                        ("[{0}] {1}" -f $_.TimeGenerated, (($_.Message -replace '[\r\n]+', ' ').Trim()))
+                    })
+                    $scmDetail = [Environment]::NewLine + "--- 系统日志（服务控制管理器）---" +
+                                 [Environment]::NewLine + ($scmLines -join [Environment]::NewLine)
+                }
+            } catch {}
+            Fail-Step (("{0} did not reach SCM Running state (net start exit {1}; State={2})." -f $svcName, $serviceStartExit, $serviceState) +
+                       $(if ($serviceStartResult.Output) { [Environment]::NewLine + "--- net start 输出 ---" + [Environment]::NewLine + $serviceStartResult.Output } else { "" }) +
+                       $scmDetail +
                        $(if ($serviceLog) { [Environment]::NewLine + $serviceLog } else { "" }))
         }
+        if (-not (Wait-MySqlReady -MySqlExe $MYSQL_EXE -ConnectionArguments $mysqlConnArgs -Password $DB_PASS -TimeoutSeconds 60)) {
+            $serviceLog = Get-LastLogLines -Paths @($MYSQL_ERROR_LOG)
+            Fail-Step (("{0} reached SCM Running but SQL readiness failed." -f $svcName) +
+                       $(if ($serviceLog) { [Environment]::NewLine + $serviceLog } else { "" }))
+        }
+        $script:InstallerBundledDbServiceReady = $true
         # 裸进程已交接给 Windows 服务，之后再失败也不该去关数据库了：
         # 那时候关掉的是服务，等于把装好的系统留在停机状态。
         $script:InstallerStartedMysqld = $false
@@ -2725,7 +2771,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     #     （只打了 warning 不中止），任务会停在禁用态 —— 等于装完了调度永不触发。
     #   - --no-service 路径：不重建任何任务，不显式启用的话，上一版装好的调度
     #     会被这次安装顺手关掉，而日志里没有任何一行提到过这件事。
-    foreach ($resumedTask in @('DentalClinic-Scheduler', 'DentalClinic-ServiceWatchdog')) {
+    foreach ($resumedTask in $script:InstallerPausedTasks) {
         Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/change', '/tn', $resumedTask, '/enable') -Probe | Out-Null
     }
     if ($SKIP_SERVICE) {
@@ -2822,6 +2868,27 @@ catch {
         }
     } catch {}
     try {
+        # 服务已注册但没有通过 net start + SCM Running + SQL 三重验收时，它只是
+        # 一个开机必失败的半成品。先尝试停止，再删除服务项；已完成交接的服务
+        # 不在这里动，避免后续非数据库步骤失败时反而把可用数据库拆掉。
+        if ($script:InstallerRegisteredBundledDbService -and
+            -not $script:InstallerBundledDbServiceReady -and $DB_SERVICE_NAME) {
+            Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('stop', $DB_SERVICE_NAME) -Probe | Out-Null
+            Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('delete', $DB_SERVICE_NAME) -Probe | Out-Null
+            for ($cleanupWait = 0; $cleanupWait -lt 20; $cleanupWait++) {
+                $leftoverService = Get-WmiObject -Class Win32_Service -Filter ("Name='{0}'" -f $DB_SERVICE_NAME) -ErrorAction SilentlyContinue
+                if (-not $leftoverService) { break }
+                Start-Sleep -Milliseconds 500
+            }
+            if ($leftoverService) {
+                Write-Host ("        [警告] 半成品数据库服务仍在等待删除: {0}" -f $DB_SERVICE_NAME) -ForegroundColor Yellow
+            } else {
+                Write-Host ("        已删除未通过启动验收的数据库服务: {0}" -f $DB_SERVICE_NAME)
+            }
+            $script:InstallerRegisteredBundledDbService = $false
+        }
+    } catch {}
+    try {
         if ($ocrProc -and -not $ocrProc.HasExited) {
             Stop-Process -Id $ocrProc.Id -Force -ErrorAction SilentlyContinue
             Write-Host "        已关闭本次安装启动的 OCR 进程"
@@ -2831,6 +2898,16 @@ catch {
         if ($script:InstallerRegisteredApache) {
             Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('stop', 'DentalClinicApache') -Probe | Out-Null
             Write-Host "        已停止本次安装注册的 Apache 服务（避免留下半安装站点）"
+        }
+    } catch {}
+    try {
+        # 放在所有服务/进程回滚之后恢复，避免 Watchdog 恰好触发并把刚清理的
+        # Apache 或半成品数据库重新拉起来。
+        foreach ($pausedTask in $script:InstallerPausedTasks) {
+            Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/change', '/tn', $pausedTask, '/enable') -Probe | Out-Null
+        }
+        if ($script:InstallerPausedTasks.Count -gt 0) {
+            Write-Host "        已恢复安装前暂停的计划任务"
         }
     } catch {}
 
