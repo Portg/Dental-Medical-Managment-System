@@ -238,7 +238,14 @@ function Invoke-MySqlQuiet {
     param(
         [string]$FilePath,
         [string[]]$Arguments = @(),
-        [string]$Password = ""
+        [string]$Password = "",
+        # 探测型调用（「MySQL 起来了没」这类）非零是**预期结果**，不该打诊断。
+        # 不转发这个开关的话，每次装机日志里都会出现
+        #   [诊断] 命令失败（退出码 1）: mysql.exe ... -e SELECT 1
+        #   [诊断] ERROR 2002 (HY000): Can't connect ... (10061)
+        # 而下一行就是「MariaDB started OK」—— 看日志的人只会以为出事了，
+        # 真正的失败反而被这种噪声淹没。
+        [switch]$Probe
     )
 
     $hadOldPassword = Test-Path Env:MYSQL_PWD
@@ -249,7 +256,11 @@ function Invoke-MySqlQuiet {
         } else {
             $env:MYSQL_PWD = $Password
         }
-        $exitCode = Invoke-NativeQuiet -FilePath $FilePath -Arguments $Arguments
+        if ($Probe) {
+            $exitCode = Invoke-NativeQuiet -FilePath $FilePath -Arguments $Arguments -Probe
+        } else {
+            $exitCode = Invoke-NativeQuiet -FilePath $FilePath -Arguments $Arguments
+        }
         return $exitCode
     } finally {
         if ($hadOldPassword) {
@@ -937,7 +948,8 @@ function Wait-MySqlReady {
     $waited = 0
     while ($waited -lt $TimeoutSeconds) {
         Start-Sleep -Seconds 2
-        $probeExit = Invoke-MySqlQuiet -FilePath $MySqlExe -Arguments ($ConnectionArguments + @('-e', 'SELECT 1')) -Password $Password
+        # 轮询等待：每 2 秒一次，未就绪前失败是常态
+        $probeExit = Invoke-MySqlQuiet -FilePath $MySqlExe -Arguments ($ConnectionArguments + @('-e', 'SELECT 1')) -Password $Password -Probe
         if ($probeExit -eq 0) {
             return $true
         }
@@ -1144,7 +1156,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260808-config-clear"
+$script:ScriptRev = "20260808-probe-quiet"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1595,7 +1607,8 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             Fail-Step ("Cannot connect to existing MySQL at {0}:{1} as {2}. No MySQL process was stopped or changed." -f $DB_HOST, $DB_PORT, $DB_ADMIN_USER)
         }
 
-        $existingDbExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-D', $DB_NAME, '-e', 'SELECT 1')) -Password $DB_ADMIN_PASS
+        # 「这个库是否已存在」——不存在是正常分支
+        $existingDbExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-D', $DB_NAME, '-e', 'SELECT 1')) -Password $DB_ADMIN_PASS -Probe
         if ($existingDbExit -eq 0) {
             if ($NON_INTERACTIVE) {
                 Fail-Step ("Database $DB_NAME already exists. Refusing to overwrite it in non-interactive mode.")
@@ -1624,7 +1637,14 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             ('port=' + $DB_PORT),
             'service=DentalClinicMySQL'
         ) | Set-Content -Path $BUNDLED_MYSQL_MARKER -Encoding ASCII
-        $mysqlProbeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password ""
+        # 「内置 MariaDB 是否已经在跑」。没跑是**首次安装的正常状态**，
+        # 下面紧接着就会把它启动起来，所以这里不能报成故障。
+        $mysqlProbeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password "" -Probe
+        if ($mysqlProbeExit -eq 0) {
+            Write-Host "        MariaDB 已在运行 ........ 复用"
+        } else {
+            Write-Host "        MariaDB 未在运行 ........ 准备启动"
+        }
         if ($mysqlProbeExit -ne 0) {
         if (-not (Test-Path $MYSQLD_EXE)) { Fail-Step "mysqld.exe not found." }
         $MYSQL_CONSOLE_LOG = Join-Path $DB_RUNTIME_LOG_DIR "mysql-console.log"
@@ -2480,7 +2500,8 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
 
         $databaseStopped = $false
         for ($i = 0; $i -lt 15; $i++) {
-            $probeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password $BUNDLED_SERVICE_ADMIN_PASS
+            # 服务起来没 —— 轮询探测
+            $probeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password $BUNDLED_SERVICE_ADMIN_PASS -Probe
             if ($probeExit -ne 0) { $databaseStopped = $true; break }
             Start-Sleep -Seconds 1
         }

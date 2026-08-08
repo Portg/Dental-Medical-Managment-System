@@ -564,6 +564,27 @@ Check "config:clear 早于 db:seed" ($posClear -ge 0 -and $posSeed -ge 0 -and $p
 $posEnv = $text.IndexOf('Write-Section "Generate .env"')
 Check "config:clear 排在 .env 生成之后" ($posEnv -ge 0 -and $posClear -gt $posEnv) "clear@$posClear env@$posEnv"
 
+Section "8g7. 预期会失败的探测不得报成故障"
+# 「MySQL 起来了没」这类探测在未就绪时失败是**预期结果**。不加 -Probe 的话
+# 每次装机日志都会出现
+#   [诊断] 命令失败（退出码 1）: mysql.exe ... -e SELECT 1
+#   [诊断] ERROR 2002 (HY000): Can't connect ... (10061)
+# 而下一行就是「MariaDB started OK」—— 看日志的人只会以为出事了，
+# 真正的失败反而被淹没。用户连着几轮都在问这条，就是被它误导的。
+Check "Invoke-MySqlQuiet 支持 -Probe" ($text -match '(?s)function Invoke-MySqlQuiet.*?\[switch\]\$Probe') "没有 Probe 参数"
+Check "Invoke-MySqlQuiet 会转发 -Probe" ($text -match 'Invoke-NativeQuiet -FilePath \$FilePath -Arguments \$Arguments -Probe') "没有转发"
+$probeLines = @(); $loudLines = @()
+$ls = $text -split "`r?`n"
+for ($i = 0; $i -lt $ls.Count; $i++) {
+    if ($ls[$i] -notmatch "'SELECT 1'" -or $ls[$i] -notmatch 'Invoke-MySqlQuiet') { continue }
+    if ($ls[$i] -match '-Probe') { $probeLines += ($i + 1) } else { $loudLines += ($i + 1) }
+}
+Check "轮询/存在性探测都已静音（$($probeLines.Count) 处）" ($probeLines.Count -ge 4) "只有 $($probeLines.Count) 处"
+# 仍报诊断的必须只剩「失败即 Fail-Step」和「加固回连验证」两处 —— 那两处的
+# mysql 报错是有用信息，不能一起静音。
+Check "仍报诊断的探测不超过 2 处（第 $($loudLines -join ', ') 行）" ($loudLines.Count -le 2) `
+      "有 $($loudLines.Count) 处仍会把预期失败报成故障"
+
 Section "8h. OCR requirements 必须能被 pip 在 GBK 区域下解码"
 # pip 的 auto_decode 只认前两行的 coding 声明或 BOM，否则按系统区域编码解码。
 # 中文 Windows 上那是 GBK，UTF-8 的中文注释会让它抛 UnicodeDecodeError，
