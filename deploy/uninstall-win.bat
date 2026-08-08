@@ -53,8 +53,16 @@ if exist "%SCRIPT_DIR%laragon\www\dental\artisan" (
     set "INSTALL_DIR=%SCRIPT_DIR:~0,-1%"
     goto :dir_found
 )
+if exist "%SCRIPT_DIR%xampp\htdocs\dental\artisan" (
+    set "INSTALL_DIR=%SCRIPT_DIR:~0,-1%"
+    goto :dir_found
+)
 REM 检查默认路径
 if exist "C:\DentalClinic\laragon\www\dental\artisan" (
+    set "INSTALL_DIR=C:\DentalClinic"
+    goto :dir_found
+)
+if exist "C:\DentalClinic\xampp\htdocs\dental\artisan" (
     set "INSTALL_DIR=C:\DentalClinic"
     goto :dir_found
 )
@@ -68,6 +76,9 @@ exit /b 1
 :dir_found
 set "LARAGON_DIR=%INSTALL_DIR%\laragon"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
+set "DB_SERVICE=DentalClinicMySQL"
+if exist "%INSTALL_DIR%\xampp\apache\bin\httpd.exe" set "DB_SERVICE=DentalClinicMariaDB"
+if "%DB_SERVICE%"=="DentalClinicMariaDB" set "PROJECT_DIR=%INSTALL_DIR%\xampp\htdocs\dental"
 set "EXTERNAL_MYSQL=0"
 if exist "%INSTALL_DIR%\existing-mysql.conf" set "EXTERNAL_MYSQL=1"
 set "APP_DB_HOST=127.0.0.1"
@@ -167,8 +178,11 @@ REM 停止 MySQL 服务
 if "%EXTERNAL_MYSQL%"=="1" (
     echo        现有 MySQL 由目标机管理、保持运行             [跳过]
 ) else (
-    echo        停止 MySQL 服务 (DentalClinicMySQL)...
-    net stop DentalClinicMySQL >nul 2>&1
+    echo        停止数据库服务 (!DB_SERVICE!)...
+    net stop !DB_SERVICE! >nul 2>&1
+    REM 旧版 xampp 包把内置库注册成 DentalClinicMySQL。只按当前名字停的话，
+    REM 早先装的机器上那个服务会被漏掉，卸载完留下一个指向已删目录的孤儿服务。
+    if not "!DB_SERVICE!"=="DentalClinicMySQL" net stop DentalClinicMySQL >nul 2>&1
     echo        服务已停止                                          [OK]
 )
 
@@ -203,7 +217,7 @@ if "%KEEP_DATA%"=="1" (
         if exist "%%D\bin\mysqldump.exe" set "MYSQLDUMP_EXE=%%D\bin\mysqldump.exe"
     )
     if defined MYSQLDUMP_EXE (
-        if "%EXTERNAL_MYSQL%"=="0" net start DentalClinicMySQL >nul 2>&1
+        if "%EXTERNAL_MYSQL%"=="0" net start !DB_SERVICE! >nul 2>&1
         echo        正在导出数据库...
         set "MYSQL_PWD=!APP_DB_PASS!"
         "!MYSQLDUMP_EXE!" -h !APP_DB_HOST! -P !APP_DB_PORT! -u !APP_DB_USER! !APP_DB_NAME! > "!BACKUP_DIR!\pristine_dental.sql" 2>nul
@@ -213,7 +227,7 @@ if "%KEEP_DATA%"=="1" (
             echo        [!] 数据库导出失败，请手动备份
         )
         set "MYSQL_PWD="
-        if "%EXTERNAL_MYSQL%"=="0" net stop DentalClinicMySQL >nul 2>&1
+        if "%EXTERNAL_MYSQL%"=="0" net stop !DB_SERVICE! >nul 2>&1
     )
 
     echo        备份目录: !BACKUP_DIR!
@@ -243,7 +257,7 @@ if not defined MYSQL_EXE for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do (
 
 if defined MYSQL_EXE (
     REM 只启动本系统的 DentalClinicMySQL；如果服务未注册，再直接启动随包实例。
-    net start DentalClinicMySQL >nul 2>&1
+    net start !DB_SERVICE! >nul 2>&1
     timeout /t 3 /nobreak >nul
     set "MYSQL_PWD=!APP_DB_PASS!"
     "!MYSQL_EXE!" -h !APP_DB_HOST! -P !APP_DB_PORT! -u !APP_DB_USER! -e "SELECT 1" >nul 2>&1
@@ -315,9 +329,15 @@ REM 删除 MySQL Windows 服务
 if "%EXTERNAL_MYSQL%"=="1" (
     echo        现有 MySQL 服务不属于本系统                 [跳过]
 ) else (
-    echo        移除 MySQL 服务 (DentalClinicMySQL)...
-    sc delete DentalClinicMySQL >nul 2>&1
-    if !ERRORLEVEL! equ 0 (
+    echo        移除数据库服务 (!DB_SERVICE!)...
+    sc delete !DB_SERVICE! >nul 2>&1
+    REM 结论要绑在**主服务**的退出码上：紧接着还要删旧名，那条会把 ERRORLEVEL
+    REM 覆盖掉（旧名通常不存在、必然非零），下面就会永远报成「不存在或已移除」。
+    set "DB_SVC_DEL_RC=!ERRORLEVEL!"
+    REM 同上：旧名也一并删，否则服务列表里会永远留着一个起不来的条目，
+    REM 下次装机 sc query 还查得到它。
+    if not "!DB_SERVICE!"=="DentalClinicMySQL" sc delete DentalClinicMySQL >nul 2>&1
+    if "!DB_SVC_DEL_RC!"=="0" (
         echo        MySQL 服务已移除                                [OK]
     ) else (
         echo        MySQL 服务不存在或已移除                        [OK]

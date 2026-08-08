@@ -481,7 +481,16 @@ Section "8g. 需要 cmd 解析的命令必须走 Invoke-CmdLine"
 # 直接经参数数组传会分别得到 1639 和「Invalid argument/option - '/c'」。
 Check "sc.exe create 走 Invoke-CmdLine" ($text -match 'Invoke-CmdLine -CommandLine \$scCmdLine') "仍走参数数组"
 Check "binPath 的内层引号被转义" ($text -match "binPathInner -replace") "没有转义"
-Check "DisplayName 的值加了引号" ($text -match 'DisplayName= "DentalClinic MySQL"') "带空格的值未加引号"
+# 服务名按形态分流后，DisplayName 从字面量变成了变量拼接，原来那条按字面量匹配的
+# 断言直接失效（报「未加引号」）。真正要守的不变量是**值两侧有引号**，
+# 所以改成匹配拼接形式：DisplayName= "' + $var + '"。
+$scCmdLineText = [regex]::Match($text, '(?s)\$scCmdLine = .*?start= auto').Value
+Check "DisplayName 的值加了引号" `
+      ($scCmdLineText -match 'DisplayName= "' -and $scCmdLineText -match 'serviceDisplayName') `
+      "带空格的值未加引号"
+Check "服务显示名按运行时形态分流" `
+      ($text -match '\$serviceDisplayName = if') `
+      "xampp 形态仍显示为 MySQL，与目标机现有 MySQL 混淆"
 Check "LogCleanup 任务指向独立 .bat" ($text -match 'clean-logs\.bat') "仍在 /tr 里套多层引号"
 Check "LogCleanup 的 schtasks 走 Invoke-CmdLine" ($text -match 'Invoke-CmdLine -CommandLine \(.schtasks\.exe /create /tn "DentalClinic-LogCleanup"') "仍走参数数组"
 Check "route:list 不再传 --compact（Laravel 11 无此选项）" `
@@ -671,6 +680,41 @@ Check "setup.bat 的 net stop 输出不直接进 setup.log" `
 Check "setup.bat 把 net stop 的退出码 2 记为预期" `
       ($setupTpl3 -match ':log_netstop' -and $setupTpl3 -match 'if "%~2"=="2"') `
       "缺少对「本来就没运行」的解释"
+
+Section "8m. 绝不能把别人的数据库当成自己的"
+# 目标机上常驻着别人的 MySQL（现场那台是 5.7，就在 3306）。它若允许空密码 root，
+# 「内置库是否已在运行」那次探测会连到它身上，接着就是在别人的实例里建库、
+# 把别人的 root 密码改成随机值、导 schema —— 数据库当场打死。
+Check "复用前校验 @@basedir" ($text -match 'SELECT @@basedir') "探测通了就直接复用，认不出是谁的库"
+Check "basedir 必须落在安装目录内" `
+      ($text -match 'normalizedProbeBase.*StartsWith.*normalizedOurBase') `
+      "没有把 basedir 与本安装目录做比对"
+Check "比对时两边补结尾斜杠（防前缀误判）" `
+      ($text -match "TrimEnd\('/'\)\.ToLowerInvariant\(\) \+ '/'") `
+      "C:\\Dental 会把 C:\\DentalClinic 的实例误判成自己人"
+Check "认不出身份时停止安装而不是继续" `
+      ($text -match '端口 \{0\} 上有另一个数据库在应答') `
+      "不确定就复用 —— 这是会改写别人 root 密码的路径"
+Check "给出两条明确出路（换端口 / 显式复用）" `
+      ($text -match '--db-port 3307' -and $text -match '--use-existing-mysql') `
+      "只报错不给解法，现场只能干等"
+
+Section "8n. 安装失败必须关掉本次拉起的进程"
+# 以前失败就直接 exit 1：第 5 步拉起的裸 mysqld 没人管，退出后继续占着端口和
+# 数据目录。2026-08-08 11:26 那次死在第 11 步，之后应用报的是 1045 而不是 2002 ——
+# 服务器还在应答，就是这个被丢下的进程。
+Check "标记本次是否拉起过裸 mysqld" ($text -match 'InstallerStartedMysqld = \$true') "无从判断该不该收尾"
+Check "交接给服务后清除标记" `
+      ($text -match 'script:InstallerStartedMysqld = \$false') `
+      "交接后再失败会把已装好的系统的数据库服务关掉"
+# 取最后一个顶层 catch 块；取不到就给空串，让下面的断言红掉而不是让 harness 崩掉
+$catchStart = $text.LastIndexOf("`ncatch {")
+$catchBlock = if ($catchStart -ge 0) { $text.Substring($catchStart) } else { '' }
+Check "catch 里关闭裸 mysqld" ($catchBlock -match 'mysqladminCleanup') "失败后 mysqld 仍占着端口"
+Check "收尾走 mysqladmin shutdown 而非按名杀进程" `
+      ($catchBlock -notmatch 'Get-Process.*mysqld' -and $catchBlock -notmatch 'taskkill') `
+      "会误杀目标机自己的 MySQL 5.7"
+Check "catch 里关闭 OCR 进程" ($catchBlock -match '\$ocrProc') "失败后 python 仍挂着"
 
 Section "8l. start-win.bat 必须可观测"
 # 它每分钟被 watchdog 跑一次、负责让服务活着，却是全套脚本里唯一不写日志的。

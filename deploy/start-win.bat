@@ -62,6 +62,8 @@ set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 if "%RUNTIME_FLAVOR%"=="xampp" set "PROJECT_DIR=%XAMPP_DIR%\htdocs\dental"
 set "EXTERNAL_MYSQL_MARKER=%INSTALL_DIR%\existing-mysql.conf"
 set "APACHE_SERVICE=DentalClinicApache"
+set "DB_SERVICE=DentalClinicMySQL"
+if "%RUNTIME_FLAVOR%"=="xampp" set "DB_SERVICE=DentalClinicMariaDB"
 call :log "形态=%RUNTIME_FLAVOR% 项目目录=%PROJECT_DIR%"
 
 REM ── 自动发现路径（版本无关）────────────────────────────────────
@@ -219,14 +221,14 @@ if exist "%EXTERNAL_MYSQL_MARKER%" (
 
 REM 内置模式只启动 DentalClinicMySQL；不调用 net start mysql，也不通过
 REM Laragon 启动，避免接管目标机原有的 MySQL 服务。
-sc query DentalClinicMySQL >nul 2>&1
+sc query %DB_SERVICE% >nul 2>&1
 if !ERRORLEVEL! equ 0 (
-    echo        启动 DentalClinicMySQL 服务...
-    net start DentalClinicMySQL >nul 2>&1
-    call :log "DentalClinicMySQL 服务存在，已执行 net start (退出码 !ERRORLEVEL!)"
+    echo        启动 %DB_SERVICE% 服务...
+    net start %DB_SERVICE% >nul 2>&1
+    call :log "%DB_SERVICE% 服务存在，已执行 net start (退出码 !ERRORLEVEL!)"
     goto :wait_mysql_managed
 )
-call :log "查不到 DentalClinicMySQL 服务 —— 服务未注册成功，改为直接拉起 mysqld"
+call :log "查不到 %DB_SERVICE% 服务 —— 服务未注册成功，改为直接拉起 mysqld"
 
 if not defined MYSQLD_EXE (
     echo        [错误] 未找到安装包内置 mysqld.exe

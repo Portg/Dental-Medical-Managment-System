@@ -30,6 +30,8 @@ set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 if "%RUNTIME_FLAVOR%"=="xampp" set "PROJECT_DIR=%XAMPP_DIR%\htdocs\dental"
 set "EXTERNAL_MYSQL_MARKER=%INSTALL_DIR%\existing-mysql.conf"
 set "APACHE_SERVICE=DentalClinicApache"
+set "DB_SERVICE=DentalClinicMySQL"
+if "%RUNTIME_FLAVOR%"=="xampp" set "DB_SERVICE=DentalClinicMariaDB"
 set "APACHE_STOPPED=0"
 
 REM 阻止每分钟运行的健康检查在停止过程中把组件重新拉起。
@@ -294,7 +296,7 @@ if defined MYSQLADMIN_EXE (
         goto :mysql_done
     )
 
-    echo        优雅关闭 DentalClinicMySQL ^(!APP_DB_HOST!:!APP_DB_PORT!^)...
+    echo        优雅关闭 !DB_SERVICE! ^(!APP_DB_HOST!:!APP_DB_PORT!^)...
     "!MYSQLADMIN_EXE!" -h !APP_DB_HOST! -P !APP_DB_PORT! -u !APP_DB_USER! shutdown >nul 2>&1
     if !ERRORLEVEL! equ 0 (
         set /a "WAIT=0"
@@ -303,8 +305,8 @@ if defined MYSQLADMIN_EXE (
 )
 
 REM mysqladmin 失败时只停止本系统注册的服务，不操作其他 MySQL 服务。
-echo        通过 DentalClinicMySQL 服务停止...
-net stop DentalClinicMySQL >nul 2>&1
+echo        通过 !DB_SERVICE! 服务停止...
+net stop !DB_SERVICE! >nul 2>&1
 if defined MYSQLADMIN_EXE (
     set /a "WAIT=0"
     goto :wait_mysql_shutdown

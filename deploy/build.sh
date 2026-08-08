@@ -845,8 +845,14 @@ elif [[ "$RUNTIME_FLAVOR" == "xampp-installer" ]]; then
     SUFFIX="${TARGET}-xampp-installer"
 elif [[ "$USE_EXISTING_MYSQL" == true ]]; then
     SUFFIX="${TARGET}-existing-mysql"
-elif [[ -n "$BUNDLED_MYSQL_PORT" ]]; then
-    SUFFIX="${TARGET}-bundled-mysql-${BUNDLED_MYSQL_PORT}"
+fi
+# 端口是与运行时形态**正交**的一维，必须叠加而不是替换 —— 原先它写在同一条
+# elif 链里，于是：
+#   --runtime xampp --bundled-mysql-port 3307          → win-bundled-mysql-3307（丢了形态）
+#   --runtime xampp-installer --bundled-mysql-port 3307 → win-xampp-installer（丢了端口）
+# 两个都名不副实，正是上面注释里说的「现场拿错包」的成因。
+if [[ -n "$BUNDLED_MYSQL_PORT" ]]; then
+    SUFFIX="${SUFFIX}-db${BUNDLED_MYSQL_PORT}"
 fi
 
 # 产物名带上 commit 短哈希：现场反复拿旧包测试、以为改动没生效，是真实发生过的事。
@@ -1141,6 +1147,10 @@ if [[ "$UPGRADE" == false ]] && [[ "$INIT_DB_FROM_LOCAL" == true ]]; then
     mkdir -p "$SCHEMA_DIR"
     SCHEMA_FILE="$SCHEMA_DIR/mysql-schema.sql"
 
+    # 这是“本机数据库快照”包的明确标记。安装脚本据此跳过所有 Seeder，
+    # 保留快照中的账号、权限、菜单及业务数据，不再把它当成普通空库初始化。
+    touch "$DIST_DIR/database/.init-db-from-local"
+
     # install-win.ps1 先找 database\schema.sql，找不到才用 database\schema\mysql-schema.sql。
     # 项目里若混进了前者会盖过本步骤的产物，装机时导入的就是旧文件。
     rm -f "$DIST_DIR/database/schema.sql"
@@ -1215,25 +1225,27 @@ if [[ "$UPGRADE" == false ]] && [[ "$INIT_DB_FROM_LOCAL" == true ]]; then
     DUMP_INSERTS=$(grep -c '^INSERT INTO' "$SCHEMA_FILE" 2>/dev/null || true)
     [[ "${DUMP_TABLES:-0}" -lt 50 ]] && fatal "导出的 SQL 只有 ${DUMP_TABLES} 张表，明显不完整（本系统约 125 张）"
 
-    # users 必须有数据：装机脚本据此判断库是否为空，空则跑 db:seed 重建基础数据，
-    # 且随包若无任何用户，装完将无账号可登录。
-    #
-    # 注：此处原先还有一层顾虑 —— db:seed 会让 MenuItemsSeeder truncate 掉随包的
-    # menu_items / role_menu_items。该 seeder 现已改为按 title_key 幂等 upsert
-    # （既有项就地更新、未定义项只报告不删除），不再有这个风险。
-    if ! grep -qE '^INSERT INTO `users`' "$SCHEMA_FILE"; then
-        fatal "导出的 SQL 里 users 表没有数据 —— 装机后将无账号可登录，且会被判定为空库而重跑 db:seed。请确认本地库的 users 表非空"
-    fi
+    # 快照模式必须是可直接运行的完整业务库。只检查 users 会漏掉权限表为空的
+    # 情况，最终在目标机执行 MenuItemsSeeder 时才失败（最近一次安装事故）。
+    # 在构建阶段提前拒绝不完整快照，并给出明确的补数提示。
+    for required_table in users roles permissions menu_items; do
+        required_insert_pattern=$(printf '^INSERT INTO `%s`' "$required_table")
+        if ! grep -qE "$required_insert_pattern" "$SCHEMA_FILE"; then
+            fatal "导出的 SQL 里 ${required_table} 表没有数据 —— 本机数据库快照不完整，请先补齐该表后重新构建"
+        fi
+    done
 
     SCHEMA_SIZE=$(du -h "$SCHEMA_FILE" | cut -f1)
     info "初始数据库导出完成: ${DUMP_TABLES} 张表 / ${DUMP_INSERTS} 条 INSERT 语句 (${SCHEMA_SIZE})"
-    info "  装机时导入到 pristine_dental；users 非空 → db:seed 自动跳过"
+    info "  快照模式标记已写入；装机时导入到 pristine_dental，所有 Seeder 自动跳过"
 
 elif [[ "$UPGRADE" == false ]]; then
     step "导出数据库 Schema"
 
     SCHEMA_DIR="$DIST_DIR/database/schema"
     mkdir -p "$SCHEMA_DIR"
+    # 防止复用旧 dist 时把快照模式误带入普通 Schema 包。
+    rm -f "$DIST_DIR/database/.init-db-from-local"
 
     SCHEMA_DUMPED=false
 
@@ -1464,11 +1476,19 @@ call :log "stopping DentalClinicApache (net stop is synchronous)"
 net stop DentalClinicApache >"%NETSTOP_TMP%" 2>&1
 call :log_netstop "DentalClinicApache" %ERRORLEVEL%
 :no_apache_service
-sc query DentalClinicMySQL >nul 2>&1
-if errorlevel 1 goto :no_db_service
-call :log "stopping DentalClinicMySQL (net stop is synchronous)"
-net stop DentalClinicMySQL >"%NETSTOP_TMP%" 2>&1
-call :log_netstop "DentalClinicMySQL" %ERRORLEVEL%
+REM 数据库服务名随形态而变：xampp 形态是 DentalClinicMariaDB，laragon 形态是
+REM DentalClinicMySQL。而且旧版 xampp 包用的是 DentalClinicMySQL —— 覆盖安装
+REM 时机器上留的可能是任意一个。两个都试一遍，各自按存在性判断，
+REM 少停一个就意味着 mysqld 还占着 xampp\mysql\data，后面 xcopy 必撞占用。
+for %%V in (DentalClinicMariaDB DentalClinicMySQL) do call :stop_db_service "%%V"
+goto :no_db_service
+:stop_db_service
+sc query %~1 >nul 2>&1
+if errorlevel 1 exit /b 0
+call :log "stopping %~1 (net stop is synchronous)"
+net stop %~1 >"%NETSTOP_TMP%" 2>&1
+call :log_netstop "%~1" %ERRORLEVEL%
+exit /b 0
 :no_db_service
 timeout /t 2 /nobreak >nul 2>&1
 
@@ -2428,10 +2448,16 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
             ASSERT_FAIL=true
         fi
         for lifecycle_script in start-win.bat stop-win.bat uninstall-win.bat; do
-            if ! grep -qF 'DentalClinicMySQL' "$DIST_DIR/$lifecycle_script"; then
-                error "  ✗ $lifecycle_script 未限定为 DentalClinicMySQL 服务"
-                ASSERT_FAIL=true
-            fi
+            # 本意是「只许操作本系统命名空间下的服务，不许裸操作 mysqld」。
+            # 服务名按形态分成 DentalClinicMariaDB / DentalClinicMySQL 之后，
+            # 只查旧名会被 laragon 分支的默认值蒙混过关（xampp 形态一点保护都没有），
+            # 所以改成两个名字都必须出现 —— 缺一个就说明某条路径没跟着改名走。
+            for expected_service in DentalClinicMariaDB DentalClinicMySQL; do
+                if ! grep -qF "$expected_service" "$DIST_DIR/$lifecycle_script"; then
+                    error "  ✗ $lifecycle_script 未覆盖服务名 $expected_service（改名后有路径漏同步）"
+                    ASSERT_FAIL=true
+                fi
+            done
         done
     fi
     if [[ -f "$DIST_DIR/install-win.bat" ]] && grep -qiE 'wusa\.exe|KB3191566|dotnet48|win7-prereq' "$DIST_DIR/install-win.bat"; then

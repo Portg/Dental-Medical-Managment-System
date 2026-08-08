@@ -1161,7 +1161,9 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260808-scheduler-pause"
+$script:ScriptRev = "20260808-foreign-db-guard"
+# 失败收尾要用：本次安装是否亲手拉起过裸 mysqld（交接给 Windows 服务后清零）。
+$script:InstallerStartedMysqld = $false
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1239,11 +1241,13 @@ $ARTISAN = Join-Path $PROJECT_DIR "artisan"
 # 名字和路径都改成跟着形态走，laragon 分支保持原样不动。
 if ($RUNTIME_FLAVOR -eq "xampp") {
     $DB_ENGINE_NAME  = "MariaDB"
+    $DB_SERVICE_NAME = "DentalClinicMariaDB"
     $DB_STATE_DIR    = Join-Path $XAMPP_DIR "mysql"
     $DB_CONFIG_FILE  = Join-Path $XAMPP_DIR "mysql\my.ini"
     $DB_RUNTIME_LOG_DIR = Join-Path $XAMPP_DIR "mysql\data"
 } else {
     $DB_ENGINE_NAME  = "MySQL"
+    $DB_SERVICE_NAME = "DentalClinicMySQL"
     $DB_STATE_DIR    = Join-Path $LARAGON_DIR "data"
     $DB_CONFIG_FILE  = Join-Path $LARAGON_DIR "etc\mysql\my.ini"
     $DB_RUNTIME_LOG_DIR = Join-Path $LARAGON_DIR "data"
@@ -1658,7 +1662,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             'mode=bundled',
             ('host=' + $DB_HOST),
             ('port=' + $DB_PORT),
-            'service=DentalClinicMySQL'
+            ('service=' + $DB_SERVICE_NAME)
         ) | Set-Content -Path $BUNDLED_MYSQL_MARKER -Encoding ASCII
         # 「内置 MariaDB 是否已经在跑」。没跑是**首次安装的正常状态**，
         # 下面紧接着就会把它启动起来，所以这里不能报成故障。
@@ -1668,7 +1672,38 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         # 正在运行也会探测失败 —— 那种情况由下面的「停服务 + 端口占用检查」兜住，
         # 但这里不能替它下「未在运行」的结论。
         if ($mysqlProbeExit -eq 0) {
-            Write-Host "        MariaDB 探测 ............ 已在运行，复用"
+            # 探测通了**不等于**通的是我们自己的实例。
+            #
+            # 目标机上常驻着别人的 MySQL（现场那台是 5.7，就在 3306）。它若恰好
+            # 允许空密码 root，上面这次探测会连到**它**身上，而下面的代码会把它
+            # 当成「内置 MariaDB 已在运行」直接复用 —— 接着就是在别人的实例里建库、
+            # 把别人的 root 密码改成随机值（三个 host 全覆盖）、往里导 schema。
+            # 那是把人家的数据库当场打死，比装不上严重得多。
+            #
+            # 所以复用之前必须验明正身：@@basedir 必须落在本安装目录内。
+            # 这里刻意「不确定就停」——验不了身份的复用一律拒绝，让人显式选择
+            # --db-port（内置库换端口共存）或 --use-existing-mysql（明确复用）。
+            $baseDirProbe = Invoke-MySqlCapture -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-N', '-B', '-e', 'SELECT @@basedir')) -Password ""
+            $probeBaseDir = ''
+            if ($baseDirProbe.ExitCode -eq 0) { $probeBaseDir = ($baseDirProbe.Output -split "`r?`n")[0].Trim() }
+            # 比对时两边都补上结尾的 '/'：否则安装到 C:\Dental 时，
+            # 一个 basedir 在 C:\DentalClinic 的外部实例会因为前缀相同被误判成自己人。
+            $normalizedProbeBase = $probeBaseDir.Replace('\', '/').TrimEnd('/').ToLowerInvariant() + '/'
+            $normalizedOurBase   = $INSTALL_DIR.Replace('\', '/').TrimEnd('/').ToLowerInvariant() + '/'
+            if ($probeBaseDir -and $normalizedProbeBase.StartsWith($normalizedOurBase)) {
+                Write-Host "        MariaDB 探测 ............ 已在运行，复用（basedir 已验明）"
+            } else {
+                $foreignDetail = if ($probeBaseDir) { $probeBaseDir } else { "（无法读取 @@basedir）" }
+                Fail-Step (
+                    ("端口 {0} 上有另一个数据库在应答，它不属于本系统。" -f $DB_PORT) + [Environment]::NewLine +
+                    ("  它的 basedir: {0}" -f $foreignDetail) + [Environment]::NewLine +
+                    ("  本系统目录:   {0}" -f $INSTALL_DIR) + [Environment]::NewLine +
+                    "已停止安装，未对该数据库做任何修改。请二选一后重试：" + [Environment]::NewLine +
+                    "  1) 内置数据库换端口与它共存：安装时加 --db-port 3307" + [Environment]::NewLine +
+                    "     （或用 build.sh --bundled-mysql-port 3307 构建的安装包）" + [Environment]::NewLine +
+                    "  2) 明确复用目标机现有数据库：安装时加 --use-existing-mysql"
+                )
+            }
         } else {
             Write-Host "        MariaDB 探测 ............ 未响应，准备启动"
         }
@@ -1681,10 +1716,22 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         # 覆盖安装时先停止本系统注册的服务（它可能仍使用旧端口或旧配置）。
         # 绝不能按进程名批量终止 mysqld.exe，否则会误停目标机原有的
         # MySQL（例如 3306 上的 5.6）。
-        $managedServiceExit = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('query', 'DentalClinicMySQL') -Probe
+        # 旧版 XAMPP 包曾误用 DentalClinicMySQL，升级时顺手停掉并在注册阶段删除
+        # 这个旧别名；不会触碰目标机真正名为 MySQL 的服务。
+        $managedServiceNames = @($DB_SERVICE_NAME)
+        if ($RUNTIME_FLAVOR -eq 'xampp') { $managedServiceNames += 'DentalClinicMySQL' }
+        foreach ($managedServiceName in ($managedServiceNames | Select-Object -Unique)) {
+            $legacyServiceExit = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('query', $managedServiceName) -Probe
+            if ($legacyServiceExit -eq 0) {
+                Write-Host ("        Stopping previous {0} service..." -f $managedServiceName)
+                Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('stop', $managedServiceName) -Probe | Out-Null
+                Start-Sleep -Seconds 2
+            }
+        }
+        $managedServiceExit = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('query', $DB_SERVICE_NAME) -Probe
         if ($managedServiceExit -eq 0) {
-            Write-Host "        Stopping previous DentalClinicMySQL service..."
-            Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('stop', 'DentalClinicMySQL') -Probe | Out-Null
+            Write-Host ("        Stopping previous {0} service..." -f $DB_SERVICE_NAME)
+            Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('stop', $DB_SERVICE_NAME) -Probe | Out-Null
             Start-Sleep -Seconds 5
         }
 
@@ -1697,7 +1744,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
 
         if ($portInUse) {
             $portDetails = Get-PortOccupancyDetails -Port ([int]$DB_PORT)
-            $portMessage = "Port {0} is occupied after stopping DentalClinicMySQL. Nothing else was stopped. Please free this port or choose another port, then retry." -f $DB_PORT
+            $portMessage = "Port {0} is occupied after stopping {1}. Nothing else was stopped. Please free this port or choose another port, then retry." -f $DB_PORT, $DB_SERVICE_NAME
             if ($portDetails) {
                 Fail-Step ($portMessage + [Environment]::NewLine + $portDetails)
             }
@@ -1780,6 +1827,11 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         # Start-Process 参数组合。安装器本身已在隐藏窗口中运行，去掉
         # WindowStyle 仍不会弹出额外窗口，同时保留启动日志和进程句柄。
         $mysqldProc = Start-Process -FilePath $MYSQLD_EXE -ArgumentList $mysqlArgs -RedirectStandardOutput $MYSQL_CONSOLE_LOG -RedirectStandardError $MYSQL_STDERR_LOG -PassThru
+        # 标记「这个 mysqld 是本次安装拉起的裸进程」。第 17 步会把它交接给
+        # Windows 服务；但**安装中途失败时没人关它** —— 2026-08-08 11:26 那次
+        # 死在第 11 步，退出后它还活着占着端口和数据目录，所以 11:27~11:29 应用
+        # 报的是 1045（服务器在应答、密码不对）而不是 2002。收尾清理靠这个标记。
+        $script:InstallerStartedMysqld = $true
         if (-not (Wait-MySqlReady -MySqlExe $MYSQL_EXE -ConnectionArguments $rootConnArgs -Password "" -TimeoutSeconds 60)) {
             $startupLog = Get-LastLogLines -Paths @($MYSQL_ERROR_LOG, $MYSQL_CONSOLE_LOG, $MYSQL_STDERR_LOG)
             $portDetails = Get-PortOccupancyDetails -Port ([int]$DB_PORT)
@@ -2084,22 +2136,28 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     $script:Step++
     Write-Section "Seed database"
     $DEFAULT_ADMIN_SEEDED = $false
-    $seedArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_USER, '-D', $DB_NAME, '-N', '-e', 'SELECT 1 FROM users LIMIT 1')
-    $seedProbeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments $seedArgs -Password $DB_PASS
-    if ($seedProbeExit -ne 0) {
-        Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'db:seed', '--force', '--no-interaction') | Out-Null
-        $DEFAULT_ADMIN_SEEDED = $true
-        Write-Host "        Seed data initialized .... OK"
+    $LOCAL_DB_SNAPSHOT = Test-Path (Join-Path $PROJECT_DIR 'database\.init-db-from-local')
+    if ($LOCAL_DB_SNAPSHOT) {
+        # 快照包里的数据（含账号、角色、权限、菜单和业务数据）是交付内容。
+        # 任何 Seeder 都可能覆盖/补写快照，且权限不完整时会直接导致安装失败，
+        # 因此本模式严格跳过全部 Seeder。
+        Write-Host "        Package database snapshot . preserved"
+        Write-Host "        All seeders ................ skipped"
     } else {
-        Write-Host "        Existing data found ...... skipped"
-    }
+        $seedArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_USER, '-D', $DB_NAME, '-N', '-e', 'SELECT 1 FROM users LIMIT 1')
+        $seedProbeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments $seedArgs -Password $DB_PASS
+        if ($seedProbeExit -ne 0) {
+            Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'db:seed', '--force', '--no-interaction') | Out-Null
+            $DEFAULT_ADMIN_SEEDED = $true
+            Write-Host "        Seed data initialized .... OK"
+        } else {
+            Write-Host "        Existing data found ...... skipped"
+        }
 
-    # 菜单同步无条件执行（不受上面的「已有数据」判断影响）：
-    # MenuItemsSeeder 不在 DatabaseSeeder 中，且它是侧边栏菜单的唯一定义。
-    # 按 title_key 幂等 upsert —— 既有项就地更新、未定义项只报告不删除，
-    # 因此对随包导入了菜单数据的库同样安全。
-    Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'db:seed', '--class=MenuItemsSeeder', '--force', '--no-interaction') | Out-Null
-    Write-Host "        Sidebar menu synced ...... OK"
+        # 普通 Schema 包没有业务快照，菜单需要由专用 Seeder 补齐。
+        Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'db:seed', '--class=MenuItemsSeeder', '--force', '--no-interaction') | Out-Null
+        Write-Host "        Sidebar menu synced ...... OK"
+    }
 
     $script:Step++
     Write-Section "Create storage link"
@@ -2346,6 +2404,19 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             }
         }
 
+        # 健康检查只临时启动 OCR，不把安装器子进程当成最终常驻实例。
+        # 安装完成后由 DentalClinic-AutoStart / ServiceWatchdog 统一拉起，
+        # 这样 stop/start、重启和失败回滚都只管理同一套进程。
+        if ($ocrProc) {
+            try {
+                if (-not $ocrProc.HasExited) {
+                    Stop-Process -Id $ocrProc.Id -Force -ErrorAction SilentlyContinue
+                    $ocrProc.WaitForExit(5000)
+                }
+            } catch {}
+            $ocrProc = $null
+        }
+
         if ($ocrReady) {
             Write-Host "        OCR setup ............... OK"
         } else {
@@ -2469,8 +2540,17 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     } elseif (-not (Test-Path $MYSQLD_EXE)) {
         Write-Host "        Windows service ......... skipped (mysqld not found)"
     } else {
-        $svcName = "DentalClinicMySQL"
+        $svcName = $DB_SERVICE_NAME
+        $serviceDisplayName = if ($RUNTIME_FLAVOR -eq 'xampp') { 'DentalClinic MariaDB' } else { 'DentalClinic MySQL' }
         $mysqlIni = $DB_CONFIG_FILE
+        if ($RUNTIME_FLAVOR -eq 'xampp') {
+            $legacySvc = 'DentalClinicMySQL'
+            if ($legacySvc -ne $svcName -and (Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('query', $legacySvc) -Probe) -eq 0) {
+                Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('stop', $legacySvc) -Probe | Out-Null
+                Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('delete', $legacySvc) -Probe | Out-Null
+                Write-Host "        Legacy MySQL service ..... removed for refresh"
+            }
+        }
         $serviceQueryExit = Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('query', $svcName) -Probe
         if ($serviceQueryExit -eq 0) {
             # 与 Apache 对称：已存在则停掉并删除，按当前 my.ini / basedir 重建，
@@ -2497,7 +2577,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         if ($nssmExe) {
             $serviceCreateExit = Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('install', $svcName, $MYSQLD_EXE, "--defaults-file=$mysqlIni")
             if ($serviceCreateExit -eq 0) {
-                Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('set', $svcName, 'DisplayName', 'DentalClinic MySQL') | Out-Null
+                Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('set', $svcName, 'DisplayName', $serviceDisplayName) | Out-Null
                 Invoke-NativeQuiet -FilePath $nssmExe -Arguments @('set', $svcName, 'Start', 'SERVICE_AUTO_START') | Out-Null
                 Write-Host "        Service registration .... OK (NSSM)"
             } else {
@@ -2518,10 +2598,10 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             }
             $scCmdLine = 'sc.exe create ' + $svcName +
                          ' binPath= "' + ($binPathInner -replace '"', '\"') + '"' +
-                         ' DisplayName= "DentalClinic MySQL" start= auto'
+                         ' DisplayName= "' + $serviceDisplayName + '" start= auto'
             $serviceCreateExit = Invoke-CmdLine -CommandLine $scCmdLine
             if ($serviceCreateExit -eq 0) {
-                Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('description', $svcName, 'DentalClinic MySQL database service') | Out-Null
+                Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('description', $svcName, ($serviceDisplayName + ' database service')) | Out-Null
                 Write-Host "        Service registration .... OK (sc.exe)"
             } else {
                 Write-Host "        Service registration .... warning"
@@ -2529,7 +2609,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         }
 
         if ($serviceCreateExit -ne 0) {
-            Fail-Step "DentalClinicMySQL service registration failed. The database would not survive installer exit or reboot."
+            Fail-Step ("{0} service registration failed. The database would not survive installer exit or reboot." -f $svcName)
         }
 
         # mysqld 在前面的数据库初始化阶段是安装器直接拉起的。服务注册成功并不
@@ -2538,14 +2618,14 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         # 10:30 被拒绝、10:31 又恢复。这里显式做一次“裸进程 -> Windows 服务”交接。
         $MYSQLADMIN_EXE = Join-Path $mysqlDir 'bin\mysqladmin.exe'
         if (-not (Test-Path $MYSQLADMIN_EXE)) {
-            Fail-Step "mysqladmin.exe not found; cannot safely hand the bundled database over to its Windows service."
+            Fail-Step ("mysqladmin.exe not found; cannot safely hand the bundled database over to its Windows service ({0})." -f $svcName)
         }
 
         $shutdownExit = Invoke-MySqlQuiet -FilePath $MYSQLADMIN_EXE `
                             -Arguments @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_ADMIN_USER, 'shutdown') `
                             -Password $BUNDLED_SERVICE_ADMIN_PASS
         if ($shutdownExit -ne 0) {
-            Fail-Step "Could not gracefully stop the installer-managed MySQL process before starting DentalClinicMySQL."
+            Fail-Step ("Could not gracefully stop the installer-managed {0} process before starting its Windows service." -f $DB_ENGINE_NAME)
         }
 
         $databaseStopped = $false
@@ -2562,9 +2642,12 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         $serviceStartExit = Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('start', $svcName) -Probe
         if (-not (Wait-MySqlReady -MySqlExe $MYSQL_EXE -ConnectionArguments $mysqlConnArgs -Password $DB_PASS -TimeoutSeconds 60)) {
             $serviceLog = Get-LastLogLines -Paths @($MYSQL_ERROR_LOG)
-            Fail-Step (("DentalClinicMySQL service failed to start (net start exit {0})." -f $serviceStartExit) +
+            Fail-Step (("{0} service failed to start (net start exit {1})." -f $svcName, $serviceStartExit) +
                        $(if ($serviceLog) { [Environment]::NewLine + $serviceLog } else { "" }))
         }
+        # 裸进程已交接给 Windows 服务，之后再失败也不该去关数据库了：
+        # 那时候关掉的是服务，等于把装好的系统留在停机状态。
+        $script:InstallerStartedMysqld = $false
         $BUNDLED_SERVICE_ADMIN_PASS = ""
         Write-Host "        Managed MySQL service ... started and verified"
     }
@@ -2646,6 +2729,40 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     exit 0
 }
 catch {
+    # ── 收尾：关掉本次安装亲手拉起的进程 ────────────────────────────
+    #
+    # 以前失败就直接 exit 1，第 5 步拉起的裸 mysqld 没人管，退出后继续占着
+    # 端口和数据目录。2026-08-08 11:26 那次死在第 11 步，之后 11:27~11:29
+    # 应用报的是 1045 而不是 2002 —— 服务器还在应答，就是这个被丢下的进程。
+    #
+    # 只关本次自己起的：InstallerStartedMysqld 标记为真、且尚未交接给
+    # Windows 服务时才动手；一律走 mysqladmin shutdown，绝不按进程名杀
+    # mysqld.exe（目标机上还有别人的 MySQL 5.7）。
+    try {
+        if ($script:InstallerStartedMysqld -and $MYSQL_EXE) {
+            $mysqladminCleanup = Join-Path (Split-Path -Parent $MYSQL_EXE) 'mysqladmin.exe'
+            if (Test-Path $mysqladminCleanup) {
+                # 失败可能发生在加固密码前后，口令不确定，按可能性依次试。
+                foreach ($cleanupPass in @($BUNDLED_SERVICE_ADMIN_PASS, $DB_PASS, $DB_ADMIN_PASS, "")) {
+                    if ($null -eq $cleanupPass) { continue }
+                    $cleanupExit = Invoke-MySqlQuiet -FilePath $mysqladminCleanup `
+                                       -Arguments @('-h', $DB_HOST, '-P', $DB_PORT, '-u', 'root', 'shutdown') `
+                                       -Password $cleanupPass -Probe
+                    if ($cleanupExit -eq 0) {
+                        Write-Host "        已关闭本次安装启动的数据库进程（避免占用端口与数据目录）"
+                        break
+                    }
+                }
+            }
+        }
+    } catch {}
+    try {
+        if ($ocrProc -and -not $ocrProc.HasExited) {
+            Stop-Process -Id $ocrProc.Id -Force -ErrorAction SilentlyContinue
+            Write-Host "        已关闭本次安装启动的 OCR 进程"
+        }
+    } catch {}
+
     Write-Host ""
     Write-Host "+=========================================================+"
     Write-Host "| Installation failed                                      |"
