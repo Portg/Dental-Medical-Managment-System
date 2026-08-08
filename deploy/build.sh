@@ -123,8 +123,8 @@ while [[ $# -gt 0 ]]; do
         --runtime)
             RUNTIME_FLAVOR="${2:-}"
             case "$RUNTIME_FLAVOR" in
-                laragon|xampp) ;;
-                *) fatal "--runtime 只支持 laragon 或 xampp（收到: ${RUNTIME_FLAVOR}）" ;;
+                laragon|xampp|xampp-installer) ;;
+                *) fatal "--runtime 只支持 laragon / xampp / xampp-installer（收到: ${RUNTIME_FLAVOR}）" ;;
             esac
             shift 2
             ;;
@@ -459,6 +459,8 @@ download_win7_prereqs() {
 WIN7_RUNTIME_DIR=""
 # XAMPP 运行时的解压目录（--runtime xampp 时由 prepare-xampp-runtime.sh 产出）
 XAMPP_RUNTIME_SRC=""
+# --runtime xampp-installer 时指向缓存里的官方安装器（见下方 prepare 步骤）
+XAMPP_INSTALLER_SRC=""
 
 # CACHE_DIR 必须在两条运行时分支之外定义。
 # 它原本只在 Laragon 分支内赋值，--runtime xampp 时那段不执行，
@@ -751,6 +753,29 @@ fi
 # 下载/校验/解压/自检的细节都在 deploy/prepare-xampp-runtime.sh 里。
 #
 # 位置必须在 download_win7_prereqs() 定义之后（该函数定义在本段之前不远处）。
+# ── xampp-installer：只把官方安装器放进包，不铺运行时文件树 ────────────────
+# 应用不放 htdocs：setup.bat 复制应用时 C:\xampp 还不存在（XAMPP 要等
+# install-win.ps1 才安装）。所以应用固定在 {安装目录}\dental，由 Apache
+# vhost 的 DocumentRoot 指过去 —— write_apache_vhost.php 接受任意路径并
+# 生成对应的 <Directory> 授权块，不依赖 htdocs。
+if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" == false ]] && [[ "$RUNTIME_FLAVOR" == "xampp-installer" ]]; then
+    step "准备 XAMPP 官方安装器"
+    XAMPP_INSTALLER_PREPARE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/prepare-xampp-installer.sh"
+    [[ -x "$XAMPP_INSTALLER_PREPARE" ]] || fatal "找不到可执行的 prepare-xampp-installer.sh"
+    # 只准备缓存，不给输出目录 —— 此处 DIST_DIR 还没定义（它在下面的
+    # 「项目根目录定位」之后才赋值）。复制统一放到后面与 xampp 树同一处做。
+    "$XAMPP_INSTALLER_PREPARE" || fatal "XAMPP 安装器准备失败"
+    XAMPP_INSTALLER_SRC="$CACHE_DIR/xampp-windows-x64-8.2.12-0-VS16-installer.exe"
+    [[ -f "$XAMPP_INSTALLER_SRC" ]] || fatal "XAMPP 安装器不存在: $XAMPP_INSTALLER_SRC"
+
+    # XAMPP 的 Apache / PHP 是 VS16 构建，依赖 VC++ 运行库，而官方安装器
+    # **不负责**装它。不在这里补一次，目标机上 httpd.exe 直接起不来。
+    if ! download_win7_prereqs; then
+        fatal "Win7 前置组件缺失（VC++ 运行库），拒绝产出装不上的安装包"
+    fi
+    info "包内含 xampp-installer.exe，目标机静默安装到 C:\xampp"
+fi
+
 if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" == false ]] && [[ "$RUNTIME_FLAVOR" == "xampp" ]]; then
     step "准备 XAMPP portable 运行时"
     XAMPP_PREPARE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/prepare-xampp-runtime.sh"
@@ -809,8 +834,12 @@ DIST_DIR="$PROJECT_ROOT/deploy/dist"
 OUTPUT_DIR="$PROJECT_ROOT/deploy/output"
 
 SUFFIX="${TARGET}"
+# 两种 xampp 形态必须产出不同文件名，否则后构建的会**静默覆盖**前一个 ——
+# 现场拿错包是真实发生过的事（产物名带 commit 短哈希也正是为此）。
 if [[ "$UPGRADE" == true ]]; then
     SUFFIX="${TARGET}-upgrade"
+elif [[ "$RUNTIME_FLAVOR" == "xampp-installer" ]]; then
+    SUFFIX="${TARGET}-xampp-installer"
 elif [[ "$USE_EXISTING_MYSQL" == true ]]; then
     SUFFIX="${TARGET}-existing-mysql"
 elif [[ -n "$BUNDLED_MYSQL_PORT" ]]; then
@@ -1443,12 +1472,36 @@ REM   laragon -> {安装目录}\laragon\www\dental
 REM   xampp   -> {安装目录}\xampp\htdocs\dental
 REM 按包内目录存在性判定，与 install-win.ps1 的识别方式保持一致，
 REM 这样同一份 setup.bat 两种包都能用，不需要构建期分叉出两个模板。
+REM 三种形态：
+REM   laragon         包内有 laragon\ 文件树，应用放 laragon\www\dental
+REM   xampp           包内有 xampp\ 文件树，应用放 xampp\htdocs\dental
+REM   xampp-installer 包内只有 xampp-installer.exe，XAMPP 由 install-win.ps1
+REM                   在目标机静默装到 C:\xampp。此时应用**不能**放 htdocs ——
+REM                   本脚本复制应用时 C:\xampp 还不存在。所以固定放
+REM                   {安装目录}\dental，由 Apache vhost 的 DocumentRoot 指过去。
 set "RUNTIME_DIR_NAME=laragon"
 set "APP_ROOT=%INSTALL_DIR%\laragon\www\dental"
+set "XAMPP_INSTALLER_MODE=0"
 if exist "%PKG_DIR%\xampp\apache\bin\httpd.exe" (
     set "RUNTIME_DIR_NAME=xampp"
     set "APP_ROOT=%INSTALL_DIR%\xampp\htdocs\dental"
 )
+if exist "%PKG_DIR%\xampp-installer.exe" (
+    set "XAMPP_INSTALLER_MODE=1"
+    set "RUNTIME_DIR_NAME="
+    set "APP_ROOT=%INSTALL_DIR%\dental"
+)
+
+REM 已完整安装过的 XAMPP 运行时无需在每次 setup.bat 重跑时覆盖。
+REM PHP/Apache/OCR 进程会长期加载这些 DLL；重复 xcopy 整棵运行时既慢，也容易
+REM 因杀毒软件或残留进程的短暂文件句柄报“共享冲突”。应用和部署脚本仍会同步。
+set "TARGET_RUNTIME_READY=0"
+if not "%RUNTIME_DIR_NAME%"=="xampp" goto :runtime_ready_checked
+if not exist "%INSTALL_DIR%\xampp\apache\bin\httpd.exe" goto :runtime_ready_checked
+if not exist "%INSTALL_DIR%\xampp\php\php.exe" goto :runtime_ready_checked
+if not exist "%INSTALL_DIR%\xampp\mysql\bin\mysqld.exe" goto :runtime_ready_checked
+set "TARGET_RUNTIME_READY=1"
+:runtime_ready_checked
 
 echo  [2/3] Copying runtime and application files...
 
@@ -1456,23 +1509,43 @@ REM 运行时必须先落到 %INSTALL_DIR%\%RUNTIME_DIR_NAME%，
 REM 否则 install-win.ps1 会因找不到运行时目录而直接退出。
 REM 目录名随包内形态而定（laragon 或 xampp），不能写死。
 REM 安装包允许直接解压到 C:\DentalClinic。此时源和目标相同，绝不能 xcopy 自身。
-if "%IN_PLACE%"=="0" (
-    if not exist "%PKG_DIR%\%RUNTIME_DIR_NAME%" (
-        echo  [ERROR] Missing %RUNTIME_DIR_NAME% runtime in package:
-        echo          %PKG_DIR%\%RUNTIME_DIR_NAME%
-        exit /b 1
-    )
-    echo         Copying %RUNTIME_DIR_NAME% runtime, please wait...
-    call :copy_dir "%PKG_DIR%\%RUNTIME_DIR_NAME%" "%INSTALL_DIR%\%RUNTIME_DIR_NAME%" "%RUNTIME_DIR_NAME% runtime"
-    if errorlevel 1 goto :copy_failed
-) else (
-    if not exist "%INSTALL_DIR%\%RUNTIME_DIR_NAME%" (
-        echo  [ERROR] In-place package is missing %RUNTIME_DIR_NAME% runtime:
-        echo          %INSTALL_DIR%\%RUNTIME_DIR_NAME%
-        exit /b 1
-    )
-    echo         Package is already in the install directory; runtime self-copy skipped.
-)
+REM installer 模式没有运行时文件树可复制，只需把安装器本身放过去。
+if not "%XAMPP_INSTALLER_MODE%"=="1" goto :copy_runtime_tree
+call :log "xampp-installer mode: copying installer only"
+if "%IN_PLACE%"=="0" call :copy_file "%PKG_DIR%\xampp-installer.exe" "%INSTALL_DIR%\xampp-installer.exe" "XAMPP installer"
+if errorlevel 1 goto :copy_failed
+echo         XAMPP will be installed by install-win.ps1 (C:\xampp).
+goto :runtime_done
+:copy_runtime_tree
+
+if "%TARGET_RUNTIME_READY%"=="1" goto :runtime_copy_skipped_existing
+if "%IN_PLACE%"=="1" goto :runtime_copy_skipped_in_place
+if not exist "%PKG_DIR%\%RUNTIME_DIR_NAME%" goto :runtime_source_missing
+echo         Copying %RUNTIME_DIR_NAME% runtime, please wait...
+call :copy_dir "%PKG_DIR%\%RUNTIME_DIR_NAME%" "%INSTALL_DIR%\%RUNTIME_DIR_NAME%" "%RUNTIME_DIR_NAME% runtime"
+if errorlevel 1 goto :copy_failed
+goto :runtime_done
+
+:runtime_copy_skipped_existing
+echo         Existing complete XAMPP runtime detected; runtime overlay skipped.
+call :log "existing complete XAMPP runtime detected; runtime overlay skipped"
+goto :runtime_done
+
+:runtime_copy_skipped_in_place
+if not exist "%INSTALL_DIR%\%RUNTIME_DIR_NAME%" goto :runtime_in_place_missing
+echo         Package is already in the install directory; runtime self-copy skipped.
+goto :runtime_done
+
+:runtime_source_missing
+echo  [ERROR] Missing %RUNTIME_DIR_NAME% runtime in package:
+echo          %PKG_DIR%\%RUNTIME_DIR_NAME%
+exit /b 1
+
+:runtime_in_place_missing
+echo  [ERROR] In-place package is missing %RUNTIME_DIR_NAME% runtime:
+echo          %INSTALL_DIR%\%RUNTIME_DIR_NAME%
+exit /b 1
+:runtime_done
 
 for %%D in (app bootstrap config database public resources routes storage vendor scripts) do (
     if exist "%PKG_DIR%\%%D" (
@@ -1713,9 +1786,15 @@ LOCKCHK
         OCR_WHEELS_DIR="$DIST_DIR/ocr-wheels"
         mkdir -p "$OCR_WHEELS_DIR"
 
-        # 带缓存的下载
+        # 带缓存的下载。锁文件同样属于缓存输入：只改锁文件时必须让旧 wheel
+        # 缓存失效，否则会继续把已经证明不兼容的 protobuf 等旧包打进去。
         OCR_CACHE_DIR="$PROJECT_ROOT/deploy/.cache/ocr-wheels-${TARGET}"
-        REQ_HASH=$(md5sum "$OCR_REQUIREMENTS" 2>/dev/null | cut -d' ' -f1 || md5 -q "$OCR_REQUIREMENTS" 2>/dev/null)
+        OCR_LOCK_FILE="$PROJECT_ROOT/scripts/requirements-lock.txt"
+        OCR_HASH_FILES=("$OCR_REQUIREMENTS")
+        if [[ -f "$OCR_LOCK_FILE" ]]; then
+            OCR_HASH_FILES+=("$OCR_LOCK_FILE")
+        fi
+        REQ_HASH=$(cksum "${OCR_HASH_FILES[@]}" | cksum | awk '{print $1 "-" $2}')
         OCR_CACHE_HASH_FILE="$OCR_CACHE_DIR/.requirements_hash"
 
         if [[ -d "$OCR_CACHE_DIR" ]] && [[ -f "$OCR_CACHE_HASH_FILE" ]] && [[ "$(cat "$OCR_CACHE_HASH_FILE")" == "$REQ_HASH" ]]; then
@@ -1732,6 +1811,7 @@ LOCKCHK
             fi
 
             PIP_DOWNLOAD_ARGS=()
+            PIP_EXTRA_REQUIREMENTS=()
             case "$TARGET" in
                 win)
                     # 与 Win7 目标机上的 Python 3.8.10 保持一致
@@ -1740,6 +1820,12 @@ LOCKCHK
                         --python-version 3.8
                         --only-binary=:all:
                     )
+                    # 跨平台 pip download 会按构建机 Python 解释环境标记，可能漏掉
+                    # Python 3.8 专用的 exceptiongroup；Paddle 2.6.2 又明确要求
+                    # protobuf <=3.20.2。首次生成锁文件时显式钉住两者。
+                    if [[ ! -f "$OCR_LOCK_FILE" ]]; then
+                        PIP_EXTRA_REQUIREMENTS+=(exceptiongroup==1.2.2 protobuf==3.20.2)
+                    fi
                     ;;
                 linux)
                     PIP_DOWNLOAD_ARGS=(
@@ -1754,7 +1840,6 @@ LOCKCHK
             esac
 
             # 优先使用锁定版本文件（跳过依赖解析，大幅加速）
-            OCR_LOCK_FILE="$PROJECT_ROOT/scripts/requirements-lock.txt"
             if [[ -f "$OCR_LOCK_FILE" ]]; then
                 PIP_REQ_FILE="$OCR_LOCK_FILE"
                 PIP_DOWNLOAD_ARGS+=(--no-deps)
@@ -1764,10 +1849,17 @@ LOCKCHK
             fi
 
             warn "正在下载 OCR Python wheels (目标: $TARGET)，首次下载需几分钟，后续构建使用缓存..."
+            # 数组可能为空（有锁文件时 PIP_EXTRA_REQUIREMENTS 就是空的），
+            # 而 bash 3.2（macOS 自带）在 set -u 下展开空数组会报 unbound
+            # variable —— 4.4 才修。用 ${arr[@]+"${arr[@]}"} 这个惯用法兜住。
+            # 这条只有在 wheels 缓存失效时才会走到，所以潜伏了很久：
+            # 2026-08-08 因为给 requirements-lock.txt 加 coding 声明使缓存
+            # 失效，才第一次暴露。
             if $PIP_CMD download \
-                "${PIP_DOWNLOAD_ARGS[@]}" \
+                ${PIP_DOWNLOAD_ARGS[@]+"${PIP_DOWNLOAD_ARGS[@]}"} \
                 -d "$OCR_WHEELS_DIR" \
-                -r "$PIP_REQ_FILE"; then
+                -r "$PIP_REQ_FILE" \
+                ${PIP_EXTRA_REQUIREMENTS[@]+"${PIP_EXTRA_REQUIREMENTS[@]}"}; then
                 WHEEL_COUNT=$(find "$OCR_WHEELS_DIR" -type f \( -name '*.whl' -o -name '*.tar.gz' \) | wc -l | tr -d ' ')
                 WHEEL_SIZE=$(du -sh "$OCR_WHEELS_DIR" 2>/dev/null | cut -f1)
                 info "下载 ${WHEEL_COUNT} 个 wheel 包 (${WHEEL_SIZE})"
@@ -1844,6 +1936,22 @@ fi
 # ── 复制 XAMPP 运行环境（--runtime xampp）
 # 目录名必须是 xampp —— install-win.ps1 以 {安装目录}\xampp 为根定位运行时，
 # 且 XAMPP 自带配置里写死了 /xampp/... 的绝对路径（装机时由 setup_xampp.bat 重写）。
+if [[ -n "$XAMPP_INSTALLER_SRC" ]] && [[ -f "$XAMPP_INSTALLER_SRC" ]]; then
+    cp "$XAMPP_INSTALLER_SRC" "$DIST_DIR/xampp-installer.exe"
+    info "复制 XAMPP 官方安装器（$(du -h "$DIST_DIR/xampp-installer.exe" | cut -f1)）"
+
+    # VC++ 运行库同样必须带：XAMPP 的 Apache/PHP 是 VS16 构建依赖它，
+    # 而官方安装器**不负责**装它。这一步原先只挂在「复制运行时文件树」的
+    # 两个分支里，installer 模式没有文件树可复制，于是漏掉了 ——
+    # 发布包校验（assert_exists vc_redist.x64.exe）当场拦下了。
+    if [[ -s "$CACHE_DIR/vc_redist.x64.exe" ]]; then
+        cp "$CACHE_DIR/vc_redist.x64.exe" "$DIST_DIR/vc_redist.x64.exe"
+        info "复制 VC++ 2015-2022 x64 运行库"
+    else
+        fatal "缓存里没有 vc_redist.x64.exe —— XAMPP 的 Apache/PHP 起不来"
+    fi
+fi
+
 if [[ -n "$XAMPP_RUNTIME_SRC" ]] && [[ -d "$XAMPP_RUNTIME_SRC" ]]; then
     cp -r "$XAMPP_RUNTIME_SRC" "$DIST_DIR/xampp"
     RUNTIME_SIZE=$(du -sh "$DIST_DIR/xampp" 2>/dev/null | cut -f1)
@@ -2084,7 +2192,22 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
     assert_exists     "vc_redist.x64.exe"   "VC++ 2015-2022 x64 运行库"
     # 运行时布局按形态区分：Laragon 是 laragon/bin/{php,mysql}，
     # XAMPP 是扁平的 xampp/{php,mysql,apache}（没有版本号子目录）。
-    if [[ "$RUNTIME_FLAVOR" == "xampp" ]]; then
+    if [[ "$RUNTIME_FLAVOR" == "xampp-installer" ]]; then
+        # 这条路只能验安装器本身：里面装出什么，构建机看不见（见
+        # prepare-xampp-installer.sh 顶部关于这项代价的说明）。
+        assert_exists "xampp-installer.exe"           "XAMPP 官方安装器"
+        if [[ -f "$DIST_DIR/xampp-installer.exe" ]]; then
+            _sz=$(du -m "$DIST_DIR/xampp-installer.exe" | cut -f1)
+            if [[ "$_sz" -lt 100 ]]; then
+                error "  ✗ xampp-installer.exe 只有 ${_sz}MB，明显不完整（应约 150MB）"
+                ASSERT_FAIL=true
+            fi
+        fi
+        if [[ -d "$DIST_DIR/xampp" ]]; then
+            error "  ✗ installer 模式下不该同时铺 xampp/ 文件树"
+            ASSERT_FAIL=true
+        fi
+    elif [[ "$RUNTIME_FLAVOR" == "xampp" ]]; then
         assert_exists "xampp/php/php.exe"              "PHP 运行时（XAMPP）"
         assert_exists "xampp/php/php8ts.dll"           "PHP TS 运行库（mod_php 依赖）"
         assert_exists "xampp/php/php8apache2_4.dll"    "mod_php 模块"

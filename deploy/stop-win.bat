@@ -50,7 +50,7 @@ REM ═════════════════════════�
 echo  [1/5] 停止队列工作进程...
 
 set "QUEUE_FOUND=0"
-for /f "tokens=2" %%P in ('wmic process where "commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+for /f "tokens=1" %%P in ('wmic process where "commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "^[0-9][0-9]*"') do (
     set "QUEUE_FOUND=1"
     echo        发现队列进程 PID=%%P，尝试优雅关闭...
     taskkill /PID %%P >nul 2>&1
@@ -74,7 +74,7 @@ if !ERRORLEVEL! neq 0 (
 set /a "WAIT+=2"
 if !WAIT! geq %GRACEFUL_TIMEOUT% (
     echo        优雅关闭超时，强制终止...
-    for /f "tokens=2" %%P in ('wmic process where "commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+    for /f "tokens=1" %%P in ('wmic process where "commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "^[0-9][0-9]*"') do (
         taskkill /PID %%P /F >nul 2>&1
     )
     echo        队列工作进程已强制停止                        [OK]
@@ -96,7 +96,7 @@ REM ═════════════════════════�
 echo  [2/5] 停止 OCR 服务...
 
 set "OCR_FOUND=0"
-for /f "tokens=2" %%P in ('wmic process where "commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+for /f "tokens=1" %%P in ('wmic process where "commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "^[0-9][0-9]*"') do (
     set "OCR_FOUND=1"
     echo        发现 OCR 进程 PID=%%P，尝试优雅关闭...
     taskkill /PID %%P >nul 2>&1
@@ -120,7 +120,7 @@ if !ERRORLEVEL! neq 0 (
 set /a "WAIT+=2"
 if !WAIT! geq %GRACEFUL_TIMEOUT% (
     echo        优雅关闭超时，强制终止...
-    for /f "tokens=2" %%P in ('wmic process where "commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+    for /f "tokens=1" %%P in ('wmic process where "commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "^[0-9][0-9]*"') do (
         taskkill /PID %%P /F >nul 2>&1
     )
     echo        OCR 服务已强制停止                            [OK]
@@ -224,7 +224,7 @@ if "!KILL_HIT!"=="1" (
 
 REM ─ 停止 PHP 内置服务器 ─
 set "PHPSVR_FOUND=0"
-for /f "tokens=2" %%P in ('wmic process where "commandline like '%%-S localhost%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+for /f "tokens=1" %%P in ('wmic process where "commandline like '%%-S localhost%%'" get processid 2^>nul ^| findstr /R "^[0-9][0-9]*"') do (
     set "PHPSVR_FOUND=1"
     echo        发现 PHP 内置服务器 PID=%%P，终止...
     taskkill /PID %%P >nul 2>&1
@@ -232,7 +232,7 @@ for /f "tokens=2" %%P in ('wmic process where "commandline like '%%-S localhost%
 if "!PHPSVR_FOUND!"=="1" (
     timeout /t 2 /nobreak >nul
     REM 强制终止残留
-    for /f "tokens=2" %%P in ('wmic process where "commandline like '%%-S localhost%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+    for /f "tokens=1" %%P in ('wmic process where "commandline like '%%-S localhost%%'" get processid 2^>nul ^| findstr /R "^[0-9][0-9]*"') do (
         taskkill /PID %%P /F >nul 2>&1
     )
     set "PHPCGI_STOPPED=1"

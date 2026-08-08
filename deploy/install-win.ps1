@@ -531,7 +531,11 @@ function Invoke-CmdLine {
     $output = @()
     try {
         $ErrorActionPreference = "Continue"
-        $output = @(& cmd.exe /c $CommandLine 2>&1 | ForEach-Object { "$_" })
+        # cmd /S /C 遇到「命令本身以带引号的 exe 开头」时，会把第一对引号
+        # 当成 /C 的外层引号剥掉。mysql.exe ... < schema.sql 正是这种形态，
+        # 不补最外层这一对就会报“文件名、目录名或卷标语法不正确”。
+        $cmdPayload = '"' + $CommandLine + '"'
+        $output = @(& cmd.exe /D /S /C $cmdPayload 2>&1 | ForEach-Object { "$_" })
         $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
     } catch {
         $exitCode = -1
@@ -734,6 +738,67 @@ function Assert-PhpExtensions {
     Fail-Step ("PHP 缺少必需扩展，装下去会在后续步骤以「Class ... not found」这类信息失败:" +
                $detail + [Environment]::NewLine +
                "php.ini: " + (Join-Path (Split-Path -Parent $PhpExe) 'php.ini'))
+}
+
+# ── 在目标机静默安装 XAMPP（--runtime xampp-installer）────────────────
+#
+# 官方安装器是 BitRock/InstallBuilder（二进制里含 BitRock Installer 标识），
+# 该家族支持：
+#   --mode unattended --unattendedmodeui none --prefix <dir> --launchapps 0
+# 注意这些选项字符串在安装器里搜不到（Tcl 载荷是压缩的）——「它是 BitRock」
+# 是构建期实测的，「这个二进制确实接受这些参数」只能在目标机验证。
+# 因此这里不假设它一定成功：装完必须**按文件是否出现**判定，而不是看退出码。
+function Install-XamppRuntime {
+    param(
+        [string]$InstallerPath,
+        [string]$Prefix
+    )
+
+    $httpd = Join-Path $Prefix "apache\bin\httpd.exe"
+    $php   = Join-Path $Prefix "php\php.exe"
+
+    if ((Test-Path $httpd) -and (Test-Path $php)) {
+        # 已有 XAMPP。复用而不是覆盖：重复安装会把用户既有的数据库和
+        # 配置一起动掉，比拒绝安装更糟。版本不符时明确拒绝，别装一半。
+        $verProbe = Invoke-NativeCapture -FilePath $php -Arguments @('-r', 'echo PHP_VERSION;')
+        $existing = "$($verProbe.Output)".Trim()
+        Write-Host ("        已有 XAMPP ............... {0}（PHP {1}）" -f $Prefix, $existing)
+        if ($existing -notmatch '^8\.2\.') {
+            Fail-Step ("{0} 已存在，但其 PHP 是 {1}，本系统要求 8.2.x。" -f $Prefix, $existing)
+        }
+        Write-Host "        XAMPP 安装 ............... 复用已有安装"
+        return
+    }
+
+    if (Test-Path $Prefix) {
+        # 目录在但没有 httpd/php —— 上次装了一半，或者是别的东西占了这个名字。
+        # 直接往上装容易得到一个半死不活的环境，不如让人先处理。
+        Fail-Step ("{0} 已存在但不是完整的 XAMPP（缺 apache\bin\httpd.exe 或 php\php.exe）。" -f $Prefix +
+                   [Environment]::NewLine + "请先手工删除或重命名该目录，再重新运行安装。")
+    }
+
+    if (-not (Test-Path $InstallerPath)) {
+        Fail-Step ("找不到 XAMPP 安装器: {0}" -f $InstallerPath)
+    }
+
+    Write-Host ("        安装 XAMPP 到 {0} ......（约需数分钟，无界面）" -f $Prefix)
+    $args = @('--mode', 'unattended', '--unattendedmodeui', 'none', '--prefix', $Prefix, '--launchapps', '0')
+    $installExit = Invoke-NativeQuiet -FilePath $InstallerPath -Arguments $args
+
+    # 判定以文件为准。BitRock 静默安装的退出码在部分版本上并不可靠，
+    # 而「装出来没有」是可以直接看的。
+    $waited = 0
+    while ($waited -lt 60 -and -not ((Test-Path $httpd) -and (Test-Path $php))) {
+        Start-Sleep -Seconds 5
+        $waited += 5
+    }
+
+    if (-not ((Test-Path $httpd) -and (Test-Path $php))) {
+        Fail-Step ("XAMPP 静默安装失败（安装器退出码 {0}）。" -f $installExit + [Environment]::NewLine +
+                   ("期望出现: {0}" -f $httpd) + [Environment]::NewLine +
+                   "若安装器不接受 --mode unattended，请改用 portable 版安装包（build.sh --runtime xampp）。")
+    }
+    Write-Host ("        XAMPP 安装 ............... OK（安装器退出码 {0}）" -f $installExit)
 }
 
 # ── XAMPP 内置绝对路径重写 ────────────────────────────────────────────
@@ -1079,7 +1144,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260808-refresh-scripts-first"
+$script:ScriptRev = "20260808-runtime-ocr-db-handoff"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1111,7 +1176,29 @@ $SILENT_MODE = $cfg.SILENT_MODE
 $XAMPP_DIR = Join-Path $INSTALL_DIR "xampp"
 $LARAGON_DIR = Join-Path $INSTALL_DIR "laragon"
 
-if (Test-Path (Join-Path $XAMPP_DIR "apache\bin\httpd.exe")) {
+# ── xampp-installer 形态 ─────────────────────────────────────────────
+# 包内只有 xampp-installer.exe，没有运行时文件树。XAMPP 由本脚本在目标机
+# 静默安装到 **C:\xampp**（它的默认位置）—— 落点对了，XAMPP 配置里那 67 处
+# 写死的 \xampp\... 路径天生就是正确的，Repair-XamppHardcodedPaths 会
+# 报「0 处需改写」，退化成一张安全网。
+#
+# 应用**不放** htdocs：setup.bat 复制应用时 C:\xampp 尚不存在。
+# 应用固定在 {安装目录}\dental，由 Apache vhost 的 DocumentRoot 指过去；
+# write_apache_vhost.php 接受任意路径并生成对应的 <Directory> 授权块。
+# 好处是应用与运行时彻底分开：卸载应用不动 XAMPP，反之亦然。
+$XAMPP_INSTALLER = Join-Path $INSTALL_DIR "xampp-installer.exe"
+$XAMPP_INSTALLER_MODE = Test-Path $XAMPP_INSTALLER
+if ($XAMPP_INSTALLER_MODE) {
+    # 安装前缀写死 C:\xampp：换成别的目录就等于回到「要重写 67 处路径」，
+    # 那正是这条路线要消掉的东西。
+    $XAMPP_DIR = "C:\xampp"
+}
+
+if ($XAMPP_INSTALLER_MODE) {
+    $RUNTIME_FLAVOR = "xampp"
+    $RUNTIME_ROOT   = $XAMPP_DIR
+    $PROJECT_DIR    = Join-Path $INSTALL_DIR "dental"
+} elseif (Test-Path (Join-Path $XAMPP_DIR "apache\bin\httpd.exe")) {
     $RUNTIME_FLAVOR = "xampp"
     $RUNTIME_ROOT   = $XAMPP_DIR
     $PROJECT_DIR    = Join-Path $XAMPP_DIR "htdocs\dental"
@@ -1287,6 +1374,10 @@ try {
     Write-Section ("Detect runtime ({0})" -f $RUNTIME_FLAVOR)
 
 if ($RUNTIME_FLAVOR -eq "xampp") {
+    # installer 形态：先把 XAMPP 装出来，再往下探测
+    if ($XAMPP_INSTALLER_MODE) {
+        Install-XamppRuntime -InstallerPath $XAMPP_INSTALLER -Prefix $XAMPP_DIR
+    }
     # ── XAMPP 布局：扁平，没有版本号子目录，不需要 Get-FirstDirectoryMatch ──
     $PHP_DIR    = Join-Path $XAMPP_DIR "php"
     $PHP_EXE    = Join-Path $PHP_DIR "php.exe"
@@ -1821,6 +1912,12 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             Write-Host ("        Dedicated user created .. {0}" -f $DB_USER)
         }
     }
+    # 注册服务时要把当前安装器直接启动的 mysqld 优雅交接给 Windows 服务。
+    # 先保留管理员密码供 mysqladmin shutdown 使用；交接完成后立即清空。
+    $BUNDLED_SERVICE_ADMIN_PASS = ""
+    if (-not $USE_EXISTING_MYSQL) {
+        $BUNDLED_SERVICE_ADMIN_PASS = $DB_ADMIN_PASS
+    }
     $DB_ADMIN_PASS = ""
     Remove-Item Env:DENTAL_MYSQL_ADMIN_PASSWORD -ErrorAction SilentlyContinue
 
@@ -1922,10 +2019,12 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
 
     $script:Step++
     Write-Section "Seed database"
+    $DEFAULT_ADMIN_SEEDED = $false
     $seedArgs = @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_USER, '-D', $DB_NAME, '-N', '-e', 'SELECT 1 FROM users LIMIT 1')
     $seedProbeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments $seedArgs -Password $DB_PASS
     if ($seedProbeExit -ne 0) {
         Invoke-External -FilePath $PHP_EXE -Arguments @($ARTISAN, 'db:seed', '--force', '--no-interaction') | Out-Null
+        $DEFAULT_ADMIN_SEEDED = $true
         Write-Host "        Seed data initialized .... OK"
     } else {
         Write-Host "        Existing data found ...... skipped"
@@ -2015,7 +2114,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         $OCR_VENV = Join-Path $PROJECT_DIR "scripts\venv"
 
         # 优先用锁文件：离线 wheels 是构建时按 requirements-lock.txt 以 --no-deps
-        # 下载的那 81 个精确版本。若在这里用只有 5 个顶层包的 requirements.txt，
+        # 下载的约 80 个精确版本。若在这里用只有 5 个顶层包的 requirements.txt，
         # pip 得自己在 wheels 目录里重新解析依赖树，解出来的版本一旦和已下载的
         # 对不上就整体失败，然后回退在线安装 —— 而目标机通常没有外网，最终表现为
         # 一次漫长的超时，真正的原因（离线解析失败）被埋在日志前半段。
@@ -2057,7 +2156,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             if (Test-Path $OCR_REQUIREMENTS) {
                 $pipExe = Join-Path $OCR_VENV "Scripts\pip.exe"
                 Write-Host "        Installing OCR dependencies offline..."
-                Write-Host "        Win7 may need 10-30 minutes for 81 packages (about 342 MB)."
+                Write-Host "        Win7 may need 10-30 minutes for about 80 packages (about 342 MB)."
                 Write-Host ("        Progress log: {0}" -f $OCR_INSTALL_LOG)
                 # 每次 pip 调用都追加，不能覆盖：这里最多跑三次（离线 → 升级 pip → 在线），
                 # 用覆盖的话前面的输出会被后面冲掉，离线为什么失败就永远查不到了 ——
@@ -2068,13 +2167,11 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                     if ($pipExit -ne 0) {
                         Write-Host "        [警告] 离线安装失败，回退到在线安装（目标机无网络时会超时）。"
                         Write-Host ("        离线失败的详细原因见 {0}" -f $OCR_INSTALL_LOG)
-                        Invoke-NativeLogged -FilePath $pipExe -Arguments @('install', '--upgrade', 'pip', '-q') -LogPath $OCR_INSTALL_LOG -Append | Out-Null
                         $pipExit = Invoke-NativeLogged -FilePath $pipExe -Arguments @('install', '-r', $OCR_REQUIREMENTS, '-q') -LogPath $OCR_INSTALL_LOG -Append
                     }
                 } else {
                     Write-Host ("        [警告] 未找到离线 wheels 目录 {0}，改为在线安装。" -f $OCR_WHEELS_DIR)
-                    Invoke-NativeLogged -FilePath $pipExe -Arguments @('install', '--upgrade', 'pip', '-q') -LogPath $OCR_INSTALL_LOG | Out-Null
-                    $pipExit = Invoke-NativeLogged -FilePath $pipExe -Arguments @('install', '-r', $OCR_REQUIREMENTS, '-q') -LogPath $OCR_INSTALL_LOG -Append
+                    $pipExit = Invoke-NativeLogged -FilePath $pipExe -Arguments @('install', '-r', $OCR_REQUIREMENTS, '-q') -LogPath $OCR_INSTALL_LOG
                 }
 
                 if ($pipExit -ne 0) {
@@ -2343,6 +2440,45 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                 Write-Host "        Service registration .... warning"
             }
         }
+
+        if ($serviceCreateExit -ne 0) {
+            Fail-Step "DentalClinicMySQL service registration failed. The database would not survive installer exit or reboot."
+        }
+
+        # mysqld 在前面的数据库初始化阶段是安装器直接拉起的。服务注册成功并不
+        # 会接管这个现有进程；安装窗口退出后它可能随父进程消失，而每分钟一次的
+        # watchdog 要到下一轮才补启。2026-08-08 的现场日志正好在这个空窗里登录，
+        # 10:30 被拒绝、10:31 又恢复。这里显式做一次“裸进程 -> Windows 服务”交接。
+        $MYSQLADMIN_EXE = Join-Path $mysqlDir 'bin\mysqladmin.exe'
+        if (-not (Test-Path $MYSQLADMIN_EXE)) {
+            Fail-Step "mysqladmin.exe not found; cannot safely hand the bundled database over to its Windows service."
+        }
+
+        $shutdownExit = Invoke-MySqlQuiet -FilePath $MYSQLADMIN_EXE `
+                            -Arguments @('-h', $DB_HOST, '-P', $DB_PORT, '-u', $DB_ADMIN_USER, 'shutdown') `
+                            -Password $BUNDLED_SERVICE_ADMIN_PASS
+        if ($shutdownExit -ne 0) {
+            Fail-Step "Could not gracefully stop the installer-managed MySQL process before starting DentalClinicMySQL."
+        }
+
+        $databaseStopped = $false
+        for ($i = 0; $i -lt 15; $i++) {
+            $probeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password $BUNDLED_SERVICE_ADMIN_PASS
+            if ($probeExit -ne 0) { $databaseStopped = $true; break }
+            Start-Sleep -Seconds 1
+        }
+        if (-not $databaseStopped) {
+            Fail-Step "The installer-managed MySQL process did not stop; refusing to start a second instance on the same data directory."
+        }
+
+        $serviceStartExit = Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('start', $svcName) -Probe
+        if (-not (Wait-MySqlReady -MySqlExe $MYSQL_EXE -ConnectionArguments $mysqlConnArgs -Password $DB_PASS -TimeoutSeconds 60)) {
+            $serviceLog = Get-LastLogLines -Paths @($MYSQL_ERROR_LOG)
+            Fail-Step (("DentalClinicMySQL service failed to start (net start exit {0})." -f $serviceStartExit) +
+                       $(if ($serviceLog) { [Environment]::NewLine + $serviceLog } else { "" }))
+        }
+        $BUNDLED_SERVICE_ADMIN_PASS = ""
+        Write-Host "        Managed MySQL service ... started and verified"
     }
 
     $script:Step++
@@ -2400,8 +2536,13 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     Write-Host ("| Version:      {0}" -f ((Get-Content (Join-Path $PROJECT_DIR 'VERSION') -ErrorAction SilentlyContinue | Select-Object -First 1)))
     Write-Host ("| Install Dir:  {0}" -f $INSTALL_DIR)
     Write-Host ("| App URL:      {0}" -f $APP_URL)
-    Write-Host "| Admin User:   admin@example.com"
-    Write-Host "| Admin Pass:   password"
+    if ($DEFAULT_ADMIN_SEEDED) {
+        Write-Host "| Admin User:   admin / admin@example.com"
+        Write-Host "| Admin Pass:   password"
+    } else {
+        Write-Host "| Login:        use an account from the packaged/existing database"
+        Write-Host "|               (default password is not reset during reinstall)"
+    }
     Write-Host ("| Install Log:  {0}" -f $INSTALL_LOG)
     Write-Host "+=========================================================+"
     Stop-InstallTranscript

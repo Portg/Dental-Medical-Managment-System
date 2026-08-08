@@ -113,8 +113,15 @@ $src = Join-Path $repo 'dist/xampp'
 # 必须显式说「跳过」而不是崩掉，也不能静默当成通过。
 $haveRuntime = (Test-Path (Join-Path $src 'php/php.ini'))
 if (-not $haveRuntime) {
-    Write-Host "  跳过  dist/ 里没有 xampp 运行时（当前是升级包构建产物）"
-    Write-Host "        需要全量构建产物才能测路径重写与扩展启用："
+    # dist 可能来自 --upgrade（不带运行时），也可能来自 --runtime xampp-installer
+    # （只带安装器、没有文件树）。两种都没有素材可测，但原因不同，别说死。
+    $why = if (Test-Path (Join-Path $repo 'dist/xampp-installer.exe')) {
+        'installer 形态构建产物，运行时由目标机安装'
+    } else {
+        '升级包构建产物'
+    }
+    Write-Host ("  跳过  dist/ 里没有 xampp 运行时（{0}）" -f $why)
+    Write-Host "        需要 portable 全量构建产物才能测路径重写与扩展启用："
     Write-Host "        ./deploy/build.sh --target win --runtime xampp --keep-dist"
 }
 if ($haveRuntime) {
@@ -464,6 +471,9 @@ Check "install-win.ps1 保留 APP_KEY" ($text -match 'APP_KEY preserved') "缺�
 Check "install-win.ps1 生成随机 DB 密码" ($text -match 'New-RandomDbPassword') "缺少随机密码"
 Check "install-win.ps1 经 SQL 文件设密" ($text -match 'Invoke-MySqlSqlText') "密码仍可能拼进 -e"
 Check "MySQL 服务会刷新重建" ($text -match 'removed for refresh') "仍跳过已存在服务"
+Check "登录提示只在本次 seed 默认管理员后显示默认密码" `
+      ($text -match '\$DEFAULT_ADMIN_SEEDED' -and $text -match 'if \(\$DEFAULT_ADMIN_SEEDED\)') `
+      "导入本地数据库时仍会错误提示 admin@example.com/password"
 
 Section "8g. 需要 cmd 解析的命令必须走 Invoke-CmdLine"
 # PowerShell 的原生参数数组会吞掉参数值里的内层引号。
@@ -499,6 +509,13 @@ $idxCallStop = $setupTpl2.IndexOf('call "%INSTALL_DIR%\stop-win.bat"')
 Check "setup.bat 有『先刷新部署脚本』步骤" ($idxRefresh -ge 0) "缺少刷新步骤"
 Check "刷新排在调用 stop-win.bat 之前" ($idxRefresh -ge 0 -and $idxCallStop -ge 0 -and $idxRefresh -lt $idxCallStop) `
       "顺序不对：refresh@$idxRefresh callStop@$idxCallStop"
+$stopText = [System.IO.File]::ReadAllText((Join-Path $repo 'stop-win.bat'))
+Check "stop-win 的 WMIC 单列 PID 取 tokens=1" `
+      ($stopText -notmatch 'for /f "tokens=2".*wmic process' -and $stopText -match 'for /f "tokens=1".*queue:work') `
+      "仍把只有一列的 ProcessId 当作第二列，taskkill 会拿到空 PID"
+Check "setup.bat 复用已完整安装的 XAMPP 运行时" `
+      ($setupTpl2 -match 'TARGET_RUNTIME_READY' -and $setupTpl2 -match 'Existing complete XAMPP runtime detected') `
+      "重装仍会覆盖整棵 XAMPP，容易撞上共享冲突"
 
 Section "8g4. 走 cmd 的命令也必须捕获输出"
 # Invoke-External 早就捕获了，但 Invoke-CmdLine 一直是裸执行 ——
@@ -508,6 +525,19 @@ $icl = [regex]::Match($text, '(?s)function Invoke-CmdLine \{.*?
 Check "Invoke-CmdLine 合并 stderr 并捕获" ($icl -match '2>&1' -and $icl -match '\$output = @\(') "仍是裸执行"
 Check "Invoke-CmdLine 失败时打印诊断" ($icl -match '\[诊断\]') "失败无输出"
 Check "Invoke-CmdLine 的命令行经掩码" ($icl -match 'Format-SafeArguments') "命令行可能含密码却未掩码"
+Check "Invoke-CmdLine 给 cmd /S /C 补最外层引号" `
+      ($icl -match '\$cmdPayload\s*=.*\$CommandLine' -and $icl -match 'cmd\.exe /D /S /C \$cmdPayload') `
+      "带引号的 mysql.exe + 输入重定向仍会被 cmd 错误剥引号"
+
+Section "8g4b. 内置数据库必须从安装器进程交接给 Windows 服务"
+$handoffStart = $text.IndexOf('installer-managed MySQL process')
+$handoffVerify = $text.IndexOf('Managed MySQL service ... started and verified')
+Check "注册服务后显式关闭安装器启动的 mysqld" `
+      ($handoffStart -ge 0 -and $text -match "mysqladmin\.exe.*[\s\S]*'shutdown'") `
+      "仍依赖安装窗口退出或一分钟 watchdog，登录会出现空窗"
+Check "启动 DentalClinicMySQL 后用应用账号回连验证" `
+      ($handoffVerify -gt $handoffStart -and $text -match 'Wait-MySqlReady -MySqlExe \$MYSQL_EXE -ConnectionArguments \$mysqlConnArgs -Password \$DB_PASS') `
+      "服务启动后未验证应用实际能连库"
 
 Section "8g5. 可选加固不得阻断安装"
 # 收紧 root 是可选加固，失败必须退回既有行为（空密码）而不是 Fail-Step。
@@ -533,6 +563,16 @@ foreach ($rel in @('scripts/requirements-lock.txt', 'scripts/requirements.txt'))
     Check ("$rel 有 coding 声明/BOM 或纯 ASCII") ($hasDecl -or $hasBom -or $pureAscii) `
           "非 ASCII 且无声明 —— 目标机上 pip 会 UnicodeDecodeError"
 }
+$projectRoot = Split-Path -Parent $repo
+$ocrLockText = [System.IO.File]::ReadAllText((Join-Path $projectRoot 'scripts/requirements-lock.txt'))
+$buildText = [System.IO.File]::ReadAllText((Join-Path $repo 'build.sh'))
+Check "OCR 锁包含 Python 3.8 的 exceptiongroup" ($ocrLockText -match '(?m)^exceptiongroup==1\.2\.2$') `
+      "anyio 在 Python 3.8 下缺少 exceptiongroup"
+Check "Paddle 2.6.2 使用兼容的 protobuf 3.20.2" ($ocrLockText -match '(?m)^protobuf==3\.20\.2$') `
+      "protobuf 版本超出 paddlepaddle 2.6.2 的 <=3.20.2 约束"
+Check "OCR wheel 缓存哈希包含锁文件" `
+      ($buildText -match 'OCR_HASH_FILES.*OCR_REQUIREMENTS' -and $buildText -match 'OCR_HASH_FILES.*OCR_LOCK_FILE') `
+      "修锁文件后仍会复用旧的错误 wheel 缓存"
 
 Section "9. 打进包的 .env 模板不含真凭据"
 $envDeploy = Join-Path $repo 'dist/.env.deploy'
