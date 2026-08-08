@@ -1387,8 +1387,28 @@ REM   - ( ) 块里的 %ERRORLEVEL% 在 DisableDelayedExpansion 下于进块前�
 REM     记下来的是上一条命令的退出码，不是刚跑的那条；
 REM   - ( ) 块里放 :label / goto 在 cmd 里行为是坏的。
 REM 所以一律用 goto 跳过，退出码在顶层逐行读。
+REM ── 先把部署脚本刷新成包内的版本，再调用 stop-win.bat ──
+REM
+REM 顺序在这里是关键。下面调的是 %INSTALL_DIR%\stop-win.bat，也就是**上一次
+REM 装机留在目标机上的那份**，不是包里的。包里的副本原本要到「复制文件」
+REM 阶段才写过去，于是只要机器上有旧安装，就永远先跑旧脚本 ——
+REM 对 stop-win.bat 的任何修复都没机会在这台机器的第一次重装里生效。
+REM 2026-08-07 23:14 的 setup.log 就是这样：裸管道已经修好并打进包，
+REM 现场跑的却仍是旧版，照样死在
+REM   The syntax of the command is incorrect.
+REM
+REM 这些是几十 KB 的 .bat/.ps1，不属于运行时目录，不会被正在运行的服务占用，
+REM 所以提前复制是安全的；真正需要先停服务的是后面 xampp/laragon 那棵树。
+if "%IN_PLACE%"=="1" goto :scripts_refreshed
+call :log "refreshing deployment scripts before stopping services"
+for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
+    if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>>"%SETUP_LOG%"
+)
+if exist "%PKG_DIR%\batch-helpers" xcopy "%PKG_DIR%\batch-helpers" "%INSTALL_DIR%\batch-helpers\" /E /I /H /Y /Q >nul 2>>"%SETUP_LOG%"
+:scripts_refreshed
+
 if not exist "%INSTALL_DIR%\stop-win.bat" goto :no_stop_script
-call :log "calling stop-win.bat"
+call :log "calling stop-win.bat (refreshed copy)"
 call "%INSTALL_DIR%\stop-win.bat" "%INSTALL_DIR%" --background >>"%SETUP_LOG%" 2>&1
 call :log_rc "stop-win.bat" %ERRORLEVEL%
 goto :after_stop_script

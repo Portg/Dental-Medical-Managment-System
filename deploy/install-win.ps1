@@ -515,16 +515,37 @@ function Invoke-External {
     return $exitCode
 }
 
+# 与 Invoke-External 一样必须捕获输出。
+# 之前是裸执行：cmd 里跑的 mysql / sc / schtasks 说了什么，一个字都进不了
+# 安装日志（PS2 的 Start-Transcript 不记原生程序输出）。
+# 2026-08-07 那次装机 [7/19] 报「设置 MySQL root 密码失败。mysql 的输出见
+# 安装日志」，而日志里恰恰没有 mysql 的输出 —— 承诺了一个不存在的诊断。
 function Invoke-CmdLine {
-    param([string]$CommandLine)
+    param(
+        [string]$CommandLine,
+        # 探测型调用非零是正常结果，不打诊断
+        [switch]$Probe
+    )
     $savedPreference = $ErrorActionPreference
     $exitCode = 1
+    $output = @()
     try {
         $ErrorActionPreference = "Continue"
-        & cmd.exe /c $CommandLine
-        $exitCode = $LASTEXITCODE
+        $output = @(& cmd.exe /c $CommandLine 2>&1 | ForEach-Object { "$_" })
+        $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+    } catch {
+        $exitCode = -1
+        $output = @("无法启动 cmd.exe: " + $_.Exception.Message)
     } finally {
         $ErrorActionPreference = $savedPreference
+    }
+    $script:LastCmdLineOutput = $output
+    if ($exitCode -ne 0 -and -not $Probe) {
+        # 命令行本身可能含密码（sc 的 binPath 等），走同一套掩码
+        Write-Host ("        [诊断] cmd 命令失败（退出码 {0}）: {1}" -f $exitCode, (Format-SafeArguments @($CommandLine)))
+        foreach ($line in $output) {
+            if ("$line".Trim().Length -gt 0) { Write-Host ("        [诊断] {0}" -f $line) }
+        }
     }
     return $exitCode
 }
@@ -1058,7 +1079,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260807-root-hosts-uac"
+$script:ScriptRev = "20260808-refresh-scripts-first"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1740,22 +1761,37 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                 $setPassExit = 0
             }
         }
-        if ($setPassExit -ne 0) {
-            Fail-Step "设置 MySQL root 密码失败。mysql 的输出见安装日志。"
+        # 设密码 + 回连验证；任一环节不成就**退回空密码**继续装。
+        #
+        # 收紧 root 是可选的加固，不是装机的必要条件。空密码 root 是这个包
+        # 一直以来的既有状态 —— 退回去不构成安全回归，而为了一个可选步骤
+        # 让整个安装失败是不划算的。2026-08-07 23:23 那次就是这样：
+        # [7/19] 直接 Fail-Step，装机中止，而当时连 mysql 说了什么都看不到。
+        $hardened = $false
+        if ($setPassExit -eq 0) {
+            # 用新密码实际回连一次。不做这步就无法区分「密码设好了」和
+            # 「设在了一个连接命中不到的 host 上」——后者会一路装到导 schema 才炸。
+            $verifyExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password $DB_PASS
+            if ($verifyExit -eq 0) {
+                $hardened = $true
+            } else {
+                Write-Host "        [警告] 密码已设置但用它连不上，可能还有别的 root@host 未覆盖" -ForegroundColor Yellow
+            }
         }
 
-        $DB_ADMIN_PASS = $DB_PASS
-        # 用新密码实际回连一次。不做这步就无法区分「密码设好了」和
-        # 「设在了一个连接命中不到的 host 上」—— 后者会一路装到导 schema 才炸。
-        $verifyExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password $DB_ADMIN_PASS
-        if ($verifyExit -ne 0) {
-            Fail-Step ("root 密码已设置，但用新密码连不上 {0}:{1}。" -f $DB_HOST, $DB_PORT + [Environment]::NewLine +
-                       ("已处理的 root 账号 host: {0}" -f ($rootHosts -join ', ')) + [Environment]::NewLine +
-                       "通常意味着还存在别的 root@host 未被覆盖，或该账号用了非密码认证插件。")
-        }
-        Write-Host ("        Root password ........... generated for {0} (saved to .env)" -f ($rootHosts -join ', '))
-        if ($droppedHosts.Count -gt 0) {
-            Write-Host ("        Stale root accounts ..... dropped ({0})" -f ($droppedHosts -join ', '))
+        if ($hardened) {
+            $DB_ADMIN_PASS = $DB_PASS
+            Write-Host ("        Root password ........... generated for {0} (saved to .env)" -f ($rootHosts -join ', '))
+            if ($droppedHosts.Count -gt 0) {
+                Write-Host ("        Stale root accounts ..... dropped ({0})" -f ($droppedHosts -join ', '))
+            }
+        } else {
+            # 退回既有行为：root 空密码。必须把 $DB_PASS 也清掉，
+            # 否则 .env 会写上一个连不上的密码，应用直接起不来。
+            $DB_PASS = ""
+            $DB_ADMIN_PASS = ""
+            Write-Host "        Root password ........... 加固失败，沿用空密码（不影响安装）" -ForegroundColor Yellow
+            Write-Host "                                  mysql 的输出见上方 [诊断] 行"
         }
     } elseif ([string]::IsNullOrEmpty($DB_PASS)) {
         $DB_USER = "root"

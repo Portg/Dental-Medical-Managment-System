@@ -482,12 +482,40 @@ Section "8g2. 内置库 root 密码收紧必须覆盖全部 host 并回连验证
 # 或者其余 host 仍可空密直连、加固形同虚设。判据是「枚举 + 回连验证」。
 Check "枚举实际存在的 root host（不写死单个 host）" `
       ($text -match "SELECT Host FROM mysql\.user WHERE User='root'") "仍在猜 host"
-Check "设密后用新密码回连验证" `
-      ($text -match '(?s)\$DB_ADMIN_PASS = \$DB_PASS.*?\$verifyExit = Invoke-MySqlQuiet') "没有回连验证"
-Check "回连失败会 Fail-Step（不静默继续）" `
-      ($text -match '(?s)\$verifyExit -ne 0\) \{\s*\r?\n\s*Fail-Step') "失败未阻断"
+Check "设密后用新密码回连验证" ($text -match '\$verifyExit = Invoke-MySqlQuiet') "没有回连验证"
+# 注意：回连失败**不应**再 Fail-Step。收紧 root 是可选加固，
+# 失败要退回既有的空密码行为继续装 —— 具体断言见 8g5。
+Check "回连成功才认为加固生效" ($text -match '(?s)\$verifyExit -eq 0\) \{\s*\r?\n\s*\$hardened = \$true') "没有以回连结果为准"
 Check "非本机 host 的残留 root 账号会被删除" ($text -match "DROP USER IF EXISTS 'root'@'") "未清理残留账号"
 Check "随机密码用拒绝采样（无取模偏置）" ($text -match '256 % \$chars\.Length') "仍是直接取模"
+
+Section "8g3. setup.bat 必须先刷新部署脚本再调 stop-win.bat"
+# setup.bat 调的是 %INSTALL_DIR%\stop-win.bat（上次装机留下的那份），
+# 不是包里的。不先刷新的话，对 stop-win.bat 的任何修复都无法在有旧安装的
+# 机器上第一次重装时生效 —— 2026-08-07 的 setup.log 实测如此。
+$setupTpl2 = ((Get-BatSources)['build.sh:SHORTCUT_BAT'] -join "`n")
+$idxRefresh = $setupTpl2.IndexOf('refreshing deployment scripts')
+$idxCallStop = $setupTpl2.IndexOf('call "%INSTALL_DIR%\stop-win.bat"')
+Check "setup.bat 有『先刷新部署脚本』步骤" ($idxRefresh -ge 0) "缺少刷新步骤"
+Check "刷新排在调用 stop-win.bat 之前" ($idxRefresh -ge 0 -and $idxCallStop -ge 0 -and $idxRefresh -lt $idxCallStop) `
+      "顺序不对：refresh@$idxRefresh callStop@$idxCallStop"
+
+Section "8g4. 走 cmd 的命令也必须捕获输出"
+# Invoke-External 早就捕获了，但 Invoke-CmdLine 一直是裸执行 ——
+# 于是 mysql / sc / schtasks 经 cmd 跑出来的错误一个字都进不了日志。
+$icl = [regex]::Match($text, '(?s)function Invoke-CmdLine \{.*?
+\}').Value
+Check "Invoke-CmdLine 合并 stderr 并捕获" ($icl -match '2>&1' -and $icl -match '\$output = @\(') "仍是裸执行"
+Check "Invoke-CmdLine 失败时打印诊断" ($icl -match '\[诊断\]') "失败无输出"
+Check "Invoke-CmdLine 的命令行经掩码" ($icl -match 'Format-SafeArguments') "命令行可能含密码却未掩码"
+
+Section "8g5. 可选加固不得阻断安装"
+# 收紧 root 是可选加固，失败必须退回既有行为（空密码）而不是 Fail-Step。
+# 空密码是这个包一直以来的状态，退回去不构成安全回归。
+$hardenBlock = [regex]::Match($text, '(?s)\$hardened = \$false.*?Root password \.+[^\r\n]*').Value
+Check "root 加固失败不 Fail-Step" ($hardenBlock -notmatch 'Fail-Step') "失败仍会中止安装"
+Check "加固失败时把 DB_PASS 一并清空" ($text -match '(?s)\$hardened\)\s*\{.*?\}\s*else\s*\{[^}]*\$DB_PASS = ""') `
+      ".env 可能写入一个连不上的密码"
 
 Section "8h. OCR requirements 必须能被 pip 在 GBK 区域下解码"
 # pip 的 auto_decode 只认前两行的 coding 声明或 BOM，否则按系统区域编码解码。
