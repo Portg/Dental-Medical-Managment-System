@@ -87,6 +87,9 @@ usage() {
 
 环境变量（均可选，有默认值）:
   PYTHON_DOWNLOAD_URL          Python Windows x64 安装器下载地址（OCR 用）
+  PIP_INDEX_URL                pip 镜像源（构建机在国内时建议设置），例如
+                               https://pypi.tuna.tsinghua.edu.cn/simple
+                               版本由 requirements-lock.txt 钉死，换源不换版本
 
 示例:
   ./deploy/build.sh --target win                          # Windows 全量 ZIP 安装包
@@ -1838,6 +1841,19 @@ LOCKCHK
 
             PIP_DOWNLOAD_ARGS=()
             PIP_EXTRA_REQUIREMENTS=()
+            # 构建机在国内时，从 pypi.org 拉 342MB wheel 会很慢。
+            # 用 PIP_INDEX_URL 指定镜像即可，例如：
+            #   PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./deploy/build.sh ...
+            # **默认不改**：镜像若不全会让构建产出残缺的 wheel 集合，
+            # 而构建正确性比速度重要。版本本来就由 requirements-lock.txt 钉死，
+            # 换源不会换到不同版本。
+            # 顺带给超时和重试设上界，避免网络不好时干等。
+            PIP_DOWNLOAD_ARGS+=(--timeout 20 --retries 3)
+            if [[ -n "${PIP_INDEX_URL:-}" ]]; then
+                _pip_host=$(printf '%s' "$PIP_INDEX_URL" | sed -E 's#^[a-z]+://([^/]+).*#\1#')
+                PIP_DOWNLOAD_ARGS+=(--index-url "$PIP_INDEX_URL" --trusted-host "$_pip_host")
+                info "pip 使用镜像: $PIP_INDEX_URL"
+            fi
             case "$TARGET" in
                 win)
                     # 与 Win7 目标机上的 Python 3.8.10 保持一致

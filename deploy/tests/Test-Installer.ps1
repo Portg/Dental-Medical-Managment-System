@@ -612,6 +612,18 @@ Check "OCR wheel 缓存哈希包含锁文件" `
       ($buildText -match 'OCR_HASH_FILES.*OCR_REQUIREMENTS' -and $buildText -match 'OCR_HASH_FILES.*OCR_LOCK_FILE') `
       "修锁文件后仍会复用旧的错误 wheel 缓存"
 
+Section "8j. pip 在线回退必须有镜像与超时（国内网络）"
+# 离线路径（--no-index --find-links）不碰网络、不会卡；真正会卡的是
+# 离线失败后的在线回退。原先它既没镜像也没超时上限，在国内网络上就是干等。
+Check "在线回退设了 --timeout" ($text -match "'--timeout', '\d+'") "没有超时上限，网络差时会挂住"
+Check "在线回退设了 --retries" ($text -match "'--retries', '\d+'") "没有重试上限"
+Check "默认使用国内镜像" ($text -match 'PIP_INDEX_URL = "https://pypi\.tuna\.tsinghua\.edu\.cn/simple"') "默认仍是 pypi.org"
+Check "镜像可用 --pip-index-url 覆盖" ($text.Contains("--pip-index-url")) "不可配置"
+Check "带 index-url 时同时给 trusted-host" ($text.Contains("--trusted-host")) "Win7 根证书旧，缺它会报看不懂的 SSL 错误"
+# 离线路径绝不能被误加索引参数，否则就不是离线了
+$offline = [regex]::Match($text, "@\('install', '--no-index'[^)]*\)").Value
+Check "离线路径仍是纯离线（无 index-url）" ($offline -notmatch 'index-url') "离线路径混进了索引参数"
+
 Section "9. 打进包的 .env 模板不含真凭据"
 $envDeploy = Join-Path $repo 'dist/.env.deploy'
 if (Test-Path $envDeploy) {

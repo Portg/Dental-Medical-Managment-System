@@ -1118,6 +1118,10 @@ function Parse-Arguments {
         USE_EXISTING_MYSQL = $false
         NON_INTERACTIVE = $false
         APP_URL      = "http://localhost"
+        # 在线回退时用的 pip 索引源。默认清华镜像：这套包是发给国内诊所的，
+        # 走 pypi.org 基本等于卡死（无超时无重试上限时会干等十几分钟）。
+        # 传空字符串可退回 pypi.org 官方源。
+        PIP_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
         SKIP_OCR     = $false
         SKIP_SERVICE = $false
         SILENT_MODE  = $false
@@ -1136,6 +1140,7 @@ function Parse-Arguments {
             '^--use-existing-mysql$' { $config.USE_EXISTING_MYSQL = $true; continue }
             '^--non-interactive$' { $config.NON_INTERACTIVE = $true; continue }
             '^--app-url$'     { $i++; $config.APP_URL = [string]$RawArgs[$i]; continue }
+            '^--pip-index-url$' { $i++; $config.PIP_INDEX_URL = [string]$RawArgs[$i]; continue }
             '^--no-ocr$'      { $config.SKIP_OCR = $true; continue }
             '^--no-service$'  { $config.SKIP_SERVICE = $true; continue }
             '^(--yes|-y)$'    { $config.SILENT_MODE = $true; continue }
@@ -1156,7 +1161,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260808-probe-quiet"
+$script:ScriptRev = "20260808-pip-mirror"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1171,6 +1176,7 @@ $USE_EXISTING_MYSQL = $cfg.USE_EXISTING_MYSQL
 $NON_INTERACTIVE = $cfg.NON_INTERACTIVE
 $SKIP_SCHEMA_IMPORT = $false
 $APP_URL = $cfg.APP_URL
+$PIP_INDEX_URL = $cfg.PIP_INDEX_URL
 $SKIP_OCR = $cfg.SKIP_OCR
 $SKIP_SERVICE = $cfg.SKIP_SERVICE
 $SILENT_MODE = $cfg.SILENT_MODE
@@ -2199,16 +2205,39 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                 # 用覆盖的话前面的输出会被后面冲掉，离线为什么失败就永远查不到了 ——
                 # 2026-08-03 那次装机就是这样：日志里只剩最后一次在线安装的网络超时，
                 # 而真正该看的是第一次离线安装的报错。
+                # 在线回退的参数：镜像 + 有界超时。
+                #
+                # 离线路径（--no-index --find-links）根本不碰网络，不会卡。
+                # 真正会卡的是**离线失败后的这条回退**：原先既没有镜像也没有
+                # 超时上限，在国内网络上就是干等 —— 现场看到的「一直卡」就是它。
+                # 所以三件事一起做：走国内镜像、限制单次连接超时、限制重试次数，
+                # 让它要么很快成功、要么很快失败并降级为手工录入，而不是挂住。
+                $pipOnlineArgs = @('install', '-r', $OCR_REQUIREMENTS, '-q',
+                                   '--timeout', '20', '--retries', '2')
+                if ($PIP_INDEX_URL) {
+                    # trusted-host 必须跟着 index-url 走：目标机是 Win7，
+                    # 其根证书库常年不更新，握手失败会被报成一个看不懂的 SSL 错误。
+                    $pipHost = ''
+                    try { $pipHost = ([System.Uri]$PIP_INDEX_URL).Host } catch {}
+                    $pipOnlineArgs += @('--index-url', $PIP_INDEX_URL)
+                    if ($pipHost) { $pipOnlineArgs += @('--trusted-host', $pipHost) }
+                }
+
                 if (Test-Path $OCR_WHEELS_DIR) {
                     $pipExit = Invoke-NativeLogged -FilePath $pipExe -Arguments @('install', '--no-index', ("--find-links=" + $OCR_WHEELS_DIR), '-r', $OCR_REQUIREMENTS, '-q') -LogPath $OCR_INSTALL_LOG
                     if ($pipExit -ne 0) {
-                        Write-Host "        [警告] 离线安装失败，回退到在线安装（目标机无网络时会超时）。"
+                        Write-Host "        [警告] 离线安装失败，回退到在线安装。"
+                        if ($PIP_INDEX_URL) {
+                            Write-Host ("        使用镜像 {0}（超时 20 秒 / 重试 2 次）" -f $PIP_INDEX_URL)
+                        } else {
+                            Write-Host "        使用 pypi.org 官方源（超时 20 秒 / 重试 2 次）"
+                        }
                         Write-Host ("        离线失败的详细原因见 {0}" -f $OCR_INSTALL_LOG)
-                        $pipExit = Invoke-NativeLogged -FilePath $pipExe -Arguments @('install', '-r', $OCR_REQUIREMENTS, '-q') -LogPath $OCR_INSTALL_LOG -Append
+                        $pipExit = Invoke-NativeLogged -FilePath $pipExe -Arguments $pipOnlineArgs -LogPath $OCR_INSTALL_LOG -Append
                     }
                 } else {
                     Write-Host ("        [警告] 未找到离线 wheels 目录 {0}，改为在线安装。" -f $OCR_WHEELS_DIR)
-                    $pipExit = Invoke-NativeLogged -FilePath $pipExe -Arguments @('install', '-r', $OCR_REQUIREMENTS, '-q') -LogPath $OCR_INSTALL_LOG
+                    $pipExit = Invoke-NativeLogged -FilePath $pipExe -Arguments $pipOnlineArgs -LogPath $OCR_INSTALL_LOG
                 }
 
                 if ($pipExit -ne 0) {
