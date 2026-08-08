@@ -75,10 +75,19 @@ exit /b 1
 
 :dir_found
 set "LARAGON_DIR=%INSTALL_DIR%\laragon"
+set "INSTALL_DIR_WQL=!INSTALL_DIR:\=\\!"
 set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 set "DB_SERVICE=DentalClinicMySQL"
 if exist "%INSTALL_DIR%\xampp\apache\bin\httpd.exe" set "DB_SERVICE=DentalClinicMariaDB"
 if "%DB_SERVICE%"=="DentalClinicMariaDB" set "PROJECT_DIR=%INSTALL_DIR%\xampp\htdocs\dental"
+set "MYSQL_RUNTIME_DIR=%LARAGON_DIR%\bin\mysql"
+set "MYSQL_DATA_DIR=%LARAGON_DIR%\data\mysql"
+set "MYSQL_INI=%LARAGON_DIR%\etc\mysql\my.ini"
+if "%DB_SERVICE%"=="DentalClinicMariaDB" (
+    set "MYSQL_RUNTIME_DIR=%INSTALL_DIR%\xampp\mysql"
+    set "MYSQL_DATA_DIR=%INSTALL_DIR%\xampp\mysql\data"
+    set "MYSQL_INI=%INSTALL_DIR%\xampp\mysql\my.ini"
+)
 set "EXTERNAL_MYSQL=0"
 if exist "%INSTALL_DIR%\existing-mysql.conf" set "EXTERNAL_MYSQL=1"
 set "APP_DB_HOST=127.0.0.1"
@@ -154,11 +163,11 @@ if exist "%INSTALL_DIR%\stop-win.bat" (
 
 if "!DO_MANUAL_KILL!"=="1" (
     echo        停止队列工作进程...
-    for /f "tokens=2" %%P in ('wmic process where "commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+    for /f "tokens=1" %%P in ('wmic process where "name='php.exe' and executablepath like '%%!INSTALL_DIR_WQL!%%' and commandline like '%%queue:work%%'" get processid 2^>nul ^| findstr /R "^[0-9][0-9]*"') do (
         taskkill /PID %%P /F >nul 2>&1
     )
     echo        停止 OCR 服务...
-    for /f "tokens=2" %%P in ('wmic process where "commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "[0-9]"') do (
+    for /f "tokens=1" %%P in ('wmic process where "name='python.exe' and executablepath like '%%!INSTALL_DIR_WQL!%%' and commandline like '%%ocr_server%%'" get processid 2^>nul ^| findstr /R "^[0-9][0-9]*"') do (
         taskkill /PID %%P /F >nul 2>&1
     )
     echo        停止 Nginx（仅本安装目录）...
@@ -210,10 +219,11 @@ if "%KEEP_DATA%"=="1" (
 
     REM 导出数据库
     set "MYSQLDUMP_EXE="
-    for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do (
+    for /d %%D in ("%MYSQL_RUNTIME_DIR%\mysql-*") do (
         if exist "%%D\bin\mysqldump.exe" set "MYSQLDUMP_EXE=%%D\bin\mysqldump.exe"
     )
-    if not defined MYSQLDUMP_EXE for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do (
+    if not defined MYSQLDUMP_EXE if exist "%MYSQL_RUNTIME_DIR%\bin\mysqldump.exe" set "MYSQLDUMP_EXE=%MYSQL_RUNTIME_DIR%\bin\mysqldump.exe"
+    if not defined MYSQLDUMP_EXE for /d %%D in ("%MYSQL_RUNTIME_DIR%\*") do (
         if exist "%%D\bin\mysqldump.exe" set "MYSQLDUMP_EXE=%%D\bin\mysqldump.exe"
     )
     if defined MYSQLDUMP_EXE (
@@ -248,10 +258,11 @@ echo  [2/%TOTAL_STEPS%] 删除数据库和用户...
 
 REM 查找 MySQL 客户端
 set "MYSQL_EXE="
-for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do (
+if exist "%MYSQL_RUNTIME_DIR%\bin\mysql.exe" set "MYSQL_EXE=%MYSQL_RUNTIME_DIR%\bin\mysql.exe"
+for /d %%D in ("%MYSQL_RUNTIME_DIR%\mysql-*") do (
     if exist "%%D\bin\mysql.exe" set "MYSQL_EXE=%%D\bin\mysql.exe"
 )
-if not defined MYSQL_EXE for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do (
+if not defined MYSQL_EXE for /d %%D in ("%MYSQL_RUNTIME_DIR%\*") do (
     if exist "%%D\bin\mysql.exe" set "MYSQL_EXE=%%D\bin\mysql.exe"
 )
 
@@ -264,10 +275,11 @@ if defined MYSQL_EXE (
     set "MYSQL_READY_RC=!ERRORLEVEL!"
 
     set "MYSQLD_EXE="
-    for /d %%D in ("%LARAGON_DIR%\bin\mysql\mysql-*") do (
+    if exist "%MYSQL_RUNTIME_DIR%\bin\mysqld.exe" set "MYSQLD_EXE=%MYSQL_RUNTIME_DIR%\bin\mysqld.exe"
+    for /d %%D in ("%MYSQL_RUNTIME_DIR%\mysql-*") do (
         if exist "%%D\bin\mysqld.exe" set "MYSQLD_EXE=%%D\bin\mysqld.exe"
     )
-    if not defined MYSQLD_EXE for /d %%D in ("%LARAGON_DIR%\bin\mysql\*") do (
+    if not defined MYSQLD_EXE for /d %%D in ("%MYSQL_RUNTIME_DIR%\*") do (
         if exist "%%D\bin\mysqld.exe" set "MYSQLD_EXE=%%D\bin\mysqld.exe"
     )
     if not "!MYSQL_READY_RC!"=="0" if defined MYSQLD_EXE (
@@ -276,12 +288,11 @@ if defined MYSQL_EXE (
         REM 装机时也不生成。硬传 --defaults-file 指向不存在的文件，mysqld
         REM 起不来，后面的 DROP DATABASE 就静默失败 —— 库其实没删掉。
         REM 有 my.ini 就用，没有就退回显式 basedir/datadir（与 install-win.ps1 一致）。
-        set "MYSQL_INI=%LARAGON_DIR%\etc\mysql\my.ini"
         if exist "!MYSQL_INI!" (
             start /B "" "!MYSQLD_EXE!" --defaults-file="!MYSQL_INI!" >nul 2>&1
         ) else (
             for %%B in ("!MYSQLD_EXE!\..\..") do set "MYSQL_BASEDIR=%%~fB"
-            start /B "" "!MYSQLD_EXE!" --basedir="!MYSQL_BASEDIR!" --datadir="%LARAGON_DIR%\data\mysql" >nul 2>&1
+            start /B "" "!MYSQLD_EXE!" --basedir="!MYSQL_BASEDIR!" --datadir="!MYSQL_DATA_DIR!" >nul 2>&1
         )
         timeout /t 5 /nobreak >nul
     )

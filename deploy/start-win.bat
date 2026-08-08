@@ -14,6 +14,9 @@ REM ── 参数处理 ──────────────────�
 set "INSTALL_DIR=%~1"
 if "%INSTALL_DIR%"=="" set "INSTALL_DIR=C:\DentalClinic"
 if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+REM WQL 字符串里的反斜杠需要转义。后面的进程探测同时限定 ExecutablePath，
+REM 避免把同机其他项目的 php.exe / python.exe 当成本系统进程。
+set "INSTALL_DIR_WQL=!INSTALL_DIR:\=\\!"
 set "BACKGROUND_MODE=0"
 if /I "%~2"=="--background" set "BACKGROUND_MODE=1"
 set "STOP_MARKER=%INSTALL_DIR%\services-stopped.flag"
@@ -472,8 +475,9 @@ REM  Step 4/6: 启动 Laravel 队列工作进程
 REM ══════════════════════════════════════════════════════════════
 echo  [4/6] 启动 Laravel 队列工作进程...
 
-REM 检查是否已有 queue:work 进程运行
-wmic process where "commandline like '%%queue:work%%'" get processid 2>nul | findstr /R "[0-9]" >nul 2>&1
+REM 必须限定 name + 安装目录。只按 commandline 查时，wmic 查询命令自身也含
+REM queue:work，会永远命中一个 PID，watchdog 因而误判“队列已运行”。
+wmic process where "name='php.exe' and executablepath like '%%!INSTALL_DIR_WQL!%%' and commandline like '%%queue:work%%'" get processid 2>nul | findstr /R "[0-9]" >nul 2>&1
 if !ERRORLEVEL! equ 0 (
     echo        队列工作进程已在运行                          [跳过]
     set "QUEUE_OK=1"

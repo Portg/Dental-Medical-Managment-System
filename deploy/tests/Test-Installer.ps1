@@ -25,6 +25,23 @@ function Section($t) { Write-Host ""; Write-Host ("── " + $t + " " + ("─" 
 $repo = Split-Path -Parent $PSScriptRoot
 $installer = Join-Path $repo "install-win.ps1"
 
+Section "0. harness 自身的写法自检"
+# 双引号里的 \$ 不是转义 —— PowerShell 会把它当变量插值。未定义就成空串：
+#   轻则断言悄悄退化成一条恒真的模式（看着 PASS，其实什么都没查）
+#   重则正则以 \ 结尾直接抛异常，$ErrorActionPreference=Stop 让整套验收
+#   从那一项起**全部不再执行**（2026-08-08 16:20 那版断在第 114 项，
+#   后面 70 多条一条都没跑，而输出看着只是「短了一截」）
+# 这条自检就是为了让那种情况当场红出来，而不是安静地少跑一半。
+$selfPath = if ($PSCommandPath) { $PSCommandPath } else { $MyInvocation.MyCommand.Path }
+$selfLines = [System.IO.File]::ReadAllLines($selfPath)
+$badRegexLines = @()
+for ($i = 0; $i -lt $selfLines.Count; $i++) {
+    if ($selfLines[$i] -match '-match\s+"[^"]*\\\$') { $badRegexLines += ($i + 1) }
+}
+Check "断言正则没有写在双引号里带反斜杠美元符" `
+      ($badRegexLines.Count -eq 0) `
+      ("第 " + ($badRegexLines -join ', ') + " 行 —— 改用单引号字符串")
+
 Section "1. 语法"
 $tokens = $null; $errors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile($installer, [ref]$tokens, [ref]$errors)
@@ -475,22 +492,44 @@ Check "登录提示只在本次 seed 默认管理员后显示默认密码" `
       ($text -match '\$DEFAULT_ADMIN_SEEDED' -and $text -match 'if \(\$DEFAULT_ADMIN_SEEDED\)') `
       "导入本地数据库时仍会错误提示 admin@example.com/password"
 
-Section "8g. 需要 cmd 解析的命令必须走 Invoke-CmdLine"
-# PowerShell 的原生参数数组会吞掉参数值里的内层引号。
-# sc.exe 的 binPath= 和 schtasks 的 /tr 都是「一个参数里再带引号」的形式，
-# 直接经参数数组传会分别得到 1639 和「Invalid argument/option - '/c'」。
-Check "sc.exe create 走 Invoke-CmdLine" ($text -match 'Invoke-CmdLine -CommandLine \$scCmdLine') "仍走参数数组"
-Check "binPath 的内层引号被转义" ($text -match "binPathInner -replace") "没有转义"
-# 服务名按形态分流后，DisplayName 从字面量变成了变量拼接，原来那条按字面量匹配的
-# 断言直接失效（报「未加引号」）。真正要守的不变量是**值两侧有引号**，
-# 所以改成匹配拼接形式：DisplayName= "' + $var + '"。
-$scCmdLineText = [regex]::Match($text, '(?s)\$scCmdLine = .*?start= auto').Value
-Check "DisplayName 的值加了引号" `
-      ($scCmdLineText -match 'DisplayName= "' -and $scCmdLineText -match 'serviceDisplayName') `
-      "带空格的值未加引号"
+Section "8g. Win7 服务注册绕开 PowerShell 原生参数转义"
+# 目标 Win7 已实测 sc.exe 的参数数组返回 1639，cmd /c + \" 又会把反斜杠
+# 写进 ImagePath。这里必须直接调用 Win32_Service.Create，并在创建后读回
+# PathName / StartMode；静态检查不能再只看源码里有没有引号。
+# 取块必须从 $binPathValue 开始，而不是从 [wmiclass] 那行 —— binPath 是在
+# 调用 Create **之前**拼好的，从 [wmiclass] 起截会把「路径带引号」「有 my.ini
+# 才带 --defaults-file」这几条要查的内容全甩在块外，三条断言必红。
+$wmiBlock = [regex]::Match($text, '(?s)\$binPathValue\s*=.*?Service registration \.{4} OK \(Win32_Service\.Create \+ read-back\)').Value
+Check "取到 Win32_Service.Create 代码块" ($wmiBlock.Length -gt 0) "服务注册没有走 WMI"
+Check "不再用 sc.exe create 参数数组" `
+      ($text -notmatch 'Invoke-NativeQuiet -FilePath ''sc\.exe'' -Arguments \$scArguments') `
+      "Win7 PowerShell 2.0 已实测该路径返回 1639"
+Check "不再用 cmd.exe /c 注册数据库服务" `
+      ($text -notmatch 'serviceCreateExit\s*=\s*Invoke-CmdLine.*sc') `
+      "cmd 不认反斜杠转义，ImagePath 会写坏"
+Check "服务指向随包的 mysqld.exe" ($wmiBlock.Contains('$MYSQLD_EXE')) "服务指向的不是随包 mysqld"
+Check "可执行文件路径两侧加引号" ($wmiBlock.Contains("'`"' + `$MYSQLD_EXE")) "路径未加引号"
+Check "有 my.ini 时才带 --defaults-file" `
+      ($wmiBlock -match 'Test-Path \$mysqlIni' -and $wmiBlock.Contains('--defaults-file=')) `
+      "硬传不存在的 my.ini 会让服务起不来"
+Check "服务类型是 own-process 且自动启动" `
+      ($wmiBlock -match 'SERVICE_WIN32_OWN_PROCESS' -and $wmiBlock -match "'Automatic'") `
+      "服务类型或启动方式不正确"
+Check "创建后读回 PathName 和 StartMode" `
+      ($wmiBlock -match 'PathName' -and $wmiBlock -match 'StartMode' -and $wmiBlock -match 'servicePathMatches') `
+      "仍可能出现 create 返回 0 但 ImagePath 写坏"
 Check "服务显示名按运行时形态分流" `
       ($text -match '\$serviceDisplayName = if') `
       "xampp 形态仍显示为 MySQL，与目标机现有 MySQL 混淆"
+Check "读回校验失败不混进 WMI 返回码" `
+      ($wmiBlock -match 'serviceReadBackFailed' -and $wmiBlock -notmatch 'serviceCreateExit = 87') `
+      "自造的数字会被当成 Win32_Service.Create 的返回码，把排查引到不存在的错误码上"
+Check "读回校验失败会中止安装" `
+      ($text -match 'serviceCreateExit -ne 0 -or \$serviceReadBackFailed') `
+      "读回不对却继续装下去 —— 那正是 net start 才报 2 的形态"
+Check "失败收尾会停止本次注册的 Apache" `
+      ($text -match 'InstallerRegisteredApache' -and $text -match "net\.exe.*'stop', 'DentalClinicApache'") `
+      "服务注册失败后仍会留下 Apache 占用 80 端口"
 Check "LogCleanup 任务指向独立 .bat" ($text -match 'clean-logs\.bat') "仍在 /tr 里套多层引号"
 Check "LogCleanup 的 schtasks 走 Invoke-CmdLine" ($text -match 'Invoke-CmdLine -CommandLine \(.schtasks\.exe /create /tn "DentalClinic-LogCleanup"') "仍走参数数组"
 Check "route:list 不再传 --compact（Laravel 11 无此选项）" `
@@ -522,6 +561,13 @@ $stopText = [System.IO.File]::ReadAllText((Join-Path $repo 'stop-win.bat'))
 Check "stop-win 的 WMIC 单列 PID 取 tokens=1" `
       ($stopText -notmatch 'for /f "tokens=2".*wmic process' -and $stopText -match 'for /f "tokens=1".*queue:work') `
       "仍把只有一列的 ProcessId 当作第二列，taskkill 会拿到空 PID"
+$startText = [System.IO.File]::ReadAllText((Join-Path $repo 'start-win.bat'))
+$uninstallText = [System.IO.File]::ReadAllText((Join-Path $repo 'uninstall-win.bat'))
+foreach ($lifecycle in @(@('start-win.bat', $startText), @('stop-win.bat', $stopText), @('uninstall-win.bat', $uninstallText))) {
+    Check ("{0} 的进程查询限定可执行文件名和安装目录" -f $lifecycle[0]) `
+          ($lifecycle[1] -match "name='(php|python)\.exe'" -and $lifecycle[1] -match 'executablepath like') `
+          "WMIC 可能匹配查询命令自身或同机其他项目"
+}
 Check "setup.bat 复用已完整安装的 XAMPP 运行时" `
       ($setupTpl2 -match 'TARGET_RUNTIME_READY' -and $setupTpl2 -match 'Existing complete XAMPP runtime detected') `
       "重装仍会覆盖整棵 XAMPP，容易撞上共享冲突"
@@ -617,9 +663,19 @@ Check "OCR 锁包含 Python 3.8 的 exceptiongroup" ($ocrLockText -match '(?m)^e
       "anyio 在 Python 3.8 下缺少 exceptiongroup"
 Check "Paddle 2.6.2 使用兼容的 protobuf 3.20.2" ($ocrLockText -match '(?m)^protobuf==3\.20\.2$') `
       "protobuf 版本超出 paddlepaddle 2.6.2 的 <=3.20.2 约束"
+Check "OCR 锁包含 Windows 的 colorama" ($ocrLockText -match '(?m)^colorama==0\.4\.6$') `
+      "click/tqdm 在 Windows 上会让离线安装失败"
+Check "OCR 锁包含 Python 3.8 的 importlib backports" `
+      ($ocrLockText -match '(?m)^importlib_metadata==8\.5\.0$' -and `
+       $ocrLockText -match '(?m)^importlib_resources==6\.4\.5$' -and `
+       $ocrLockText -match '(?m)^zipp==3\.20\.2$') `
+      "Flask/Matplotlib 在 Python 3.8 下缺传递依赖"
 Check "OCR wheel 缓存哈希包含锁文件" `
       ($buildText -match 'OCR_HASH_FILES.*OCR_REQUIREMENTS' -and $buildText -match 'OCR_HASH_FILES.*OCR_LOCK_FILE') `
       "修锁文件后仍会复用旧的错误 wheel 缓存"
+Check "构建执行 Windows/Python3.8 wheel 元数据闭包校验" `
+      ($buildText -match 'verify-ocr-wheel-closure\.py' -and $buildText -match 'OCR_CLOSURE_CHECKER') `
+      "仍只按 wheel 数量判断，marker 依赖会再次漏包"
 
 Section "8j. pip 在线回退必须有镜像与超时（国内网络）"
 # 离线路径（--no-index --find-links）不碰网络、不会卡；真正会卡的是

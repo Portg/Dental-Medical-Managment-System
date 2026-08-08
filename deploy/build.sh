@@ -194,6 +194,13 @@ esac
 if [[ "$USE_EXISTING_MYSQL" == true ]] && [[ "$TARGET" != "win" || "$UPGRADE" == true ]]; then
     fatal "--use-existing-mysql 只支持 Windows 全量 ZIP 安装包"
 fi
+# XAMPP 自带 MariaDB 不应默认抢占目标机常见的 3306。若用户没有明确指定，
+# 全量 Windows XAMPP 包自动使用 3307；显式 --bundled-mysql-port 仍优先。
+if [[ "$TARGET" == "win" && "$UPGRADE" != true && "$USE_EXISTING_MYSQL" == false &&
+      ( "$RUNTIME_FLAVOR" == "xampp" || "$RUNTIME_FLAVOR" == "xampp-installer" ) &&
+      -z "$BUNDLED_MYSQL_PORT" ]]; then
+    BUNDLED_MYSQL_PORT="3307"
+fi
 if [[ -n "$BUNDLED_MYSQL_PORT" ]]; then
     [[ "$TARGET" != "win" || "$UPGRADE" == true ]] && fatal "--bundled-mysql-port 只支持 Windows 全量 ZIP 安装包"
     [[ "$USE_EXISTING_MYSQL" == true ]] && fatal "--bundled-mysql-port 不能与 --use-existing-mysql 同时使用"
@@ -1786,7 +1793,7 @@ LOCKCHK
     info "OCR requirements 文件可被 pip 在 GBK 区域下解码"
 
     # ── 锁文件里的关键 pin 必须在 ────────────────────────────────────────
-    # 这两个 pin 只在**首次生成**锁文件时由 PIP_EXTRA_REQUIREMENTS 加入
+    # 这些 pin 只在**首次生成**锁文件时由 PIP_EXTRA_REQUIREMENTS 加入
     # （见下方 `[[ ! -f "$OCR_LOCK_FILE" ]]` 那个判断）。锁文件一旦存在，
     # 后续构建就用 --no-deps 照单下载，不再做依赖解析 —— 所以任何一次在
     # 缺这两个 pin 的情况下生成的锁文件，会把错误**固化**下来且永不自动纠正。
@@ -1797,6 +1804,8 @@ LOCKCHK
     #   exceptiongroup  anyio-4.5.2 的元数据：
     #                Requires-Dist: exceptiongroup >=1.0.2 ; python_version < "3.11"
     #                目标机是 Python 3.8，而 --no-deps 不会替我们把它带出来。
+    #   colorama / importlib-* 只在 Windows 或 Python <3.10 上需要；macOS
+    #                构建机不会自动解析出来，2026-08-08 目标机离线安装已实测失败。
     _lock="$PROJECT_ROOT/scripts/requirements-lock.txt"
     if [[ -f "$_lock" ]]; then
         # 用 fatal 而不是 ASSERT_FAIL：后者由「发布包校验」那一步维护，
@@ -1808,7 +1817,11 @@ LOCKCHK
             || fatal "requirements-lock.txt 的 protobuf==$_pb 违反 paddlepaddle 2.6.2 的 Windows 约束（须 <=3.20.2），OCR 在目标机上会崩"
         LC_ALL=C grep -qE '^exceptiongroup==' "$_lock" \
             || fatal "requirements-lock.txt 缺 exceptiongroup —— Python 3.8 下 anyio 需要它，而 --no-deps 不会自动带出"
-        info "OCR 锁文件关键 pin 校验通过（protobuf==$_pb + exceptiongroup）"
+        for target_pin in 'colorama==0.4.6' 'importlib_metadata==8.5.0' 'importlib_resources==6.4.5' 'zipp==3.20.2'; do
+            LC_ALL=C grep -qxF "$target_pin" "$_lock" \
+                || fatal "requirements-lock.txt 缺 $target_pin —— Windows 7 / Python 3.8 离线依赖闭包不完整"
+        done
+        info "OCR 锁文件关键 pin 校验通过（protobuf / exceptiongroup / Windows-Python3.8 markers）"
     fi
 
     # 升级包不带 Python 安装器：upgrade-win.bat 全文不引用它（也不装 Python），
@@ -1888,10 +1901,13 @@ LOCKCHK
                         --only-binary=:all:
                     )
                     # 跨平台 pip download 会按构建机 Python 解释环境标记，可能漏掉
-                    # Python 3.8 专用的 exceptiongroup；Paddle 2.6.2 又明确要求
-                    # protobuf <=3.20.2。首次生成锁文件时显式钉住两者。
+                    # Windows / Python 3.8 专用依赖；Paddle 2.6.2 还明确要求
+                    # protobuf <=3.20.2。首次生成锁文件时显式钉住这些目标依赖。
                     if [[ ! -f "$OCR_LOCK_FILE" ]]; then
-                        PIP_EXTRA_REQUIREMENTS+=(exceptiongroup==1.2.2 protobuf==3.20.2)
+                        PIP_EXTRA_REQUIREMENTS+=(
+                            exceptiongroup==1.2.2 protobuf==3.20.2 colorama==0.4.6
+                            importlib_metadata==8.5.0 importlib_resources==6.4.5 zipp==3.20.2
+                        )
                     fi
                     ;;
                 linux)
@@ -2004,6 +2020,20 @@ LOCKGEN
             fi
         else
             warn "未找到 pip/pip3，跳过 OCR wheel 下载"
+        fi
+
+        # 不能再靠“wheel 数量差不多”判断完整性。逐个读取 Requires-Dist，按
+        # Windows 7 + CPython 3.8.10 重新计算 marker 并验证版本约束。这个检查
+        # 会抓到 macOS 构建机天然漏掉的 platform_system == "Windows" 依赖。
+        if [[ "$TARGET" == "win" ]]; then
+            command -v python3 &>/dev/null \
+                || fatal "校验 Windows OCR 离线依赖闭包需要 python3"
+            OCR_CLOSURE_CHECKER="$PROJECT_ROOT/deploy/tests/verify-ocr-wheel-closure.py"
+            [[ -f "$OCR_CLOSURE_CHECKER" ]] || fatal "缺少 OCR 离线闭包校验器: $OCR_CLOSURE_CHECKER"
+            if ! python3 "$OCR_CLOSURE_CHECKER" "$OCR_LOCK_FILE" "$OCR_WHEELS_DIR"; then
+                fatal "OCR Windows 离线 wheel 闭包不完整，拒绝产出依赖联网补包的安装包"
+            fi
+            info "OCR Windows 7 / Python 3.8 离线依赖闭包校验通过"
         fi
     fi
 else
@@ -2447,6 +2477,16 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
             error "  ✗ install-win.ps1 仍会按进程名停止全部 mysqld"
             ASSERT_FAIL=true
         fi
+        if ! grep -qF "[wmiclass]'Win32_Service'" "$DIST_DIR/install-win.ps1" ||
+           ! grep -qF 'servicePathMatches' "$DIST_DIR/install-win.ps1" ||
+           ! grep -qF 'StartMode' "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ 数据库服务未通过 Win32_Service.Create 注册并读回校验"
+            ASSERT_FAIL=true
+        fi
+        if grep -qF "Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments \$scArguments" "$DIST_DIR/install-win.ps1"; then
+            error "  ✗ 数据库服务仍走 Win7 PowerShell 2.0 已实测返回 1639 的 sc.exe 参数数组"
+            ASSERT_FAIL=true
+        fi
         for lifecycle_script in start-win.bat stop-win.bat uninstall-win.bat; do
             # 本意是「只许操作本系统命名空间下的服务，不许裸操作 mysqld」。
             # 服务名按形态分成 DentalClinicMariaDB / DentalClinicMySQL 之后，
@@ -2458,6 +2498,14 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
                     ASSERT_FAIL=true
                 fi
             done
+            if ! grep -qiF 'executablepath like' "$DIST_DIR/$lifecycle_script"; then
+                error "  ✗ $lifecycle_script 的进程探测未限定安装目录，可能误伤其他项目"
+                ASSERT_FAIL=true
+            fi
+            if grep -qiF 'wmic process where "commandline like' "$DIST_DIR/$lifecycle_script"; then
+                error "  ✗ $lifecycle_script 的 WMIC 查询会匹配查询命令自身"
+                ASSERT_FAIL=true
+            fi
         done
     fi
     if [[ -f "$DIST_DIR/install-win.bat" ]] && grep -qiE 'wusa\.exe|KB3191566|dotnet48|win7-prereq' "$DIST_DIR/install-win.bat"; then

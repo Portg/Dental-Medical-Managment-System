@@ -1161,9 +1161,12 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260808-foreign-db-guard"
+$script:ScriptRev = "20260808-win7-service-wmi"
 # 失败收尾要用：本次安装是否亲手拉起过裸 mysqld（交接给 Windows 服务后清零）。
 $script:InstallerStartedMysqld = $false
+# Apache 在数据库服务注册前启动。若后续失败，必须只回滚本次注册的 Web 服务，
+# 否则会留下“80 端口正常、数据库已停”的半安装状态。
+$script:InstallerRegisteredApache = $false
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -2490,6 +2493,7 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         }
         $apacheInstallExit = Invoke-NativeQuiet -FilePath $APACHE_EXE -Arguments @('-k', 'install', '-n', $apacheService, '-f', $httpdConf)
         if ($apacheInstallExit -eq 0) {
+            $script:InstallerRegisteredApache = $true
             Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('config', $apacheService, 'start=', 'auto') -Probe | Out-Null
             Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('description', $apacheService, 'DentalClinic Apache (mod_php) web server') -Probe | Out-Null
             Write-Host ("        Apache service .......... OK ({0})" -f $apacheService)
@@ -2565,7 +2569,20 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                 Invoke-NativeQuiet -FilePath $nssmExeExisting -Arguments @('remove', $svcName, 'confirm') -Probe | Out-Null
             }
             Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('delete', $svcName) -Probe | Out-Null
-            Start-Sleep -Seconds 1
+            # DeleteService 可能先标记“待删除”再返回。服务对象仍存在时立刻 Create
+            # 会得到 ReturnValue=23（Service Exists）或 16（Marked For Deletion），
+            # 所以等 WMI 确认它消失再重建。
+            # 注：Win32_Service.Create 的返回码是 WMI 自己那套，不是 Win32 错误码 ——
+            # 14 是 Service Disabled，别拿 Win32 的语义去对。
+            $oldServiceGone = $false
+            for ($deleteWait = 0; $deleteWait -lt 20; $deleteWait++) {
+                $oldServiceObject = Get-WmiObject -Class Win32_Service -Filter ("Name='{0}'" -f $svcName) -ErrorAction SilentlyContinue
+                if (-not $oldServiceObject) { $oldServiceGone = $true; break }
+                Start-Sleep -Milliseconds 500
+            }
+            if (-not $oldServiceGone) {
+                Fail-Step ("{0} service is still pending deletion; close service-management tools and retry." -f $svcName)
+            }
             Write-Host "        Old MySQL service ....... removed for refresh"
         }
 
@@ -2584,31 +2601,79 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
                 Write-Host "        Service registration .... warning"
             }
         } else {
-            # sc.exe 的 binPath= 必须是**一个**参数，值里的引号要转义。
-            # 之前经 PowerShell 的原生参数数组传，内层引号会被吞掉，sc 把
-            # --defaults-file 当成独立选项，报 1639（参数错误）并打出用法帮助。
-            # 2026-08-06 23:24 那次装机就没能注册上 DentalClinicMySQL ——
-            # 安装当场看不出问题（mysqld 已被直接拉起），但目标机重启后
-            # 数据库不会自启，start-win.bat 的 net start 也无从下手。
-            # 改走 cmd /c，用 cmd 自己的解析规则，引号用 \" 转义。
-            # DisplayName 的值带空格，同样必须加引号。
-            $binPathInner = '"' + $MYSQLD_EXE + '"'
+            # 不再让 PowerShell 2.0 代传 sc.exe create 的嵌套引号。
+            # 目标 Win7 已实测两种写法都不可靠：
+            #   - 原生参数数组：binPath 内层引号被重排，sc.exe 返回 1639；
+            #   - cmd.exe /c + \"：服务能创建，但反斜杠被原样写进 ImagePath，
+            #     net start 返回 2。
+            # Win32_Service.Create 直接接收 PathName 字符串并写服务数据库，没有
+            # shell/native 参数的二次解析，正好绕开这整类转义问题。
+            $binPathValue = '"' + $MYSQLD_EXE + '"'
             if (Test-Path $mysqlIni) {
-                $binPathInner += ' --defaults-file="' + $mysqlIni + '"'
+                $binPathValue += ' --defaults-file="' + $mysqlIni + '"'
             }
-            $scCmdLine = 'sc.exe create ' + $svcName +
-                         ' binPath= "' + ($binPathInner -replace '"', '\"') + '"' +
-                         ' DisplayName= "' + $serviceDisplayName + '" start= auto'
-            $serviceCreateExit = Invoke-CmdLine -CommandLine $scCmdLine
+
+            $serviceCreateExit = -1
+            # 与 $serviceCreateExit 分开：一个装 WMI 的返回码，一个装我们自己
+            # 读回校验的结论。两者混用会让日志里出现不存在的「WMI 返回码」。
+            $serviceReadBackFailed = $false
+            try {
+                $serviceClass = [wmiclass]'Win32_Service'
+                $createResult = $serviceClass.Create(
+                    $svcName,
+                    $serviceDisplayName,
+                    $binPathValue,
+                    16,          # SERVICE_WIN32_OWN_PROCESS
+                    1,           # SERVICE_ERROR_NORMAL
+                    'Automatic',
+                    $false,
+                    'LocalSystem',
+                    $null,
+                    $null,
+                    $null,
+                    $null
+                )
+                $serviceCreateExit = [int]$createResult.ReturnValue
+            } catch {
+                Write-Host ("        [诊断] Win32_Service.Create 异常: {0}" -f $_.Exception.Message)
+            }
+
             if ($serviceCreateExit -eq 0) {
-                Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('description', $svcName, ($serviceDisplayName + ' database service')) | Out-Null
-                Write-Host "        Service registration .... OK (sc.exe)"
+                # 不能只信 Create 的返回码。立即从服务数据库读回三项关键属性，
+                # 把“注册成功但 ImagePath 写错，net start 才报 2”挡在安装现场。
+                $createdService = Get-WmiObject -Class Win32_Service -Filter ("Name='{0}'" -f $svcName) -ErrorAction SilentlyContinue
+                $servicePathMatches = ($createdService -and ("$($createdService.PathName)" -eq $binPathValue))
+                $serviceModeMatches = ($createdService -and ("$($createdService.StartMode)" -eq 'Auto'))
+                if (-not $servicePathMatches -or -not $serviceModeMatches) {
+                    # 这里的失败是**我们自己判定**的，不是 WMI 返回的。
+                    # 不能把它塞回 $serviceCreateExit —— 那个变量装的是
+                    # Win32_Service.Create 的返回码，混进一个自造的数字之后，
+                    # 日志里会打出「Win32_Service.Create 返回码: 87」，
+                    # 让下一个查问题的人去 WMI 文档里找一个根本不存在的 87。
+                    Write-Host ("        [诊断] 服务读回校验失败（Create 返回 0，但写进服务数据库的值不对）")
+                    Write-Host ("        [诊断]   期望 PathName={0}" -f $binPathValue)
+                    Write-Host ("        [诊断]   实际 PathName={0}; StartMode={1}" -f $createdService.PathName, $createdService.StartMode)
+                    Invoke-NativeQuiet -FilePath 'sc.exe' -Arguments @('delete', $svcName) -Probe | Out-Null
+                    $serviceReadBackFailed = $true
+                } else {
+                    try {
+                        $serviceRegistryPath = 'HKLM:\SYSTEM\CurrentControlSet\Services\' + $svcName
+                        Set-ItemProperty -Path $serviceRegistryPath -Name 'Description' -Value ($serviceDisplayName + ' database service') -ErrorAction Stop
+                    } catch {
+                        Write-Host ("        [诊断] 服务描述写入失败（不影响启动）: {0}" -f $_.Exception.Message)
+                    }
+                    Write-Host "        Service registration .... OK (Win32_Service.Create + read-back)"
+                }
             } else {
+                Write-Host ("        [诊断] Win32_Service.Create 返回码: {0}" -f $serviceCreateExit)
                 Write-Host "        Service registration .... warning"
             }
         }
 
-        if ($serviceCreateExit -ne 0) {
+        # 两种失败都必须拦下：Create 本身没成功，或者 Create 说成功了但读回的
+        # PathName / StartMode 不对（后者正是 2026-08-08 16:24 那次的形态 ——
+        # 注册当场看着 OK，直到 net start 才报 2）。
+        if ($serviceCreateExit -ne 0 -or $serviceReadBackFailed) {
             Fail-Step ("{0} service registration failed. The database would not survive installer exit or reboot." -f $svcName)
         }
 
@@ -2760,6 +2825,12 @@ catch {
         if ($ocrProc -and -not $ocrProc.HasExited) {
             Stop-Process -Id $ocrProc.Id -Force -ErrorAction SilentlyContinue
             Write-Host "        已关闭本次安装启动的 OCR 进程"
+        }
+    } catch {}
+    try {
+        if ($script:InstallerRegisteredApache) {
+            Invoke-NativeQuiet -FilePath 'net.exe' -Arguments @('stop', 'DentalClinicApache') -Probe | Out-Null
+            Write-Host "        已停止本次安装注册的 Apache 服务（避免留下半安装站点）"
         }
     } catch {}
 
