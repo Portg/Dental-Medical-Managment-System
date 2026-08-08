@@ -1744,6 +1744,32 @@ LOCKCHK
     done
     info "OCR requirements 文件可被 pip 在 GBK 区域下解码"
 
+    # ── 锁文件里的关键 pin 必须在 ────────────────────────────────────────
+    # 这两个 pin 只在**首次生成**锁文件时由 PIP_EXTRA_REQUIREMENTS 加入
+    # （见下方 `[[ ! -f "$OCR_LOCK_FILE" ]]` 那个判断）。锁文件一旦存在，
+    # 后续构建就用 --no-deps 照单下载，不再做依赖解析 —— 所以任何一次在
+    # 缺这两个 pin 的情况下生成的锁文件，会把错误**固化**下来且永不自动纠正。
+    # 库里就这样带过 protobuf==5.29.6（违反 paddlepaddle 的 Windows 约束）
+    # 且完全没有 exceptiongroup，目标机上 OCR 必崩。
+    #   protobuf     paddlepaddle-2.6.2 的元数据：
+    #                Requires-Dist: protobuf<=3.20.2,>=3.1.0; platform_system == "Windows"
+    #   exceptiongroup  anyio-4.5.2 的元数据：
+    #                Requires-Dist: exceptiongroup >=1.0.2 ; python_version < "3.11"
+    #                目标机是 Python 3.8，而 --no-deps 不会替我们把它带出来。
+    _lock="$PROJECT_ROOT/scripts/requirements-lock.txt"
+    if [[ -f "$_lock" ]]; then
+        # 用 fatal 而不是 ASSERT_FAIL：后者由「发布包校验」那一步维护，
+        # 在这里赋值会被那一步开头的 ASSERT_FAIL=false 冲掉（实测构建仍返回 0）。
+        # 而且 pin 错了等于 wheel 集合就是错的，没必要再往下打包。
+        _pb=$(LC_ALL=C grep -E '^protobuf==' "$_lock" | head -1 | cut -d= -f3)
+        [[ -n "$_pb" ]] || fatal "requirements-lock.txt 里没有 protobuf 版本"
+        [[ "$_pb" == "3.20.2" ]] \
+            || fatal "requirements-lock.txt 的 protobuf==$_pb 违反 paddlepaddle 2.6.2 的 Windows 约束（须 <=3.20.2），OCR 在目标机上会崩"
+        LC_ALL=C grep -qE '^exceptiongroup==' "$_lock" \
+            || fatal "requirements-lock.txt 缺 exceptiongroup —— Python 3.8 下 anyio 需要它，而 --no-deps 不会自动带出"
+        info "OCR 锁文件关键 pin 校验通过（protobuf==$_pb + exceptiongroup）"
+    fi
+
     # 升级包不带 Python 安装器：upgrade-win.bat 全文不引用它（也不装 Python），
     # 而它占 27MB。OCR 运行时由全量安装建立，升级只更新 scripts/ 里的 .py。
     if [[ "$TARGET" == "win" ]] && [[ "$SKIP_OCR" == false ]] && [[ "$UPGRADE" == false ]]; then
