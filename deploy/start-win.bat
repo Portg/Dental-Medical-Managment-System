@@ -17,7 +17,25 @@ if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
 set "BACKGROUND_MODE=0"
 if /I "%~2"=="--background" set "BACKGROUND_MODE=1"
 set "STOP_MARKER=%INSTALL_DIR%\services-stopped.flag"
-if "%BACKGROUND_MODE%"=="1" if exist "%STOP_MARKER%" exit /b 0
+
+REM ── 运行日志 ────────────────────────────────────────────────────
+REM  这套系统里 setup / prereq / install / scheduler / ocr 都有日志，唯独
+REM  每分钟跑一次、负责让服务活着的这个脚本一个字都不写。
+REM  2026-08-08 那次「10:28:29 安装成功退出 0，10:30:00 起应用连不上库，
+REM  56 分钟没有自愈」到现在仍是三种可能各说各话：有人停过服务（flag 在，
+REM  按设计不动）、服务崩了但 watchdog 没拉起来、服务压根没注册上。
+REM  区分不了的唯一原因就是这里是瞎的。
+REM  本段只记录，不改变任何启动行为。
+if not exist "%INSTALL_DIR%\logs" mkdir "%INSTALL_DIR%\logs" >nul 2>&1
+set "START_LOG=%INSTALL_DIR%\logs\start-win.log"
+REM  watchdog 每分钟写一次，而 DentalClinic-LogCleanup 只清 storage\logs，
+REM  管不到这里 —— 自己按大小轮转，超过 1MB 滚存一份，最多占 2MB。
+if exist "%START_LOG%" for %%S in ("%START_LOG%") do if %%~zS GTR 1048576 move /y "%START_LOG%" "%START_LOG%.1" >nul 2>&1
+set "RUN_MODE=manual"
+if "%BACKGROUND_MODE%"=="1" set "RUN_MODE=scheduled-task"
+call :log "===== start-win.bat 启动 (%RUN_MODE%) ====="
+
+if "%BACKGROUND_MODE%"=="1" if exist "%STOP_MARKER%" goto :stopped_by_marker
 if not "%BACKGROUND_MODE%"=="1" if exist "%STOP_MARKER%" del /f /q "%STOP_MARKER%" >nul 2>&1
 
 REM stop-win.bat 会禁用这两个每分钟触发的任务（否则停服/装机过程中它们既会把
@@ -44,6 +62,7 @@ set "PROJECT_DIR=%LARAGON_DIR%\www\dental"
 if "%RUNTIME_FLAVOR%"=="xampp" set "PROJECT_DIR=%XAMPP_DIR%\htdocs\dental"
 set "EXTERNAL_MYSQL_MARKER=%INSTALL_DIR%\existing-mysql.conf"
 set "APACHE_SERVICE=DentalClinicApache"
+call :log "形态=%RUNTIME_FLAVOR% 项目目录=%PROJECT_DIR%"
 
 REM ── 自动发现路径（版本无关）────────────────────────────────────
 set "PHP_DIR="
@@ -186,8 +205,10 @@ set "MYSQL_CHECK_RC=!ERRORLEVEL!"
 if "!MYSQL_CHECK_RC!"=="0" (
     echo        MySQL 连接正常: !APP_DB_HOST!:!APP_DB_PORT!          [OK]
     set "MYSQL_OK=1"
+    call :log "MySQL 已在运行，无需处理 (!APP_DB_HOST!:!APP_DB_PORT!)"
     goto :mysql_done
 )
+call :log "MySQL 首次探测失败 (退出码 !MYSQL_CHECK_RC!)，进入启动流程"
 
 REM 现有 MySQL 模式只检查、不管理数据库生命周期。
 if exist "%EXTERNAL_MYSQL_MARKER%" (
@@ -202,11 +223,14 @@ sc query DentalClinicMySQL >nul 2>&1
 if !ERRORLEVEL! equ 0 (
     echo        启动 DentalClinicMySQL 服务...
     net start DentalClinicMySQL >nul 2>&1
+    call :log "DentalClinicMySQL 服务存在，已执行 net start (退出码 !ERRORLEVEL!)"
     goto :wait_mysql_managed
 )
+call :log "查不到 DentalClinicMySQL 服务 —— 服务未注册成功，改为直接拉起 mysqld"
 
 if not defined MYSQLD_EXE (
     echo        [错误] 未找到安装包内置 mysqld.exe
+    call :log "失败：未找到内置 mysqld.exe"
     goto :error
 )
 if not exist "%MYSQL_INI%" (
@@ -225,11 +249,13 @@ timeout /t 2 /nobreak >nul
 if !ERRORLEVEL! equ 0 (
     echo        内置 MySQL 启动成功: !APP_DB_HOST!:!APP_DB_PORT!     [OK]
     set "MYSQL_OK=1"
+    call :log "MySQL 拉起成功，等待 !WAIT! 秒 (!APP_DB_HOST!:!APP_DB_PORT!)"
     goto :mysql_done
 )
 set /a "WAIT+=2"
 if !WAIT! geq %MYSQL_WAIT_MAX% (
     echo        [错误] 内置 MySQL 启动超时: !APP_DB_HOST!:!APP_DB_PORT!
+    call :log "失败：MySQL 等待 %MYSQL_WAIT_MAX% 秒仍连不上 —— 服务起不来，或 .env 里的凭据与库不一致"
     goto :error
 )
 echo        等待中... (!WAIT!/%MYSQL_WAIT_MAX% 秒^)
@@ -267,13 +293,16 @@ goto :wait_apache
 :apache_timeout
 echo        [错误] Apache 服务已启动但 80 端口始终未监听
 echo               见 %XAMPP_DIR%\apache\logs\error.log
+call :log "失败：Apache 服务已 net start，但 80 端口 20 秒内未监听"
 goto :error
 :apache_no_service
 echo        [错误] 未找到 %APACHE_SERVICE% 服务
 echo               请重新运行安装程序（install-win.bat）以注册 Apache 服务
+call :log "失败：查不到 %APACHE_SERVICE% 服务 —— 安装时没注册上"
 goto :error
 :apache_ok
 echo        Apache 已就绪 ^(%APACHE_SERVICE%^)                [OK]
+call :log "Apache 就绪 (80 端口在监听)"
 set "WEB_OK=1"
 set "WEB_MODE=apache"
 set "APP_URL=http://localhost"
@@ -531,7 +560,29 @@ echo  ^|  启动失败！请检查以上错误信息                       ^|
 echo  ^|  修复问题后可重新运行此脚本                         ^|
 echo  +=====================================================+
 echo.
+set "RUN_RESULT=1"
+goto :done
+
+REM 计划任务模式下遇到「已手动停止」标记：这是**按设计不动**，不是故障。
+REM 单独走一条出口并留一行日志 —— 否则从外面看它和「watchdog 压根没跑」
+REM 完全一样，2026-08-08 那 56 分钟就卡在分不清这两者上。
+:stopped_by_marker
+call :log "检测到 services-stopped.flag：stop-win.bat 停过服务，按设计不启动任何组件"
+call :log "===== start-win.bat 结束 结果=skipped 退出码=0 ====="
+endlocal & exit /b 0
 
 :done
+if not defined RUN_RESULT set "RUN_RESULT=0"
+REM 每一步的结论都记下来：装完之后「过一会儿就用不了」这类问题，靠的就是
+REM 这几行能看出是哪个组件掉的、watchdog 有没有把它拉回来。
+call :log "结果 mysql=%MYSQL_OK% web=%WEB_OK% ocr=%OCR_OK% queue=%QUEUE_OK% 模式=%WEB_MODE%"
+call :log "===== start-win.bat 结束 退出码=%RUN_RESULT% ====="
 if not "%BACKGROUND_MODE%"=="1" pause
-endlocal
+endlocal & exit /b %RUN_RESULT%
+
+REM ── 日志 ────────────────────────────────────────────────────────
+REM 日志文件被上一次运行占着时（watchdog 每分钟一次，理论上可能叠上）
+REM 追加会失败；那只该丢掉这一行，绝不能让启动流程中断，所以 2>nul。
+:log
+>>"%START_LOG%" echo [%DATE% %TIME%] %~1 2>nul
+goto :eof

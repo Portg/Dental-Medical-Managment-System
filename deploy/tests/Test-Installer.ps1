@@ -672,6 +672,21 @@ Check "setup.bat 把 net stop 的退出码 2 记为预期" `
       ($setupTpl3 -match ':log_netstop' -and $setupTpl3 -match 'if "%~2"=="2"') `
       "缺少对「本来就没运行」的解释"
 
+Section "8l. start-win.bat 必须可观测"
+# 它每分钟被 watchdog 跑一次、负责让服务活着，却是全套脚本里唯一不写日志的。
+# 2026-08-08「装完 90 秒后库就没了、56 分钟没自愈」查不出原因，就卡在这。
+Check "start-win.bat 会写自己的日志" ($startText -match 'START_LOG=') "没有运行日志，出事只能靠猜"
+Check "日志按大小轮转" `
+      ($startText -match 'GTR 1048576' -and $startText -match 'move /y "%START_LOG%"') `
+      "每分钟一次的追加会把磁盘写满（LogCleanup 只清 storage\logs）"
+Check "flag 导致的跳过必须留痕" `
+      ($startText -match ':stopped_by_marker' -and $startText -match 'services-stopped\.flag：') `
+      "「按设计不动」和「压根没跑」从外面看一模一样"
+Check "失败路径返回非零" `
+      ($startText -match 'RUN_RESULT=1' -and $startText -match 'exit /b %RUN_RESULT%') `
+      "失败也返回 0，任务计划里看着永远是成功"
+Check "结束时记录各组件结论" ($startText -match '结果 mysql=%MYSQL_OK%') "看不出是哪个组件掉的"
+
 Section "9. 打进包的 .env 模板不含真凭据"
 $envDeploy = Join-Path $repo 'dist/.env.deploy'
 if (Test-Path $envDeploy) {
