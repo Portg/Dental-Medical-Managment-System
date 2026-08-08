@@ -1646,10 +1646,14 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         # 「内置 MariaDB 是否已经在跑」。没跑是**首次安装的正常状态**，
         # 下面紧接着就会把它启动起来，所以这里不能报成故障。
         $mysqlProbeExit = Invoke-MySqlQuiet -FilePath $MYSQL_EXE -Arguments ($rootConnArgs + @('-e', 'SELECT 1')) -Password "" -Probe
+        # 措辞照着探测**实际能证明的事**写：它用的是空密码，非零只说明
+        # 「空密码连不上」。覆盖安装时上一轮已把 root 密码加固过，即使 MariaDB
+        # 正在运行也会探测失败 —— 那种情况由下面的「停服务 + 端口占用检查」兜住，
+        # 但这里不能替它下「未在运行」的结论。
         if ($mysqlProbeExit -eq 0) {
-            Write-Host "        MariaDB 已在运行 ........ 复用"
+            Write-Host "        MariaDB 探测 ............ 已在运行，复用"
         } else {
-            Write-Host "        MariaDB 未在运行 ........ 准备启动"
+            Write-Host "        MariaDB 探测 ............ 未响应，准备启动"
         }
         if ($mysqlProbeExit -ne 0) {
         if (-not (Test-Path $MYSQLD_EXE)) { Fail-Step "mysqld.exe not found." }

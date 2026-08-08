@@ -418,6 +418,8 @@ dental-clinic-1.0.0-win-upgrade/
   --db-user <user>       数据库用户       (默认 root)
   --db-pass <pass>       数据库密码       (默认 空)
   --app-url <url>        应用地址         (默认 http://localhost)
+  --pip-index-url <url>  OCR 依赖在线回退时用的 pip 源
+                         (默认清华镜像；传空字符串回退到 pypi.org)
   --no-ocr               跳过 OCR 环境安装
   --no-service           跳过 Windows 服务注册
   --yes / -y             静默模式（跳过确认提示）

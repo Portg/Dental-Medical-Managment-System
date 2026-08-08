@@ -623,6 +623,13 @@ Check "带 index-url 时同时给 trusted-host" ($text.Contains("--trusted-host"
 # 离线路径绝不能被误加索引参数，否则就不是离线了
 $offline = [regex]::Match($text, "@\('install', '--no-index'[^)]*\)").Value
 Check "离线路径仍是纯离线（无 index-url）" ($offline -notmatch 'index-url') "离线路径混进了索引参数"
+# 构建侧：case "$TARGET" 的三个分支都是 PIP_DOWNLOAD_ARGS=(...) 整体赋值，
+# 追加镜像/超时必须排在 case 之后，否则会被原样冲掉（首版就是这个错）。
+$lastReset  = $buildText.LastIndexOf('PIP_DOWNLOAD_ARGS=(')
+$appendMore = $buildText.IndexOf('PIP_DOWNLOAD_ARGS+=(--timeout')
+Check "构建侧的 pip 镜像/超时参数没被 case 整体赋值冲掉" `
+      ($appendMore -gt 0 -and $appendMore -gt $lastReset) `
+      "PIP_DOWNLOAD_ARGS+= 排在 case 之前，等于没加"
 
 Section "9. 打进包的 .env 模板不含真凭据"
 $envDeploy = Join-Path $repo 'dist/.env.deploy'

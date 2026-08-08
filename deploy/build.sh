@@ -1841,19 +1841,6 @@ LOCKCHK
 
             PIP_DOWNLOAD_ARGS=()
             PIP_EXTRA_REQUIREMENTS=()
-            # 构建机在国内时，从 pypi.org 拉 342MB wheel 会很慢。
-            # 用 PIP_INDEX_URL 指定镜像即可，例如：
-            #   PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./deploy/build.sh ...
-            # **默认不改**：镜像若不全会让构建产出残缺的 wheel 集合，
-            # 而构建正确性比速度重要。版本本来就由 requirements-lock.txt 钉死，
-            # 换源不会换到不同版本。
-            # 顺带给超时和重试设上界，避免网络不好时干等。
-            PIP_DOWNLOAD_ARGS+=(--timeout 20 --retries 3)
-            if [[ -n "${PIP_INDEX_URL:-}" ]]; then
-                _pip_host=$(printf '%s' "$PIP_INDEX_URL" | sed -E 's#^[a-z]+://([^/]+).*#\1#')
-                PIP_DOWNLOAD_ARGS+=(--index-url "$PIP_INDEX_URL" --trusted-host "$_pip_host")
-                info "pip 使用镜像: $PIP_INDEX_URL"
-            fi
             case "$TARGET" in
                 win)
                     # 与 Win7 目标机上的 Python 3.8.10 保持一致
@@ -1880,6 +1867,25 @@ LOCKCHK
                     PIP_DOWNLOAD_ARGS=()
                     ;;
             esac
+
+            # 必须写在 case **之后**：上面三个分支都是 PIP_DOWNLOAD_ARGS=(...)
+            # 整体赋值，写在前面会被原样冲掉。首版就是写在前面的，结果镜像、
+            # 超时、trusted-host 一个都没进命令行，只有那句 info 照常打印
+            # ——看着像生效了，其实是空转。
+            #
+            # 构建机在国内时，从 pypi.org 拉 342MB wheel 会很慢。
+            # 用 PIP_INDEX_URL 指定镜像即可，例如：
+            #   PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple ./deploy/build.sh ...
+            # **默认不改**：镜像若不全会让构建产出残缺的 wheel 集合，
+            # 而构建正确性比速度重要。版本本来就由 requirements-lock.txt 钉死，
+            # 换源不会换到不同版本。
+            # 顺带给超时和重试设上界，避免网络不好时干等。
+            PIP_DOWNLOAD_ARGS+=(--timeout 20 --retries 3)
+            if [[ -n "${PIP_INDEX_URL:-}" ]]; then
+                _pip_host=$(printf '%s' "$PIP_INDEX_URL" | sed -E 's#^[a-z]+://([^/]+).*#\1#')
+                PIP_DOWNLOAD_ARGS+=(--index-url "$PIP_INDEX_URL" --trusted-host "$_pip_host")
+                info "pip 使用镜像: $PIP_INDEX_URL"
+            fi
 
             # 优先使用锁定版本文件（跳过依赖解析，大幅加速）
             if [[ -f "$OCR_LOCK_FILE" ]]; then
