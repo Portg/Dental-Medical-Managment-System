@@ -1144,7 +1144,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260808-runtime-ocr-db-handoff"
+$script:ScriptRev = "20260808-config-clear"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1980,6 +1980,23 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
             Remove-Item Env:DENTAL_DB_PASSWORD -ErrorAction SilentlyContinue
         }
     }
+
+    # .env 一改完就必须清掉配置缓存，且必须在任何连库的 artisan 命令之前。
+    #
+    # Laravel 只要 bootstrap\cache\config.php 存在就**完全不读 .env**。
+    # 覆盖安装时那个文件是上一次安装 config:cache 留下的，里面是旧的
+    # 数据库密码。于是会出现这种极具误导性的组合：
+    #   [7/19] root 密码已换成随机值并写进 .env（PowerShell 侧全部正确）
+    #   [10/19] 导 schema 用 $DB_PASS 直连 mysql.exe —— 成功
+    #   [11/19] db:seed 走 artisan，读到缓存里的旧空密码 —— 
+    #           SQLSTATE[HY000] [1045] ... (using password: NO)
+    # 2026-08-08 11:26 那次装机就是这样失败的。
+    #
+    # 整个脚本此前只在第 13 步「Optimize caches」里、且仅作为 config:cache
+    # 失败时的兜底才会 config:clear —— 对第 10/11 步来说太晚了。
+    # 这里用 Probe：全新安装时本来就没有缓存，clear 返回非零属正常。
+    Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'config:clear', '--no-interaction') -Probe | Out-Null
+    Write-Host "        配置缓存 ................ 已清除（.env 变更后必须）"
 
     $script:Step++
     Write-Section "Generate APP_KEY"

@@ -547,6 +547,23 @@ Check "root 加固失败不 Fail-Step" ($hardenBlock -notmatch 'Fail-Step') "失
 Check "加固失败时把 DB_PASS 一并清空" ($text -match '(?s)\$hardened\)\s*\{.*?\}\s*else\s*\{[^}]*\$DB_PASS = ""') `
       ".env 可能写入一个连不上的密码"
 
+Section "8g6. .env 改完必须清配置缓存，且早于任何连库的 artisan"
+# Laravel 只要 bootstrap\cache\config.php 存在就完全不读 .env。覆盖安装时
+# 那是上次 config:cache 留下的旧密码，于是 [7/19] 换密码成功、[10/19] 用
+# mysql.exe 直连也成功，偏偏 [11/19] 的 db:seed 报
+# 「1045 ... (using password: NO)」—— 2026-08-08 11:26 实测。
+$posClear  = $text.IndexOf("'config:clear'")
+$posMigrate = $text.IndexOf("'migrate'")
+$posSeed   = $text.IndexOf("'db:seed'")
+Check "存在 config:clear 调用" ($posClear -ge 0) "没有"
+Check "config:clear 早于 migrate" ($posClear -ge 0 -and $posMigrate -ge 0 -and $posClear -lt $posMigrate) `
+      "clear@$posClear migrate@$posMigrate"
+Check "config:clear 早于 db:seed" ($posClear -ge 0 -and $posSeed -ge 0 -and $posClear -lt $posSeed) `
+      "clear@$posClear seed@$posSeed"
+# 必须紧跟在 .env 生成之后，而不是散落在别处
+$posEnv = $text.IndexOf('Write-Section "Generate .env"')
+Check "config:clear 排在 .env 生成之后" ($posEnv -ge 0 -and $posClear -gt $posEnv) "clear@$posClear env@$posEnv"
+
 Section "8h. OCR requirements 必须能被 pip 在 GBK 区域下解码"
 # pip 的 auto_decode 只认前两行的 coding 声明或 BOM，否则按系统区域编码解码。
 # 中文 Windows 上那是 GBK，UTF-8 的中文注释会让它抛 UnicodeDecodeError，
