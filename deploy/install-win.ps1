@@ -1161,7 +1161,7 @@ function Parse-Arguments {
 
 $script:TotalSteps = 19
 $script:Step = 0
-$script:ScriptRev = "20260808-pip-mirror"
+$script:ScriptRev = "20260808-scheduler-pause"
 $cfg = Parse-Arguments $args
 
 $INSTALL_DIR = $cfg.INSTALL_DIR
@@ -1369,6 +1369,23 @@ try {
     } else {
         Write-Host "        No prior installation found"
     }
+
+    # 安装期间暂停每分钟触发的计划任务。
+    #
+    # 不停它们的话，整个装机过程一直有另一个进程在连库 —— 而这段时间里数据库
+    # 正被停掉、root 密码正被换、配置缓存正被重建。结果就是 2026-08-08 那次装机
+    # 的日志：laravel.log 被灌进 67 条 2002（库停着）+ 7 条 1045（密码刚换），
+    # scheduler.log 里 snooze:send 连续 FAIL 35 次。真正该看的失败埋在里面。
+    #
+    # 光 /end 不够 —— 那只结束当前这一次，下一分钟照样再触发，必须 /disable。
+    # 第 18 步「Create scheduled tasks」会重建并显式恢复启用；装到一半失败则
+    # 保持禁用：一个装了一半的系统本来就不该每分钟去连库刷错误日志。
+    # 任务不存在（全新安装）时 schtasks 返回非零，属正常，用 -Probe 静音。
+    foreach ($pausedTask in @('DentalClinic-Scheduler', 'DentalClinic-ServiceWatchdog')) {
+        Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/end', '/tn', $pausedTask) -Probe | Out-Null
+        Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/change', '/tn', $pausedTask, '/disable') -Probe | Out-Null
+    }
+    Write-Host "        计划任务 ................ 安装期间已暂停"
 
     $script:Step++
     Write-Section "Ensure Visual C++ runtime"
@@ -2554,6 +2571,15 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
 
     $script:Step++
     Write-Section "Create scheduled tasks"
+    # 第 2 步把 Scheduler / Watchdog 禁用了（不让它们在装机中途连库）。
+    # 这里是对称的恢复点，且必须无条件执行：
+    #   - 正常路径：下面 /create /f 重建时本来就会恢复启用，但万一 /create 失败
+    #     （只打了 warning 不中止），任务会停在禁用态 —— 等于装完了调度永不触发。
+    #   - --no-service 路径：不重建任何任务，不显式启用的话，上一版装好的调度
+    #     会被这次安装顺手关掉，而日志里没有任何一行提到过这件事。
+    foreach ($resumedTask in @('DentalClinic-Scheduler', 'DentalClinic-ServiceWatchdog')) {
+        Invoke-NativeQuiet -FilePath 'schtasks.exe' -Arguments @('/change', '/tn', $resumedTask, '/enable') -Probe | Out-Null
+    }
     if ($SKIP_SERVICE) {
         Write-Host "        Scheduler ............... skipped (--no-service)"
     } else {

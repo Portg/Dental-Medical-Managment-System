@@ -37,6 +37,14 @@ REM 阻止每分钟运行的健康检查在停止过程中把组件重新拉起�
 schtasks /end /tn "DentalClinic-ServiceWatchdog" >nul 2>&1
 schtasks /end /tn "DentalClinic-AutoStart" >nul 2>&1
 schtasks /end /tn "DentalClinic-QueueWorker" >nul 2>&1
+REM DentalClinic-Scheduler（每分钟 artisan schedule:run）此前既没 /end 也没禁用，
+REM 服务停着它照跑：2026-08-08 那次装机 laravel.log 里 67 条 2002 + 7 条 1045
+REM 全是它打的，snooze:send 在 scheduler.log 里连续 FAIL 35 次也是同一件事。
+REM 而且 /end 只结束当前这一次，下一分钟还会再触发 —— 必须 /disable。
+REM 恢复点在 start-win.bat 开头（手动启动）与 install-win.ps1 第 18 步（重装）。
+schtasks /end /tn "DentalClinic-Scheduler" >nul 2>&1
+schtasks /change /tn "DentalClinic-Scheduler" /disable >nul 2>&1
+schtasks /change /tn "DentalClinic-ServiceWatchdog" /disable >nul 2>&1
 
 echo.
 echo  +=====================================================+

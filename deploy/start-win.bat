@@ -20,6 +20,15 @@ set "STOP_MARKER=%INSTALL_DIR%\services-stopped.flag"
 if "%BACKGROUND_MODE%"=="1" if exist "%STOP_MARKER%" exit /b 0
 if not "%BACKGROUND_MODE%"=="1" if exist "%STOP_MARKER%" del /f /q "%STOP_MARKER%" >nul 2>&1
 
+REM stop-win.bat 会禁用这两个每分钟触发的任务（否则停服/装机过程中它们既会把
+REM 组件重新拉起，也会在库停着的时候连库、把 laravel.log 灌满连接错误）。
+REM 这里是对称的恢复点：用户手动跑 start-win.bat 就意味着「重新开始服务」。
+REM --background 是计划任务自己调起来的，能跑到这儿说明任务本来就是启用的。
+if not "%BACKGROUND_MODE%"=="1" (
+    schtasks /change /tn "DentalClinic-Scheduler" /enable >nul 2>&1
+    schtasks /change /tn "DentalClinic-ServiceWatchdog" /enable >nul 2>&1
+)
+
 REM ── 运行时形态判定 ──────────────────────────────────────────────
 REM 与 install-win.ps1 / setup.bat 用同一条判据：包内有 Apache 就是 xampp。
 REM   xampp   : Apache + mod_php，代码在 xampp\htdocs\dental，无 php-cgi

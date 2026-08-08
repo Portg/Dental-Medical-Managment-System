@@ -1406,6 +1406,8 @@ REM  从这里开始每一步都落盘到 logs\setup.log，xcopy 的真实错误
 REM ═══════════════════════════════════════════════════════════════
 if not exist "%INSTALL_DIR%\logs" mkdir "%INSTALL_DIR%\logs" >nul 2>&1
 set "SETUP_LOG=%INSTALL_DIR%\logs\setup.log"
+REM net stop 的原始输出先落到临时文件，由 :log_netstop 决定要不要进正式日志
+set "NETSTOP_TMP=%INSTALL_DIR%\logs\netstop.tmp"
 >"%SETUP_LOG%" echo ===== setup.bat start =====
 call :log "INSTALL_DIR = %INSTALL_DIR%"
 call :log "PKG_DIR     = %PKG_DIR%"
@@ -1459,14 +1461,14 @@ REM 别人的 Apache / MySQL。
 sc query DentalClinicApache >nul 2>&1
 if errorlevel 1 goto :no_apache_service
 call :log "stopping DentalClinicApache (net stop is synchronous)"
-net stop DentalClinicApache >>"%SETUP_LOG%" 2>&1
-call :log_rc "net stop DentalClinicApache" %ERRORLEVEL%
+net stop DentalClinicApache >"%NETSTOP_TMP%" 2>&1
+call :log_netstop "DentalClinicApache" %ERRORLEVEL%
 :no_apache_service
 sc query DentalClinicMySQL >nul 2>&1
 if errorlevel 1 goto :no_db_service
 call :log "stopping DentalClinicMySQL (net stop is synchronous)"
-net stop DentalClinicMySQL >>"%SETUP_LOG%" 2>&1
-call :log_rc "net stop DentalClinicMySQL" %ERRORLEVEL%
+net stop DentalClinicMySQL >"%NETSTOP_TMP%" 2>&1
+call :log_netstop "DentalClinicMySQL" %ERRORLEVEL%
 :no_db_service
 timeout /t 2 /nobreak >nul 2>&1
 
@@ -1626,6 +1628,22 @@ exit /b 0
 :log_rc
 REM 退出码由调用方在顶层读好再传进来 —— 见上面关于 ( ) 块里 %ERRORLEVEL% 的说明
 >>"%SETUP_LOG%" echo [%DATE% %TIME%] %~1 returned %~2
+exit /b 0
+
+REM net stop 返回 2 = 服务本来就没在运行。上面刚跑完 stop-win.bat，所以这是
+REM **预期结果**，不该把 net 的原文抄进日志 —— 2026-08-08 的 setup.log 里就是
+REM 两段「没有启动 xxx 服务。请键入 NET HELPMSG 3521 以获得更多的帮助。」
+REM 外加 returned 2，看日志的人只会以为服务停不掉。
+REM 其余退出码（5=拒绝访问、1051/1053 等）是真问题，原文照旧进日志。
+REM 退出码用字符串比较：数值比较遇到空值会直接把批处理打断（见 UAC 那次）。
+:log_netstop
+if "%~2"=="2" (
+    call :log "%~1 已停止（预期：stop-win.bat 已停过）"
+) else (
+    if exist "%NETSTOP_TMP%" type "%NETSTOP_TMP%" >>"%SETUP_LOG%" 2>&1
+    call :log_rc "net stop %~1" "%~2"
+)
+del /f /q "%NETSTOP_TMP%" >nul 2>&1
 exit /b 0
 
 REM xcopy 的错误必须留下来。

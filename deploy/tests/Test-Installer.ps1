@@ -631,6 +631,47 @@ Check "构建侧的 pip 镜像/超时参数没被 case 整体赋值冲掉" `
       ($appendMore -gt 0 -and $appendMore -gt $lastReset) `
       "PIP_DOWNLOAD_ARGS+= 排在 case 之前，等于没加"
 
+Section "8k. 计划任务不得在停服/装机期间空转"
+# DentalClinic-Scheduler 每分钟跑 artisan schedule:run。停服和装机期间不禁用它，
+# 它就会在库停着、密码刚换的中途连库 —— 2026-08-08 的 laravel.log 里 67 条 2002
+# + 7 条 1045 全是它打的，真正的失败被埋在里面。/end 只结束当前这一次，不够。
+$stopText  = [System.IO.File]::ReadAllText((Join-Path $repo 'stop-win.bat'))
+$startText = [System.IO.File]::ReadAllText((Join-Path $repo 'start-win.bat'))
+Check "stop-win.bat 会禁用 Scheduler（不只是 /end）" `
+      ($stopText -match '/change\s+/tn\s+"DentalClinic-Scheduler"\s+/disable') `
+      "只 /end 的话下一分钟又会触发"
+Check "stop-win.bat 会禁用 Watchdog" `
+      ($stopText -match '/change\s+/tn\s+"DentalClinic-ServiceWatchdog"\s+/disable') `
+      "健康检查会把刚停的服务重新拉起"
+Check "start-win.bat 会重新启用 Scheduler" `
+      ($startText -match '/change\s+/tn\s+"DentalClinic-Scheduler"\s+/enable') `
+      "停过一次之后调度就永远不跑了"
+Check "start-win.bat 会重新启用 Watchdog" `
+      ($startText -match '/change\s+/tn\s+"DentalClinic-ServiceWatchdog"\s+/enable') `
+      "停过一次之后健康检查就永远不跑了"
+$idxDisable = $text.IndexOf("'/change', '/tn', `$pausedTask, '/disable'")
+$idxEnable  = $text.IndexOf("'/change', '/tn', `$resumedTask, '/enable'")
+$idxTaskStep = $text.IndexOf('Write-Section "Create scheduled tasks"')
+Check "install-win.ps1 装机期间暂停计划任务" ($idxDisable -gt 0) "装机全程计划任务照跑"
+Check "暂停发生在建库/改密码之前" `
+      ($idxDisable -gt 0 -and $idxDisable -lt $text.IndexOf('Write-Section ("Start {0}"')) `
+      "暂停得太晚，前面几步照样被打扰"
+# 恢复必须落在「Create scheduled tasks」这一步之内：早于它则会被后面的
+# 停服流程再关掉，晚于它（比如挪到最终校验之后）则 --no-service 路径够不着。
+Check "install-win.ps1 结束前会恢复启用" `
+      ($idxEnable -gt $idxDisable -and $idxEnable -gt $idxTaskStep -and
+       $idxEnable -lt $text.IndexOf('Write-Section "Final validation"')) `
+      "装完之后调度停在禁用态"
+# setup.bat：stop-win.bat 刚停过服务，net stop 必然返回 2，别把 net 的原文
+# 「没有启动 xxx 服务 / NET HELPMSG 3521」抄进 setup.log 吓人。
+$setupTpl3 = ((Get-BatSources)['build.sh:SHORTCUT_BAT'] -join "`n")
+Check "setup.bat 的 net stop 输出不直接进 setup.log" `
+      ($setupTpl3 -notmatch 'net stop \w+ >>"%SETUP_LOG%"') `
+      "预期内的「服务未启动」原文会被当成故障"
+Check "setup.bat 把 net stop 的退出码 2 记为预期" `
+      ($setupTpl3 -match ':log_netstop' -and $setupTpl3 -match 'if "%~2"=="2"') `
+      "缺少对「本来就没运行」的解释"
+
 Section "9. 打进包的 .env 模板不含真凭据"
 $envDeploy = Join-Path $repo 'dist/.env.deploy'
 if (Test-Path $envDeploy) {
