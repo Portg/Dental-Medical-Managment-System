@@ -239,7 +239,18 @@ class TodayWorkService
                 'wq.status as queue_status',
                 'wq.check_in_time',
                 'wq.chair_id',
-                DB::raw('a.sort_by as sort_key')
+                DB::raw('a.sort_by as sort_key'),
+                // 这位患者有没有还没约上的复诊待办。病人此刻就在店里，是最容易
+                // 约上的时刻；等到复诊日当天才在随访列表里冒出来，人早走了，
+                // 只能打电话。取最近的一条即可 —— 同一患者堆着多条待办本身是异常。
+                DB::raw('(SELECT f.id FROM patient_followups f
+                          WHERE f.patient_id = a.patient_id
+                            AND f.status = "Pending" AND f.deleted_at IS NULL
+                          ORDER BY f.scheduled_date ASC LIMIT 1) as pending_followup_id'),
+                DB::raw('(SELECT f.scheduled_date FROM patient_followups f
+                          WHERE f.patient_id = a.patient_id
+                            AND f.status = "Pending" AND f.deleted_at IS NULL
+                          ORDER BY f.scheduled_date ASC LIMIT 1) as pending_followup_date')
             );
 
         // Doctor filter
@@ -357,6 +368,35 @@ class TodayWorkService
         return '<span class="label label-' . $badge[0] . '">' . __($badge[1]) . '</span>';
     }
 
+    /**
+     * 「约下次」按钮。有待约复诊时把日期显示出来并带进预约抽屉。
+     *
+     * 之前这个按钮是空的：不知道这位患者有没有待约、该约哪天，前台得先去别处查。
+     * 而医生在病例里写的复诊日期，此前要等到复诊日当天才会在随访列表里出现 ——
+     * 那时候病人早走了，只能打电话。病人还在店里的这几分钟才是最容易约上的。
+     */
+    private function renderNextAppointmentButton($row): string
+    {
+        $followupId = $row->pending_followup_id ?? null;
+
+        // 医生一律带上：病人刚看完的就是这位，前台不该再选一次
+        $doctorId = (int) $row->doctor_id;
+
+        if (!$followupId) {
+            return '<button class="btn btn-xs btn-default tw-action-btn" '
+                . 'onclick="quickNextAppointment(' . $row->patient_id . ', null, null, ' . $doctorId . ')">'
+                . '<i class="fa fa-calendar-plus-o"></i> ' . __('today_work.next_appointment') . '</button> ';
+        }
+
+        $date = substr((string) $row->pending_followup_date, 0, 10);
+
+        return '<button class="btn btn-xs btn-warning tw-action-btn" '
+            . 'onclick="quickNextAppointment(' . $row->patient_id . ', \'' . e($date) . '\', ' . (int) $followupId . ', ' . $doctorId . ')" '
+            . 'title="' . e(__('today_work.pending_followup_hint', ['date' => $date])) . '">'
+            . '<i class="fa fa-calendar-plus-o"></i> ' . __('today_work.next_appointment')
+            . ' <span class="label label-danger">' . e($date) . '</span></button> ';
+    }
+
     private function renderActions($row): string
     {
         $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
@@ -392,8 +432,7 @@ class TodayWorkService
                     . '<i class="fa fa-medkit"></i> ' . __('today_work.prescription') . '</button> ';
                 $actions .= '<button class="btn btn-xs btn-default tw-action-btn" onclick="quickInvoice(' . $row->appointment_id . ')">'
                     . '<i class="fa fa-money"></i> ' . __('today_work.invoice') . '</button> ';
-                $actions .= '<button class="btn btn-xs btn-default tw-action-btn" onclick="quickNextAppointment(' . $row->patient_id . ')">'
-                    . '<i class="fa fa-calendar-plus-o"></i> ' . __('today_work.next_appointment') . '</button> ';
+                $actions .= $this->renderNextAppointmentButton($row);
                 $actions .= '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCompleteTreatment(' . $row->queue_id . ')">'
                     . '<i class="fa fa-check"></i> ' . __('today_work.complete_treatment') . '</button>';
                 $actions .= '</div>';

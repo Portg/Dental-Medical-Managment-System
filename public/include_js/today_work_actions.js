@@ -134,9 +134,17 @@
     };
 
     // ── Next Appointment ─────────────────────────────────
-    window.quickNextAppointment = function(patientId) {
+    // date / followupId 只有该患者存在未约上的复诊待办时才会传进来：
+    // 带上日期省得前台再去病历里翻，带上 followupId 是为了约成后自动闭环那条待办。
+    window.quickNextAppointment = function(patientId, date, followupId, doctorId) {
         if (typeof openAppointmentDrawer === 'function') {
-            openAppointmentDrawer({ patient_id: patientId });
+            openAppointmentDrawer({
+                patient_id: patientId,
+                date: date || undefined,
+                followup_id: followupId || undefined,
+                // 病人刚看完的就是这位医生，默认带上；抽屉里改成别人也行
+                doctor_id: doctorId || undefined
+            });
         }
     };
 

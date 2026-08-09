@@ -45,6 +45,9 @@ $drawerTrans = [
         <form id="appointment-form" autocomplete="off">
             @csrf
             <input type="hidden" id="appointment_id" name="id">
+            {{-- 从今日工作台「约下次」带过来的复诊待办 id；约成后由后端回填
+                 appointment_id 并置为已完成。普通建约时为空。 --}}
+            <input type="hidden" id="followup_id" name="followup_id">
 
             {{-- Patient Selection --}}
             <div class="form-group-drawer">

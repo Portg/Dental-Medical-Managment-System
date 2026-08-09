@@ -90,7 +90,11 @@ class AppointmentsController extends Controller
             'doctor_id' => 'required',
         ])->validate();
 
-        $advanceError = $this->validateAdvanceBooking($request->appointment_date, $request->appointment_time);
+        $advanceError = $this->validateAdvanceBooking(
+            $request->appointment_date,
+            $request->appointment_time,
+            $this->isFollowupDrivenBooking($request)
+        );
         if ($advanceError) {
             return response()->json(['message' => $advanceError, 'status' => false]);
         }
@@ -117,6 +121,9 @@ class AppointmentsController extends Controller
             'visit_information', 'appointment_date', 'appointment_time',
             'patient_id', 'doctor_id', 'notes', 'chair_id', 'service_id',
             'appointment_type', 'duration_minutes', 'send_sms',
+            // 从「约下次」带过来的复诊待办 id：约成后由 Service 回填并置为已完成，
+            // 否则前台约完了，待办还挂在随访列表上等人打电话。
+            'followup_id',
         ]);
         $data['shift_id'] = $scheduleResult['shift_id'];
 
@@ -349,13 +356,39 @@ class AppointmentsController extends Controller
      * Validate appointment date/time against max_advance_days and min_advance_hours.
      * Returns error message string on failure, or null on success.
      */
-    private function validateAdvanceBooking(string $date, string $time): ?string
+    /**
+     * 这条待办是不是医嘱驱动的复诊 —— 是的话豁免「最多提前 N 天」。
+     *
+     * clinic.max_advance_days 默认 7 天，本意是防散客把远期的号占满。而医生写
+     * 「两周后复诊」是牙科最常见的间隔之一，前台在病人离店时按那个日期约，
+     * 会被这条规则直接挡掉（实测：最多只能提前 7 天预约）。复诊有明确临床理由，
+     * 不该跟散客占号同等对待。
+     *
+     * followup_id 是前端带来的，必须验：存在、仍是 Pending、且属于这位患者。
+     * 否则任何人传一个 id 就能绕过提前预约限制。
+     */
+    private function isFollowupDrivenBooking(Request $request): bool
+    {
+        $followupId = $request->input('followup_id');
+        if (!$followupId) {
+            return false;
+        }
+
+        return \App\PatientFollowup::where('id', (int) $followupId)
+            ->where('patient_id', (int) $request->input('patient_id'))
+            ->where('status', \App\PatientFollowup::STATUS_PENDING)
+            ->exists();
+    }
+
+    private function validateAdvanceBooking(string $date, string $time, bool $isFollowup = false): ?string
     {
         $appointmentDt = \Carbon\Carbon::parse($date . ' ' . date('H:i:s', strtotime($time)));
         $now = \Carbon\Carbon::now();
 
         $maxDays = (int) SystemSetting::get('clinic.max_advance_days', 0);
-        if ($maxDays > 0) {
+        // 「不能约太远」对复诊豁免；「不能约太急」（min_advance_hours）照常生效 ——
+        // 那条防的是临时插号，跟复诊是不是医嘱驱动没关系。
+        if ($maxDays > 0 && !$isFollowup) {
             $maxDate = $now->copy()->addDays($maxDays)->endOfDay();
             if ($appointmentDt->gt($maxDate)) {
                 return __('appointment.max_advance_days_exceeded', ['days' => $maxDays]);

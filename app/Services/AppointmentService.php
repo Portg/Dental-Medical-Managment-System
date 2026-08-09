@@ -401,10 +401,38 @@ class AppointmentService
             if ($appointment) {
                 $sendSms = ($data['send_sms'] ?? '1') === '1';
                 $this->createAppointmentHistory($appointment->id, "Created", $sendSms);
+                $this->closeFollowupIfRequested($appointment, $data);
             }
 
             return $appointment;
         });
+    }
+
+    /**
+     * 「约下次」带着复诊待办 id 过来时，约成即闭环：回填 appointment_id、置为已完成。
+     *
+     * 不这么做的话，前台在病人离店时明明已经约好了，那条待办还会在复诊日当天
+     * 跳进随访列表让人再打一次电话 —— 病人接到"该来复诊了"的电话，回一句
+     * "我不是已经约了吗"。patient_followups.appointment_id 这个字段本来就是
+     * 为这一步留的，此前全仓库没有任何地方写过它。
+     *
+     * 只认自己患者名下、且仍是 Pending 的那条：id 是从前端带来的，不能直接信。
+     */
+    private function closeFollowupIfRequested(Appointment $appointment, array $data): void
+    {
+        $followupId = $data['followup_id'] ?? null;
+        if (!$followupId) {
+            return;
+        }
+
+        \App\PatientFollowup::where('id', (int) $followupId)
+            ->where('patient_id', $appointment->patient_id)
+            ->where('status', \App\PatientFollowup::STATUS_PENDING)
+            ->update([
+                'status'         => \App\PatientFollowup::STATUS_COMPLETED,
+                'completed_date' => now(),
+                'appointment_id' => $appointment->id,
+            ]);
     }
 
     /**

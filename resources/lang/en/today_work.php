@@ -36,6 +36,7 @@ return [
     'prescription'        => 'Prescription',
     'invoice'             => 'Invoice',
     'next_appointment'    => 'Next Appt',
+    'pending_followup_hint' => 'Follow-up due :date is not booked yet. The patient is here now — book it.',
     'mark_no_show'        => 'No Show',
     'mark_no_show_success'=> 'Marked as no show',
     'search_patient'      => 'Search Patient',

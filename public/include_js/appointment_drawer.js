@@ -71,6 +71,11 @@
                 if (prefillData.duration) {
                     $('#duration_minutes').val(prefillData.duration);
                 }
+                // 复诊待办 id 随表单一起提交，后端约成后回填 appointment_id 并置为已完成。
+                // 不带的话前台约完了，待办还会在复诊日当天跳出来让人再打一次电话。
+                if (prefillData.followup_id) {
+                    $('#followup_id').val(prefillData.followup_id);
+                }
                 // Load doctor last so change → loadTimeSlots sees date already set
                 if (prefillData.doctor_id) {
                     loadDoctorById(prefillData.doctor_id);
@@ -87,6 +92,9 @@
         window.resetAppointmentForm = function() {
             $('#appointment-form')[0].reset();
             $('#appointment_id').val('');
+            // hidden 字段 reset() 会还原成 value 属性（空），这里显式清一遍，
+            // 免得上一次「约下次」的 followup_id 残留到下一次普通建约上
+            $('#followup_id').val('');
             $('#drawer_patient').val(null).trigger('change');
             $('#drawer_doctor').val(null).trigger('change');
             $('#drawer_chair').val('');
