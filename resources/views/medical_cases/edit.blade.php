@@ -166,7 +166,7 @@
             </div>
             <div class="modal-body text-center">
                 <p class="text-muted">{{ __('medical_cases.signature_hint') }}</p>
-                <canvas id="signature-canvas" width="460" height="200" style="border:1px solid #ddd; border-radius:4px; cursor:crosshair;"></canvas>
+                <canvas id="signature-canvas" width="460" height="200" style="width:460px; max-width:100%; height:200px; box-sizing:border-box; border:1px solid #ddd; border-radius:4px; cursor:crosshair;"></canvas>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" id="btn-clear-signature">{{ __('common.clear') }}</button>
@@ -243,6 +243,7 @@ LanguageManager.loadAllFromPHP({
 </script>
 <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
 <script src="{{ asset('include_js/template_picker.js') }}"></script>
-<script src="{{ asset('include_js/signature_pad.umd.min.js') }}"></script>
-<script src="{{ asset('include_js/medical_record_edit.js') }}"></script>
+<script src="{{ asset('include_js/signature_pad.umd.min.js') }}?v={{ filemtime(public_path('include_js/signature_pad.umd.min.js')) }}"></script>
+<script src="{{ asset('include_js/signature_pad_compat.js') }}?v={{ filemtime(public_path('include_js/signature_pad_compat.js')) }}"></script>
+<script src="{{ asset('include_js/medical_record_edit.js') }}?v={{ filemtime(public_path('include_js/medical_record_edit.js')) }}"></script>
 @endsection

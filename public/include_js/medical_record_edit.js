@@ -506,10 +506,24 @@ var pendingSignatureAction = null;
 function initSignaturePad() {
     var canvas = document.getElementById('signature-canvas');
     if (!canvas || typeof SignaturePad === 'undefined') return;
+
+    if (typeof SignaturePadCompat !== 'undefined') {
+        SignaturePadCompat.ensureCustomEvent(window, document);
+    }
+
     signaturePad = new SignaturePad(canvas, {
         backgroundColor: 'rgb(255, 255, 255)',
         penColor: 'rgb(0, 0, 0)'
     });
+
+    // Some Win7 Chromium/WebView builds expose PointerEvent but deliver only
+    // mouse/touch input. SignaturePad v4 otherwise binds the unusable pointer
+    // path exclusively, leaving an apparently healthy canvas that cannot draw.
+    if (typeof SignaturePadCompat !== 'undefined'
+            && SignaturePadCompat.isLegacyWindows(navigator.userAgent)) {
+        SignaturePadCompat.bindLegacyInput(signaturePad, canvas);
+    }
+
     $('#btn-clear-signature').on('click', function() { signaturePad.clear(); });
     $('#btn-confirm-signature').on('click', function() {
         if (signaturePad.isEmpty()) {
@@ -521,12 +535,11 @@ function initSignaturePad() {
         doSaveMedicalRecord(pendingSignatureAction, signatureData);
     });
     $('#signatureModal').on('shown.bs.modal', function() {
-        // Resize canvas to fit modal
-        var ratio = Math.max(window.devicePixelRatio || 1, 1);
-        canvas.width = canvas.offsetWidth * ratio;
-        canvas.height = canvas.offsetHeight * ratio;
-        canvas.getContext('2d').scale(ratio, ratio);
-        signaturePad.clear();
+        if (typeof SignaturePadCompat !== 'undefined') {
+            SignaturePadCompat.resizeCanvas(canvas, signaturePad, window);
+        } else {
+            signaturePad.clear();
+        }
     });
 }
 
@@ -574,7 +587,8 @@ function doSaveMedicalRecord(action, signatureData) {
     }
 
     var caseId = $('#case_id').val();
-    var url = caseId ? '/medical-cases/' + caseId : '/medical-cases';
+    var baseUrl = MedicalRecordConfig.urls.medicalCases || '/medical-cases';
+    var url = caseId ? baseUrl + '/' + caseId : baseUrl;
     var method = caseId ? 'PUT' : 'POST';
 
     $.ajax({
@@ -644,9 +658,10 @@ function promptModificationReason(action, signatureData) {
                 formData += '&signature=' + encodeURIComponent(signatureData);
             }
             var caseId = $('#case_id').val();
+            var baseUrl = MedicalRecordConfig.urls.medicalCases || '/medical-cases';
             $.ajax({
                 type: 'PUT',
-                url: '/medical-cases/' + caseId,
+                url: baseUrl + '/' + caseId,
                 data: formData,
                 success: function(response) {
                     $.LoadingOverlay("hide");
@@ -994,7 +1009,11 @@ function doSaveAsTemplate() {
         error: function(xhr) {
             if (xhr.status === 422) {
                 var errors = xhr.responseJSON.errors || {};
-                var msg = Object.values(errors).flat().join('<br>');
+                var messages = [];
+                $.each(errors, function(key, value) {
+                    messages = messages.concat(value);
+                });
+                var msg = messages.join('<br>');
                 toastr.error(msg);
             } else {
                 toastr.error(MedicalRecordConfig.translations.saveFailed);
