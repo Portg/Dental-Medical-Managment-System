@@ -44,6 +44,8 @@ class PatientBillingTabTest extends TestCase
         RolePermission::create(['role_id' => $role->id, 'permission_id' => $perm->id]);
         $perm2 = Permission::create(['name' => 'View Invoices', 'slug' => 'view-invoices', 'module' => 'invoices']);
         RolePermission::create(['role_id' => $role->id, 'permission_id' => $perm2->id]);
+        $perm3 = Permission::create(['name' => 'View Patients', 'slug' => 'view-patients', 'module' => 'patients']);
+        RolePermission::create(['role_id' => $role->id, 'permission_id' => $perm3->id]);
 
         $doctorRole = Role::create(['name' => 'Doctor', 'slug' => 'doctor']);
         $this->doctor = User::factory()->create([
@@ -117,6 +119,18 @@ class PatientBillingTabTest extends TestCase
             'branch_id'      => $branch->id,
             '_who_added'     => $this->admin->id,
         ]);
+    }
+
+    /** @test */
+    public function patient_detail_displays_total_outstanding_balance(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->get('/patients/' . $this->patient->id);
+
+        $response->assertOk()
+                 ->assertViewHas('totalOutstanding', fn($amount) => (float) $amount === 500.0)
+                 ->assertSeeText(__('patient.outstanding_balance'))
+                 ->assertSee('&yen;500.00', false);
     }
 
     /** @test */

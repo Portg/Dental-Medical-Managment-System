@@ -346,6 +346,14 @@ class PatientService
             ->whereNull('invoices.deleted_at')
             ->sum('invoices.total_amount');
 
+        // 未付余额：与未收款报表保持一致，仅汇总仍未结清的账单。
+        $totalOutstanding = DB::table('invoices')
+            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
+            ->where(DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'), $id)
+            ->whereNull('invoices.deleted_at')
+            ->whereIn('invoices.payment_status', ['unpaid', 'partial', 'overdue'])
+            ->sum('invoices.outstanding_amount');
+
         // 所有标签（用于左侧面板复选框）
         $allTags = \App\PatientTag::orderBy('name')->get(['id', 'name']);
 
@@ -366,7 +374,7 @@ class PatientService
         return compact(
             'patient', 'appointmentsCount', 'medicalCasesCount',
             'imagesCount', 'followupsCount', 'labCasesCount', 'prescriptionsCount', 'invoicesCount',
-            'firstVisit', 'latestVisit', 'totalSpending', 'allTags', 'allGroups', 'doctors',
+            'firstVisit', 'latestVisit', 'totalSpending', 'totalOutstanding', 'allTags', 'allGroups', 'doctors',
             'dentalChartSummary', 'dentalChartAppointmentId'
         );
     }

@@ -278,6 +278,7 @@ return [
     'first_visit_doctor' => 'First Visit',
     'latest_visit' => 'Latest Visit',
     'total_spending' => 'Total Spending',
+    'outstanding_balance' => 'Outstanding Balance',
     'member_balance' => 'Member Balance',
     'member_points' => 'Points',
     'no_visit_record' => 'No visit records',

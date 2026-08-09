@@ -212,6 +212,12 @@
         {{ __('patient.total_spending') }}: <span class="amount">&yen;{{ number_format($totalSpending, 2) }}</span>
     </span>
 
+    <div class="summary-divider"></div>
+
+    <span class="summary-item">
+        {{ __('patient.outstanding_balance') }}: <span class="amount">&yen;{{ number_format($totalOutstanding, 2) }}</span>
+    </span>
+
     @if($patient->member_status === 'Active')
         <div class="summary-divider"></div>
         <span class="summary-item">
