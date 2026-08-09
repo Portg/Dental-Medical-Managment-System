@@ -164,6 +164,25 @@ class DataSecurityTest extends TestCase
         $this->assertEquals('', DataMaskingService::maskField('phone_no', ''));
     }
 
+    public function test_screen_display_defaults_to_raw_only_with_sensitive_data_permission(): void
+    {
+        config(['data_security.display_masking.enabled' => true]);
+
+        $this->actingAs($this->doctorUser);
+        $this->assertTrue(DataMaskingService::shouldDisplayUnmasked());
+        $this->assertSame(
+            '13800138000',
+            DataMaskingService::displayField('phone_no', '13800138000')
+        );
+
+        $this->actingAs($this->nurseUser);
+        $this->assertFalse(DataMaskingService::shouldDisplayUnmasked());
+        $this->assertSame(
+            '138****8000',
+            DataMaskingService::displayField('phone_no', '13800138000')
+        );
+    }
+
     public function test_is_export_masking_enabled(): void
     {
         config(['data_security.export_masking_enabled' => true]);
@@ -377,6 +396,70 @@ class DataSecurityTest extends TestCase
             'accessed_resource' => 'Patient:view_detail',
             'resource_type'     => 'Patient',
             'resource_id'       => $patient->id,
+        ]);
+    }
+
+    public function test_patient_web_pages_default_to_raw_for_authorized_users_and_mask_for_others(): void
+    {
+        $patient = $this->createTestPatient();
+
+        $authorizedDetail = $this->actingAs($this->doctorUser)
+            ->get("/patients/{$patient->id}");
+        $authorizedDetail->assertOk()
+            ->assertSeeText('13800138000')
+            ->assertSeeText(__('data_security.hide_sensitive'));
+
+        $authorizedList = $this->actingAs($this->doctorUser)
+            ->get('/patients?draw=1&start=0&length=10', [
+                'X-Requested-With' => 'XMLHttpRequest',
+            ]);
+        $authorizedList->assertOk()
+            ->assertJsonPath('data.0.phone_no', '13800138000');
+
+        $maskedDetail = $this->actingAs($this->nurseUser)
+            ->get("/patients/{$patient->id}");
+        $maskedDetail->assertOk()
+            ->assertSeeText('138****8000')
+            ->assertDontSeeText('13800138000');
+
+        $maskedList = $this->actingAs($this->nurseUser)
+            ->get('/patients?draw=1&start=0&length=10', [
+                'X-Requested-With' => 'XMLHttpRequest',
+            ]);
+        $maskedList->assertOk()
+            ->assertJsonPath('data.0.phone_no', '138****8000');
+    }
+
+    /**
+     * 默认显示明文之后，没人再点「显示敏感信息」按钮，revealPii() 里的
+     * 'Patient:reveal_pii' 对有权限的人永远不会产生。那条记录是用来追溯
+     * 「谁真的看了电话/身份证号」的，改交互不能让它静默消失 ——
+     * 页面以明文渲染时必须补记一条等价的。
+     */
+    public function test_showing_pii_by_default_still_leaves_an_access_trail(): void
+    {
+        $patient = $this->createTestPatient();
+
+        $this->actingAs($this->doctorUser)->get("/patients/{$patient->id}")->assertOk();
+
+        $this->assertDatabaseHas('access_logs', [
+            'user_id'           => $this->doctorUser->id,
+            'accessed_resource' => 'Patient:pii_shown',
+            'resource_type'     => 'Patient',
+            'resource_id'       => $patient->id,
+        ]);
+    }
+
+    /** @test */
+    public function test_masked_viewers_do_not_produce_a_pii_access_record(): void
+    {
+        $patient = $this->createTestPatient();
+
+        $this->actingAs($this->nurseUser)->get("/patients/{$patient->id}")->assertOk();
+
+        $this->assertDatabaseMissing('access_logs', [
+            'user_id'           => $this->nurseUser->id,
+            'accessed_resource' => 'Patient:pii_shown',
         ]);
     }
 

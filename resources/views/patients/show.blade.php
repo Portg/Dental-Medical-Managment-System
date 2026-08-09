@@ -1,5 +1,22 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
-@php use App\Services\DataMaskingService; @endphp
+@php
+    use App\Services\DataMaskingService;
+
+    $piiShownByDefault = DataMaskingService::shouldDisplayUnmasked();
+    $piiMaskedValues = [
+        'full_name' => DataMaskingService::maskName($patient->full_name) ?? '-',
+        'full_name_summary' => DataMaskingService::maskName($patient->full_name) ?? '-',
+        'full_name_detail' => DataMaskingService::maskName($patient->full_name) ?? '-',
+        'phone_no' => DataMaskingService::maskPhone($patient->phone_no) ?? '-',
+        'alternative_no' => DataMaskingService::maskPhone($patient->alternative_no) ?? '-',
+        'nin' => DataMaskingService::maskNin($patient->nin) ?? '-',
+        'email' => DataMaskingService::maskEmail($patient->email) ?? '-',
+        'address' => DataMaskingService::maskAddress($patient->address) ?? '-',
+        'next_of_kin' => DataMaskingService::maskName($patient->next_of_kin) ?? '-',
+        'next_of_kin_no' => DataMaskingService::maskPhone($patient->next_of_kin_no) ?? '-',
+        'next_of_kin_address' => DataMaskingService::maskAddress($patient->next_of_kin_address) ?? '-',
+    ];
+@endphp
 @section('css')
     @include('layouts.page_loader')
     <link rel="stylesheet" href="{{ asset('css/form-modal.css') }}?v={{ filemtime(public_path('css/form-modal.css')) }}">
@@ -151,7 +168,7 @@
         <img src="{{ asset('images/default-avatar.png') }}" class="summary-avatar">
     @endif
 
-    <span class="summary-name pii-field" data-field="full_name">{{ DataMaskingService::maskName($patient->full_name) }}</span>
+    <span class="summary-name pii-field" data-field="full_name">{{ DataMaskingService::displayField('full_name', $patient->full_name) }}</span>
 
     @if($patient->member_status === 'Active' && $patient->memberLevel)
         <span class="summary-tag" style="background:#3598dc;">{{ $patient->memberLevel->name }}</span>
@@ -164,7 +181,7 @@
     <div class="summary-divider"></div>
 
     <span class="summary-item">
-        <span class="pii-field" data-field="phone_no">{{ DataMaskingService::maskPhone($patient->phone_no) ?? '-' }}</span>
+        <span class="pii-field" data-field="phone_no">{{ DataMaskingService::displayField('phone_no', $patient->phone_no) ?? '-' }}</span>
     </span>
 
     <div class="summary-divider"></div>
@@ -205,7 +222,11 @@
     @can('view-sensitive-data')
     <div class="summary-actions">
         <button id="revealPiiBtn" class="btn btn-xs btn-default">
-            <i class="fa fa-eye"></i> {{ __('data_security.reveal_sensitive') }}
+            @if($piiShownByDefault)
+                <i class="fa fa-eye-slash"></i> {{ __('data_security.hide_sensitive') }}
+            @else
+                <i class="fa fa-eye"></i> {{ __('data_security.reveal_sensitive') }}
+            @endif
         </button>
     </div>
     @endcan
@@ -225,7 +246,7 @@
                 @else
                     <img src="{{ asset('images/default-avatar.png') }}" alt="">
                 @endif
-                <span class="patient-name pii-field" data-field="full_name_summary">{{ DataMaskingService::maskName($patient->full_name) }}</span>
+                <span class="patient-name pii-field" data-field="full_name_summary">{{ DataMaskingService::displayField('full_name', $patient->full_name) }}</span>
                 @if($patient->patient_group)
                     <div class="patient-group-badge">
                         @php $groupLabel = $allGroups->firstWhere('code', $patient->patient_group); @endphp
@@ -322,7 +343,7 @@
                                     <table class="table table-bordered">
                                         <tr>
                                             <th width="40%">{{ __('patient.name') }}</th>
-                                            <td><span class="pii-field" data-field="full_name_detail">{{ DataMaskingService::maskName($patient->full_name) ?? '-' }}</span></td>
+                                            <td><span class="pii-field" data-field="full_name_detail">{{ DataMaskingService::displayField('full_name', $patient->full_name) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.gender') }}</th>
@@ -334,7 +355,7 @@
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.nin') }}</th>
-                                            <td><span class="pii-field" data-field="nin">{{ DataMaskingService::maskNin($patient->nin) ?? '-' }}</span></td>
+                                            <td><span class="pii-field" data-field="nin">{{ DataMaskingService::displayField('nin', $patient->nin) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.ethnicity') }}</th>
@@ -424,27 +445,27 @@
                                     <table class="table table-bordered">
                                         <tr>
                                             <th width="40%">{{ __('patient.phone') }}</th>
-                                            <td><span class="pii-field" data-field="phone_no">{{ DataMaskingService::maskPhone($patient->phone_no) ?? '-' }}</span></td>
+                                            <td><span class="pii-field" data-field="phone_no">{{ DataMaskingService::displayField('phone_no', $patient->phone_no) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.alternative_phone') }}</th>
-                                            <td><span class="pii-field" data-field="alternative_no">{{ DataMaskingService::maskPhone($patient->alternative_no) ?? '-' }}</span></td>
+                                            <td><span class="pii-field" data-field="alternative_no">{{ DataMaskingService::displayField('alternative_no', $patient->alternative_no) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.email') }}</th>
-                                            <td><span class="pii-field" data-field="email">{{ DataMaskingService::maskEmail($patient->email) ?? '-' }}</span></td>
+                                            <td><span class="pii-field" data-field="email">{{ DataMaskingService::displayField('email', $patient->email) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.address') }}</th>
-                                            <td><span class="pii-field" data-field="address">{{ DataMaskingService::maskAddress($patient->address) ?? '-' }}</span></td>
+                                            <td><span class="pii-field" data-field="address">{{ DataMaskingService::displayField('address', $patient->address) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.next_of_kin') }}</th>
-                                            <td><span class="pii-field" data-field="next_of_kin">{{ DataMaskingService::maskName($patient->next_of_kin) ?? '-' }}</span></td>
+                                            <td><span class="pii-field" data-field="next_of_kin">{{ DataMaskingService::displayField('next_of_kin', $patient->next_of_kin) ?? '-' }}</span></td>
                                         </tr>
                                         <tr>
                                             <th>{{ __('patient.next_of_kin_phone') }}</th>
-                                            <td><span class="pii-field" data-field="next_of_kin_no">{{ DataMaskingService::maskPhone($patient->next_of_kin_no) ?? '-' }}</span></td>
+                                            <td><span class="pii-field" data-field="next_of_kin_no">{{ DataMaskingService::displayField('next_of_kin_no', $patient->next_of_kin_no) ?? '-' }}</span></td>
                                         </tr>
                                     </table>
 
@@ -694,13 +715,8 @@
     </script>
     <script>
         // Reveal / Hide PII toggle
-        var piiRevealed = false;
-        var piiMaskedValues = {};
-        // Store initial masked values
-        $('.pii-field').each(function() {
-            var field = $(this).data('field');
-            piiMaskedValues[field] = $(this).text();
-        });
+        var piiRevealed = @json($piiShownByDefault);
+        var piiMaskedValues = @json($piiMaskedValues);
 
         $('#revealPiiBtn').click(function() {
             var btn = $(this);

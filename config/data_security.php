@@ -18,8 +18,23 @@ return [
     | Display Masking
     |--------------------------------------------------------------------------
     |
-    | When enabled, sensitive fields are masked by default on list/detail pages.
-    | Users with 'view-sensitive-data' permission can reveal via the UI toggle.
+    | When enabled, sensitive fields are masked on list/detail pages for users
+    | WITHOUT the 'view-sensitive-data' permission — currently nurses and
+    | receptionists (see DefaultRolePermissionsSeeder). Those roles cannot
+    | unmask at all; there is no reveal button for them.
+    |
+    | Users WITH that permission (admin, doctor) see the values unmasked on
+    | page load, and the toggle reads "Hide" instead of "Reveal".
+    | See DataMaskingService::shouldDisplayUnmasked().
+    |
+    | Audit trail: /patients/{id}/reveal-pii logs 'Patient:reveal_pii', but
+    | users who see PII by default never click that button. PatientController@show
+    | therefore logs 'Patient:pii_shown' whenever the page renders unmasked, so
+    | "who actually saw the phone / ID number" stays answerable either way.
+    | Masked viewers only produce 'Patient:view_detail'.
+    |
+    | Setting DISPLAY_MASKING_ENABLED=false disables masking for everyone,
+    | including nurses and receptionists.
     |
     */
     'display_masking' => [

@@ -150,6 +150,15 @@ class PatientController extends Controller
     {
         AccessLog::log('Patient:view_detail', 'Patient', $id);
 
+        // 有 view-sensitive-data 权限的人（管理员、医生）现在页面加载即看到明文，
+        // 不再点「显示敏感信息」那个按钮 —— 于是 revealPii() 里的
+        // 'Patient:reveal_pii' 对他们永远不会产生。那条记录是用来追溯
+        // 「谁真的看了电话/身份证号」的，不能因为交互改了就静默消失：
+        // 页面以明文渲染时补记一条等价的。
+        if (DataMaskingService::shouldDisplayUnmasked()) {
+            AccessLog::log('Patient:pii_shown', 'Patient', $id);
+        }
+
         $detail = $this->patientService->getPatientDetail($id);
 
         return view('patients.show', $detail);

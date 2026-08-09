@@ -137,6 +137,35 @@ class DataMaskingService
     }
 
     /**
+     * Whether the current web user may see PII without clicking "reveal".
+     *
+     * This intentionally affects on-screen display only. API resources and
+     * exports keep their explicit masking rules and audit boundaries.
+     */
+    public static function shouldDisplayUnmasked(): bool
+    {
+        if (!config('data_security.display_masking.enabled', true)) {
+            return true;
+        }
+
+        $user = auth()->user();
+
+        return $user !== null && $user->can('view-sensitive-data');
+    }
+
+    /**
+     * Format a sensitive field for a list/detail page.
+     */
+    public static function displayField(string $fieldName, ?string $value): ?string
+    {
+        if (static::shouldDisplayUnmasked()) {
+            return $value;
+        }
+
+        return static::maskField($fieldName, $value);
+    }
+
+    /**
      * Check if export masking is enabled.
      */
     public static function isExportMaskingEnabled(): bool
