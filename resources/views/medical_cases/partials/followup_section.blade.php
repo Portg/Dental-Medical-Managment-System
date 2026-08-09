@@ -15,8 +15,11 @@
         </div>
     </div>
     <div class="followup-checkbox">
+        {{-- 新建病例默认勾选：写了复诊日期，正常就该有人跟进；不勾才是例外
+             （条件性复诊「若症状持续再来」只留记录、不进前台待办列表）。
+             已有病例按存的值走，不覆盖医生上次的选择。 --}}
         <input type="checkbox" name="auto_create_followup" id="auto_create_followup" value="1"
-               {{ (isset($case) && $case->auto_create_followup) ? 'checked' : '' }}>
+               {{ (!isset($case) || $case->auto_create_followup) ? 'checked' : '' }}>
         <label for="auto_create_followup">{{ __('medical_cases.auto_create_followup') }}</label>
     </div>
 </div>

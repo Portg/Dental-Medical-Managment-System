@@ -8,6 +8,7 @@ use App\MedicalCase;
 use App\MedicalCaseAmendment;
 use App\OperationLog;
 use App\Patient;
+use App\PatientFollowup;
 use App\TreatmentPlan;
 use App\User;
 use App\VitalSign;
@@ -20,6 +21,13 @@ use Yajra\DataTables\DataTables;
 
 class MedicalCaseService
 {
+    private PatientFollowupService $followupService;
+
+    public function __construct(PatientFollowupService $followupService)
+    {
+        $this->followupService = $followupService;
+    }
+
     /**
      * Get all medical cases for DataTables (query builder, server-side pagination).
      * Filters are pushed to SQL — avoids loading all records into PHP memory.
@@ -241,6 +249,11 @@ class MedicalCaseService
                         ->whereNull('medical_case_id')
                         ->update(['medical_case_id' => $case->id]);
                 }
+
+                // 草稿不生成复诊待办：草稿会反复保存，而且「草稿」本身就意味着还没定。
+                if (!$isDraft) {
+                    $this->syncFollowupFromCase($case);
+                }
             }
 
             return $case;
@@ -295,7 +308,72 @@ class MedicalCaseService
             $case->lock();
         }
 
+        // 复诊待办跟着最新的 next_visit_date 走。必须 refresh：上面走的是
+        // MedicalCase::where()->update()，$case 手里还是更新前的值，不刷新会拿旧日期。
+        if ($status !== false && !$isDraft) {
+            $case->refresh();
+            $this->syncFollowupFromCase($case);
+        }
+
         return ['status' => $status !== false];
+    }
+
+    /**
+     * 把病例里的「下次复诊日期」同步成一条随访待办。
+     *
+     * 为什么写进 patient_followups 而不是 appointments：
+     *   医生写「两周后复诊」是**医嘱**，不是排期 —— 它没有时间、没有椅位，
+     *   病人也还不知道。写进 appointments 会被当成已排期的号：
+     *   NurseDashboardService / PharmacyDashboardService / ReceptionistDashboardService
+     *   三处都是无条件的 Appointment::today()->count()，会把复诊建议算进「今日预约数」，
+     *   护士看到 12 个、实际来 8 个。而 patient_followups 本来就是为这件事建的：
+     *   它有 medical_case_id / appointment_id / scheduled_date / status，
+     *   还有现成的 scopeOverdue()，护士仪表盘已经在显示 overdue_followups。
+     *
+     * 幂等键是 medical_case_id：一份病例最多一条自动生成的复诊待办。医生改了日期
+     * 是 update 而不是再插一条 —— 否则改三次日期就留三条垃圾待办，比不做更糟。
+     * 只处理 Pending 的那条：已经被人约掉（Completed）或取消的，不再回头改动。
+     */
+    public function syncFollowupFromCase(MedicalCase $case): void
+    {
+        $existing = PatientFollowup::where('medical_case_id', $case->id)
+            ->where('status', PatientFollowup::STATUS_PENDING)
+            ->first();
+
+        // 两种情况都要撤销待办，不留孤儿：
+        //   日期被清空          = 医嘱撤回
+        //   医生取消了勾选      = 条件性复诊（「若症状持续，两周后复诊」）——那是写给
+        //                        病人和病历看的，不该让前台去打召回电话。无差别建待办，
+        //                        前台会召回一批本来不用来的人，几周后就没人信这个列表了。
+        if (empty($case->next_visit_date) || !$case->auto_create_followup) {
+            if ($existing) {
+                $existing->update(['status' => PatientFollowup::STATUS_CANCELLED]);
+            }
+            return;
+        }
+
+        $scheduledDate = $case->next_visit_date instanceof \DateTimeInterface
+            ? $case->next_visit_date->format('Y-m-d')
+            : (string) $case->next_visit_date;
+        $purpose = $case->next_visit_note ?: __('medical_cases.followup_from_case_purpose');
+
+        if ($existing) {
+            $existing->update([
+                'scheduled_date' => $scheduledDate,
+                'purpose'        => $purpose,
+            ]);
+            return;
+        }
+
+        // followup_type 是 enum('Phone','SMS','Email','Visit','Other')：到店复诊用 Visit
+        $this->followupService->createFollowup([
+            'followup_type'   => 'Visit',
+            'scheduled_date'  => $scheduledDate,
+            'purpose'         => $purpose,
+            'notes'           => $case->next_visit_note,
+            'patient_id'      => $case->patient_id,
+            'medical_case_id' => $case->id,
+        ]);
     }
 
     /**

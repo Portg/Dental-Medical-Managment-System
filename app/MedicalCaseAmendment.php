@@ -79,6 +79,18 @@ class MedicalCaseAmendment extends Model implements AuditableContract
             $case->increment('version_number');
             $case->recordModification($this->amendment_reason);
             $case->save();
+
+            // 病例一提交就锁了，之后改「下次复诊日期」只能走修改申请 —— 而这条路径
+            // 是直接 fill()->save() 的，不经过 MedicalCaseService。不在这里补一刀，
+            // 审批通过后复诊待办还停在旧日期上，且没有任何地方会提示不一致。
+            // 两个键都要认：改日期要移动待办，取消勾选（改为按需复诊）要撤销待办。
+            // 只认 next_visit_date 的话，医生把「生成复诊待办」取消掉、审批也通过了，
+            // 前台那条待办还挂在列表上等人打电话。
+            $followupKeys = ['next_visit_date', 'auto_create_followup'];
+            $touchesFollowup = count(array_intersect($followupKeys, array_keys($this->new_values))) > 0;
+            if ($touchesFollowup && !$case->is_draft) {
+                app(\App\Services\MedicalCaseService::class)->syncFollowupFromCase($case->refresh());
+            }
         }
 
         return true;

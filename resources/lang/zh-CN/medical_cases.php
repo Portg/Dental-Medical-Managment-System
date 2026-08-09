@@ -210,7 +210,10 @@ return [
     'followup_section' => '复诊安排',
     'next_visit_date' => '下次复诊',
     'next_visit_note' => '复诊说明',
-    'auto_create_followup' => '自动创建复诊提醒',
+    // 文案描述的是后果（前台会看到这条待办），不是内部机制。
+    // 不勾＝只在病历里留一句复诊建议，不进前台的跟进列表。
+    'auto_create_followup' => '生成复诊待办（前台跟进）',
+    'followup_from_case_purpose' => '病例约定复诊',
 
     // Right Panel
     'patient_info' => '患者信息',

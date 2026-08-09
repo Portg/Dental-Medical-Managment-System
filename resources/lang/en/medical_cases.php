@@ -210,7 +210,8 @@ return [
     'followup_section' => 'Follow-up Schedule',
     'next_visit_date' => 'Next Visit Date',
     'next_visit_note' => 'Follow-up Notes',
-    'auto_create_followup' => 'Auto-create follow-up reminder',
+    'auto_create_followup' => 'Create follow-up task (front desk will chase it)',
+    'followup_from_case_purpose' => 'Follow-up agreed in medical case',
 
     // Right Panel
     'patient_info' => 'Patient Information',
