@@ -250,6 +250,14 @@
     color: rgba(255,255,255,0.85) !important;
 }
 
+/* Layout4's expand/collapse arrows use the old `FontAwesome` family name.
+   Point every menu level at the bundled Font Awesome 5 solid font instead. */
+.page-sidebar .page-sidebar-menu li > a > .arrow:before,
+.page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu li > a > .arrow:before {
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+}
+
 .page-sidebar .page-sidebar-menu > li > a > .arrow:before,
 .page-sidebar .page-sidebar-menu > li > a > .arrow.open:before,
 .page-sidebar-closed.page-sidebar-fixed .page-sidebar:hover .page-sidebar-menu > li > a > .arrow:before,

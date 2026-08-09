@@ -14,6 +14,10 @@
     <meta content="" name="author"/>
     {{-- Backend CSS Bundle (compiled via npm run dev/prod) --}}
     <link href="{{ asset('css/backend-bundle.css') }}" rel="stylesheet" type="text/css"/>
+    {{-- Icon fonts stay at their original paths so relative font URLs resolve correctly. --}}
+    <link href="{{ asset('backend/assets/global/plugins/simple-line-icons/simple-line-icons.min.css') }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('backend/assets/global/plugins/font-awesome/css/all.min.css') }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('backend/assets/global/plugins/font-awesome/css/v4-shims.min.css') }}" rel="stylesheet" type="text/css"/>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"/>
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 
