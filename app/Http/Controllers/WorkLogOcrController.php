@@ -42,15 +42,14 @@ class WorkLogOcrController extends Controller
         // the file arrives with an upload error and Laravel's implicit `uploaded`
         // rule yields a cryptic ":attribute 上传失败。". Surface the real cause
         // (server-side size limit) so the operator knows what to change.
-        $uploaded = $request->file('image');
-        if ($uploaded !== null && !$uploaded->isValid()
-            && in_array($uploaded->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+        // 两种超限都要认：超过 upload_max_filesize（文件带着错误码进来），
+        // 以及超过 post_max_size（PHP 直接丢掉整个请求体，file() 是 null，
+        // 校验器只会说「请上传图片」——用户明明选了文件，会一直重选）。
+        $limitHit = \App\Http\Helper\FunctionsHelper::exceededUploadLimit($request, 'image');
+        if ($limitHit !== null) {
             return response()->json([
                 'status'  => 0,
-                'message' => __('work_log.file_exceeds_server_limit', [
-                    'upload_max_filesize' => ini_get('upload_max_filesize'),
-                    'post_max_size'       => ini_get('post_max_size'),
-                ]),
+                'message' => __('work_log.file_exceeds_server_limit', ['limit' => $limitHit]),
             ]);
         }
 
