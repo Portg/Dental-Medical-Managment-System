@@ -4,7 +4,6 @@ return [
     'records_tab'     => 'Sterilization Records',
     'kits_tab'        => 'Instrument Kits',
     'records_export'  => 'Export Records',
-    'records_desc'    => 'Review batches, expiry, operator, and usage status with kit and date filters.',
     'kits_desc'       => 'Manage kit number, name, instrument count, and status.',
     'filter_kit'      => 'Kit',
     'filter_status'   => 'Status',

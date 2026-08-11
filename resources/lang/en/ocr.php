@@ -37,5 +37,5 @@ return [
     'upload_required' => 'Please upload a medical record image',
     'invalid_image' => 'File must be an image',
     'file_too_large' => 'File size cannot exceed 5MB',
-    'file_exceeds_server_limit' => 'The image exceeds the server upload limit (PHP upload_max_filesize=:upload_max_filesize, post_max_size=:post_max_size). Compress the image, or raise upload_max_filesize and post_max_size in the server php.ini and restart the service, then retry.',
+    'file_exceeds_server_limit' => 'The image exceeds the upload limit (:limit max). Compress it and retry, or contact an administrator.',
 ];

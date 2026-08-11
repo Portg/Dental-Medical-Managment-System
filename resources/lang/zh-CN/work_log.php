@@ -41,11 +41,12 @@ return [
     'upload_required'   => '请上传工作日志图片',
     'invalid_image'     => '文件必须是图片格式',
     'file_too_large'    => '文件大小不能超过 8MB',
-    'file_exceeds_server_limit' => '图片超过服务器上传上限（PHP upload_max_filesize=:upload_max_filesize，post_max_size=:post_max_size）。请压缩图片，或调高服务器 php.ini 的 upload_max_filesize 与 post_max_size 后重启服务再试。',
+    'file_exceeds_server_limit' => '图片超过上传限制（最大 :limit）。请压缩后重试，或联系管理员。',
     'no_rows'           => '没有可保存的记录',
     'row_name_required' => '第 :row 行：姓名为必填项',
     'case_from_worklog' => '工作日志补录',
-    'save_success'      => '保存成功：新增 :created 条，关联患者 :linked 条，生成账单 :invoiced 张，生成病历 :cased 份',
+    // 补录会顺带生成账单和病历，必须让用户知道系统替他建了什么 —— 尤其账单是钱。
+    'save_success'      => '已保存 :created 条（关联患者 :linked 条 / 账单 :invoiced 张 / 病历 :cased 份）',
     'save_failed'       => '保存失败',
     'ocr_disabled'      => '本机未启用图片识别功能，请手工录入工作日志内容',
 ];

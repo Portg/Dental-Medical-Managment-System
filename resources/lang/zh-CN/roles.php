@@ -70,7 +70,6 @@ return [
     'tab_menu_visibility' => '菜单可见性',
     'sidebar_saved' => '侧边栏配置已保存',
     'sidebar_reset' => '已恢复默认',
-    'sidebar_hint' => '点击菜单项前的切换按钮可隐藏/显示该菜单，灰色项表示无权限不可操作',
     'save_sidebar' => '保存',
     'reset_sidebar' => '恢复默认',
     'not_found' => '角色不存在',

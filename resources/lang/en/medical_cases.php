@@ -70,8 +70,6 @@ return [
     'note_type_follow_up' => 'Follow-up',
 
     // SOAP fields
-    'soap_explanation' => 'SOAP Notes Format',
-    'soap_description' => 'SOAP is a structured documentation format: Subjective (patient complaints), Objective (clinical findings), Assessment (diagnosis/evaluation), Plan (treatment plan).',
     'subjective' => 'Subjective',
     'objective' => 'Objective',
     'assessment' => 'Assessment',

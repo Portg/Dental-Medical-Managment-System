@@ -90,9 +90,6 @@
                         <!-- SOAP Fields for progress_note type -->
                         <div id="soap-fields">
                             <hr>
-                            <div class="alert alert-info">
-                                <i class="fa fa-info-circle"></i> {{ __('templates.soap_hint') }}
-                            </div>
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="form-group">

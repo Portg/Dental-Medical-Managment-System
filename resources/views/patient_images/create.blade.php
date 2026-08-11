@@ -341,7 +341,6 @@
                     <section class="patient-image-section">
                         <div class="patient-image-section__header">
                             <h5 class="patient-image-section__title">{{ __('patient_images.upload_priority_title') }}</h5>
-                            <div class="patient-image-section__hint">{{ __('patient_images.upload_priority_hint') }}</div>
                         </div>
                         <div class="patient-image-section__body">
                             <div class="patient-image-upload">
@@ -362,7 +361,7 @@
                                                 <i class="fa fa-info"></i>
                                             </span>
                                         </div>
-                                        <div class="patient-image-dropzone__hint">点击或拖拽上传</div>
+                                        <div class="patient-image-dropzone__hint">{{ __('patient_images.dropzone_hint') }}</div>
                                         <div class="patient-image-file-meta" id="selected_file_meta">
                                             <i class="fa fa-file-image-o"></i>
                                             <span id="selected_file_name">{{ __('patient_images.selected_file') }}</span>
@@ -375,7 +374,6 @@
                                     <div class="patient-image-preview-card__frame">
                                         <div class="patient-image-preview-card__placeholder" id="image_preview_placeholder">
                                             <i class="fa fa-picture-o"></i>
-                                            <div>{{ __('patient_images.upload_priority_hint') }}</div>
                                         </div>
                                         <div id="current_image_preview" style="display:none;">
                                             <img id="preview_image" src="" alt="preview">

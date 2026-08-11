@@ -50,10 +50,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="alert alert-info">
-                            <strong>{{ __('medical_cases.soap_explanation') }}</strong><br>
-                            <small>{{ __('medical_cases.soap_description') }}</small>
-                        </div>
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">

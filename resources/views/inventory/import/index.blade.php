@@ -20,44 +20,31 @@
         </div>
     </div>
 
-    {{-- 步骤提示区 --}}
-    <div class="row import-steps mb-4">
-        <div class="col-md-4">
-            <div class="step-card step-1">
-                <div class="step-number">1</div>
-                <div class="step-body">
-                    <div class="step-title">{{ __('inventory.step1_download') }}</div>
-                    <p class="step-desc">{{ __('inventory.step1_download_desc') }}</p>
-                    <a href="{{ url('inventory-import/template') }}" class="btn btn-outline-primary btn-sm">
-                        <i class="fa fa-download"></i> {{ __('inventory.download_template') }}
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="step-card step-2">
-                <div class="step-number">2</div>
-                <div class="step-body">
-                    <div class="step-title">{{ __('inventory.step2_fill') }}</div>
-                    <p class="step-desc">{{ __('inventory.step2_fill_desc') }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="step-card step-3">
-                <div class="step-number">3</div>
-                <div class="step-body">
-                    <div class="step-title">{{ __('inventory.step3_upload') }}</div>
-                    <p class="step-desc">{{ __('inventory.step3_upload_desc') }}</p>
-                </div>
+    {{-- 第一步：拿模板 --}}
+    {{--
+        这里原本是三张并排的步骤卡（下载 / 填写 / 上传）。第二步「填写数据」发生在
+        Excel 里，系统帮不上忙；第三步「上传导入」和它正下方的上传区说的是同一件事。
+        为两个真实动作画三张卡，中间那张永远是空的 —— 编号改成贴在实际操作块上。
+        别再改回并排卡片。
+    --}}
+    <div class="card import-step-card mb-4">
+        <div class="card-body import-step-body">
+            <div class="step-number">1</div>
+            <div class="import-step-main">
+                <div class="step-title">{{ __('inventory.step1_download') }}</div>
+                <a href="{{ url('inventory-import/template') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fa fa-download"></i> {{ __('inventory.download_template') }}
+                </a>
             </div>
         </div>
     </div>
 
-    {{-- 上传区域 --}}
+    {{-- 第二步：传文件 --}}
     <div class="card import-upload-card">
         <div class="card-body">
-            <h5 class="card-title mb-4">{{ __('inventory.import_items') }}</h5>
+            <h5 class="card-title mb-4 import-step-heading">
+                <span class="step-number">2</span>{{ __('inventory.step2_upload') }}
+            </h5>
 
             <div id="drop-zone" class="drop-zone">
                 <div class="drop-zone-inner">

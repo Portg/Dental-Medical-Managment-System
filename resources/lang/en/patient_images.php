@@ -34,14 +34,14 @@ return [
     'tooth_number_placeholder' => 'e.g., 11, 21, 36',
     'description_placeholder' => 'Enter image description or notes',
     'select_file' => 'Select File',
-    'file_hint' => 'Accepted formats: JPEG, PNG, JPG, GIF, BMP. Max size: 10MB',
+    'file_hint' => 'JPG/JPEG, PNG, GIF, or BMP. Max 10 MB.',
     'upload_priority_title' => 'Upload the image first',
-    'upload_priority_hint' => 'Start by selecting the image file, then fill in the patient and capture details.',
     'basic_info' => 'Core details',
     'basic_info_hint' => 'These fields establish the image record.',
     'auxiliary_info' => 'Supporting details',
     'auxiliary_info_hint' => 'Tooth position and notes are optional and should not interrupt the main flow.',
     'selected_file' => 'Selected file',
+    'dropzone_hint' => 'Click or drag a file here',
 
     // Image types (short)
     'intraoral' => 'Intraoral',

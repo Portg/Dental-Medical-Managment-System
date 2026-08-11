@@ -34,14 +34,14 @@ return [
     'tooth_number_placeholder' => '例如：11, 21, 36',
     'description_placeholder' => '请输入影像描述或备注',
     'select_file' => '选择文件',
-    'file_hint' => '支持格式：JPEG, PNG, JPG, GIF, BMP，最大10MB',
+    'file_hint' => '支持 JPG/JPEG、PNG、GIF、BMP，最大 10 MB',
     'upload_priority_title' => '先上传影像文件',
-    'upload_priority_hint' => '建议先选择本次影像文件，再补充患者与拍摄信息。',
     'basic_info' => '基础信息',
     'basic_info_hint' => '这些信息用于快速建立影像记录。',
     'auxiliary_info' => '辅助信息',
     'auxiliary_info_hint' => '牙位和备注属于补充信息，不填写也可以先保存。',
     'selected_file' => '已选择文件',
+    'dropzone_hint' => '点击或拖拽上传',
 
     // Image types (short)
     'intraoral' => '口内照',

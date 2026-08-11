@@ -44,6 +44,9 @@ class OcrUploadLimitTest extends TestCase
 
         $message = $response->json('message');
         $this->assertNotSame('image 上传失败。', $message);
-        $this->assertStringContainsString('upload_max_filesize', $message);
+        $this->assertStringContainsString((string) ini_get('upload_max_filesize'), $message);
+        $this->assertStringContainsString('压缩', $message);
+        $this->assertStringContainsString('联系管理员', $message);
+        $this->assertStringNotContainsString('upload_max_filesize', $message);
     }
 }

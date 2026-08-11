@@ -36,7 +36,6 @@ return [
     'prescription'        => '开处方',
     'invoice'             => '收费',
     'next_appointment'    => '约下次',
-    'pending_followup_hint' => '该患者有未约上的复诊：:date。病人此刻在店，点此直接约。',
     'mark_no_show'        => '标记未到',
     'mark_no_show_success'=> '已标记为未到诊',
     'search_patient'      => '搜索患者',

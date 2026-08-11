@@ -26,7 +26,6 @@ return [
     'usage_count' => '使用次数',
 
     // SOAP Fields
-    'soap_hint' => 'SOAP病历格式：S-主诉（患者自述症状）、O-检查（客观检查发现）、A-评估（诊断和评估）、P-计划（治疗计划）',
     'subjective' => '主诉',
     'subjective_hint' => '患者自述的症状、不适、就诊原因等',
     'objective' => '检查',

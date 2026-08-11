@@ -70,8 +70,6 @@ return [
     'note_type_follow_up' => '复诊记录',
 
     // SOAP fields
-    'soap_explanation' => 'SOAP病历格式',
-    'soap_description' => 'SOAP是一种结构化的病历记录格式：主观资料（患者主诉）、客观资料（临床检查发现）、评估（诊断/评价）、计划（治疗方案）。',
     'subjective' => '主观资料 (S)',
     'objective' => '客观资料 (O)',
     'assessment' => '评估 (A)',

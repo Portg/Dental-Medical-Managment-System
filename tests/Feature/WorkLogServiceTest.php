@@ -216,7 +216,11 @@ class WorkLogServiceTest extends TestCase
         $message = $response->json('message');
         // Must NOT be the cryptic default uploaded-rule message.
         $this->assertNotSame('image 上传失败。', $message);
-        // Must point the operator at the real server-side limit.
-        $this->assertStringContainsString('upload_max_filesize', $message);
+        // Must state the actual limit and give the operator a useful next step,
+        // without exposing PHP configuration names in the UI.
+        $this->assertStringContainsString((string) ini_get('upload_max_filesize'), $message);
+        $this->assertStringContainsString('压缩', $message);
+        $this->assertStringContainsString('联系管理员', $message);
+        $this->assertStringNotContainsString('upload_max_filesize', $message);
     }
 }

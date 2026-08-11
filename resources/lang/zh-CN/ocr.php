@@ -37,5 +37,5 @@ return [
     'upload_required' => '请上传病历图片',
     'invalid_image' => '文件必须是图片格式',
     'file_too_large' => '文件大小不能超过 5MB',
-    'file_exceeds_server_limit' => '图片超过服务器上传上限（PHP upload_max_filesize=:upload_max_filesize，post_max_size=:post_max_size）。请压缩图片，或调高服务器 php.ini 的 upload_max_filesize 与 post_max_size 后重启服务再试。',
+    'file_exceeds_server_limit' => '图片超过上传限制（最大 :limit）。请压缩后重试，或联系管理员。',
 ];

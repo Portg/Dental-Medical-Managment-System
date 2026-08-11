@@ -11,9 +11,6 @@
                         <i class="fa fa-download"></i> {{ __('clinical_services.download_import_template') }}
                     </a>
                 </p>
-                <p class="text-muted" style="font-size: 12px;">
-                    {{ __('clinical_services.import_template_hint') }}
-                </p>
                 <form id="import-form" enctype="multipart/form-data">
                     @csrf
                     <div class="form-group">

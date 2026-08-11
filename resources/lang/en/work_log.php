@@ -41,11 +41,12 @@ return [
     'upload_required'   => 'Please upload a work-log image',
     'invalid_image'     => 'The file must be an image',
     'file_too_large'    => 'File size must not exceed 8MB',
-    'file_exceeds_server_limit' => 'The image exceeds the server upload limit (PHP upload_max_filesize=:upload_max_filesize, post_max_size=:post_max_size). Compress the image, or raise upload_max_filesize and post_max_size in the server php.ini and restart the service, then retry.',
+    'file_exceeds_server_limit' => 'The image exceeds the upload limit (:limit max). Compress it and retry, or contact an administrator.',
     'no_rows'           => 'No records to save',
     'row_name_required' => 'Row :row: patient name is required',
     'case_from_worklog' => 'Work log import',
-    'save_success'      => 'Saved: :created added, :linked patient-linked, :invoiced invoiced, :cased draft cases created',
+    // Importing also creates invoices and cases — the user must see what was created.
+    'save_success'      => 'Saved :created (linked :linked / invoices :invoiced / cases :cased)',
     'save_failed'       => 'Save failed',
     'ocr_disabled'      => 'Image recognition is not available on this machine. Please enter the work log manually.',
 ];

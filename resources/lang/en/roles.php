@@ -66,7 +66,6 @@ return [
     'tab_menu_visibility' => 'Menu Visibility',
     'sidebar_saved' => 'Sidebar configuration saved',
     'sidebar_reset' => 'Reset to default',
-    'sidebar_hint' => 'Click the toggle button before each menu item to hide/show it. Grayed items have no permission.',
     'save_sidebar' => 'Save',
     'reset_sidebar' => 'Reset Default',
     'not_found' => 'Role not found',

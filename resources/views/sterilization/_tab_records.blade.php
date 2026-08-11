@@ -1,10 +1,3 @@
-<div class="sterilization-section-header sterilization-section-header-records">
-    <div>
-        <div class="sterilization-section-title">{{ __('sterilization.records_tab') }}</div>
-        <div class="sterilization-section-desc">{{ __('sterilization.records_desc') }}</div>
-    </div>
-</div>
-
 <div class="filter-area-l2 sterilization-filter-panel">
     <div class="row filter-row">
         <div class="col-md-3">

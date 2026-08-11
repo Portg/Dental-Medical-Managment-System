@@ -1,8 +1,7 @@
 {{-- Tab 3: 菜单可见性 --}}
 <div class="sidebar-preview-toolbar">
-    <p class="sidebar-hint">
-        {{ __('roles.sidebar_hint') }}
-    </p>
+    {{-- 不要再加「灰色=无权限」之类的文字说明：右栏图例已经用真实的开关样式
+         画出可见/已隐藏/无权限三种状态，比文字直观，加回来就是第二遍。 --}}
     <div class="sidebar-toolbar-actions">
         <button type="button" class="btn btn-sm btn-default" id="btn-reset-sidebar">
             {{ __('roles.reset_sidebar') }}

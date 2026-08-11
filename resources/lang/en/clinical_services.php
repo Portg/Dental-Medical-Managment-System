@@ -68,7 +68,6 @@ return [
 
     // Import
     'download_import_template'      => 'Download Import Template',
-    'import_template_hint'          => 'Fill in the template format: name (required), price, unit, category columns',
     'select_file'                   => 'Select File',
     'start_import'                  => 'Start Import',
     'import_success'                => 'Successfully imported :count records',

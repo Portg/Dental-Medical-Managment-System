@@ -68,7 +68,6 @@ return [
 
     // 导入
     'download_import_template'      => '下载导入模板',
-    'import_template_hint'          => '请按模板格式填写，name（必填）、price、unit、category 列',
     'select_file'                   => '选择文件',
     'start_import'                  => '开始导入',
     'import_success'                => '成功导入 :count 条记录',

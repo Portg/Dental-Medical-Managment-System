@@ -26,7 +26,6 @@ return [
     'usage_count' => 'Usage Count',
 
     // SOAP Fields
-    'soap_hint' => 'SOAP Note Format: S-Subjective (patient symptoms), O-Objective (examination findings), A-Assessment (diagnosis), P-Plan (treatment plan)',
     'subjective' => 'Subjective',
     'subjective_hint' => 'Patient-reported symptoms, complaints, reason for visit, etc.',
     'objective' => 'Objective',

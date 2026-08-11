@@ -392,7 +392,7 @@ class TodayWorkService
 
         return '<button class="btn btn-xs btn-warning tw-action-btn" '
             . 'onclick="quickNextAppointment(' . $row->patient_id . ', \'' . e($date) . '\', ' . (int) $followupId . ', ' . $doctorId . ')" '
-            . 'title="' . e(__('today_work.pending_followup_hint', ['date' => $date])) . '">'
+            . 'aria-label="' . e(__('today_work.next_appointment') . ' ' . $date) . '">'
             . '<i class="fa fa-calendar-plus-o"></i> ' . __('today_work.next_appointment')
             . ' <span class="label label-danger">' . e($date) . '</span></button> ';
     }
