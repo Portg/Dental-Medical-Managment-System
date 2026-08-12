@@ -29,6 +29,9 @@
     <link href="{{ asset('backend/assets/global/plugins/select2/css/select2-bootstrap.min.css') }}" rel="stylesheet" type="text/css"/>
     {{-- 日期+时间组合控件（partials/datetime_picker.blade.php），替代原生 datetime-local --}}
     <link href="{{ asset('css/datetime-picker.css') }}?v={{ filemtime(public_path('css/datetime-picker.css')) }}" rel="stylesheet" type="text/css"/>
+    {{-- 表格「操作」下拉按钮：撤销 Metronic 把 .btn-group 绝对定位的 hack，
+         必须排在 backend-bundle.css 之后才能覆盖掉它 --}}
+    <link href="{{ asset('css/table-actions.css') }}?v={{ filemtime(public_path('css/table-actions.css')) }}" rel="stylesheet" type="text/css"/>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"/>
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 
@@ -126,6 +129,8 @@
     <script src="{{ asset('backend/assets/global/plugins/bootstrap-datepicker/js/locales/bootstrap-datepicker.' . app()->getLocale() . '.js') }}" type="text/javascript"></script>
     {{-- 必须排在 clockface 与 datepicker 之后：它要拿这两个插件初始化组合控件 --}}
     <script src="{{ asset('include_js/datetime_picker.js') }}?v={{ filemtime(public_path('include_js/datetime_picker.js')) }}" type="text/javascript"></script>
+    {{-- 表格「操作」下拉菜单展开时改用 fixed 定位，绕开 .table-scrollable 的裁剪 --}}
+    <script src="{{ asset('include_js/table_dropdown.js') }}?v={{ filemtime(public_path('include_js/table_dropdown.js')) }}" type="text/javascript"></script>
 
     <script src="{{ asset('backend/assets/pages/scripts/select2.min.js') }}" type="text/javascript"></script>
     <script src="{{ asset('backend/assets/global/plugins/select2/js/i18n/' . app()->getLocale() . '.js') }}" type="text/javascript"></script>

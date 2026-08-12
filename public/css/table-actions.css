@@ -1,0 +1,39 @@
+/* =====================================================
+   表格里的「操作」下拉按钮
+   配套 public/include_js/table_dropdown.js
+   ===================================================== */
+
+/*
+ * 撤销 Metronic 的这条 hack（在 backend-bundle.css 里）：
+ *
+ *     .table-scrollable .dataTable td > .btn-group,
+ *     .table-scrollable .dataTable th > .btn-group { position: absolute; margin: -2px; }
+ *
+ * 它的动机是合理的：DataTables 默认 dom 会把表格包进
+ * <div class="table-scrollable">（见 datatables.bootstrap.js），而这个容器是
+ * overflow: auto hidden —— 下拉菜单展开会被纵向裁掉。绝对定位让菜单脱离该容器
+ * 的裁剪区，问题就"解决"了。
+ *
+ * 代价是按钮同时脱离了文档流：单元格高度塌回一行文字（约 20px），而按钮有 34px，
+ * 于是按钮整个戳出行的下边框。全站 25 处服务端渲染的操作列都中招，实测患者详情
+ * 的预约列表溢出 4px、收费项目列表溢出 2px。
+ *
+ * 这里把按钮放回文档流（行高恢复正常），裁剪问题改由 JS 解决：菜单展开时切成
+ * position: fixed 并按触发按钮的位置摆放 —— fixed 元素不受祖先 overflow 裁剪
+ * （.table-scrollable 上没有 transform / filter，不会给 fixed 造出包含块）。
+ *
+ * 别把 position 改回 absolute，那等于把这个 bug 装回去。
+ */
+.table-scrollable .dataTable td > .btn-group,
+.table-scrollable .dataTable th > .btn-group {
+    position: relative;
+    margin: 0;
+}
+
+/* 展开时由 JS 接管定位。z-index 取 1060：高于 BS3 弹窗的 1050（表格也可能长在
+   弹窗里），低于 tooltip 的 1070 */
+.dropdown-menu.is-table-action-pinned {
+    position: fixed;
+    margin: 0;
+    z-index: 1060;
+}
