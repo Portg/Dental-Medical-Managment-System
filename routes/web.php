@@ -394,7 +394,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('vital-signs', 'VitalSignController')->except(['index']);
 
     // Patient Images
-    Route::get('patient-images', 'PatientImageController@index');
+    Route::get('patient-images', 'PatientImageController@index')->name('patient-images.index');
     Route::get('patient-images/{patient_id}/list', 'PatientImageController@patientImages');
     Route::resource('patient-images', 'PatientImageController')->except(['index']);
 
@@ -717,4 +717,29 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::get('sterilization-kits/{id}/edit', 'SterilizationKitController@edit')->name('sterilization-kits.edit');
     Route::resource('sterilization-kits', 'SterilizationKitController')->only(['index', 'store', 'update', 'destroy']);
+
+    // ── 诊所事务：环境消毒 / 设备维护 / 医疗废物 ───────────────────────
+    Route::prefix('clinic-affairs')->group(function () {
+        Route::get('disinfection', 'ClinicAffairsController@disinfection')->name('clinic-affairs.disinfection');
+        Route::get('disinfection/data', 'ClinicAffairsController@disinfectionData')->name('clinic-affairs.disinfection.data');
+        Route::post('disinfection', 'ClinicAffairsController@storeDisinfection');
+        Route::put('disinfection/{id}', 'ClinicAffairsController@updateDisinfection');
+        Route::post('disinfection/{id}/review', 'ClinicAffairsController@reviewDisinfection');
+        Route::get('disinfection-export', 'ClinicAffairsController@exportDisinfection')->name('clinic-affairs.disinfection.export');
+
+        Route::get('equipment-maintenance', 'ClinicAffairsController@equipment')->name('clinic-affairs.equipment');
+        Route::get('equipment-maintenance/data', 'ClinicAffairsController@equipmentData')->name('clinic-affairs.equipment.data');
+        Route::post('equipment-maintenance', 'ClinicAffairsController@storeEquipment');
+        Route::put('equipment-maintenance/{id}', 'ClinicAffairsController@updateEquipment');
+        Route::get('equipment-maintenance-export', 'ClinicAffairsController@exportEquipment')->name('clinic-affairs.equipment.export');
+
+        Route::get('medical-waste', 'ClinicAffairsController@waste')->name('clinic-affairs.waste');
+        Route::get('medical-waste/data', 'ClinicAffairsController@wasteData')->name('clinic-affairs.waste.data');
+        Route::post('medical-waste', 'ClinicAffairsController@storeWaste');
+        Route::put('medical-waste/{id}', 'ClinicAffairsController@updateWaste');
+        Route::get('medical-waste-export', 'ClinicAffairsController@exportWaste')->name('clinic-affairs.waste.export');
+
+        Route::delete('{type}/{id}', 'ClinicAffairsController@destroy')
+            ->where('type', 'disinfection|equipment|waste');
+    });
 });

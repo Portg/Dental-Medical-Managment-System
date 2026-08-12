@@ -89,6 +89,14 @@ class MedicalTemplateController extends Controller
     }
 
     /**
+     * The create form is a modal embedded in the index page.
+     */
+    public function create()
+    {
+        return redirect()->route('medical-templates.index');
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @param Request $request
@@ -146,6 +154,14 @@ class MedicalTemplateController extends Controller
             'status' => true,
             'data' => $template
         ]);
+    }
+
+    /**
+     * Editing is handled by the modal embedded in the index page.
+     */
+    public function edit($id)
+    {
+        return redirect()->route('medical-templates.index');
     }
 
     /**

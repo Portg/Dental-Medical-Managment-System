@@ -100,6 +100,8 @@ class PermissionsTableSeeder extends Seeder
             // 诊所事务
             ['name' => '查看消毒记录', 'slug' => 'view-sterilization',   'module' => '诊所事务', 'description' => '查看灭菌记录和器械包列表，登记使用'],
             ['name' => '管理消毒记录', 'slug' => 'manage-sterilization', 'module' => '诊所事务', 'description' => '新增/编辑/删除灭菌记录与器械包台账'],
+            ['name' => '查看诊所事务', 'slug' => 'view-clinic-affairs', 'module' => '诊所事务', 'description' => '查看环境消毒、设备维护和医疗废物交接记录'],
+            ['name' => '管理诊所事务', 'slug' => 'manage-clinic-affairs', 'module' => '诊所事务', 'description' => '新增、修改、复核和删除诊所事务记录'],
 
             // 满意度调查（拆分见 2026_08_02_135903）
             // 同上：全新安装不跑那条迁移，这里必须有定义，否则 MenuItemsSeeder

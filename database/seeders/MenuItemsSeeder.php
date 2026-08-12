@@ -376,6 +376,12 @@ class MenuItemsSeeder extends Seeder
     {
         $this->item($parentId, 'menu.sterilization_management', 'sterilization', 'icon-shield',
             'view-sterilization', 10, 'SADN');
+        $this->item($parentId, 'menu.disinfection_checks', 'clinic-affairs/disinfection', null,
+            'view-clinic-affairs', 20, 'SADN');
+        $this->item($parentId, 'menu.equipment_maintenance', 'clinic-affairs/equipment-maintenance', null,
+            'view-clinic-affairs', 30, 'SADN');
+        $this->item($parentId, 'menu.medical_waste_handover', 'clinic-affairs/medical-waste', null,
+            'view-clinic-affairs', 40, 'SADN');
     }
 
     // ── Helper ─────────────────────────────────────────────────────────────

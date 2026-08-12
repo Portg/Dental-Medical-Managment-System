@@ -52,6 +52,7 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'manage-system-maintenance',
                 'manage-shifts', 'request-inventory',
                 'view-sterilization', 'manage-sterilization',
+                'view-clinic-affairs', 'manage-clinic-affairs',
                 // 绩效/工作量报表菜单以此权限为准（见 2026_08_01_000001 迁移）
                 'view-own-doctor-report',
             ])->get();
@@ -80,6 +81,7 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'view-own-schedule',
                 'request-inventory',
                 'view-sterilization', 'manage-sterilization',
+                'view-clinic-affairs',
             ])->get();
 
             foreach ($doctorPermissions as $permission) {
@@ -104,6 +106,7 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'view-surveys',
                 'request-inventory',
                 'view-sterilization', 'manage-sterilization',
+                'view-clinic-affairs', 'manage-clinic-affairs',
             ])->get();
 
             foreach ($nursePermissions as $permission) {

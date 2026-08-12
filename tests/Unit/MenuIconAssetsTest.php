@@ -29,13 +29,18 @@ class MenuIconAssetsTest extends TestCase
         $this->assertFileExists(public_path(
             'backend/assets/global/plugins/font-awesome/webfonts/fa-solid-900.woff2'
         ));
+        // The committed legacy bundle still references /css/fonts/*. Keep these
+        // compatibility assets so older browsers do not emit 404s before the
+        // correctly linked icon stylesheet takes over.
+        $this->assertFileExists(public_path('css/fonts/Simple-Line-Icons.woff'));
+        $this->assertFileExists(public_path('css/fonts/Simple-Line-Icons.ttf'));
     }
 
     /**
      * 这三行 <link> 能救回图标，唯一的原因是它们排在 backend-bundle.css **之后**。
      *
      * 已提交的 backend-bundle.css 里还留着一份 simple-line-icons 的 @font-face，
-     * 而它的字体是相对路径 url(fonts/…)：从 /css/ 解析成 /css/fonts/… → 404。
+     * 而它的字体是相对路径 url(fonts/…)：从 /css/ 解析成兼容目录 /css/fonts/…。
      * 两份 @font-face 同名时后定义的生效，所以顺序一颠倒，图标立刻变回空白方块，
      * 而且页面不会报任何错——只有肉眼能发现。这条断言就是替肉眼守着。
      */

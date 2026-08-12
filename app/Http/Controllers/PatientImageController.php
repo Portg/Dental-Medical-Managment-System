@@ -37,6 +37,14 @@ class PatientImageController extends Controller
     }
 
     /**
+     * The create form is a modal embedded in the index page.
+     */
+    public function create()
+    {
+        return redirect()->route('patient-images.index');
+    }
+
+    /**
      * Display images for a specific patient.
      *
      * @param Request $request

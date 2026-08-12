@@ -309,5 +309,8 @@ return [
     // 诊所事务（消毒管理模块）
     'clinic_affairs'           => '诊所事务',
     'sterilization_management' => '消毒管理',
+    'disinfection_checks'      => '环境消毒巡检',
+    'equipment_maintenance'    => '设备维护',
+    'medical_waste_handover'   => '医疗废物交接',
 
 ];

@@ -309,5 +309,8 @@ return [
     // Clinic Affairs (Sterilization Module)
     'clinic_affairs'           => 'Clinic Affairs',
     'sterilization_management' => 'Sterilization',
+    'disinfection_checks'      => 'Disinfection Checks',
+    'equipment_maintenance'    => 'Equipment Maintenance',
+    'medical_waste_handover'   => 'Medical Waste Handover',
 
 ];
