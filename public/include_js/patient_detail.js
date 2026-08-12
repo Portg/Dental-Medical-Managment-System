@@ -17,6 +17,9 @@ function loadPatientAppointments() {
             type: 'GET',
             data: function(d) {
                 d.patient_id = global_patient_id;
+                // 让服务端裁剪操作列：编辑/删除/生成账单的处理函数只存在于预约页，
+                // 在这里渲染出来点了没反应（见 AppointmentService::buildActionColumn）
+                d.embedded = 1;
             }
         },
         columns: [

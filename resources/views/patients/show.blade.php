@@ -678,6 +678,13 @@
 @include('patients.modals.view_image')
 @include('patients.modals.add_followup')
 @include('patients.modals.view_followup')
+{{-- 改约弹窗与预约页共用同一个 partial：预约记录页签的「改约」就地完成，不用跳去
+     预约页再翻一遍列表。其余操作（编辑/删除/生成账单）仍跳转过去，见
+     AppointmentService::buildActionColumn() 的注释。
+     必须放在 content 里而不是 @section('js')：弹窗里的 #datepicker2 / #start_time
+     由 layout 的内联脚本初始化，那段脚本排在 @yield('js') 之前，弹窗晚于它渲染
+     就选不中，日期和时间框会变成两个没有选择器的空文本框。 --}}
+@include('appointments.reschedule_appointment')
 
 @endsection
 @section('js')
@@ -698,6 +705,7 @@
         });
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+    <script src="{{ asset('include_js/reschedule_appointment.js') }}?v={{ filemtime(public_path('include_js/reschedule_appointment.js')) }}"></script>
     <script src="{{ asset('include_js/patient_detail.js') }}"></script>
     <script src="{{ asset('include_js/patient_billing.js') }}?v={{ filemtime(public_path('include_js/patient_billing.js')) }}"></script>
     @if(!empty($dentalChartAppointmentId))

@@ -216,6 +216,7 @@ return [
     'enter_general_notes' => '在此输入一般备注（如有）',
     'optional' => '可选',
     'reschedule' => '改约',
+    'manage_on_appointments_page' => '去预约页处理',
 
     // Form section headers (design spec)
     'patient_info' => '患者与医生',

@@ -45,6 +45,7 @@ return [
     'appointment_form' => 'Appointment Form',
     'appointment' => 'Appointment',
     'reschedule' => 'Reschedule',
+    'manage_on_appointments_page' => 'Manage on appointments page',
 
     // Appointment Status
     'pending' => 'Pending',

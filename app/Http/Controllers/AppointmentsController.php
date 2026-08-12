@@ -40,7 +40,8 @@ class AppointmentsController extends Controller
                 'filter_doctor', 'filter_invoice_status', 'search', 'patient_id',
             ]));
 
-            return $this->appointmentService->buildIndexDataTable($data);
+            // embedded=1 由患者详情的「预约记录」页签发出，操作列会据此裁剪
+            return $this->appointmentService->buildIndexDataTable($data, $request->boolean('embedded'));
         }
 
         // 高级查询的医生下拉此前只有「全部」一项，后端 filter_doctor 筛选虽已实现却无从选择

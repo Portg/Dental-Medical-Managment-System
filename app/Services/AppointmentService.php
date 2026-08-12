@@ -666,8 +666,11 @@ class AppointmentService
 
     /**
      * Build DataTables response for the appointments index page.
+     *
+     * @param bool $embedded 表格是否嵌在别的页面里（目前只有患者详情的「预约记录」页签）。
+     *                       操作列会据此裁剪，见 buildActionColumn() 的注释。
      */
-    public function buildIndexDataTable($data)
+    public function buildIndexDataTable($data, bool $embedded = false)
     {
         return DataTables::of($data)
             ->addIndexColumn()
@@ -703,48 +706,77 @@ class AppointmentService
                 }
                 return '<span class="text-primary">' . __('messages.invoice_already_generated') . '</span>';
             })
-            ->addColumn('action', function ($row) {
-                // 账单入口按权限显示：「生成账单」最终 POST /invoices（需 create-invoices），
-                // 「查看账单」打开 /invoices/{id}（需 view-invoices）。护士两个权限都不持有，
-                // 此前无论落到哪个分支拿到的都是点了必然 403 的死链接；医生只有
-                // view-invoices，却同样看得到「生成账单」。服务端权限不变，这里只是不再
-                // 展示必然失败的入口；两者都无权时整条菜单项不再输出。
-                $user = auth()->user();
-                $invoice_action = '';
-                if ($row->has_invoice_status === 'pending') {
-                    if ($user && $user->can('create-invoices')) {
-                        $invoice_action = '<a href="#" onclick="RecordPayment(' . $row->id . ')" >' . __('invoices.generate_invoice') . '</a>';
-                    }
-                } elseif ($user && $user->can('view-invoices')) {
-                    $invoice_action = '<a href="' . url('invoices/' . $row->invoice_id) . '">' . __('invoices.view_invoice') . '</a>';
-                }
-                $invoice_item = $invoice_action === '' ? '' : '<li>' . $invoice_action . '</li>';
-
-                return '
-                  <div class="btn-group">
-                    <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
-                            aria-expanded="false"> ' . __('common.action') . '
-                        <i class="fa fa-angle-down"></i>
-                    </button>
-                    <ul class="dropdown-menu" role="menu">
-                          <li>
-                            <a href="#" onclick="RescheduleAppointment(' . $row->id . ')" >' . __('appointment.reschedule') . '</a>
-                        </li>
-                         ' . $invoice_item . '
-                          <li>
-                            <a href="#" onclick="editRecord(' . $row->id . ')" >' . __('common.edit') . '</a>
-                        </li>
-                          <li>
-                            <a href="' . url('medical-treatment/' . $row->id) . '" >' . __('medical_treatment.treatment_history') . '</a>
-                        </li>
-                         <li>
-                           <a href="#" onclick="deleteRecord(' . $row->id . ')">' . __('common.delete') . '</a>
-                        </li>
-                    </ul>
-                </div>
-                ';
-            })
+            ->addColumn('action', fn($row) => $this->buildActionColumn($row, $embedded))
             ->rawColumns(['visit_information', 'invoice_status', 'action'])
             ->make(true);
+    }
+
+    /**
+     * 操作列。
+     *
+     * 同一份 HTML 供两个地方消费：预约页 /appointments，以及患者详情的「预约记录」页签
+     * （patient_detail.js 请求的也是 /appointments，只是多带一个 patient_id）。
+     *
+     * 但「改约 / 生成账单 / 编辑 / 删除」四项是 onclick 调全局函数，而其中三个函数写死在
+     * appointments/index.blade.php 的内联脚本里，患者详情页压根没有 —— 结果那四项在患者页
+     * 点了毫无反应，且因为下拉菜单一直被 .table-scrollable 裁掉，六年没人发现。
+     *
+     * 这里按上下文裁剪：
+     *   · 改约      两边都留。弹窗是独立 partial，患者页 @include 一份即可，
+     *               而改约是前台在患者档案里最常做的动作，值得就地完成。
+     *   · 查看账单  两边都留 —— 本来就是纯链接。
+     *   · 治疗历史  两边都留 —— 本来就是纯链接。
+     *   · 生成账单 / 编辑 / 删除
+     *               只在预约页出现。它们的处理函数写死在预约页的内联脚本里，搬过来
+     *               等于两处维护；患者页改成一个「去预约页处理」的跳转，带 focus 参数
+     *               让落地后能定位到那一行。
+     */
+    private function buildActionColumn($row, bool $embedded): string
+    {
+        $items = [];
+
+        $items[] = '<li><a href="#" onclick="RescheduleAppointment(' . $row->id . ')">'
+            . __('appointment.reschedule') . '</a></li>';
+
+        // 账单入口按权限显示：「生成账单」最终 POST /invoices（需 create-invoices），
+        // 「查看账单」打开 /invoices/{id}（需 view-invoices）。护士两个权限都不持有，
+        // 此前无论落到哪个分支拿到的都是点了必然 403 的死链接；医生只有 view-invoices，
+        // 却同样看得到「生成账单」。服务端权限不变，这里只是不再展示必然失败的入口。
+        $user = auth()->user();
+        if ($row->has_invoice_status === 'pending') {
+            if (!$embedded && $user && $user->can('create-invoices')) {
+                $items[] = '<li><a href="#" onclick="RecordPayment(' . $row->id . ')">'
+                    . __('invoices.generate_invoice') . '</a></li>';
+            }
+        } elseif ($user && $user->can('view-invoices')) {
+            $items[] = '<li><a href="' . url('invoices/' . $row->invoice_id) . '">'
+                . __('invoices.view_invoice') . '</a></li>';
+        }
+
+        if (!$embedded) {
+            $items[] = '<li><a href="#" onclick="editRecord(' . $row->id . ')">'
+                . __('common.edit') . '</a></li>';
+        }
+
+        $items[] = '<li><a href="' . url('medical-treatment/' . $row->id) . '">'
+            . __('medical_treatment.treatment_history') . '</a></li>';
+
+        if ($embedded) {
+            $items[] = '<li class="divider"></li>';
+            // 传预约编号而不是 id：预约页已有按 appointment_no 的服务端筛选
+            // （#appointment_no_filter），落地直接筛出这一条，不用另加接口
+            $items[] = '<li><a href="' . url('appointments?focus=' . urlencode($row->appointment_no)) . '">'
+                . __('appointment.manage_on_appointments_page') . '</a></li>';
+        } else {
+            $items[] = '<li><a href="#" onclick="deleteRecord(' . $row->id . ')">'
+                . __('common.delete') . '</a></li>';
+        }
+
+        return '<div class="btn-group">'
+            . '<button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">'
+            . __('common.action') . ' <i class="fa fa-angle-down"></i>'
+            . '</button>'
+            . '<ul class="dropdown-menu" role="menu">' . implode('', $items) . '</ul>'
+            . '</div>';
     }
 }

@@ -1161,6 +1161,20 @@
                 var cleanUrl = window.location.pathname + window.location.hash;
                 window.history.replaceState(null, '', cleanUrl);
             }
+
+            // 从患者详情的「预约记录」页签跳过来时带 ?focus={预约编号}：
+            // 填进已有的编号筛选框并重绘，落地就只剩那一条，不用再翻页找。
+            var focusNo = params.get('focus');
+            if (focusNo) {
+                // 日期范围默认是「今天」，而要找的那条多半不在今天（改约/回看都是往后往前跑的），
+                // 不清掉就会筛出 0 条 —— 用户看到的是「表中没有数据」，比不跳转还费解
+                $('.start_date, .end_date').val('');
+                $('#appointment_no_filter').val(focusNo);
+                if ($('#appointments-table').length && $.fn.DataTable.isDataTable('#appointments-table')) {
+                    $('#appointments-table').DataTable().draw(true);
+                }
+                window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+            }
         });
     </script>
 @endsection
