@@ -99,13 +99,13 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>{{ __('invoices.coupon_start_date') }}</label>
-                                <input type="date" name="starts_at" id="starts_at" class="form-control">
+                                <input type="text" name="starts_at" id="starts_at" class="form-control js-date" autocomplete="off">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>{{ __('invoices.coupon_end_date') }}</label>
-                                <input type="date" name="expires_at" id="expires_at" class="form-control">
+                                <input type="text" name="expires_at" id="expires_at" class="form-control js-date" autocomplete="off">
                             </div>
                         </div>
                     </div>

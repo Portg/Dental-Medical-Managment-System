@@ -178,7 +178,7 @@ function deleteDeposit(id) {
 }
 
 function alert_deposit_message(message, status) {
-    swal("Alert!", message, status);
+    swal(LanguageManager.trans('common.notice'), message, status);
     let oTable = $('#self_account_deposits_table').dataTable();
     oTable.fnDraw(true);
 }

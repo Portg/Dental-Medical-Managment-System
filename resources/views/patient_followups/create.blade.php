@@ -44,7 +44,7 @@
                     <div class="form-group">
                         <label class="control-label col-md-3 text-primary">{{ __('patient_followups.scheduled_date') }} <span class="text-danger">*</span></label>
                         <div class="col-md-9">
-                            <input type="date" name="scheduled_date" id="scheduled_date" class="form-control">
+                            <input type="text" name="scheduled_date" id="scheduled_date" class="form-control js-date" autocomplete="off">
                         </div>
                     </div>
 
@@ -84,7 +84,7 @@
                     <div class="form-group">
                         <label class="control-label col-md-3 text-primary">{{ __('patient_followups.next_followup_date') }}</label>
                         <div class="col-md-9">
-                            <input type="date" name="next_followup_date" id="next_followup_date" class="form-control">
+                            <input type="text" name="next_followup_date" id="next_followup_date" class="form-control js-date" autocomplete="off">
                         </div>
                     </div>
                 </form>

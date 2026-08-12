@@ -59,13 +59,13 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>{{ __('lab_cases.sent_date') }}</label>
-                                    <input type="date" id="patient_lc_sent_date" name="sent_date" class="form-control">
+                                    <input type="text" id="patient_lc_sent_date" name="sent_date" class="form-control js-date" autocomplete="off">
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>{{ __('lab_cases.expected_return_date') }}</label>
-                                    <input type="date" id="patient_lc_expected_return_date" name="expected_return_date" class="form-control">
+                                    <input type="text" id="patient_lc_expected_return_date" name="expected_return_date" class="form-control js-date" autocomplete="off">
                                 </div>
                             </div>
                             <div class="col-md-3">

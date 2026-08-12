@@ -20,11 +20,11 @@
         </div>
         <div class="col-md-2">
             <label class="filter-label">{{ __('common.start_date') }}</label>
-            <input type="date" class="form-control" id="filter-date-from" placeholder="{{ __('common.start_date') }}">
+            <input type="text" class="form-control js-date" id="filter-date-from" placeholder="{{ __('common.start_date') }}" autocomplete="off">
         </div>
         <div class="col-md-2">
             <label class="filter-label">{{ __('common.end_date') }}</label>
-            <input type="date" class="form-control" id="filter-date-to" placeholder="{{ __('common.end_date') }}">
+            <input type="text" class="form-control js-date" id="filter-date-to" placeholder="{{ __('common.end_date') }}" autocomplete="off">
         </div>
         <div class="col-md-3 text-right sterilization-filter-actions">
             <button class="btn btn-default" id="btn-reset-records">{{ __('common.reset') }}</button>

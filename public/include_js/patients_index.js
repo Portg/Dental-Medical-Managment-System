@@ -477,7 +477,7 @@ function showImportResult(res) {
 
 // Reset import modal on close
 $('#importModal').on('hidden.bs.modal', function() {
-    $('#importFile').val('');
+    $('#importFile').val('').trigger('change');
     $('#importResultArea').hide();
     $('#importResultContent').html('');
 });

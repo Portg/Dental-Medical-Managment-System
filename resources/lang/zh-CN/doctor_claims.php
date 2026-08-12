@@ -31,6 +31,7 @@ return [
     'patient' => '患者',
     'doctor' => '医生',
     'treatment_amount' => '治疗金额',
+    'treatment_amount_hint' => '本次就诊的治疗金额',
     'insurance_claim' => '保险理赔',
     'cash_claim' => '现金理赔',
     'total_claim_amount' => '总理赔金额',

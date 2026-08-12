@@ -38,7 +38,7 @@
                                 <div class="form-group">
                                     <label class="control-label col-md-5 text-primary">{{ __('medical_cases.diagnosis_date') }} <span class="text-danger">*</span></label>
                                     <div class="col-md-7">
-                                        <input type="date" name="diagnosis_date" id="diagnosis_date" class="form-control" required>
+                                        <input type="text" name="diagnosis_date" id="diagnosis_date" class="form-control js-date" required autocomplete="off">
                                     </div>
                                 </div>
                             </div>
@@ -73,7 +73,7 @@
                                 <div class="form-group">
                                     <label class="control-label col-md-4 text-primary">{{ __('medical_cases.resolved_date') }}</label>
                                     <div class="col-md-8">
-                                        <input type="date" name="resolved_date" id="resolved_date" class="form-control">
+                                        <input type="text" name="resolved_date" id="resolved_date" class="form-control js-date" autocomplete="off">
                                     </div>
                                 </div>
                             </div>

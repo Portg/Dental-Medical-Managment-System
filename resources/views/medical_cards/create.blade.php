@@ -24,7 +24,11 @@
                         <input type="radio" name="card_type" value="Medical Card"> {{ __('patient.medical_card') }}
                     </div>
                     <div class="form-group">
-                        <input type="file" id="uploadFile" name="uploadFile[]" multiple/>
+                        @include('partials.file_picker', [
+                            'name'     => 'uploadFile[]',
+                            'id'       => 'uploadFile',
+                            'multiple' => true,
+                        ])
                     </div>
                     <div id="image_preview"></div>
                     <br>

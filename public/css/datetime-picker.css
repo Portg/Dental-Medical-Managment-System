@@ -1,0 +1,36 @@
+/* =====================================================
+   日期 + 时间组合控件
+   见 resources/views/partials/datetime_picker.blade.php
+
+   为什么不用 <input type="datetime-local">：原生控件的显示格式跟着**浏览器界面
+   语言**走（不认 <html lang>，也不认系统区域设置），英文界面的 Chrome 上就是
+   「08/12/2026, 07:48 PM」，和同页面 bootstrap-datepicker 渲染的 2026-08-12
+   并排出现。这里改用已经载入且已本地化的两个控件拼：
+     日期 → bootstrap-datepicker（中文语言包，yyyy-mm-dd）
+     时间 → clockface（表盘 UI，24 小时制 HH:mm，本身没有文案）
+   ===================================================== */
+
+.datetime-picker {
+    display: flex;
+    gap: 8px;
+}
+
+.datetime-picker__date {
+    flex: 1 1 60%;
+    min-width: 0;
+}
+
+.datetime-picker__time {
+    flex: 0 0 92px;
+    min-width: 0;
+}
+
+@media (max-width: 480px) {
+    .datetime-picker {
+        flex-direction: column;
+    }
+
+    .datetime-picker__time {
+        flex: 1 1 auto;
+    }
+}

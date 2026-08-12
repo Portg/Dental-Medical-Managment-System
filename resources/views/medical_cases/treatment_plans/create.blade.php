@@ -230,11 +230,11 @@
                                 </div>
                                 <div class="plan-field span-3">
                                     <label for="start_date">{{ __('medical_cases.start_date') }}</label>
-                                    <input type="date" name="start_date" id="start_date" class="form-control">
+                                    <input type="text" name="start_date" id="start_date" class="form-control js-date" autocomplete="off">
                                 </div>
                                 <div class="plan-field span-3">
                                     <label for="target_completion_date">{{ __('medical_cases.target_completion_date') }}</label>
-                                    <input type="date" name="target_completion_date" id="target_completion_date" class="form-control">
+                                    <input type="text" name="target_completion_date" id="target_completion_date" class="form-control js-date" autocomplete="off">
                                 </div>
                                 <div class="plan-field span-3">
                                     <label for="estimated_cost">{{ __('medical_cases.estimated_cost') }}</label>
@@ -270,7 +270,7 @@
                                 </div>
                                 <div class="plan-field span-3" id="actual_completion_date_row">
                                     <label for="actual_completion_date">{{ __('medical_cases.actual_completion_date') }}</label>
-                                    <input type="date" name="actual_completion_date" id="actual_completion_date" class="form-control">
+                                    <input type="text" name="actual_completion_date" id="actual_completion_date" class="form-control js-date" autocomplete="off">
                                 </div>
                                 <div class="plan-field span-6" id="completion_notes_row">
                                     <label for="completion_notes">{{ __('medical_cases.completion_notes') }}</label>

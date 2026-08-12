@@ -58,7 +58,7 @@
                             </div>
                             <div class="img-form-field">
                                 <label for="image_date">{{ __('patient_images.image_date') }} <span class="text-danger">*</span></label>
-                                <input type="date" name="image_date" id="image_date" class="form-control" value="{{ date('Y-m-d') }}">
+                                <input type="text" name="image_date" id="image_date" class="form-control js-date" value="{{ date('Y-m-d') }}" autocomplete="off">
                             </div>
                         </div>
                     </div>

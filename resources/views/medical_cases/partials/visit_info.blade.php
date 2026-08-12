@@ -2,7 +2,7 @@
 <div class="visit-info-section">
     <div class="visit-info-item">
         <label>{{ __('medical_cases.case_date') }}</label>
-        <input type="date" name="case_date" id="case_date" class="form-control"
+        <input type="text" name="case_date" id="case_date" class="form-control js-date" autocomplete="off"
                value="{{ isset($case) && $case->case_date ? $case->case_date->format('Y-m-d') : date('Y-m-d') }}">
     </div>
     <div class="visit-info-item">

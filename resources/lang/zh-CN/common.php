@@ -98,6 +98,15 @@ return [
     'info' => '信息',
     'optional' => '可选',
 
+    // 统一的文件选择控件（partials/file_picker.blade.php）
+    'choose_file' => '选择文件',
+    'no_file_chosen' => '未选择任何文件',
+    'n_files_chosen' => '已选 :count 个文件',
+
+    // 日期+时间组合控件（partials/datetime_picker.blade.php）
+    'date_placeholder' => '年-月-日',
+    'time_placeholder' => '时:分',
+
     // Common Fields
     'id' => '编号',
     'name' => '姓名',
@@ -314,6 +323,7 @@ return [
     'enter_unit_price' => '输入单价',
     'choose_patient' => '选择患者',
     'select_procedure' => '选择诊疗项目',
+    'notice' => '提示',
     'share_invoice' => '分享账单',
     'share_quotation' => '分享报价单',
     'operation_success' => '操作成功！',

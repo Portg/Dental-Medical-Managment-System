@@ -72,8 +72,8 @@
     {{-- Toolbar --}}
     <div class="tw-toolbar">
         <div class="tw-toolbar-left">
-            <input type="date" class="form-control input-sm tw-date-picker" id="tw-date-filter"
-                   value="{{ date('Y-m-d') }}" onchange="onTodayWorkFilterChanged()">
+            <input type="text" class="form-control input-sm tw-date-picker js-date" id="tw-date-filter"
+                   value="{{ date('Y-m-d') }}" onchange="onTodayWorkFilterChanged()" autocomplete="off">
             <select class="form-control input-sm tw-doctor-filter" id="tw-doctor-filter" onchange="onTodayWorkFilterChanged()">
                 <option value="">{{ __('today_work.filter_all_doctors') }}</option>
                 @foreach($doctors as $doc)
@@ -164,8 +164,8 @@
         {{-- Tab: Billing --}}
         <div role="tabpanel" class="tab-pane" id="tab-billing">
             <div class="tw-tab-toolbar">
-                <input type="date" class="form-control input-sm tw-date-picker" id="billing-date-filter"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('billing')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="billing-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('billing')" autocomplete="off">
             </div>
             <div class="tw-tab-loading" id="billing-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
             <div id="billing-content" style="display:none;"></div>
@@ -174,8 +174,8 @@
         {{-- Tab: Paid Today --}}
         <div role="tabpanel" class="tab-pane" id="tab-paid">
             <div class="tw-tab-toolbar">
-                <input type="date" class="form-control input-sm tw-date-picker" id="paid-date-filter"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('paid')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="paid-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('paid')" autocomplete="off">
             </div>
             <div class="tw-tab-loading" id="paid-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
             <div id="paid-content" style="display:none;"></div>
@@ -184,8 +184,8 @@
         {{-- Tab: Unpaid Today --}}
         <div role="tabpanel" class="tab-pane" id="tab-unpaid">
             <div class="tw-tab-toolbar">
-                <input type="date" class="form-control input-sm tw-date-picker" id="unpaid-date-filter"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('unpaid')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="unpaid-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('unpaid')" autocomplete="off">
             </div>
             <div class="tw-tab-loading" id="unpaid-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
             <div id="unpaid-content" style="display:none;"></div>
@@ -194,8 +194,8 @@
         {{-- Tab: Follow-ups --}}
         <div role="tabpanel" class="tab-pane" id="tab-followups">
             <div class="tw-tab-toolbar">
-                <input type="date" class="form-control input-sm tw-date-picker" id="followups-date-filter"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('followups')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="followups-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('followups')" autocomplete="off">
                 <input type="text" class="form-control input-sm" id="followups-search"
                        placeholder="{{ __('today_work.search_patient_hint') }}"
                        onkeyup="debounceTabSearch('followups')" style="width:180px;">
@@ -228,8 +228,8 @@
         {{-- Tab: Tomorrow --}}
         <div role="tabpanel" class="tab-pane" id="tab-tomorrow">
             <div class="tw-tab-toolbar">
-                <input type="date" class="form-control input-sm tw-date-picker" id="tomorrow-date-filter"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('tomorrow')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="tomorrow-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('tomorrow')" autocomplete="off">
                 <input type="text" class="form-control input-sm" id="tomorrow-search"
                        placeholder="{{ __('today_work.search_patient_hint') }}"
                        onkeyup="debounceTabSearch('tomorrow')" style="width:200px;">
@@ -248,11 +248,11 @@
         <div role="tabpanel" class="tab-pane" id="tab-week-missed">
             <div class="tw-tab-toolbar">
                 <label style="margin:0; font-weight:normal; font-size:12px; color:#666;">{{ __('today_work.filter_start_date') }}</label>
-                <input type="date" class="form-control input-sm tw-date-picker" id="week-missed-start-date"
-                       value="{{ date('Y-m-d', strtotime('-7 days')) }}" onchange="onTabFilterChanged('week-missed')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="week-missed-start-date"
+                       value="{{ date('Y-m-d', strtotime('-7 days')) }}" onchange="onTabFilterChanged('week-missed')" autocomplete="off">
                 <label style="margin:0; font-weight:normal; font-size:12px; color:#666;">{{ __('today_work.filter_end_date') }}</label>
-                <input type="date" class="form-control input-sm tw-date-picker" id="week-missed-end-date"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('week-missed')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="week-missed-end-date"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('week-missed')" autocomplete="off">
             </div>
             <div class="tw-tab-loading" id="week-missed-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
             <div id="week-missed-content" style="display:none;"></div>
@@ -261,8 +261,8 @@
         {{-- Tab: Lab Cases --}}
         <div role="tabpanel" class="tab-pane" id="tab-lab-cases">
             <div class="tw-tab-toolbar">
-                <input type="date" class="form-control input-sm tw-date-picker" id="lab-cases-date-filter"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('lab-cases')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="lab-cases-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('lab-cases')" autocomplete="off">
             </div>
             <div class="tw-tab-loading" id="lab-cases-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
             <div id="lab-cases-content" style="display:none;"></div>
@@ -271,8 +271,8 @@
         {{-- Tab: Birthdays --}}
         <div role="tabpanel" class="tab-pane" id="tab-birthdays">
             <div class="tw-tab-toolbar">
-                <input type="date" class="form-control input-sm tw-date-picker" id="birthdays-date-filter"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('birthdays')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="birthdays-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('birthdays')" autocomplete="off">
             </div>
             <div class="tw-tab-loading" id="birthdays-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
             <div id="birthdays-content" style="display:none;"></div>
@@ -281,8 +281,8 @@
         {{-- Tab: Doctor Table --}}
         <div role="tabpanel" class="tab-pane" id="tab-doctor-table">
             <div class="tw-tab-toolbar">
-                <input type="date" class="form-control input-sm tw-date-picker" id="doctor-table-date-filter"
-                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('doctor-table')">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="doctor-table-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('doctor-table')" autocomplete="off">
                 <select class="form-control input-sm tw-doctor-filter" id="doctor-table-doctor-filter" onchange="onTabFilterChanged('doctor-table')">
                     <option value="">{{ __('today_work.filter_all_doctors') }}</option>
                     @foreach($doctors as $doc)

@@ -178,7 +178,7 @@ function deleteSurgery(id) {
 
 
 function alert_surgery(message, status) {
-    swal("Alert!", message, status);
+    swal(LanguageManager.trans('common.notice'), message, status);
 
     let oTable = $('#surgical_table').dataTable();
     oTable.fnDraw(true);

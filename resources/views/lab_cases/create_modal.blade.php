@@ -76,7 +76,7 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>{{ __('lab_cases.expected_return_date') }}</label>
-                                <input type="date" name="expected_return_date" class="form-control">
+                                <input type="text" name="expected_return_date" class="form-control js-date" autocomplete="off">
                             </div>
                         </div>
                         <div class="col-md-4">

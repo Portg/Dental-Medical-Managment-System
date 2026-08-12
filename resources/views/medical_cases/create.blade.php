@@ -26,7 +26,7 @@
                                 <div class="form-group">
                                     <label class="control-label col-md-4 text-primary">{{ __('medical_cases.case_date') }} <span class="text-danger">*</span></label>
                                     <div class="col-md-8">
-                                        <input type="date" name="case_date" id="case_date" class="form-control" required>
+                                        <input type="text" name="case_date" id="case_date" class="form-control js-date" required autocomplete="off">
                                     </div>
                                 </div>
                             </div>

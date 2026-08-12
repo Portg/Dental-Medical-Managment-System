@@ -82,7 +82,7 @@
                     <div class="form-group">
                         <label class="control-label col-md-4 text-primary">{{ __('members.expiry_date') }}</label>
                         <div class="col-md-8">
-                            <input type="date" name="member_expiry" id="member_expiry" class="form-control">
+                            <input type="text" name="member_expiry" id="member_expiry" class="form-control js-date" autocomplete="off">
                         </div>
                     </div>
 

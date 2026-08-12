@@ -33,7 +33,7 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>{{ __('prescriptions.prescription_date') }}</label>
-                                <input type="date" name="prescription_date" id="rx_date" class="form-control" value="{{ date('Y-m-d') }}">
+                                <input type="text" name="prescription_date" id="rx_date" class="form-control js-date" value="{{ date('Y-m-d') }}" autocomplete="off">
                             </div>
                         </div>
                         <div class="col-md-4">

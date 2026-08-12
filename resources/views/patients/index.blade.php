@@ -325,7 +325,11 @@
                     </div>
                     <div class="form-group">
                         <label>2. {{ __('patient.upload_file') }}</label>
-                        <input type="file" id="importFile" class="form-control" accept=".xlsx,.xls,.csv">
+                        @include('partials.file_picker', [
+                            'name'   => 'file',
+                            'id'     => 'importFile',
+                            'accept' => '.xlsx,.xls,.csv',
+                        ])
                         <p class="help-block">{{ __('patient.import_supported_formats') }}</p>
                     </div>
                     <div class="alert alert-info" style="font-size:13px; margin-bottom:10px;">
@@ -835,7 +839,7 @@
 
     // Reset import modal on close
     $('#importModal').on('hidden.bs.modal', function() {
-        $('#importFile').val('');
+        $('#importFile').val('').trigger('change');
         $('#importResultArea').hide();
         $('#importResultContent').html('');
     });

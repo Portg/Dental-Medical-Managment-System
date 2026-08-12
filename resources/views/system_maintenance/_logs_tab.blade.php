@@ -43,11 +43,11 @@
                 </div>
                 <div class="col-md-2">
                     <label>{{ __('system_maintenance.start_date') }}</label>
-                    <input type="date" id="op-filter-start" class="form-control input-sm">
+                    <input type="text" id="op-filter-start" class="form-control input-sm js-date" autocomplete="off">
                 </div>
                 <div class="col-md-2">
                     <label>{{ __('system_maintenance.end_date') }}</label>
-                    <input type="date" id="op-filter-end" class="form-control input-sm">
+                    <input type="text" id="op-filter-end" class="form-control input-sm js-date" autocomplete="off">
                 </div>
                 <div class="col-md-2" style="padding-top: 24px;">
                     <button class="btn btn-sm btn-primary" onclick="operationLogsTable.draw()">
@@ -99,11 +99,11 @@
                 </div>
                 <div class="col-md-2">
                     <label>{{ __('system_maintenance.start_date') }}</label>
-                    <input type="date" id="acc-filter-start" class="form-control input-sm">
+                    <input type="text" id="acc-filter-start" class="form-control input-sm js-date" autocomplete="off">
                 </div>
                 <div class="col-md-2">
                     <label>{{ __('system_maintenance.end_date') }}</label>
-                    <input type="date" id="acc-filter-end" class="form-control input-sm">
+                    <input type="text" id="acc-filter-end" class="form-control input-sm js-date" autocomplete="off">
                 </div>
                 <div class="col-md-2" style="padding-top: 24px;">
                     <button class="btn btn-sm btn-primary" onclick="accessLogsTable.draw()">
@@ -154,11 +154,11 @@
                 </div>
                 <div class="col-md-2">
                     <label>{{ __('system_maintenance.start_date') }}</label>
-                    <input type="date" id="aud-filter-start" class="form-control input-sm">
+                    <input type="text" id="aud-filter-start" class="form-control input-sm js-date" autocomplete="off">
                 </div>
                 <div class="col-md-2">
                     <label>{{ __('system_maintenance.end_date') }}</label>
-                    <input type="date" id="aud-filter-end" class="form-control input-sm">
+                    <input type="text" id="aud-filter-end" class="form-control input-sm js-date" autocomplete="off">
                 </div>
                 <div class="col-md-2" style="padding-top: 24px;">
                     <button class="btn btn-sm btn-primary" onclick="auditLogsTable.draw()">

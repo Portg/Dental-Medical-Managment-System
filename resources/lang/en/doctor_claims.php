@@ -31,6 +31,7 @@ return [
     'patient' => 'Patient',
     'doctor' => 'Doctor',
     'treatment_amount' => 'Treatment Amount',
+    'treatment_amount_hint' => "Amount for today's treatment",
     'insurance_claim' => 'Insurance Claim',
     'cash_claim' => 'Cash Claim',
     'total_claim_amount' => 'Total Claim Amount',

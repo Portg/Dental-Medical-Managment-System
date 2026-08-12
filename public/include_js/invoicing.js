@@ -147,7 +147,7 @@ function editItem(id) {
 
 //filter Procedures
 $('#service').select2({
-    placeholder: "Select Procedure",
+    placeholder: LanguageManager.trans('common.select_procedure'),
     minimumInputLength: 2,
     ajax: {
         url: '/search-medical-service',
@@ -175,7 +175,7 @@ $('#service').select2({
 
 });
 $('#medical_service_id').select2({
-    placeholder: "Select Procedure",
+    placeholder: LanguageManager.trans('common.select_procedure'),
     minimumInputLength: 2,
     ajax: {
         url: '/search-medical-service',

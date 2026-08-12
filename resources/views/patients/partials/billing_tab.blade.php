@@ -154,8 +154,8 @@
                             <label>
                                 <input type="checkbox" id="backEntryCheck"> {{ __('invoices.back_entry') }}
                             </label>
-                            <input type="date" id="backEntryDate" class="form-control input-sm"
-                                   style="display:none" value="{{ date('Y-m-d') }}">
+                            <input type="text" id="backEntryDate" class="form-control input-sm js-date"
+                                   style="display:none" value="{{ date('Y-m-d') }}" autocomplete="off">
                         </div>
                     </div>
                 </div>

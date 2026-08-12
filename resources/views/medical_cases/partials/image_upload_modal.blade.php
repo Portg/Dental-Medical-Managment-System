@@ -27,13 +27,16 @@
                     </div>
                     <div class="form-group">
                         <label>{{ __('patient_images.image_date') }} <span class="required">*</span></label>
-                        <input type="date" name="image_date" id="image_date" class="form-control"
-                               value="{{ date('Y-m-d') }}">
+                        <input type="text" name="image_date" id="image_date" class="form-control js-date"
+                               value="{{ date('Y-m-d') }}" autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label>{{ __('patient_images.select_file') }} <span class="required">*</span></label>
-                        <input type="file" name="image_file" id="image_file" class="form-control"
-                               accept="image/jpeg,image/png,image/jpg,image/gif,image/bmp">
+                        @include('partials.file_picker', [
+                            'name'   => 'image_file',
+                            'id'     => 'image_file',
+                            'accept' => 'image/jpeg,image/png,image/jpg,image/gif,image/bmp',
+                        ])
                         <p class="help-block">{{ __('patient_images.file_hint') }}</p>
                     </div>
                     <div class="form-group">

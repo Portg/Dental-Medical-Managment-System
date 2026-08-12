@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">{{ __('common.import') }} — {{ __('clinical_services.name') }}</h4>
+                <h4 class="modal-title">{{ __('common.import') }} — {{ __('clinical_services.service_items') }}</h4>
             </div>
             <div class="modal-body">
                 <p>
@@ -15,7 +15,11 @@
                     @csrf
                     <div class="form-group">
                         <label>{{ __('clinical_services.select_file') }} <span class="required">*</span></label>
-                        <input type="file" id="import-file" name="file" accept=".xlsx,.xls">
+                        @include('partials.file_picker', [
+                            'name'   => 'file',
+                            'id'     => 'import-file',
+                            'accept' => '.xlsx,.xls',
+                        ])
                     </div>
                 </form>
             </div>

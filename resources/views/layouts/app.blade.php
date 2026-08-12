@@ -18,6 +18,17 @@
     <link href="{{ asset('backend/assets/global/plugins/simple-line-icons/simple-line-icons.min.css') }}" rel="stylesheet" type="text/css"/>
     <link href="{{ asset('backend/assets/global/plugins/font-awesome/css/all.min.css') }}" rel="stylesheet" type="text/css"/>
     <link href="{{ asset('backend/assets/global/plugins/font-awesome/css/v4-shims.min.css') }}" rel="stylesheet" type="text/css"/>
+    {{--
+        select2 的 bootstrap 主题。app.min.js（Metronic 核心，每页都加载）里写死了
+        $.fn.select2.defaults.set("theme","bootstrap")，而 backend-bundle 里只打包了
+        Metronic 对该主题的几条覆盖（字体、阴影），没有画边框和底色的主题本体。
+        结果是：凡在 $(document).ready 里初始化的 select2（那时 app.min.js 已经把默认
+        主题改成 bootstrap 了）全都渲染成透明无边框的一块 —— 标签下面看着空无一物。
+        在 script 之前把主题本体补上，比逐处传 theme:'default' 靠谱。
+    --}}
+    <link href="{{ asset('backend/assets/global/plugins/select2/css/select2-bootstrap.min.css') }}" rel="stylesheet" type="text/css"/>
+    {{-- 日期+时间组合控件（partials/datetime_picker.blade.php），替代原生 datetime-local --}}
+    <link href="{{ asset('css/datetime-picker.css') }}?v={{ filemtime(public_path('css/datetime-picker.css')) }}" rel="stylesheet" type="text/css"/>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"/>
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 
@@ -113,6 +124,8 @@
 
     <script src="{{ asset('backend/assets/global/plugins/bootstrap-datepicker.js') }}" type="text/javascript"></script>
     <script src="{{ asset('backend/assets/global/plugins/bootstrap-datepicker/js/locales/bootstrap-datepicker.' . app()->getLocale() . '.js') }}" type="text/javascript"></script>
+    {{-- 必须排在 clockface 与 datepicker 之后：它要拿这两个插件初始化组合控件 --}}
+    <script src="{{ asset('include_js/datetime_picker.js') }}?v={{ filemtime(public_path('include_js/datetime_picker.js')) }}" type="text/javascript"></script>
 
     <script src="{{ asset('backend/assets/pages/scripts/select2.min.js') }}" type="text/javascript"></script>
     <script src="{{ asset('backend/assets/global/plugins/select2/js/i18n/' . app()->getLocale() . '.js') }}" type="text/javascript"></script>
@@ -247,6 +260,32 @@
             autoclose: true,
             format: 'yyyy-mm',
             todayHighlight: true,
+        });
+
+        /*
+         * 全站日期输入统一走 bootstrap-datepicker（上面已按 app locale 载入中文语言包）。
+         *
+         * 原来有 46 个原生日期输入框。原生日期框的显示格式跟着**浏览器界面语言**走，
+         * 不跟 <html lang> 也不跟系统区域设置走 —— 英文界面的 Chrome 上就是 mm/dd/yyyy，
+         * 和同一个页面里 bootstrap-datepicker 渲染的 yyyy-mm-dd 并排出现，既不像中文习惯，
+         * 也自相矛盾。改成 .js-date + 文本框，显示格式由我们自己定死。
+         *
+         * 用 .js-date 而不是复用 .datepicker：有 20 多个页面自己按 .datepicker 初始化并传了
+         * startDate / endDate / format:'yyyy-mm' 等参数，而插件是「首次初始化的参数生效、
+         * 后续调用直接忽略」（bootstrap-datepicker.js:1652 的 if (!data)）。这段脚本比页面
+         * 脚本先执行，若复用同一个类名就会把那些页面的参数全部吃掉。
+         *
+         * format 保持 yyyy-mm-dd，与原生 type=date 的提交值一致，后端和读写 .val() 的
+         * 既有 JS 都不用改。
+         */
+        $('input.js-date').datepicker({
+            format: 'yyyy-mm-dd',
+            autoclose: true,
+            todayHighlight: true,
+            clearBtn: true,
+            // 默认 'auto' 在弹窗里常判成往上弹，日历会盖住上面的表单区；
+            // 'bottom auto' 优先往下，位置真不够时才翻上去
+            orientation: 'bottom auto',
         });
 
     </script>

@@ -1,0 +1,59 @@
+/* =====================================================
+   统一的文件选择控件
+   见 resources/views/partials/file_picker.blade.php
+
+   为什么要包一层：<input type="file"> 的按钮文案和「未选择文件」由浏览器渲染，
+   跟着**浏览器界面语言**走，不跟系统的 zh-CN 设置走。英文版 Chrome 上就是
+   「Choose File / No file chosen」，跟满页中文混在一起。原生控件也没法调样式。
+   所以把 input 透明铺在 label 上，文案自己出。
+   ===================================================== */
+
+.file-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.file-picker__btn {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 7px 14px;
+    border: 1px solid #d6dde3;
+    border-radius: 6px;
+    background: #f3f5f7;
+    color: #415364;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease;
+}
+
+.file-picker__btn:hover {
+    background: #e8edf1;
+    border-color: #c8d3db;
+}
+
+/* 铺满整个按钮，点按钮任意位置都能唤起选择框；键盘 Tab 依然能聚焦到原生 input */
+.file-picker__btn input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-picker__name {
+    min-width: 0;
+    font-size: 13px;
+    color: #8a97a6;
+    word-break: break-all;
+}
+
+.file-picker__name.is-chosen {
+    color: #1f2937;
+}

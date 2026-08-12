@@ -178,7 +178,7 @@ function deleteAllowanceRecord(id) {
 
 
 function alert_dialog(message, status) {
-    swal("Alert!", message, status);
+    swal(LanguageManager.trans('common.notice'), message, status);
 
     setTimeout(function () {
         location.reload();

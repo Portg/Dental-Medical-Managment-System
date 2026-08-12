@@ -97,6 +97,15 @@ return [
     'info' => 'Info',
     'optional' => 'Optional',
 
+    // Shared file picker (partials/file_picker.blade.php)
+    'choose_file' => 'Choose file',
+    'no_file_chosen' => 'No file chosen',
+    'n_files_chosen' => ':count files chosen',
+
+    // Combined date + time control (partials/datetime_picker.blade.php)
+    'date_placeholder' => 'YYYY-MM-DD',
+    'time_placeholder' => 'HH:MM',
+
     // Common Fields
     'id' => 'ID',
     'name' => 'Name',
@@ -310,6 +319,7 @@ return [
     'enter_unit_price' => 'Enter unit price',
     'choose_patient' => 'Choose patient',
     'select_procedure' => 'Select procedure',
+    'notice' => 'Notice',
     'share_invoice' => 'Share Invoice',
     'share_quotation' => 'Share Quotation',
     'operation_success' => 'Operation Successful!',
