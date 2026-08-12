@@ -1,11 +1,26 @@
 $(document).ready(function() {
     loadImagesTable();
 
-    // Initialize select2
-    $('.select2').select2();
-    $('[data-toggle="tooltip"]').tooltip();
+    // select2 默认 width:'resolve' —— 它去量元素的实际宽度来定容器宽度。这里的
+    // .select2 长在 #imageModal 里，document.ready 时弹窗还是 display:none，量出来
+    // 是 0，容器就渲染成一条看不见的缝：页面上只剩「患者」这个标签，底下什么都没有。
+    // 必须显式给 width，别删。
+    // dropdownParent 指到弹窗上，否则 BS3 的 modal 会抢焦点，select2 的搜索框打不了字。
+    $('#patient_id').select2({
+        width: '100%',
+        dropdownParent: $('#imageModal'),
+        placeholder: LanguageManager.trans('patient_images.select_patient'),
+        allowClear: true
+    });
+    // 必须限定 select：select2 生成的包装 <span> 自己也带 .select2 类，
+    // 写成 $('.select2') 会把上面刚生成的容器再初始化一遍，页面上就多出一个
+    // 高 1px 的空壳盖在真控件上 —— 表现为「患者」下面一个空框，选了人也不显示。
+    $('select.select2').not('#patient_id').select2({ width: '100%' });
 
     $('#image_file').on('change', handleImageFileSelection);
+    $('#btn_change_file').on('click', function () {
+        $('#image_file').val('').trigger('change');
+    });
 });
 
 function loadImagesTable() {
@@ -49,7 +64,6 @@ function loadImagesTable() {
 function addImage() {
     resetForm();
     $('#imageModalLabel').text(LanguageManager.trans('patient_images.add_image'));
-    $('[data-toggle="tooltip"]').tooltip();
     $('#imageModal').modal('show');
 }
 
@@ -61,15 +75,15 @@ function resetForm() {
     $('#imageForm .alert-danger').hide();
 }
 
+// 上传区只有两态：没选文件 → 拖拽框；选了 → 缩略图行（拖拽框由 CSS 相邻选择器隐藏）。
+// src 为空但有 fileName 的中间态是「已选中，缩略图还在读」，此时留占位图标。
 function setImagePreviewState(src, fileName) {
     var hasImage = !!src;
-    $('#preview_image').attr('src', src || '');
-    $('#current_image_preview').toggle(hasImage);
+    $('#preview_image').attr('src', src || '').toggle(hasImage);
     $('#image_preview_placeholder').toggle(!hasImage);
 
-    var hasFileName = !!fileName;
     $('#selected_file_name').text(fileName || LanguageManager.trans('patient_images.selected_file'));
-    $('#selected_file_meta').toggleClass('is-visible', hasFileName);
+    $('#selected_file_meta').toggleClass('is-visible', !!fileName);
 }
 
 function handleImageFileSelection() {
@@ -160,7 +174,6 @@ function editImage(id) {
             $('.loading').hide();
             resetForm();
             $('#imageModalLabel').text(LanguageManager.trans('patient_images.edit_image'));
-            $('[data-toggle="tooltip"]').tooltip();
 
             $('#image_id').val(response.id);
             $('#patient_id').val(response.patient_id).trigger('change');

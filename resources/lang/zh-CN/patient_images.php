@@ -42,6 +42,9 @@ return [
     'auxiliary_info_hint' => '牙位和备注属于补充信息，不填写也可以先保存。',
     'selected_file' => '已选择文件',
     'dropzone_hint' => '点击或拖拽上传',
+    'dropzone_title' => '点击或拖拽上传影像文件',
+    'change_file' => '重新选择',
+    'select_patient' => '搜索或选择患者',
 
     // Image types (short)
     'intraoral' => '口内照',

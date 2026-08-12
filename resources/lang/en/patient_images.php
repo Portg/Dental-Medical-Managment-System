@@ -42,6 +42,9 @@ return [
     'auxiliary_info_hint' => 'Tooth position and notes are optional and should not interrupt the main flow.',
     'selected_file' => 'Selected file',
     'dropzone_hint' => 'Click or drag a file here',
+    'dropzone_title' => 'Click or drag the image file here',
+    'change_file' => 'Change file',
+    'select_patient' => 'Search or select a patient',
 
     // Image types (short)
     'intraoral' => 'Intraoral',

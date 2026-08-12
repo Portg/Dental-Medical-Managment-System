@@ -5,38 +5,7 @@
 @section('table_id', 'patient_images_table')
 
 @section('page_css')
-    <style>
-        #patient_images_table {
-            min-width: 960px;
-        }
-
-        .portlet-body.patient-images-empty #patient_images_table_wrapper .table-scrollable tbody,
-        .portlet-body.patient-images-empty #patient_images_table_wrapper > .row:last-child {
-            display: none;
-        }
-
-        .portlet-body.patient-images-empty #emptyState {
-            margin-top: 16px;
-            border-top: 1px solid #eef2f5;
-            padding-top: 48px;
-        }
-
-        @media (max-width: 991px) {
-            #patient_images_table_wrapper .table-scrollable {
-                overflow-x: auto;
-            }
-        }
-
-        @media (max-width: 767px) {
-            .page-header-l1 {
-                flex-direction: column;
-            }
-
-            .page-header-l1 .header-actions .btn {
-                width: 100%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/patient-images.css') }}?v={{ filemtime(public_path('css/patient-images.css')) }}">
 @endsection
 
 @section('header_actions')

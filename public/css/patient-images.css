@@ -1,0 +1,280 @@
+/* =====================================================
+   患者影像：列表页 + 添加/编辑弹窗
+   （原来这两段样式分别内联在 patient_images/index.blade.php 的 @section('page_css')
+     和 patient_images/create.blade.php 顶部，共 350 行，违反 Blade 不内联样式的约定）
+   ===================================================== */
+
+/* ---------- 列表 ---------- */
+#patient_images_table {
+    min-width: 960px;
+}
+
+.portlet-body.patient-images-empty #patient_images_table_wrapper .table-scrollable tbody,
+.portlet-body.patient-images-empty #patient_images_table_wrapper > .row:last-child {
+    display: none;
+}
+
+.portlet-body.patient-images-empty #emptyState {
+    margin-top: 16px;
+    border-top: 1px solid #eef2f5;
+    padding-top: 48px;
+}
+
+/* ---------- 弹窗骨架 ---------- */
+#imageModal .modal-dialog {
+    width: 760px;
+    max-width: 96%;
+}
+
+#imageModal .modal-body {
+    padding: 24px;
+}
+
+#imageModal .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+#imageModal .modal-footer .btn {
+    min-width: 88px;
+    border-radius: 6px;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+#imageModal .modal-footer .btn-default {
+    float: none;
+    margin-left: 0;
+    background: #f3f5f7;
+    border-color: #d6dde3;
+    color: #415364;
+}
+
+#imageModal .modal-footer .btn-default:hover,
+#imageModal .modal-footer .btn-default:focus {
+    background: #e8edf1;
+    border-color: #c8d3db;
+    color: #243444;
+}
+
+#imageModal .modal-footer .btn-primary {
+    background: #0f5c66;
+    border-color: #0f5c66;
+    color: #fff;
+}
+
+#imageModal .modal-footer .btn-primary:hover,
+#imageModal .modal-footer .btn-primary:focus {
+    background: #0b4a53;
+    border-color: #0b4a53;
+}
+
+/* ---------- 上传区 ----------
+ * 原来是「拖拽框 + 常驻空预览卡」左右并排：没选文件时右边那张 260px 宽的卡永远
+ * 是个空相框，占掉近一半弹窗宽度却不传达任何信息。改成单块 —— 未选文件是拖拽框，
+ * 选了就地换成缩略图 + 文件名 + 重新选择。别再拆回两栏。
+ */
+.patient-image-dropzone {
+    position: relative;
+    display: block;
+    margin: 0;
+    border: 2px dashed #9fd5da;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #fbfefe 0%, #f3fbfc 100%);
+    transition: border-color .2s ease, box-shadow .2s ease;
+    cursor: pointer;
+}
+
+.patient-image-dropzone:hover {
+    border-color: #48aab3;
+    box-shadow: 0 6px 18px rgba(0, 131, 143, .08);
+}
+
+.patient-image-dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.patient-image-dropzone__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 24px;
+    color: #4b5563;
+}
+
+.patient-image-dropzone__icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 12px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 131, 143, .12);
+    color: #00838f;
+    font-size: 24px;
+}
+
+.patient-image-dropzone__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 6px;
+}
+
+.patient-image-dropzone__hint {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #8a97a6;
+}
+
+/* 选中文件后的那一块，与拖拽框互斥显示 */
+.patient-image-picked {
+    display: none;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid #d9e9ed;
+    border-radius: 12px;
+    background: #f8fbfc;
+}
+
+.patient-image-picked.is-visible {
+    display: flex;
+}
+
+.patient-image-picked.is-visible + .patient-image-dropzone {
+    display: none;
+}
+
+.patient-image-picked__thumb {
+    flex: 0 0 auto;
+    width: 88px;
+    height: 88px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e3edf2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #b6c2cc;
+    font-size: 26px;
+}
+
+.patient-image-picked__thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.patient-image-picked__meta {
+    min-width: 0;
+    flex: 1;
+}
+
+.patient-image-picked__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    word-break: break-all;
+}
+
+.patient-image-picked__hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #8a97a6;
+}
+
+/* ---------- 字段 ---------- */
+.patient-image-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.patient-image-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+}
+
+.patient-image-field {
+    min-width: 0;
+}
+
+.patient-image-field--full {
+    grid-column: 1 / -1;
+}
+
+.patient-image-field label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.patient-image-field .text-danger {
+    line-height: 1;
+}
+
+.patient-image-field-optional {
+    color: #8a97a6;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.patient-image-field .form-control,
+.patient-image-field .select2-container .select2-selection--single {
+    min-height: 40px;
+    border-radius: 8px;
+}
+
+/* select2 在隐藏的弹窗里初始化会算出 0 宽度（见 patient_images.js 的注释），
+   这里再兜一道底，防止别处漏传 width 配置时又变成一条看不见的缝 */
+.patient-image-field .select2-container {
+    width: 100% !important;
+}
+
+.patient-image-field textarea.form-control {
+    min-height: 88px;
+    resize: vertical;
+}
+
+@media (max-width: 767px) {
+    #imageModal .modal-body {
+        padding: 16px;
+    }
+
+    .patient-image-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .page-header-l1 {
+        flex-direction: column;
+    }
+
+    .page-header-l1 .header-actions .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 991px) {
+    #patient_images_table_wrapper .table-scrollable {
+        overflow-x: auto;
+    }
+}
