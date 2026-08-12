@@ -200,6 +200,19 @@
             $.fn.datepicker.defaults.language = '{{ app()->getLocale() }}';
         }
 
+        /*
+         * sweetalert 的按钮默认文案是英文「OK」「Cancel」，弹窗正文是中文、按钮是英文。
+         * 全站 74 个文件调 swal()，其中只有部分显式传了 confirmButtonText —— 剩下的
+         * 一律走默认值。在这里设一次全局默认，比逐个调用点补参数靠谱。
+         * 显式传了文案的调用不受影响（setDefaults 只填未指定的项）。
+         */
+        if (typeof swal !== 'undefined' && typeof swal.setDefaults === 'function') {
+            swal.setDefaults({
+                confirmButtonText: @json(__('common.ok')),
+                cancelButtonText: @json(__('common.cancel')),
+            });
+        }
+
         // Restore sidebar collapsed state from cookie
         if (typeof Cookies !== 'undefined' && Cookies.get('sidebar_closed') === '1') {
             $('body').addClass('page-sidebar-closed');
