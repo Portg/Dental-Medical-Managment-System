@@ -141,7 +141,7 @@
                            placeholder="{{ __('frontend.email_address') }}">
                 </div>
                 <div class="form-group">
-                    <label>{{ __('frontend.have_you_ever_visited') }} {{ env('CompanyName',null)}} <span>*</span></label><br>
+                    <label>{{ __('frontend.have_you_ever_visited') }} {{ config('company.name')}} <span>*</span></label><br>
                     <input type="radio" name="visit_history" value="1"> <span class="radio_">{{ __('frontend.yes') }}</span><br>
                     <input type="radio" name="visit_history" value="0"> <span class="radio_">{{ __('frontend.no') }}</span><br>
                 </div>

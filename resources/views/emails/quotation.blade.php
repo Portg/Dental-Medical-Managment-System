@@ -12,7 +12,7 @@
         <p>{{ __('emails.dear_patient', ['surname' => $user_info['surname'], 'othername' => $user_info['othername']]) }}</p>
 
         <p>{{ __('emails.thank_you_message', [
-                'company_name' => env('CompanyName', 'Dental Clinic'),
+                'company_name' => config('company.name'),
                     'document_type' => __('emails.quotation_attached')
                     ]) }}</p>
 
@@ -22,7 +22,7 @@
 
         <p style="text-align: center;">
             <strong>{{ __('emails.sincerely') }}</strong><br>
-            {{ __('emails.company_team', ['company_name' => env('CompanyName', 'Dental Clinic')]) }}
+            {{ __('emails.company_team', ['company_name' => config('company.name')]) }}
         </p>
     </div>
 </div>

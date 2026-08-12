@@ -47,7 +47,7 @@
                         <div class="col-md-6">
 
                             <div class="form-group"><br>
-                                <label>{{ __('online_bookings.have_you_visited') }} {{ env('CompanyName',null) }} <span>*</span></label><br>
+                                <label>{{ __('online_bookings.have_you_visited') }} {{ config('company.name') }} <span>*</span></label><br>
                                 <input type="radio" name="visit_history" value="1"> {{ __('online_bookings.yes') }}<br>
                                 <input type="radio" name="visit_history" value="0"> {{ __('online_bookings.no') }}<br>
                             </div>

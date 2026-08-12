@@ -39,10 +39,10 @@
         <table width="100%">
             <tr>
                 <td align="left" style="width: 40%;">
-                    <p class="header_text">{{env("CompanyAddress",null)}}<br>
-                        {{ __('print.tel') }}: {{env("companyMobile",null)}}; {{env("companyMobileOther",null)}} <br>
-                        {{ __('print.email') }}:{{env("companyInfoEmail",null)}}
-                        {{ __('print.tin_no') }}: {{ env("companyTinNo",null)}}
+                    <p class="header_text">{{config('company.address')}}<br>
+                        {{ __('print.tel') }}: {{config('company.mobile')}}; {{config('company.mobile_other')}} <br>
+                        {{ __('print.email') }}:{{config('company.email.info')}}
+                        {{ __('print.tin_no') }}: {{ config('company.tin_no')}}
                     </p>
 
                 </td>
@@ -51,9 +51,9 @@
                 </td>
                 <td align="right" style="width: 40%;">
                     <p class="header_text">
-                       {{ env("MainDoctorName",null)}}<br>
-                        {{ __('print.tel') }} {{env("mainDoctorContacts",null)}}
-                        {{ __('print.email') }}:{{ env("companyOfficalEmail",null)}}
+                       {{ config('company.main_doctor.name')}}<br>
+                        {{ __('print.tel') }} {{config('company.main_doctor.contacts')}}
+                        {{ __('print.email') }}:{{ config('company.email.official')}}
 
                     </p>
                 </td>

@@ -47,13 +47,13 @@
                                                 <td><span style="font-size: 18px;">{{ config('app.name', 'Laravel') }}</span></td>
                                             </tr>
                                             <tr>
-                                                <td>{{env("CompanyAddress",null)}}</td>
+                                                <td>{{config('company.address')}}</td>
                                             </tr>
                                             <tr>
-                                                <td>{{ __('company.phone_no') }}: {{env("companyMobile",null)}} / {{env("companyMobileOther",null)}}</td>
+                                                <td>{{ __('company.phone_no') }}: {{config('company.mobile')}} / {{config('company.mobile_other')}}</td>
                                             </tr>
                                             <tr>
-                                                <td>{{ __('company.email_address') }}: {{ env("companyOfficalEmail",null)}}</td>
+                                                <td>{{ __('company.email_address') }}: {{ config('company.email.official')}}</td>
                                             </tr>
                                         </table>
                                     </div>

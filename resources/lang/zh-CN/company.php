@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'name' => env('COMPANY_NAME_ZH', env('APP_NAME')),
-    'address' => env('COMPANY_ADDRESS_ZH', env('CompanyAddress')),
+    'name' => config('company.name_zh') ?: config('company.name'),
+    'address' => config('company.address_zh') ?: config('company.address'),
     'phone' => '电话',
     'email' => '邮箱',
     'tin_no' => '税号',
