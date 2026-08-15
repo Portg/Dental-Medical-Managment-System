@@ -801,6 +801,19 @@ else
     fi
 fi
 
+# dompdf 自带字体只有拉丁字形，不装中文字体的话所有打印单据（处方、收据、报价单、
+# 技工单、病历、退费单）里的中文都是问号。命令会在常见路径里找一份中文 TrueType，
+# 复制进项目并注册，最后渲染一份中文 PDF 回读校验。
+# 失败不阻断安装：只影响打印，应用其余部分照常可用。
+info "检查打印用中文字体..."
+if (cd "$INSTALL_DIR" && sudo -u "$WEB_USER" php artisan pdf:install-cjk-font --no-interaction 2>&1) || \
+   (cd "$INSTALL_DIR" && php artisan pdf:install-cjk-font --no-interaction 2>&1); then
+    ok "中文字体就绪"
+else
+    warn "中文字体安装失败，打印单据里的中文会显示为问号；请安装后手动执行："
+    warn "  php artisan pdf:install-cjk-font /path/to/font.ttf"
+fi
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  Step 7: Storage link + 缓存优化
 # ══════════════════════════════════════════════════════════════════════════════

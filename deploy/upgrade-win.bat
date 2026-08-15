@@ -525,6 +525,21 @@ if !ERRORLEVEL! neq 0 (
 )
 echo.
 
+REM dompdf 自带字体只有拉丁字形，不装中文字体的话所有打印单据（处方、收据、
+REM 报价单、技工单、病历、退费单）里的中文都是问号。命令会自动找
+REM C:\Windows\Fonts\simhei.ttf，复制进项目并注册，最后渲染一份中文 PDF 回读校验。
+REM 已装过则直接跳过，重复升级不会重复消耗时间。
+REM 失败不回滚：只影响打印，应用其余部分照常可用。
+echo        检查打印用中文字体...
+"!PHP!" artisan pdf:install-cjk-font --no-interaction
+if !ERRORLEVEL! neq 0 (
+    echo        [警告] 中文字体安装失败，打印单据里的中文会显示为问号
+    echo        [警告] 请升级后手动执行: php artisan pdf:install-cjk-font
+) else (
+    echo        中文字体就绪
+)
+echo.
+
 REM ═══════════════════════════════════════════════════════════════
 REM  Step 9: 缓存清理与重建
 REM ═══════════════════════════════════════════════════════════════

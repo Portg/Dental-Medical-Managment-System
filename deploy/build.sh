@@ -2217,8 +2217,25 @@ if [[ "$UPGRADE" == true ]]; then
    php artisan route:cache
    php artisan view:cache
    \`\`\`
-5. 检查 env.patch 中是否有新增的环境变量需要配置
-6. 重启 Web 服务
+5. 安装打印用中文字体（不装则所有打印单据里的中文是问号）:
+   \`\`\`bash
+   php artisan pdf:install-cjk-font
+   \`\`\`
+6. 检查 env.patch 中是否有新增的环境变量需要配置
+7. 重启 Web 服务
+
+> upgrade-win.bat / install-win.ps1 / install-linux.sh 已自动执行第 3、5 步，
+> 手工升级才需要照着敲。
+
+## 升级后自检
+
+\`\`\`bash
+# 账单已收金额与收款/退费明细是否对得上（只读，不改数据）
+php artisan invoices:check-paid-drift
+\`\`\`
+
+无输出漂移即可。若报出条数，**先别让前台动那些账单的收款**，把
+\`Drifting rows\` 与 \`Would DECREASE\` 两个数字反馈给开发再定处理方式。
 
 ## 包含的迁移文件
 

@@ -2173,6 +2173,20 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
     }
 
     $script:Step++
+    Write-Section "Install Chinese PDF font"
+    # dompdf 自带字体只有拉丁字形，不装中文字体的话所有打印单据（处方、收据、
+    # 报价单、技工单、病历、退费单）里的中文都是问号。命令自动找
+    # C:\Windows\Fonts\simhei.ttf，复制进项目并注册，最后渲染一份中文 PDF 回读校验。
+    # 失败不阻断安装：只影响打印，应用其余部分照常可用。
+    $fontExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'pdf:install-cjk-font', '--no-interaction')
+    if ($fontExit -eq 0) {
+        Write-Host "        Chinese PDF font ........ OK"
+    } else {
+        Write-Host "        Chinese PDF font ........ FAILED (printed documents will show '?')"
+        Write-Host "        Run manually: php artisan pdf:install-cjk-font"
+    }
+
+    $script:Step++
     Write-Section "Create storage link"
     $storageLinkExit = Invoke-NativeQuiet -FilePath $PHP_EXE -Arguments @($ARTISAN, 'storage:link', '--force', '--no-interaction')
     if ($storageLinkExit -ne 0 -and -not (Test-Path (Join-Path $PROJECT_DIR 'public\storage'))) {
