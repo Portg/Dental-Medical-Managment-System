@@ -156,6 +156,19 @@ if not exist "%PROJECT_DIR%\artisan" (
     echo         如果这是首次安装，请运行 setup.bat 或 install-win.bat
     goto :abort_no_rollback
 )
+
+REM 升级包必须解压在项目目录之外：本脚本是把包内文件 xcopy 到 PROJECT_DIR，
+REM 两者相同的话等于源和目标同一个位置 —— 备份的是已被覆盖的状态，
+REM 「保留 .env / storage\app」也失去意义，出了问题回滚不到升级前。
+if /i "%UPGRADE_PKG_DIR%"=="%PROJECT_DIR%" (
+    echo  [错误] 升级包不能解压到项目目录内
+    echo         升级包位置: %UPGRADE_PKG_DIR%
+    echo         项目目录:   %PROJECT_DIR%
+    echo.
+    echo         请把升级包解压到别处（例如 C:\Temp\upgrade），再从那里运行:
+    echo             upgrade-win.bat %INSTALL_DIR%
+    goto :abort_no_rollback
+)
 if not defined PHP (
     echo  [错误] 未找到 PHP，请确认 Laragon 已安装或 PHP 已加入 PATH
     goto :abort_no_rollback
