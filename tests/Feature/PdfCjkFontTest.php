@@ -55,6 +55,30 @@ class PdfCjkFontTest extends TestCase
     }
 
     /**
+     * 页眉 logo 必须走文件系统路径。
+     *
+     * asset() 生成的是 http://host/images/logo.png，而 PDF 在命令行进程里渲染，
+     * dompdf 取不到那个地址 —— 页眉会印一行 "Image not found or type unknown"，
+     * 单据直接没法给患者。public_path() 在 dompdf 的 chroot 之内，能直接读。
+     */
+    public function test_print_layout_loads_the_logo_from_disk_not_a_url(): void
+    {
+        $layout = File::get(resource_path('views/printer_pdf/layout.blade.php'));
+
+        $this->assertStringNotContainsString(
+            "asset('images/logo.png')",
+            $layout,
+            'asset() 生成 HTTP 地址，dompdf 在 CLI 下取不到，页眉会印成 Image not found'
+        );
+
+        $this->assertStringContainsString(
+            "public_path('images/logo.png')",
+            $layout,
+            '页眉 logo 应走 public_path()'
+        );
+    }
+
+    /**
      * .ttc 要被明确拒绝并给出可操作的替代，而不是让 dompdf 抛一个没头没尾的 fatal。
      *
      * Windows 的宋体只有 simsun.ttc；php-font-lib 认得这个头，但返回的
@@ -134,6 +158,29 @@ class PdfCjkFontTest extends TestCase
         $this->assertStringContainsString('退费单据', $text);
         $this->assertStringContainsString('粗体标题', $text, '粗体中文变问号：只注册了常规字面');
         $this->assertStringNotContainsString('??', $text);
+    }
+
+    /**
+     * 真渲染一份走共享布局的单据，确认 logo 读得到。
+     *
+     * 上一条只查 blade 源码里的写法，这条查实际产物 —— dompdf 取不到图时会把
+     * "Image not found or type unknown" 印进 PDF，回读文本就能抓到。
+     */
+    public function test_rendered_receipt_has_no_missing_image_placeholder(): void
+    {
+        if (!is_file(public_path('images/logo.png'))) {
+            $this->markTestSkipped('public/images/logo.png 不存在，跳过');
+        }
+
+        $html = '<html><body><img src="' . public_path('images/logo.png') . '" style="width:140px"></body></html>';
+
+        $text = $this->extractText(Pdf::loadHTML($html)->output());
+
+        if ($text === null) {
+            $this->markTestSkipped('本机没有 pdftotext，跳过文本回读');
+        }
+
+        $this->assertStringNotContainsString('Image not found', $text);
     }
 
     private function memoryLimitBytes(): ?int

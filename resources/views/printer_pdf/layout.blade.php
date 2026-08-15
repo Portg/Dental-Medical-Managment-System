@@ -43,9 +43,16 @@
 <div class="container" style="position: relative !important;top: -20px !important;">
     <header style="position: relative !important;top: -2px !important;">
 
-        <h2 style="position: relative !important;top: -2px !important;">
-            <img src="{{ asset('images/logo.png') }}" alt="Logo" class="logo"/>
-        </h2>
+        {{-- 走文件系统路径而不是 asset()：asset() 生成的是 http://host/... ，
+             而 PDF 是在命令行进程里渲染的，dompdf 取不到那个地址，页眉一直显示
+             "Image not found or type unknown"。public_path() 在 dompdf 的 chroot
+             （base_path）之内，可以直接读。文件缺失时整块略过，不要在单据上印一行报错。 --}}
+        @php($logoPath = public_path('images/logo.png'))
+        @if(is_file($logoPath))
+            <h2 style="position: relative !important;top: -2px !important;">
+                <img src="{{ $logoPath }}" alt="Logo" class="logo"/>
+            </h2>
+        @endif
         <br><br>
         <table width="100%">
             <tr>
