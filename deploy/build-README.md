@@ -67,6 +67,35 @@
 如果 PowerShell 探测失败，先确认 Windows 功能中的 .NET Framework 3.5.1 已开启；
 它是系统自带 PowerShell 2.0 的运行基础，不是本安装包新增的前置组件。
 
+### 打印单据的中文字体（装机后执行一次）
+
+dompdf 自带字体只有拉丁字形，不装中文字体的话，**所有打印单据里的中文都是问号**
+（处方、账单收据、报价单、化验单、病历、退费单）。装机后在应用目录执行一次：
+
+```bat
+php artisan pdf:install-cjk-font
+```
+
+它会自动找 `C:\Windows\Fonts\msyh.ttf`（微软雅黑，Win7 自带），复制进项目并注册，
+最后渲染一份中文 PDF 回读校验。注册信息写在 `storage/fonts/installed-fonts.json`，
+一次生效，全部打印页共用。
+
+几个要点：
+
+- **不能用 `simsun.ttc`（宋体）**。Windows 的宋体只有 `.ttc` 格式（TrueType
+  Collection），dompdf 依赖的 php-font-lib 读不了，命令会明确拒绝并提示替代。
+  Win7 上可用的纯 `.ttf` 有 `msyh.ttf`、`simhei.ttf`、`simkai.ttf`、`simfang.ttf`。
+
+- **注意 memory_limit**。中文字体的度量缓存会被整份解码进内存，字形越多越吃：
+  微软雅黑约 2.8 万字形、黑体约 2.2 万。命令跑完会报出峰值内存与余量，余量不足
+  20% 时会警告。真不够就换轻一些的字体：
+
+  ```bat
+  php artisan pdf:install-cjk-font "C:/Windows/Fonts/simhei.ttf" --force
+  ```
+
+- 换过字体或升级后想重装，加 `--force`。
+
 ### 构建机必须是 PHP 8.2.x
 
 `vendor/` 由构建机的 composer 产出。在 PHP 8.3+ 上构建可能拉进要求 8.3 的包，

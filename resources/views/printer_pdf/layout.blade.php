@@ -6,6 +6,16 @@
     <title>{{ config('app.name', 'Laravel') }}</title>
 
     <style type="text/css">
+        /*
+         * 中文字形。dompdf 自带的 Helvetica/Times 只有拉丁字符，不声明这一条的话
+         * 所有打印单据里的中文都是问号。'cjk' 由 `php artisan pdf:install-cjk-font`
+         * 注册（映射持久化在 storage/fonts/installed-fonts.json，全局生效）。
+         * 没装时会静默回退到 sans-serif —— 也就是回到问号，但不会报错。
+         */
+        body, table, td, th, p, div, span, h1, h2, h3 {
+            font-family: cjk, sans-serif;
+        }
+
         .container {
 
         }
@@ -19,7 +29,8 @@
 
         .header_text {
             font-size: 15px;
-            font-family: sans-serif !important;
+            /* 原为 sans-serif !important，会盖掉上面的 cjk，让页眉的诊所名/地址变问号 */
+            font-family: cjk, sans-serif !important;
         }
 
         .footer_text {
