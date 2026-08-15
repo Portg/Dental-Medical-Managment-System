@@ -119,9 +119,11 @@ class PdfCjkFontTest extends TestCase
             $this->markTestSkipped('本机没有可用的中文 TrueType 字体，跳过端到端渲染');
         }
 
-        // 字形数上万的中文字体，其 .ufm.json 度量缓存被整份 json_decode 成 PHP 数组，
-        // 单次渲染峰值可达 120MB 上下（Arial Unicode 实测 119MB）。128M 的默认上限
-        // 跑这条必炸，且炸在 phpunit 进程里会带走整个测试套件。
+        // 渲染峰值约为字体文件的 3.5 倍（dompdf 做子集时把整份字体读进来两遍）。
+        // 开发机上唯一可用的是 22MB 的 Arial Unicode，峰值 121MB，加上 phpunit
+        // 自身的开销，128M 必炸且会带走整个套件。生产用的黑体只有 9.7MB，
+        // 峰值约 78MB，默认上限完全够 —— 这条跳过反映的是开发机字体偏大，
+        // 不是生产环境的约束。
         if ($this->memoryLimitBytes() !== null && $this->memoryLimitBytes() < 384 * 1048576) {
             // 注意 `php artisan test` 另起子进程，不继承 -d，要直接调 phpunit
             $this->markTestSkipped(

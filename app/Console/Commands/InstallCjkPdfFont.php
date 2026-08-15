@@ -22,7 +22,7 @@ use Illuminate\Console\Command;
  *    php-font-lib 0.5.6 认得这个头，但返回的 TrueType\Collection 类没有
  *    saveAdobeFontMetrics() / getFontType() / close()，而 dompdf 的 registerFont()
  *    三个都要调 —— 直接 fatal。所以候选里只能放纯 .ttf。
- *    Windows 7 上微软雅黑正好是 msyh.ttf（Win8.1 之后才换成 .ttc），够用。
+ *    Windows 7 上可用的纯 .ttf 有 simhei（黑体）、simkai、simfang、msyh。
  *
  * 2. **字体文件必须在 chroot 内。** dompdf 2.x 给 file:// 协议挂了一条校验规则，
  *    要求文件位于 Options::chroot（默认 base_path()）之下，直接指
@@ -30,8 +30,14 @@ use Illuminate\Console\Command;
  *    固化了 chroot，事后 setChroot() 无效。所以这里先把字体复制进项目再注册。
  *
  * 3. **必须开子集化。** 中文字体动辄 10-25MB，enable_font_subsetting 关着时
- *    dompdf 会把整个字体嵌进 PDF，128M 的 memory_limit 直接爆。开了之后只嵌
- *    用到的字形，一页单据的 PDF 从 23MB 降到 16KB。开关在 AppServiceProvider。
+ *    dompdf 会把整份字体嵌进 PDF，产出几十 MB 的文件并撑爆内存。开了之后只嵌
+ *    用到的字形，一页单据从 23MB 降到 26KB。开关在 AppServiceProvider。
+ *
+ * 4. **内存开销跟字体文件大小走，约 3.5 倍。** Cpdf.php 做子集时 Font::load +
+ *    reduce 走两遍，再把 cmap/hmtx 全展开成 PHP 数组。实测：22.2MB 的
+ *    Arial Unicode 峰值 121MB，13.2MB 的子集 90MB，不装中文字体 44MB。
+ *    所以余量不够时该换小字体，而不是抬 memory_limit —— 抬上去只是把「选了个
+ *    覆盖全 Unicode 的字体」这件事掩盖过去。黑体 9.7MB 约 78MB，默认 128M 够用。
  */
 class InstallCjkPdfFont extends Command
 {
@@ -45,17 +51,22 @@ class InstallCjkPdfFont extends Command
     public const FAMILY = 'cjk';
 
     /**
-     * 各平台自带的候选，只列纯 .ttf。
+     * 各平台自带的候选，只列纯 .ttf，按文件体积从小到大排。
      *
-     * Windows 7 的 msyh.ttf 排第一：字形最适合屏幕与打印，且这台机器就是 Win7。
+     * 排序依据是内存：dompdf 嵌入字体时会把整份字体读进来做子集（Cpdf.php 里
+     * Font::load + reduce 走两遍，再把 cmap/hmtx 全展开成 PHP 数组），实测峰值
+     * 约为字体文件的 3.5 倍。黑体 9.7MB → 约 78MB，微软雅黑 15MB → 约 96MB，
+     * 默认 memory_limit 128M 下前者余量舒服得多。
+     *
+     * 黑体本来就是中文正式单据的常用字体，观感上不吃亏。
      * simsun.ttc 不在列 —— 见类注释第 1 条。
      */
     private const CANDIDATES = [
-        // Windows（7 上 msyh 是 .ttf；8.1+ 换成 .ttc，届时会落到 simhei）
-        'C:/Windows/Fonts/msyh.ttf',
+        // Windows（7 上 msyh 是 .ttf；8.1+ 换成 .ttc，届时自然落到黑体）
         'C:/Windows/Fonts/simhei.ttf',
         'C:/Windows/Fonts/simkai.ttf',
         'C:/Windows/Fonts/simfang.ttf',
+        'C:/Windows/Fonts/msyh.ttf',
         // macOS（开发机）
         '/Library/Fonts/Arial Unicode.ttf',
         '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
@@ -92,7 +103,7 @@ class InstallCjkPdfFont extends Command
             return self::FAILURE;
         }
 
-        return $this->verify() ? self::SUCCESS : self::FAILURE;
+        return $this->verify($staged) ? self::SUCCESS : self::FAILURE;
     }
 
     /**
@@ -194,7 +205,7 @@ class InstallCjkPdfFont extends Command
     /**
      * 注册到 dompdf。这一步会写 font_dir/installed-fonts.json，之后全局生效。
      *
-     * 四种字重都指向同一个文件。只注册 normal 的话，凡是 font-weight: bold 的
+     * 两个字重都指向同一个文件。只注册 normal 的话，凡是 font-weight: bold 的
      * 地方（单据标题、表头）dompdf 找不到对应字面，会回退到自带的 Helvetica ——
      * 于是同一页里正文中文正常、标题和表头是问号。Windows 自带的中文字体多数
      * 没有独立的粗体文件（msyhbd.ttf 是例外），让 dompdf 拿常规字面去合成即可。
@@ -213,9 +224,8 @@ class InstallCjkPdfFont extends Command
 
         $metrics = Pdf::loadHTML('<p>x</p>')->getDomPDF()->getFontMetrics();
 
-        // 只注册 normal 与 bold。斜体这些打印模板一处没用，而每多一个字面就多一份
-        // .ufm.json 度量缓存 —— 中文字体字形数以万计，那份 json 解码成 PHP 数组
-        // 后能吃掉几十 MB，装得越多渲染时越容易撞 memory_limit。
+        // 只注册 normal 与 bold。斜体这些打印模板一处没用，装了只是白占磁盘
+        // 和安装时间（每个字面都要把整份字体重新解析一遍）。
         $styles = [
             ['weight' => 'normal', 'style' => 'normal'],
             ['weight' => 'bold',   'style' => 'normal'],
@@ -243,7 +253,7 @@ class InstallCjkPdfFont extends Command
      * 不做这一步的话，registerFont() 返回 true 但 PDF 里仍是 `?` 也发现不了 ——
      * 这一整轮排查的教训就是「没验证过的成功不算成功」。
      */
-    private function verify(): bool
+    private function verify(string $fontPath): bool
     {
         // 粗体一并验证：只注册常规字面时，正文中文正常而标题/表头是问号，
         // 只探常规就会漏掉这种「一半对一半错」的状态。
@@ -269,7 +279,7 @@ class InstallCjkPdfFont extends Command
             $this->warn('That PDF is unexpectedly large - font subsetting may be disabled.');
         }
 
-        $this->reportMemoryHeadroom();
+        $this->reportMemoryHeadroom($fontPath);
 
         $this->info('Done. Chinese text will now render in printed PDFs.');
         $this->line('Registered as font-family: ' . self::FAMILY . ' (used by resources/views/printer_pdf/layout.blade.php)');
@@ -280,18 +290,25 @@ class InstallCjkPdfFont extends Command
     /**
      * 报出这次渲染的峰值内存与 memory_limit 的余量。
      *
-     * 中文字体的度量缓存（.ufm.json）会被整份 json_decode 成 PHP 数组，字形数上万
-     * 时能吃掉几十 MB，每个已注册字面各一份。字形越多的字体越吃内存：
-     * Arial Unicode 约 5 万字形要 ~122MB，msyh 约 2.8 万、simhei 约 2.2 万要少得多。
+     * dompdf 嵌入字体时要把整份字体读进来做子集（Cpdf.php 里 Font::load + reduce
+     * 走两遍，再把 cmap/hmtx 全展开成 PHP 数组），峰值实测约为字体文件的 3.5 倍，
+     * 与字形数无关、只跟文件大小走：
      *
-     * 余量不足时当场说清楚，别等某天前台点打印才蹦一个看不懂的 fatal。
+     *     Arial Unicode  22.2MB → 121MB     黑体   9.7MB → 约 78MB
+     *     21k 字形子集   13.2MB →  90MB     雅黑  15.0MB → 约 96MB
+     *
+     * 所以余量不够时正确的做法是换更小的字体，不是抬 memory_limit —— 抬上去只是
+     * 把「选了一个覆盖全 Unicode 的字体」这件事掩盖掉。
      */
-    private function reportMemoryHeadroom(): void
+    private function reportMemoryHeadroom(string $fontPath): void
     {
         $peak = memory_get_peak_usage(true);
         $limit = $this->memoryLimitBytes();
 
         $peakMb = (int) round($peak / 1048576);
+        $fontMb = round(filesize($fontPath) / 1048576, 1);
+
+        $this->line("Font size: {$fontMb} MB");
 
         if ($limit === null) {
             $this->line("Peak memory: {$peakMb} MB (memory_limit is unlimited)");
@@ -302,10 +319,37 @@ class InstallCjkPdfFont extends Command
         $limitMb = (int) round($limit / 1048576);
         $this->line("Peak memory: {$peakMb} MB of {$limitMb} MB memory_limit");
 
-        if ($peak > $limit * 0.8) {
-            $this->warn('Less than 20% headroom. Printing may fail with an out-of-memory error.');
-            $this->line('Either raise memory_limit in php.ini, or install a lighter font:');
-            $this->line('  php artisan pdf:install-cjk-font "C:/Windows/Fonts/simhei.ttf" --force');
+        if ($peak <= $limit * 0.8) {
+            return;
+        }
+
+        $this->warn('Less than 20% headroom - printing a busier page may run out of memory.');
+        $this->line('Peak memory tracks the FONT FILE SIZE (roughly 3.5x), so pick a smaller font');
+        $this->line('rather than raising memory_limit.');
+
+        $lighter = [];
+        foreach (self::CANDIDATES as $candidate) {
+            if (!is_file($candidate) || realpath($candidate) === realpath($fontPath)) {
+                continue;
+            }
+
+            $mb = round(filesize($candidate) / 1048576, 1);
+            if ($mb < $fontMb) {
+                $lighter[] = "  php artisan pdf:install-cjk-font \"{$candidate}\" --force   ({$mb} MB)";
+            }
+        }
+
+        if ($lighter === []) {
+            // 开发机常见：本地只有一个覆盖全 Unicode 的大字体。生产的
+            // Windows 自带黑体 9.7MB，峰值约 78MB，默认 128M 完全够。
+            $this->line('No lighter font found on this machine. On Windows try simhei.ttf (~9.7 MB).');
+
+            return;
+        }
+
+        $this->line('Lighter fonts available here:');
+        foreach ($lighter as $line) {
+            $this->line($line);
         }
     }
 

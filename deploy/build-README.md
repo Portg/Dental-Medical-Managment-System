@@ -76,7 +76,7 @@ dompdf 自带字体只有拉丁字形，不装中文字体的话，**所有打�
 php artisan pdf:install-cjk-font
 ```
 
-它会自动找 `C:\Windows\Fonts\msyh.ttf`（微软雅黑，Win7 自带），复制进项目并注册，
+它会自动找 `C:\Windows\Fonts\simhei.ttf`（黑体，Win7 自带），复制进项目并注册，
 最后渲染一份中文 PDF 回读校验。注册信息写在 `storage/fonts/installed-fonts.json`，
 一次生效，全部打印页共用。
 
@@ -84,15 +84,22 @@ php artisan pdf:install-cjk-font
 
 - **不能用 `simsun.ttc`（宋体）**。Windows 的宋体只有 `.ttc` 格式（TrueType
   Collection），dompdf 依赖的 php-font-lib 读不了，命令会明确拒绝并提示替代。
-  Win7 上可用的纯 `.ttf` 有 `msyh.ttf`、`simhei.ttf`、`simkai.ttf`、`simfang.ttf`。
+  Win7 上可用的纯 `.ttf` 有 `simhei.ttf`、`simkai.ttf`、`simfang.ttf`、`msyh.ttf`。
 
-- **注意 memory_limit**。中文字体的度量缓存会被整份解码进内存，字形越多越吃：
-  微软雅黑约 2.8 万字形、黑体约 2.2 万。命令跑完会报出峰值内存与余量，余量不足
-  20% 时会警告。真不够就换轻一些的字体：
+- **默认选黑体是为了省内存**。dompdf 嵌字体时要把整份字体读进来做子集，渲染峰值
+  约为**字体文件大小的 3.5 倍**（实测：22.2MB 的字体峰值 121MB，不装中文字体是
+  44MB）。黑体 9.7MB → 约 78MB，微软雅黑 15MB → 约 96MB，默认 `memory_limit`
+  128M 两者都够，黑体余量更舒服。黑体也是中文正式单据的常用字体，观感不吃亏。
+
+  想换字体直接传路径：
 
   ```bat
-  php artisan pdf:install-cjk-font "C:/Windows/Fonts/simhei.ttf" --force
+  php artisan pdf:install-cjk-font "C:/Windows/Fonts/msyh.ttf" --force
   ```
+
+  命令跑完会报出字体大小、渲染峰值与 `memory_limit` 余量。余量不足 20% 时它会
+  提示换更小的字体 —— **这种情况下正确做法是换字体，不是抬 `memory_limit`**：
+  抬上去只会把「选了个覆盖全 Unicode 的大字体」这件事掩盖过去。
 
 - 换过字体或升级后想重装，加 `--force`。
 
