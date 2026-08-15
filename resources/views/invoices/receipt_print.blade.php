@@ -17,7 +17,8 @@
             <tr>
                 <td align="left">
                     <span>{{ __('invoices.invoice_no') }}: {{ $invoice->invoice_no }} <br>
-                        {{ __('invoices.date') }}: {{ $invoice->created_at }}<br>
+                        {{-- 模型 cast 只作用于 toArray()，直接 echo Carbon 会带出秒 --}}
+                        {{ __('invoices.date') }}: {{ $invoice->created_at?->format('Y-m-d H:i') }}<br>
                     </span>
 
                 </td>
@@ -80,8 +81,9 @@
                 @php $paid_amount=0; @endphp
                 @foreach($payments as $row)
                     <tr>
-                        <td>{{ $row->payment_date }}</td>
-                        <td>{{ $row->payment_method }}</td>
+                        <td>{{ $row->payment_date ? \Illuminate\Support\Carbon::parse($row->payment_date)->format('Y-m-d') : '-' }}</td>
+                        {{-- 库里存的是 Cash / Self Account 这类英文枚举值，直出会让收据上印一行英文 --}}
+                        <td>{{ \App\Services\InvoicePaymentService::methodLabel($row->payment_method) }}</td>
                         <td class="text-alignment">{{ number_format($row->amount) }}</td>
                     </tr>
                     @php /** @var TYPE_NAME $paid_amount */

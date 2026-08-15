@@ -40,11 +40,12 @@ class QuotationItemController extends Controller
                 ->addColumn('qty', function ($row) {
                     return number_format($row->qty);
                 })
+                // 金额列叫 amount，存的是单价（见 QuotationItemService::create）
                 ->addColumn('price', function ($row) {
-                    return number_format($row->price);
+                    return number_format($row->amount);
                 })
                 ->addColumn('total_amount', function ($row) {
-                    return number_format($row->qty * $row->price);
+                    return number_format($row->qty * $row->amount);
                 })
                 ->addColumn('added_by', function ($row) {
                     return $row->othername;

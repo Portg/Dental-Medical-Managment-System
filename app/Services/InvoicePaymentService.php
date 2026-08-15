@@ -33,6 +33,27 @@ class InvoicePaymentService
     ];
 
     /**
+     * 收款方式的可读名称。
+     *
+     * 库里存的是 'Cash' / 'Self Account' 这类英文枚举值，直接输出到单据上就是
+     * 一行英文（收据打印页此前就是这样）。映射本来就在 PAYMENT_METHODS 里，
+     * 这里包一层，省得每个视图各自写一份数组。
+     *
+     * 认不出的值原样返回：服务商回执或历史数据可能带来枚举外的字符串，
+     * 显示原值也好过显示空白。
+     */
+    public static function methodLabel(?string $method): string
+    {
+        if ($method === null || $method === '') {
+            return '-';
+        }
+
+        $key = self::PAYMENT_METHODS[$method]['label'] ?? null;
+
+        return $key === null ? $method : __($key);
+    }
+
+    /**
      * Get payments for an invoice.
      */
     public function getPaymentsByInvoice(int $invoiceId): Collection

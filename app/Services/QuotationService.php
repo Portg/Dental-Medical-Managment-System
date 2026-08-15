@@ -58,7 +58,13 @@ class QuotationService
         foreach ($items as $value) {
             QuotationItem::create([
                 'qty' => $value['qty'],
-                'amount' => $value['amount'],
+                // 两个调用方用的键名不一样，都要认：
+                //   API v1 按契约提交 items.*.amount（见 Api\V1\QuotationController 的校验）
+                //   Web 表单提交 addmore[N][price]（单价）—— 页面上那个 #total_amount
+                //   是只读、无 name 的展示字段，从不提交
+                // 原先只取 $value['amount']，Web 侧就是个不存在的键，
+                // 新建报价单必然抛「Column 'amount' cannot be null」，从来没能用过。
+                'amount' => $value['amount'] ?? $value['price'],
                 'quotation_id' => $quotation->id,
                 'medical_service_id' => $value['medical_service_id'],
                 '_who_added' => $userId,
@@ -93,11 +99,11 @@ class QuotationService
      */
     public function getQuotationPrintData(int $quotationId): array
     {
-        $patient = DB::table('quotations')
-            ->leftJoin('patients', 'patients.id', 'quotations.patient_id')
-            ->where('quotations.id', $quotationId)
-            ->select('patients.*')
-            ->first();
+        // 取模型而不是 DB::table 的 stdClass：打印页用的是 $patient->full_name，
+        // 那是 Patient 上的访问器（按语言拼 surname + othername），裸查询取不到 ——
+        // 报价单上的患者姓名因此一直是空的（PHP 只报 Undefined property 警告，
+        // 页面照样出，所以一直没人发现）。
+        $patient = Quotation::where('id', $quotationId)->first()?->patient;
 
         $quotation = Quotation::where('id', $quotationId)->first();
 

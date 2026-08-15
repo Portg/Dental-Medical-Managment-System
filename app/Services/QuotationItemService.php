@@ -31,9 +31,12 @@ class QuotationItemService
     {
         return QuotationItem::create([
             'qty' => $input['qty'],
-            'price' => $input['price'],
+            // 列名叫 amount，存的其实是**单价**：表单提交的是 addmore[N][price]
+            // （单价），行小计由 qty * 单价算出。原先这里写 'price'，而
+            // quotation_items 根本没有这一列、$fillable 里也没有 —— 批量赋值保护
+            // 把它静默丢掉，于是每条报价项的金额都是空的。
+            'amount' => $input['price'],
             'medical_service_id' => $input['medical_service_id'],
-            'tooth_no' => $input['tooth_no'] ?? null,
             'quotation_id' => $input['quotation_id'],
             '_who_added' => Auth::User()->id,
         ]);
@@ -58,9 +61,9 @@ class QuotationItemService
     {
         return (bool) QuotationItem::where('id', $id)->update([
             'qty' => $input['qty'],
-            'price' => $input['price'],
+            // 同 create()：列名 amount，存的是单价
+            'amount' => $input['price'],
             'medical_service_id' => $input['medical_service_id'],
-            'tooth_no' => $input['tooth_no'] ?? null,
             '_who_added' => Auth::User()->id,
         ]);
     }

@@ -17,6 +17,11 @@ class Quotation extends Model
         return $this->hasMany(QuotationItem::class, 'quotation_id');
     }
 
+    public function patient()
+    {
+        return $this->belongsTo(Patient::class, 'patient_id');
+    }
+
     public static function QuotationNo()
     {
         $latest = self::latest()->first();

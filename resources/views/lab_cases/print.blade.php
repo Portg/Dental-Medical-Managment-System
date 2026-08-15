@@ -42,7 +42,8 @@
                     @endif
                 </td>
                 <td class="info-label">{{ __('lab_cases.doctor') }}:</td>
-                <td>{{ $labCase->doctor->name ?? '-' }}</td>
+                {{-- User 没有 name 属性，姓名是 surname + othername；原写法让每张技工单的医生栏恒为 '-' --}}
+                <td>{{ $labCase->doctor ? $labCase->doctor->surname . $labCase->doctor->othername : '-' }}</td>
             </tr>
         </table>
 
@@ -68,7 +69,7 @@
         <table width="100%" class="info-table">
             <tr>
                 <td class="info-label">{{ __('lab_cases.prosthesis_type') }}:</td>
-                <td>{{ __('lab_cases.type_' . $labCase->prosthesis_type) }}</td>
+                <td>{{ $labCase->prosthesis_type ? __('lab_cases.type_' . $labCase->prosthesis_type) : '-' }}</td>
                 <td class="info-label">{{ __('lab_cases.material') }}:</td>
                 <td>{{ $labCase->material ? __('lab_cases.material_' . $labCase->material) : '-' }}</td>
             </tr>
@@ -107,15 +108,16 @@
         {{-- Dates & Fees --}}
         <div class="section-title">{{ __('lab_cases.sent_date') }} / {{ __('lab_cases.lab_fee') }}</div>
         <table width="100%" class="info-table">
+            {{-- 模型的 date:Y-m-d cast 只作用于 toArray()，直接 echo Carbon 会带出 00:00:00 --}}
             <tr>
                 <td class="info-label">{{ __('lab_cases.sent_date') }}:</td>
-                <td>{{ $labCase->sent_date ?? '-' }}</td>
+                <td>{{ $labCase->sent_date ? $labCase->sent_date->format('Y-m-d') : '-' }}</td>
                 <td class="info-label">{{ __('lab_cases.expected_return_date') }}:</td>
-                <td>{{ $labCase->expected_return_date ?? '-' }}</td>
+                <td>{{ $labCase->expected_return_date ? $labCase->expected_return_date->format('Y-m-d') : '-' }}</td>
             </tr>
             <tr>
                 <td class="info-label">{{ __('lab_cases.actual_return_date') }}:</td>
-                <td>{{ $labCase->actual_return_date ?? '-' }}</td>
+                <td>{{ $labCase->actual_return_date ? $labCase->actual_return_date->format('Y-m-d') : '-' }}</td>
                 <td></td>
                 <td></td>
             </tr>

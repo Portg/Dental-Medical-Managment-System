@@ -40,16 +40,20 @@
             </tr>
             </thead>
             <tbody>
+            {{-- quotation_items 的金额列叫 amount，存的是单价；行小计 = qty * amount。
+                 原先读 $row->price（该列不存在）导致打印出来价格与总额全是 0。 --}}
             @php $due_amount=0; @endphp
             @foreach($quotation_items as $row)
                 <tr>
-                    <td>{{ $row->name." ".$row->tooth_no }}</td>
+                    {{-- quotation_items 上没有 tooth_no 列（模板是照着一个比实际更丰富的
+                         模型写的），直接取会抛 Undefined property。留着拼接以便将来补列。 --}}
+                    <td>{{ trim($row->name . ' ' . ($row->tooth_no ?? '')) }}</td>
                     <td class="text-alignment">{{ number_format($row->qty) }}</td>
-                    <td class="text-alignment">{{ number_format($row->price) }}</td>
-                    <td class="text-alignment">{{ number_format($row->qty* $row->price) }}</td>
+                    <td class="text-alignment">{{ number_format($row->amount) }}</td>
+                    <td class="text-alignment">{{ number_format($row->qty * $row->amount) }}</td>
                 </tr>
                 @php /** @var TYPE_NAME $due_amount */
-                       $due_amount+=$row->qty* $row->price; @endphp
+                       $due_amount += $row->qty * $row->amount; @endphp
             @endforeach
 
             </tbody>
