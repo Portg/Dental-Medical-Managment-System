@@ -73,12 +73,10 @@ class MedicalCardService
     public function getMedicalCardDetail(int $id): array
     {
         $images = MedicalCardItem::where('medical_card_id', $id)->get();
-        $patient = DB::table('medical_cards')
-            ->join('patients', 'patients.id', 'medical_cards.patient_id')
-            ->whereNull('medical_cards.deleted_at')
-            ->where('medical_cards.id', $id)
-            ->select('patients.*')
-            ->first();
+        // 用模型而不是 DB::table 的 stdClass：视图用的是 $patient->full_name，
+        // 那是 Patient 上的访问器（按语言拼 surname + othername），裸查询取不到 ——
+        // 患者姓名会是空的，APP_DEBUG 下还会因 Undefined property 直接 500。
+        $patient = MedicalCard::find($id)?->patient;
 
         return compact('images', 'patient');
     }

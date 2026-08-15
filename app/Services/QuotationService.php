@@ -79,13 +79,12 @@ class QuotationService
      */
     public function getQuotationShowData(int $quotationId): array
     {
-        $patient = DB::table('quotations')
-            ->join('patients', 'patients.id', 'quotations.patient_id')
-            ->where('quotations.id', $quotationId)
-            ->select('patients.*')
-            ->first();
-
         $quotation = Quotation::where('id', $quotationId)->first();
+
+        // 与 getQuotationPrintData() 同一个理由：详情页用 $patient->full_name，
+        // 那是 Patient 上的访问器，DB::table 的 stdClass 上没有。
+        // 之前这里返回 stdClass，报价单详情页在 APP_DEBUG 下直接 500。
+        $patient = $quotation?->patient;
 
         return [
             'patient' => $patient,

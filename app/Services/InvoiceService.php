@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Patient;
+use App\Appointment;
 use App\Http\Helper\NameHelper;
 use App\Invoice;
 use App\InvoiceItem;
@@ -174,14 +176,13 @@ class InvoiceService
         $invoice = Invoice::findOrFail($invoiceId);
 
         // Support both appointment-linked and direct billing invoices
+        // 用模型而不是 DB::table 的 stdClass：视图用的是 $patient->full_name，
+        // 那是 Patient 上的访问器（按语言拼 surname + othername），裸查询取不到 ——
+        // 患者姓名会是空的，APP_DEBUG 下还会因 Undefined property 直接 500。
         if ($invoice->patient_id) {
-            $patient = DB::table('patients')->where('id', $invoice->patient_id)->first();
+            $patient = Patient::find($invoice->patient_id);
         } elseif ($invoice->appointment_id) {
-            $patient = DB::table('patients')
-                ->join('appointments', 'appointments.patient_id', 'patients.id')
-                ->where('appointments.id', $invoice->appointment_id)
-                ->select('patients.*')
-                ->first();
+            $patient = Appointment::find($invoice->appointment_id)?->patient;
         } else {
             $patient = null;
         }

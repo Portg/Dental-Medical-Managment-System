@@ -197,4 +197,66 @@ class PrintDocumentFieldsTest extends TestCase
             '直接 echo Carbon 会带出秒'
         );
     }
+
+    /**
+     * 四个 Service 都用 DB::table 取患者，返回 stdClass；而对应视图用的是
+     * $patient->full_name —— Patient 上的访问器，裸查询取不到。
+     *
+     * 后果分两种：打印单据上患者姓名是空的；报价单详情页在 APP_DEBUG 下
+     * 因 Undefined property 直接 500（浏览器里打不开，tinker 里只是个警告，
+     * 所以一直没被发现）。
+     */
+    public function test_services_return_patient_models_so_the_full_name_accessor_works(): void
+    {
+        $service = MedicalService::create([
+            'name' => '洁牙', 'price' => 200, '_who_added' => $this->user->id,
+        ]);
+
+        $quotation = app(QuotationService::class)->createQuotation(
+            $this->patient->id,
+            [['medical_service_id' => $service->id, 'qty' => 1, 'price' => 200]],
+            $this->user->id
+        );
+
+        $appointment = \App\Appointment::create([
+            'appointment_no'    => 'PD-APT-1',
+            'patient_id'        => $this->patient->id,
+            'doctor_id'         => $this->user->id,
+            'branch_id'         => $this->branch->id,
+            'start_date'        => now()->toDateString(),
+            'end_date'          => now()->toDateString(),
+            'start_time'        => '10:00 AM',
+            'visit_information' => 'appointment',
+            '_who_added'        => $this->user->id,
+            'sort_by'           => now()->toDateString() . ' 10:00:00',
+        ]);
+
+        $invoice = \App\Invoice::create([
+            'invoice_no'   => 'PD-INV-1',
+            'invoice_date' => now()->toDateString(),
+            'total_amount' => 200,
+            'paid_amount'  => 0,
+            'patient_id'   => $this->patient->id,
+            'branch_id'    => $this->branch->id,
+            '_who_added'   => $this->user->id,
+        ]);
+
+        $cases = [
+            '报价单详情' => app(QuotationService::class)->getQuotationShowData($quotation->id)['patient'],
+            '报价单打印' => app(QuotationService::class)->getQuotationPrintData($quotation->id)['patient'],
+            '处方打印'   => app(\App\Services\PrescriptionService::class)
+                              ->getPrintDataByAppointment($appointment->id)['patient'],
+            '账单详情'   => app(\App\Services\InvoiceService::class)
+                              ->getInvoiceDetail($invoice->id)['patient'],
+        ];
+
+        foreach ($cases as $label => $patient) {
+            $this->assertInstanceOf(
+                Patient::class,
+                $patient,
+                "{$label} 返回的必须是模型，stdClass 上没有 full_name 访问器"
+            );
+            $this->assertSame('陈晓雯', $patient->full_name, "{$label} 取不到患者姓名");
+        }
+    }
 }

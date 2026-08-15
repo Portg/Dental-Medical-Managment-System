@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Appointment;
 use App\Invoice;
 use App\MedicalService;
 use App\Prescription;
@@ -308,11 +309,10 @@ class PrescriptionService
      */
     public function getPrintDataByAppointment(int $appointmentId): array
     {
-        $patient = DB::table('appointments')
-            ->leftJoin('patients', 'patients.id', 'appointments.patient_id')
-            ->where('appointments.id', $appointmentId)
-            ->select('patients.*')
-            ->first();
+        // 用模型而不是 DB::table 的 stdClass：视图用的是 $patient->full_name，
+        // 那是 Patient 上的访问器（按语言拼 surname + othername），裸查询取不到 ——
+        // 患者姓名会是空的，APP_DEBUG 下还会因 Undefined property 直接 500。
+        $patient = Appointment::find($appointmentId)?->patient;
 
         $prescriptions = Prescription::where('appointment_id', $appointmentId)->get();
 
