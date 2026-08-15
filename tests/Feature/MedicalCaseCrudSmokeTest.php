@@ -104,4 +104,48 @@ class MedicalCaseCrudSmokeTest extends TestCase
             'is_draft'   => 1,
         ]);
     }
+
+    /**
+     * 病历打印取数不能炸。
+     *
+     * getPrintData() 原先按 VitalSign::where('medical_case_id', ...) 查最近一次
+     * 体征，而 vital_signs 表根本没有这一列（体征是按患者/预约记录的）——
+     * SQL 直接抛 Unknown column，也就是说 /print-medical-case/{id} 从来没有
+     * 成功过一次。页面上看不出来，只有真去打印才发现。
+     */
+    /** @test */
+    public function print_data_can_be_assembled_for_a_medical_case(): void
+    {
+        $patient = Patient::create([
+            'patient_no' => 'MC-PRINT-001',
+            'surname'    => '测试',
+            'othername'  => '患者',
+            'gender'     => 'Male',
+            'phone_no'   => '13800138001',
+            '_who_added' => $this->admin->id,
+        ]);
+
+        $case = \App\MedicalCase::create([
+            'case_no'    => 'MC-PRINT-0001',
+            'patient_id' => $patient->id,
+            'doctor_id'  => $this->admin->id,
+            'case_date'  => now()->toDateString(),
+            '_who_added' => $this->admin->id,
+        ]);
+
+        // 该患者的体征按 patient_id 记录，打印时应取到它
+        \App\VitalSign::create([
+            'patient_id'  => $patient->id,
+            'temperature' => 36.7,
+            'heart_rate'  => 72,
+            'recorded_at' => now(),
+            '_who_added'  => $this->admin->id,
+        ]);
+
+        $data = app(\App\Services\MedicalCaseService::class)->getPrintData($case->id);
+
+        $this->assertSame($case->id, $data['case']->id);
+        $this->assertNotNull($data['latestVitalSign'], '按 patient_id 应能取到该患者的体征');
+        $this->assertEquals(72, $data['latestVitalSign']->heart_rate);
+    }
 }

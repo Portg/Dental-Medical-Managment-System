@@ -432,8 +432,13 @@ class MedicalCaseService
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $latestVitalSign = VitalSign::where('medical_case_id', $id)
-            ->whereNull('deleted_at')
+        // vital_signs 上没有 medical_case_id 这一列 —— 体征是按患者/预约记录的
+        // （见 VitalSignController::store），而病历表本身也只有 patient_id。
+        // 原先按 medical_case_id 查，SQL 直接抛 Unknown column，
+        // 也就是说 /print-medical-case/{id} 从来没有成功过一次。
+        // 取该患者最近一次体征，与 VitalSignService::getByPatient() 的口径一致。
+        // SoftDeletes 已挂在模型上，不必再手写 whereNull('deleted_at')。
+        $latestVitalSign = VitalSign::where('patient_id', $case->patient_id)
             ->orderBy('recorded_at', 'desc')
             ->first();
 
