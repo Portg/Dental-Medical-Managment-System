@@ -52,7 +52,16 @@ class InvoiceItemController extends Controller
                     return number_format($row->price * $row->qty);
                 })
                 ->addColumn('procedure_doctor', function ($row) {
-                    return $row->procedure_doctor->surname;
+                    // invoice_items.doctor_id 可空（建表就是 nullable），无条件取 ->surname
+                    // 会抛「Attempt to read property "surname" on null」——DataTables 把异常
+                    // 包进 JSON 的 error 字段返回，前端不报错、表格永远停在「处理中…」。
+                    // 一条明细没填诊疗医生，整张账单明细表就全空。
+                    return $row->procedure_doctor
+                        ? \App\Http\Helper\NameHelper::join(
+                            $row->procedure_doctor->surname,
+                            $row->procedure_doctor->othername
+                          )
+                        : '-';
                 })
                 ->addColumn('editBtn', function ($row) {
                     if (!Gate::allows('edit-invoices')) {

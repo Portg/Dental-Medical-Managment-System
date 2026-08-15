@@ -51,7 +51,10 @@ class InvoicePaymentController extends Controller
                     return number_format($row->amount);
                 })
                 ->addColumn('added_by', function ($row) {
-                    return \App\Http\Helper\NameHelper::join($row->addedBy->surname, $row->addedBy->othername);
+                    // 同 InvoiceItemController：录入人可能已被删除，null 会让整张收据表卡住
+                    return $row->addedBy
+                        ? \App\Http\Helper\NameHelper::join($row->addedBy->surname, $row->addedBy->othername)
+                        : '-';
                 })
                 ->addColumn('editBtn', function ($row) {
                     $btn = '<a href="#" onclick="edit_Payment(' . $row->id . ')" class="btn btn-primary">' . __('common.edit') . '</a>';

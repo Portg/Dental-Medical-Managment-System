@@ -316,12 +316,11 @@ class PrescriptionService
 
         $prescriptions = Prescription::where('appointment_id', $appointmentId)->get();
 
-        $prescribed_by = DB::table('prescriptions')
-            ->join('users', 'users.id', 'prescriptions._who_added')
-            ->whereNull('prescriptions.deleted_at')
-            ->where('prescriptions.appointment_id', $appointmentId)
-            ->select('users.*')
-            ->first();
+        // 同 $patient：视图用 $prescribed_by->full_name，那是 User 上的访问器
+        // （见 User::getFullNameAttribute），DB::table 的 stdClass 上没有 ——
+        // 处方笺的「开方医生」栏因此一直是空的。
+        $prescribed_by = Prescription::where('appointment_id', $appointmentId)
+            ->first()?->addedBy;
 
         return compact('patient', 'prescriptions', 'prescribed_by');
     }

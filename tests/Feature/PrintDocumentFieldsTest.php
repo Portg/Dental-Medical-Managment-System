@@ -259,4 +259,58 @@ class PrintDocumentFieldsTest extends TestCase
             $this->assertSame('陈晓雯', $patient->full_name, "{$label} 取不到患者姓名");
         }
     }
+
+    /**
+     * 账单明细的「诊疗医生」列。
+     *
+     * invoice_items.doctor_id 建表就是 nullable，而列渲染无条件取 ->surname，
+     * 一条明细没填医生就抛「Attempt to read property "surname" on null」。
+     * DataTables 把异常包进 JSON 的 error 字段返回，前端不报错、表格永远停在
+     * 「处理中…」—— 整张账单的明细一条都看不到。收据表的「录入人」同理。
+     */
+    public function test_invoice_item_datatable_survives_a_null_doctor(): void
+    {
+        $invoice = \App\Invoice::create([
+            'invoice_no'   => 'PD-INV-2',
+            'invoice_date' => now()->toDateString(),
+            'total_amount' => 2800,
+            'paid_amount'  => 0,
+            'patient_id'   => $this->patient->id,
+            'branch_id'    => $this->branch->id,
+            '_who_added'   => $this->user->id,
+        ]);
+        $service = MedicalService::create([
+            'name' => '烤瓷冠修复', 'price' => 2800, '_who_added' => $this->user->id,
+        ]);
+        \App\InvoiceItem::create([
+            'invoice_id'         => $invoice->id,
+            'medical_service_id' => $service->id,
+            'qty'                => 1,
+            'price'              => 2800,
+            'doctor_id'          => null,   // 关键：没填诊疗医生
+            '_who_added'         => $this->user->id,
+        ]);
+
+        // index 需要 view-invoices
+        $perm = \App\Permission::firstOrCreate(
+            ['slug' => 'view-invoices'],
+            ['name' => '查看账单', 'module' => '账单管理']
+        );
+        \App\RolePermission::firstOrCreate([
+            'role_id'       => $this->user->role_id,
+            'permission_id' => $perm->id,
+        ]);
+        \Illuminate\Support\Facades\Cache::flush();
+
+        // 控制器用 $request->ajax() 分流，那要 X-Requested-With 头；getJson 只发 Accept
+        $payload = $this->actingAs($this->user)
+            ->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+            ->getJson('/invoice-items/' . $invoice->id . '?draw=1')
+            ->assertOk()
+            ->json();
+
+        $this->assertArrayNotHasKey('error', $payload, 'DataTables 把异常塞进 error 字段，表格会卡在「处理中…」');
+        $this->assertCount(1, $payload['data']);
+        $this->assertSame('-', $payload['data'][0]['procedure_doctor']);
+    }
 }
