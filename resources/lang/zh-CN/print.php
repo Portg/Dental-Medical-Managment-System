@@ -25,4 +25,6 @@ return [
     'payment_info_message' => '如需更多付款方式信息，请联系我们。',
     'thank_you_business' => '感谢您的惠顾。',
     'printed_at' => '打印时间',
+    'received_by' => '领款人签字',
+    'issued_by' => '经办人签字',
 ];

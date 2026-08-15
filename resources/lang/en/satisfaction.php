@@ -118,4 +118,8 @@ return [
     'fill_link'        => 'Survey link',
     'link_expires_at'  => 'Valid until :time',
     'no_link_yet'      => 'No survey link generated yet',
+    'dispatch_status'  => 'Dispatch status',
+    'not_dispatched'   => 'Not dispatched (link generated, not yet sent to the patient)',
+    'dispatched_at'    => 'Dispatched at :time',
+    'marked_dispatched' => 'Dispatch time recorded',
 ];

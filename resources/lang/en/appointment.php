@@ -154,4 +154,10 @@ return [
     'no_schedule_for_booking'  => 'This doctor has no schedule for the selected date. Booking is not allowed.',
     'time_outside_shift'       => 'The selected time is outside this doctor\'s scheduled working hours.',
     'shift_max_patients_exceeded' => 'This time slot is fully booked. Please select another time.',
+
+    // 代码里在用、en 侧此前缺失，切英文会直出 appointment.xxx 原始 key
+    'edit_appointment'     => 'Edit Appointment',
+    'appointment_calendar' => 'Appointment Calendar',
+    'today'                => 'Today',
+    'reminder_sent'        => 'Reminder sent',
 ];

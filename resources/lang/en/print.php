@@ -25,4 +25,6 @@ return [
     'payment_info_message' => 'Please contact us for more information about payment options.',
     'thank_you_business' => 'Thank you for your business.',
     'printed_at' => 'Printed at',
+    'received_by' => 'Received by',
+    'issued_by' => 'Issued by',
 ];

@@ -17,7 +17,7 @@ class SatisfactionSurveyController extends Controller
         // 但「看」和「改」必须分开：view-patients 授予了全部业务角色，
         // 挂在整个控制器上等于让任何能看患者的人都能批量生成问卷、重置患者填写链接。
         $this->middleware('can:view-surveys');
-        $this->middleware('can:manage-surveys')->only(['create', 'store', 'sendBatch', 'regenerateLink']);
+        $this->middleware('can:manage-surveys')->only(['store', 'sendBatch', 'regenerateLink']);
     }
 
     /**
@@ -83,14 +83,6 @@ class SatisfactionSurveyController extends Controller
     }
 
     /**
-     * Show the create survey form.
-     */
-    public function create()
-    {
-        return view('satisfaction_surveys.create');
-    }
-
-    /**
      * Send a survey for an appointment.
      */
     public function store(Request $request)
@@ -138,6 +130,23 @@ class SatisfactionSurveyController extends Controller
             'message'    => __('satisfaction.link_regenerated'),
             'fill_url'   => $survey->fill_url,
             'expires_at' => optional($survey->expires_at)->format('Y-m-d H:i'),
+        ]);
+    }
+
+    /**
+     * 标记填写链接已交给患者。
+     *
+     * 由详情页「复制链接」成功后调用。建问卷时不写 sent_at —— 那时只是生成了
+     * 链接，没人把它发出去；只有这一步才是这套人工流程里真实发生的派发动作。
+     */
+    public function markDispatched($id)
+    {
+        $survey = $this->service->markDispatched((int) $id);
+
+        return response()->json([
+            'status'  => 1,
+            'message' => __('satisfaction.marked_dispatched'),
+            'sent_at' => optional($survey->sent_at)->format('Y-m-d H:i'),
         ]);
     }
 

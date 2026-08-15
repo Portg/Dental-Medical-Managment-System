@@ -98,7 +98,11 @@ class SatisfactionSurveyService
             'branch_id'      => $appointment->branch_id ?? optional(Auth::user())->branch_id,
             'survey_channel' => $channel,
             'status'         => SatisfactionSurvey::STATUS_PENDING,
-            'sent_at'        => now(),
+            // 建问卷只是生成了链接，没有任何发送动作发生 —— 短信通道未接入，
+            // 链接要靠前台在详情页复制后人工发给患者。这里写 now() 等于让
+            // sent_at 撒谎，「已派发/未派发」就再也分不出来了。真正的派发时间
+            // 由 markDispatched() 在前台复制链接时写入。
+            'sent_at'        => null,
             'expires_at'     => now()->addDays(SatisfactionSurvey::DEFAULT_VALID_DAYS),
         ]);
     }
@@ -121,13 +125,33 @@ class SatisfactionSurveyService
             ->update([
                 'token'      => SatisfactionSurvey::generateToken(),
                 'status'     => SatisfactionSurvey::STATUS_PENDING,
-                'sent_at'    => now(),
+                // 换了新链接，旧链接立刻失效 —— 在前台把新链接发出去之前，
+                // 这份问卷的状态就是「未派发」，所以要清掉而不是刷成 now()。
+                'sent_at'    => null,
                 'expires_at' => now()->addDays(SatisfactionSurvey::DEFAULT_VALID_DAYS),
             ]);
 
         if ($affected === 0) {
             throw new \RuntimeException(__('satisfaction.already_completed'));
         }
+
+        return $survey->refresh();
+    }
+
+    /**
+     * 标记填写链接已交给患者。
+     *
+     * 由详情页的「复制链接」触发：复制成功就是这套人工流程里唯一能观测到的
+     * 派发动作。重复复制按最后一次算，便于回答「这条什么时候发出去的」。
+     * 已填写完成的问卷不再改 sent_at，避免覆盖当初的派发记录。
+     */
+    public function markDispatched(int $id): SatisfactionSurvey
+    {
+        $survey = SatisfactionSurvey::findOrFail($id);
+
+        SatisfactionSurvey::where('id', $survey->id)
+            ->where('status', '<>', SatisfactionSurvey::STATUS_COMPLETED)
+            ->update(['sent_at' => now()]);
 
         return $survey->refresh();
     }

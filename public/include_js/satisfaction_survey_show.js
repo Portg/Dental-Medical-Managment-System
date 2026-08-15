@@ -28,7 +28,38 @@ $(document).ready(function () {
         });
     }
 
+    /**
+     * 复制成功即视为「链接已交给患者」。
+     *
+     * 建问卷时不写 sent_at —— 那时只是生成了链接，没人把它发出去。复制是这套
+     * 人工流程里唯一能观测到的派发动作，所以在这里回填，「已派发/未派发」才有意义。
+     * 回填失败不影响复制本身：链接已经在剪贴板里了，没必要弹错吓人，
+     * 只把状态留在「未派发」，前台下次复制会再试一次。
+     */
+    function markDispatched($btn) {
+        var url = $btn.data('url');
+        if (!url) {
+            return;
+        }
+
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: { _token: $('meta[name="csrf-token"]').attr('content') },
+            dataType: 'json'
+        }).done(function (res) {
+            if (res && res.status === 1 && res.sent_at) {
+                $('#dispatchStatus').html(
+                    $('<span class="text-success">').text(
+                        LanguageManager.trans('satisfaction.dispatched_at', { time: res.sent_at })
+                    )
+                );
+            }
+        });
+    }
+
     $('#copyLinkBtn').on('click', function () {
+        var $btn = $(this);
         var text = $url.val();
         if (!text) {
             toastr.warning(LanguageManager.trans('satisfaction.no_link_yet'));
@@ -37,6 +68,7 @@ $(document).ready(function () {
 
         copyToClipboard(text).then(function () {
             toastr.success(LanguageManager.trans('satisfaction.link_copied'));
+            markDispatched($btn);
         }).catch(function () {
             toastr.warning(LanguageManager.trans('satisfaction.copy_failed'));
         });
@@ -59,6 +91,12 @@ $(document).ready(function () {
                         LanguageManager.trans('satisfaction.link_expires_at', { time: res.expires_at })
                     );
                 }
+                // 换了新链接，旧的立刻失效——在把新链接发出去之前是「未派发」
+                $('#dispatchStatus').html(
+                    $('<span class="text-warning">').text(
+                        LanguageManager.trans('satisfaction.not_dispatched')
+                    )
+                );
                 toastr.success(res.message);
             } else {
                 toastr.error((res && res.message) || LanguageManager.trans('satisfaction.network_error'));

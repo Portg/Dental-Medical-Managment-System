@@ -155,7 +155,8 @@
                                                value="{{ $survey->fill_url ?? '' }}"
                                                placeholder="{{ __('satisfaction.no_link_yet') }}">
                                         <span class="input-group-btn">
-                                            <button type="button" class="btn btn-default" id="copyLinkBtn">
+                                            <button type="button" class="btn btn-default" id="copyLinkBtn"
+                                                    data-url="{{ url('satisfaction-surveys/' . $survey->id . '/mark-dispatched') }}">
                                                 <i class="icon-docs"></i> {{ __('satisfaction.copy_link') }}
                                             </button>
                                         </span>
@@ -167,6 +168,21 @@
                                     @else
                                         <span class="help-block" id="expiresAt"></span>
                                     @endif
+                                </div>
+
+                                {{-- 建问卷只是生成链接，真正发给患者是前台的人工动作；
+                                     这里如实区分「已派发/未派发」，否则没人知道哪些还没发出去 --}}
+                                <div class="form-group">
+                                    <label>{{ __('satisfaction.dispatch_status') }}</label>
+                                    <p class="help-block" id="dispatchStatus">
+                                        @if($survey->sent_at)
+                                            <span class="text-success">
+                                                {{ __('satisfaction.dispatched_at', ['time' => $survey->sent_at->format('Y-m-d H:i')]) }}
+                                            </span>
+                                        @else
+                                            <span class="text-warning">{{ __('satisfaction.not_dispatched') }}</span>
+                                        @endif
+                                    </p>
                                 </div>
 
                                 <button type="button" class="btn btn-primary" id="resendBtn"

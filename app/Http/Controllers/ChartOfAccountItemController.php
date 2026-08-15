@@ -18,26 +18,6 @@ class ChartOfAccountItemController extends Controller
     }
 
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
      * Store a newly created resource in storage.
      *
      * @param \Illuminate\Http\Request $request
@@ -54,17 +34,6 @@ class ChartOfAccountItemController extends Controller
         if ($success) {
             return FunctionsHelper::messageResponse(__('charts_of_accounts.chart_of_accounts_added_successfully'), $success);
         }
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        //
     }
 
     /**
@@ -107,6 +76,19 @@ class ChartOfAccountItemController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $id = (int) $id;
+
+        // 不走 messageResponse：它的失败分支会把 message 换成通用的「请重试」，
+        // 而这里必须让用户看到删不掉的真实原因。
+        if ($this->chartOfAccountItemService->isInUse($id)) {
+            return response()->json([
+                'message' => __('charts_of_accounts.chart_of_accounts_in_use'),
+                'status'  => false,
+            ]);
+        }
+
+        $success = $this->chartOfAccountItemService->deleteItem($id);
+
+        return FunctionsHelper::messageResponse(__('charts_of_accounts.chart_of_accounts_deleted_successfully'), $success);
     }
 }

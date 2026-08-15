@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Http\Helper\SmsLogger;
 use App\Services\DataMaskingService;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -25,6 +26,8 @@ class SmsLoggingExport implements FromArray, WithHeadings, ShouldAutoSize
             'failed' => __('sms.failed'),
             'undelivered' => __('sms.undelivered'),
             'queued' => __('sms.queued'),
+            'pending' => __('sms.pending'),
+            SmsLogger::STATUS_NOT_CONFIGURED => __('sms.not_configured'),
         ];
 
         $rows = [];

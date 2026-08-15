@@ -118,4 +118,8 @@ return [
     'fill_link'        => '填写链接',
     'link_expires_at'  => '有效期至 :time',
     'no_link_yet'      => '尚未生成填写链接',
+    'dispatch_status'  => '派发状态',
+    'not_dispatched'   => '未派发（链接已生成，尚未发给患者）',
+    'dispatched_at'    => '已于 :time 派发',
+    'marked_dispatched' => '已记录派发时间',
 ];

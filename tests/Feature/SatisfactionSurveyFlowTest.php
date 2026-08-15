@@ -198,6 +198,68 @@ class SatisfactionSurveyFlowTest extends TestCase
         $this->assertArrayNotHasKey('token', $survey->toArray());
     }
 
+    // ── 派发时间 ────────────────────────────────────────────────────
+
+    /**
+     * 建问卷不等于发出去。
+     *
+     * 短信通道未接入，sendBatch() 全程没有任何发送动作，链接要靠前台在详情页
+     * 复制后人工发给患者。此前建记录时就把 sent_at 写成 now()，于是「哪些还没
+     * 发出去」在库里根本查不出来 —— 每条看起来都已派发。
+     */
+    public function test_batch_generated_survey_is_not_marked_dispatched(): void
+    {
+        $this->actingAs($this->admin);
+
+        $survey = $this->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $this->assertNull($survey->sent_at, '仅生成链接不应算作已派发');
+    }
+
+    public function test_copying_the_link_records_the_dispatch_time(): void
+    {
+        $this->actingAs($this->admin);
+        $survey = $this->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $response = $this->postJson('/satisfaction-surveys/' . $survey->id . '/mark-dispatched');
+
+        $response->assertStatus(200)->assertJson(['status' => 1]);
+        $this->assertNotNull($survey->fresh()->sent_at);
+    }
+
+    /**
+     * 换了新链接，旧链接立刻失效 —— 在把新链接发出去之前是「未派发」。
+     */
+    public function test_regenerate_resets_the_dispatch_time(): void
+    {
+        $this->actingAs($this->admin);
+        $survey = $this->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $this->service()->markDispatched($survey->id);
+        $this->assertNotNull($survey->fresh()->sent_at);
+
+        $refreshed = $this->service()->regenerateToken($survey->id);
+
+        $this->assertNull($refreshed->sent_at, '新链接尚未发出，不该保留旧的派发时间');
+    }
+
+    /**
+     * 已填写完成的问卷不再改 sent_at，避免覆盖当初的派发记录。
+     */
+    public function test_completed_survey_keeps_its_original_dispatch_time(): void
+    {
+        $this->actingAs($this->admin);
+        $survey = $this->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $this->service()->markDispatched($survey->id);
+        $dispatchedAt = $survey->fresh()->sent_at;
+
+        $survey->update(['status' => SatisfactionSurvey::STATUS_COMPLETED]);
+        $this->service()->markDispatched($survey->id);
+
+        $this->assertEquals($dispatchedAt, $survey->fresh()->sent_at);
+    }
+
     // ── 重新生成链接 ────────────────────────────────────────────────
 
     public function test_regenerate_token_invalidates_the_old_link(): void

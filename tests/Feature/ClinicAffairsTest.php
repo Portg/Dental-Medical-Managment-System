@@ -216,7 +216,9 @@ class ClinicAffairsTest extends TestCase
             ->json('data.0.review_status');
 
         $this->assertStringContainsString('本人', $badge, '自审记录必须标注「本人」');
-        $this->assertStringContainsString($this->manager->full_name, $badge, '徽章上要能看到复核人');
+        // 徽章是 HTML，姓名经过 e() 转义。直接拿原始姓名比对时，faker 随机生成
+        // 带撇号的姓（O'Brien 之类）会变成 D&#039;… 而随机挂掉。
+        $this->assertStringContainsString(e($this->manager->full_name), $badge, '徽章上要能看到复核人');
         $this->assertStringContainsString('label-info', $badge, '自审用 info 色：既不能撞「待复核」的 warning，也不能混进他人复核的 success');
     }
 
@@ -229,7 +231,7 @@ class ClinicAffairsTest extends TestCase
             ->getJson('/clinic-affairs/disinfection/data?draw=1&start=0&length=10')
             ->json('data.0.review_status');
 
-        $this->assertStringContainsString($this->manager->full_name, $badge);
+        $this->assertStringContainsString(e($this->manager->full_name), $badge);
         $this->assertStringNotContainsString('本人', $badge);
         $this->assertStringContainsString('label-success', $badge);
     }

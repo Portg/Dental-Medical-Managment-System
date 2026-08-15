@@ -26,6 +26,24 @@ class SmsLoggingSchemaTest extends TestCase
         $this->assertDatabaseHas('sms_loggings', [
             'phone_number' => '13800138000',
             'type'         => 'Appointment',
+            'status'       => SmsLogger::STATUS_NOT_CONFIGURED,
+        ]);
+    }
+
+    /**
+     * 没接服务商时不许写 'pending'。
+     *
+     * pending 的含义是「已交给服务商、等回执」，而这里根本没有服务商，状态永远不会
+     * 再变。短信记录页与导出都直出这个字段，一列「待处理」会让前台以为在排队，
+     * 于是没人去补打电话——预约提醒就这么静悄悄地没发出去。
+     */
+    /** @test */
+    public function unsent_sms_is_not_labelled_pending(): void
+    {
+        (new SmsLogger())->SendMessage('13800138000', '您的预约已安排', 'Appointment');
+
+        $this->assertDatabaseMissing('sms_loggings', [
+            'phone_number' => '13800138000',
             'status'       => 'pending',
         ]);
     }

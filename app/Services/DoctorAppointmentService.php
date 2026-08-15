@@ -97,6 +97,10 @@ class DoctorAppointmentService
 
     /**
      * Get appointment detail for editing.
+     *
+     * 只认本人的预约：列表与日历一直是按 doctor_id 过滤的，但按 id 取单条的这几个
+     * 方法此前谁都能传任意 id 进来 —— 控制器上又没有任何权限中间件，等于全站
+     * 任一登录账号都能读改删别人的预约。
      */
     public function getAppointmentForEdit(int $id): ?object
     {
@@ -104,6 +108,7 @@ class DoctorAppointmentService
             ->join('users', 'users.id', 'appointments.doctor_id')
             ->join('patients', 'patients.id', 'appointments.patient_id')
             ->where('appointments.id', $id)
+            ->where('appointments.doctor_id', Auth::User()->id)
             ->whereNull('appointments.deleted_at')
             ->select(
                 'appointments.*',
@@ -118,11 +123,13 @@ class DoctorAppointmentService
      */
     public function updateAppointment(int $id, int $patientId, ?string $notes): bool
     {
-        return (bool) Appointment::where('id', $id)->update([
-            'patient_id' => $patientId,
-            'notes' => $notes,
-            '_who_added' => Auth::User()->id,
-        ]);
+        return (bool) Appointment::where('id', $id)
+            ->where('doctor_id', Auth::User()->id)
+            ->update([
+                'patient_id' => $patientId,
+                'notes' => $notes,
+                '_who_added' => Auth::User()->id,
+            ]);
     }
 
     /**
@@ -130,7 +137,9 @@ class DoctorAppointmentService
      */
     public function updateStatus(int $appointmentId, string $status): bool
     {
-        return (bool) Appointment::where('id', $appointmentId)->update(['status' => $status]);
+        return (bool) Appointment::where('id', $appointmentId)
+            ->where('doctor_id', Auth::User()->id)
+            ->update(['status' => $status]);
     }
 
     /**
@@ -138,6 +147,8 @@ class DoctorAppointmentService
      */
     public function deleteAppointment(int $id): bool
     {
-        return (bool) Appointment::where('id', $id)->delete();
+        return (bool) Appointment::where('id', $id)
+            ->where('doctor_id', Auth::User()->id)
+            ->delete();
     }
 }

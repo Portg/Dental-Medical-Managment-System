@@ -41,6 +41,9 @@ return [
 
     'tooth_numbers' => 'Tooth Numbers',
     'quantity' => 'Qty',
+    'invoice_items' => 'Invoice Items',
+    'service' => 'Service',
+    'approved_by' => 'Approved By',
     'total_amount' => 'Total Amount',
     'choose_doctor' => 'Choose Doctor',
     'add_more' => 'Add More',
@@ -154,6 +157,9 @@ return [
     'refunds' => 'Refunds',
     'refund' => 'Refund',
     'new_refund' => 'New Refund',
+    'refund_detail' => 'Refund Detail',
+    'print_refund' => 'Print Refund',
+    'refund_receipt' => 'Refund Receipt',
     'refund_no' => 'Refund No',
     'refund_amount' => 'Refund Amount',
     'refund_date' => 'Refund Date',
@@ -339,5 +345,12 @@ return [
     'invoice_settled'         => 'Invoice fully settled',
     'panel_load_failed'       => 'Load failed, please retry',
     'billing_tab_label'       => 'Billing',
+
+    // 代码里在用、en 侧此前缺失（折扣审批与储值支付的报错文案）
+    'discount_not_pending'             => 'This discount is not pending approval',
+    'payment_exceeds_outstanding'      => 'Payment amount cannot exceed the outstanding amount',
+    'patient_required_for_stored_value' => 'Stored-value payment requires a linked patient',
+    'insufficient_stored_balance'      => 'Insufficient stored-value balance',
+    'stored_value_payment'             => 'Stored-value payment: invoice :invoice_no',
 
 ];

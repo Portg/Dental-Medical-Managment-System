@@ -43,4 +43,8 @@ return [
     // User validation
     'invalid_user' => 'You are not a valid user',
 
+    // 代码里在用、en 侧此前缺失
+    'forgot_password_description' => 'Enter your email address to reset your password.',
+    'name'                        => 'Name',
+
 ];

@@ -172,10 +172,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('refunds/{id}/approve', 'RefundController@approve');
     Route::post('refunds/{id}/reject', 'RefundController@reject');
     Route::get('refunds/{id}/print', 'RefundController@print');
-    Route::resource('refunds', 'RefundController');
+    Route::resource('refunds', 'RefundController')->except(['edit', 'update']);
 
     // Coupons
-    Route::resource('coupons', 'CouponController');
+    // 新增/编辑都走 index 页里的 #couponModal，没有独立的 create 页面
+    Route::resource('coupons', 'CouponController')->except(['create']);
     Route::get('coupons/validate/{code}', 'CouponController@validateCoupon');
 
     //quotations
@@ -205,7 +206,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('prescriptions/services', 'PrescriptionController@prescriptionServices');
     Route::get('prescriptions/pending/{patient_id}', 'PrescriptionController@pendingPrescriptions');
     Route::post('prescriptions/{id}/settle', 'PrescriptionController@settle');
-    Route::resource('prescriptions', 'PrescriptionController')->except(['index']);
+    Route::resource('prescriptions', 'PrescriptionController')->except(['index', 'create']);
     Route::get('filter-drugs', 'PrescriptionController@filterDrugs')->name('filter-drugs');
     Route::get('print-prescription/{id}', 'PrescriptionController@printPrescription');
     //expenses
@@ -300,14 +301,14 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('branches', 'BranchController');
     Route::get('search-branch', 'BranchController@filterBranches');
 
-    Route::resource('chairs', 'ChairController');
+    Route::resource('chairs', 'ChairController')->except(['create', 'show']);
 
     //leave mgt
     Route::resource('holidays', 'HolidayController')->except(['create', 'show']);
     Route::resource('leave-types', 'LeaveTypeController');
     Route::get('search-leave-type', 'LeaveTypeController@filter'); //search leave type
     Route::get('get-all-leave-types', 'LeaveTypeController@getAll'); //get all leave types for dropdown
-    Route::resource('leave-requests', 'LeaveRequestController');
+    Route::resource('leave-requests', 'LeaveRequestController')->except(['show']);
     //leave approval
     Route::get('leave-requests-approval', 'LeaveRequestApprovalController@index');
     Route::get('approve-leave-request/{id}', 'LeaveRequestApprovalController@approveRequest');
@@ -322,10 +323,13 @@ Route::group(['middleware' => ['auth']], function () {
 
     //accounting
     Route::get('charts-of-accounts', 'AccountingEquationController@index');
-    Route::resource('charts-of-accounts-items', 'ChartOfAccountItemController');
+    // 列表由 AccountingEquationController@index 渲染（/charts-of-accounts），
+    // 这里只保留科目本身的增删改，避免再暴露空实现的 index/create/show。
+    Route::resource('charts-of-accounts-items', 'ChartOfAccountItemController')
+        ->only(['store', 'edit', 'update', 'destroy']);
 
     Route::resource('permissions', 'PermissionController');
-    Route::resource('role-permissions', 'RolePermissionController');
+    Route::resource('role-permissions', 'RolePermissionController')->except(['create', 'show']);
     // System Settings (unified)
     Route::get('system-settings', 'SystemSettingController@index');
     Route::put('system-settings/{group}', 'SystemSettingController@update');
@@ -374,24 +378,24 @@ Route::group(['middleware' => ['auth']], function () {
     // Diagnoses
     Route::get('diagnoses/{patient_id}', 'DiagnosisController@index');
     Route::get('case-diagnoses/{case_id}', 'DiagnosisController@caseIndex');
-    Route::resource('diagnoses', 'DiagnosisController')->except(['index']);
+    Route::resource('diagnoses', 'DiagnosisController')->except(['index', 'create', 'show']);
 
     // Progress Notes (SOAP)
     Route::get('progress-notes/{patient_id}', 'ProgressNoteController@index');
     Route::get('case-progress-notes/{case_id}', 'ProgressNoteController@caseIndex');
-    Route::resource('progress-notes', 'ProgressNoteController')->except(['index']);
+    Route::resource('progress-notes', 'ProgressNoteController')->except(['index', 'create']);
 
     // Treatment Plans
     Route::get('treatment-plans', 'TreatmentPlanController@listAll');
     Route::get('treatment-plans/patient/{patient_id}', 'TreatmentPlanController@index');
     Route::get('case-treatment-plans/{case_id}', 'TreatmentPlanController@caseIndex');
-    Route::resource('treatment-plans', 'TreatmentPlanController')->except(['index']);
+    Route::resource('treatment-plans', 'TreatmentPlanController')->except(['index', 'create']);
 
     // Vital Signs
     Route::get('vital-signs/{patient_id}', 'VitalSignController@index');
     Route::get('case-vital-signs/{case_id}', 'VitalSignController@caseIndex');
     Route::get('latest-vital-signs/{patient_id}', 'VitalSignController@latest');
-    Route::resource('vital-signs', 'VitalSignController')->except(['index']);
+    Route::resource('vital-signs', 'VitalSignController')->except(['index', 'create', 'show']);
 
     // Patient Images
     Route::get('patient-images', 'PatientImageController@index')->name('patient-images.index');
@@ -404,10 +408,10 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('pending-followups', 'PatientFollowupController@pendingFollowups');
     Route::get('overdue-followups', 'PatientFollowupController@overdueFollowups');
     Route::post('patient-followups/{id}/complete', 'PatientFollowupController@complete');
-    Route::resource('patient-followups', 'PatientFollowupController')->except(['index']);
+    Route::resource('patient-followups', 'PatientFollowupController')->except(['index', 'create']);
 
     // Members Management
-    Route::resource('members', 'MemberController');
+    Route::resource('members', 'MemberController')->except(['create', 'edit', 'destroy']);
     Route::get('members/{id}/transactions', 'MemberController@transactions');
     Route::post('members/{id}/deposit', 'MemberController@deposit');
     Route::post('members/{id}/refund', 'MemberController@refund');
@@ -435,15 +439,15 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('medical-templates/{id}/increment-usage', 'MedicalTemplateController@incrementUsage');
 
     // Quick Phrases
-    Route::resource('quick-phrases', 'QuickPhraseController');
+    Route::resource('quick-phrases', 'QuickPhraseController')->except(['create', 'edit']);
     Route::get('quick-phrases-search', 'QuickPhraseController@search');
 
     // Patient Tags
-    Route::resource('patient-tags', 'PatientTagController');
+    Route::resource('patient-tags', 'PatientTagController')->except(['create', 'edit']);
     Route::get('patient-tags-list', 'PatientTagController@list');
 
     // Patient Sources
-    Route::resource('patient-sources', 'PatientSourceController');
+    Route::resource('patient-sources', 'PatientSourceController')->except(['create', 'edit']);
     Route::get('patient-sources-list', 'PatientSourceController@list');
 
     // Dict Items (通用字典)
@@ -468,11 +472,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('inventory-query/movement-detail', 'InventoryQueryController@movementDetail');
 
     // Inventory Categories
-    Route::resource('inventory-categories', 'InventoryCategoryController');
+    Route::resource('inventory-categories', 'InventoryCategoryController')->except(['create', 'show']);
     Route::get('inventory-categories-list', 'InventoryCategoryController@list');
 
     // Inventory Items
-    Route::resource('inventory-items', 'InventoryItemController');
+    Route::resource('inventory-items', 'InventoryItemController')->except(['create', 'show']);
     Route::get('inventory-items-search', 'InventoryItemController@search');
     Route::get('inventory-stock-warnings', 'InventoryItemController@stockWarnings');
     Route::get('inventory-expiry-warnings', 'InventoryItemController@expiryWarnings');
@@ -481,7 +485,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::resource('stock-ins', 'StockInController');
     Route::post('stock-ins/{id}/confirm', 'StockInController@confirm');
     Route::post('stock-ins/{id}/cancel', 'StockInController@cancel');
-    Route::resource('stock-in-items', 'StockInItemController');
+    Route::resource('stock-in-items', 'StockInItemController')->except(['create', 'show']);
 
     // Stock Out Management
     Route::resource('stock-outs', 'StockOutController');
@@ -491,7 +495,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('stock-outs/{id}/submit-approval', 'StockOutController@submitApproval')->name('stock-outs.submit-approval');
     Route::post('stock-outs/{id}/approve', 'StockOutController@approveStockOut')->name('stock-outs.approve');
     Route::post('stock-outs/{id}/reject', 'StockOutController@rejectStockOut')->name('stock-outs.reject');
-    Route::resource('stock-out-items', 'StockOutItemController');
+    Route::resource('stock-out-items', 'StockOutItemController')->except(['create', 'show']);
 
     // Requisition Management (申领单管理) - 必须在 resource 前声明具名路由
     Route::get('requisitions', 'RequisitionController@index')->name('requisitions.index');
@@ -522,7 +526,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('inventory-import', 'InventoryImportController@import')->name('inventory-import.import');
 
     // Service Consumables Configuration
-    Route::resource('service-consumables', 'ServiceConsumableController');
+    Route::resource('service-consumables', 'ServiceConsumableController')->except(['create', 'edit']);
 
     // ============================================================
     // ============================================================
@@ -599,13 +603,15 @@ Route::group(['middleware' => ['auth']], function () {
 
     Route::get('satisfaction-surveys', 'SatisfactionSurveyController@index');
     Route::get('satisfaction-surveys/data', 'SatisfactionSurveyController@getData');
-    Route::get('satisfaction-surveys/create', 'SatisfactionSurveyController@create');
     Route::post('satisfaction-surveys', 'SatisfactionSurveyController@store');
     Route::get('satisfaction-surveys/{id}', 'SatisfactionSurveyController@show');
     // 患者提交走公开的 token 链接（PublicSurveyController），
     // 后台按数字 ID 提交的入口已移除，避免员工替患者伪造评价
     Route::post('satisfaction-surveys/send-batch', 'SatisfactionSurveyController@sendBatch');
     Route::post('satisfaction-surveys/{id}/regenerate-link', 'SatisfactionSurveyController@regenerateLink');
+    // 复制链接成功后回填派发时间。只需 view-surveys：把链接发给患者是前台日常，
+    // manage-surveys 管的是批量生成与重置链接那类动作。
+    Route::post('satisfaction-surveys/{id}/mark-dispatched', 'SatisfactionSurveyController@markDispatched');
 
     // ============================================================
     // Shift Management (班次管理)
@@ -637,7 +643,7 @@ Route::group(['middleware' => ['auth']], function () {
     // Commission Rules Management
     // ============================================================
 
-    Route::resource('commission-rules', 'CommissionRuleController');
+    Route::resource('commission-rules', 'CommissionRuleController')->except(['create', 'show']);
     Route::post('commission-rules/calculate', 'CommissionRuleController@calculate');
 
     // ============================================================
@@ -645,10 +651,10 @@ Route::group(['middleware' => ['auth']], function () {
     // ============================================================
 
     // Labs (技工厂)
-    Route::resource('labs', 'LabController');
+    Route::resource('labs', 'LabController')->except(['create', 'edit']);
 
     // Lab Cases (技工单)
-    Route::resource('lab-cases', 'LabCaseController');
+    Route::resource('lab-cases', 'LabCaseController')->except(['create', 'edit']);
     Route::get('patient-lab-cases/{patient_id}', 'LabCaseController@patientLabCases');
     Route::post('lab-cases/{id}/update-status', 'LabCaseController@updateStatus');
     Route::get('api/lab-case/{id}', 'LabCaseController@getCase');
@@ -669,14 +675,14 @@ Route::group(['middleware' => ['auth']], function () {
     // ============================================================
 
     Route::get('doctor-appointments/calendar-events', 'DoctorAppointmentController@calendarEvents');
-    Route::resource('doctor-appointments', 'DoctorAppointmentController');
+    Route::resource('doctor-appointments', 'DoctorAppointmentController')->except(['create', 'show']);
     Route::post('appointment-status', 'DoctorAppointmentController@updateAppointmentStatus');
 
     // ============================================================
     // Doctor Self Claims (migrated from Modules/Doctor)
     // ============================================================
 
-    Route::resource('claims', 'DoctorSelfClaimController');
+    Route::resource('claims', 'DoctorSelfClaimController')->except(['create', 'show']);
 
     // ============================================================
     // OCR Medical Record Recognition (病历 OCR 识别)

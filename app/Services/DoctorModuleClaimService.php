@@ -82,9 +82,19 @@ class DoctorModuleClaimService
     /**
      * Get a claim for editing.
      */
+    /**
+     * 只认本人、且仍处于待审批的提成。
+     *
+     * getClaimsList() 一直按 _who_added 过滤，但按 id 取单条的这几个方法此前不过滤，
+     * 控制器上也没有任何权限中间件 —— 等于任一登录账号都能改别人的提成金额，
+     * 旧实现还顺手把 _who_added 改成自己，等于把记录据为己有。
+     *
+     * 状态限制与列表的操作菜单一致：只有 Pending 才给编辑/删除按钮，
+     * 接口这一侧此前没跟上，已审批的提成照样能被改。
+     */
     public function getClaimForEdit(int $id): ?DoctorClaim
     {
-        return DoctorClaim::where('id', $id)->first();
+        return $this->ownPendingClaim($id)->first();
     }
 
     /**
@@ -92,9 +102,8 @@ class DoctorModuleClaimService
      */
     public function updateClaim(int $id, float $amount): bool
     {
-        return (bool) DoctorClaim::where('id', $id)->update([
+        return (bool) $this->ownPendingClaim($id)->update([
             'claim_amount' => $amount,
-            '_who_added' => Auth::User()->id,
         ]);
     }
 
@@ -103,6 +112,16 @@ class DoctorModuleClaimService
      */
     public function deleteClaim(int $id): bool
     {
-        return (bool) DoctorClaim::where('id', $id)->delete();
+        return (bool) $this->ownPendingClaim($id)->delete();
+    }
+
+    /**
+     * 当前用户名下、仍待审批的提成记录。
+     */
+    private function ownPendingClaim(int $id)
+    {
+        return DoctorClaim::where('id', $id)
+            ->where('_who_added', Auth::User()->id)
+            ->where('status', DoctorClaim::STATUS_PENDING);
     }
 }

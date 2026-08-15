@@ -342,4 +342,8 @@ return [
     'merge_cases' => 'Cases',
     'merge_images' => 'Images',
     'merge_followups' => 'Follow-ups',
+
+    // 代码里在用、en 侧此前缺失
+    'patient_list'    => 'Patient List',
+    'patient_details' => 'Patient Details',
 ];

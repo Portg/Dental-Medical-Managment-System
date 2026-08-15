@@ -47,4 +47,28 @@ class ChartOfAccountItemService
             '_who_added' => Auth::User()->id,
         ]);
     }
+
+    /**
+     * 科目是否仍被引用。两张表都有指向 chart_of_account_items 的外键，
+     * 硬删会直接撞约束，软删则会留下费用类别指着一个查不到的科目。
+     */
+    public function isInUse(int $id): bool
+    {
+        return DB::table('expense_categories')
+                ->where('chart_of_account_item_id', $id)
+                ->whereNull('deleted_at')
+                ->exists()
+            || DB::table('expense_payments')
+                ->where('payment_account_id', $id)
+                ->whereNull('deleted_at')
+                ->exists();
+    }
+
+    /**
+     * Soft delete an item.
+     */
+    public function deleteItem(int $id): bool
+    {
+        return (bool) ChartOfAccountItem::where('id', $id)->delete();
+    }
 }

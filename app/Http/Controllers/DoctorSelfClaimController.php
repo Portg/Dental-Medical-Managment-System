@@ -16,6 +16,9 @@ class DoctorSelfClaimController extends Controller
     public function __construct(DoctorModuleClaimService $service)
     {
         $this->service = $service;
+        // 医生自助提成：数据已按 _who_added 限定本人，这里挡住不该进本模块的角色。
+        // manage-doctor-claims 是后台审批他人提成的权限（DoctorClaimController），别混用。
+        $this->middleware('can:view-appointments');
     }
 
     public function index(Request $request)

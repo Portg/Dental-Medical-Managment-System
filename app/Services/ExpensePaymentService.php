@@ -11,6 +11,23 @@ use Illuminate\Support\Facades\DB;
 class ExpensePaymentService
 {
     /**
+     * 支出付款方式的取值范围。
+     *
+     * 前四项与支出付款表单（expenses/payment/create.blade.php）的单选项一一对应；
+     * Online Wallet 是历史数据里存在的旧值，保留以免编辑旧记录时被校验挡下。
+     *
+     * 库里这一列已从 enum 放开成 varchar（见 2026_08_15 的迁移）——枚举挡不住
+     * 表单新增选项，只会让「加一种付款方式」变成改表结构。范围由这里把关。
+     */
+    public const PAYMENT_METHODS = [
+        'Cash',
+        'Mobile Money',
+        'Cheque',
+        'Bank Wire Transfer',
+        'Online Wallet',
+    ];
+
+    /**
      * Get expense payments for a given expense.
      */
     public function getPaymentsByExpense(int $expenseId): Collection

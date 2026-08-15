@@ -70,14 +70,6 @@ class CouponController extends Controller
     }
 
     /**
-     * Show the form for creating a new coupon.
-     */
-    public function create()
-    {
-        return view('coupons.create');
-    }
-
-    /**
      * Store a newly created coupon.
      */
     public function store(Request $request)

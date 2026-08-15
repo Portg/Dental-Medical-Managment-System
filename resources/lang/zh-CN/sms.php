@@ -65,6 +65,7 @@ return [
     'status' => '状态',
     'sent' => '已发送',
     'pending' => '待处理',
+    'not_configured' => '短信未启用',
     'failed' => '失败',
     'delivered' => '已送达',
     'undelivered' => '未送达',

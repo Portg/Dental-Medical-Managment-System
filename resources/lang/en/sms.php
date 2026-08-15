@@ -65,6 +65,7 @@ return [
     'status' => 'Status',
     'sent' => 'Sent',
     'pending' => 'Pending',
+    'not_configured' => 'SMS not enabled',
     'failed' => 'Failed',
     'delivered' => 'Delivered',
     'undelivered' => 'Undelivered',

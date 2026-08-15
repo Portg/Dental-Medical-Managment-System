@@ -119,6 +119,19 @@ class PatientBillingTabTest extends TestCase
             'branch_id'      => $branch->id,
             '_who_added'     => $this->admin->id,
         ]);
+
+        // overdueInvoice 的 paid_amount=300 必须有对应的收款明细。
+        // 应用里 paid_amount 只会由收款（processMixedPayment / createPayment）抬高、
+        // 由退费压低，产生不出「有已付金额、无收款行」的状态；夹具漏了这一行，
+        // 就成了只在测试里存在的账。收款金额现在按明细重算，这种账会当场露馅。
+        InvoicePayment::create([
+            'amount'         => 300,
+            'payment_method' => 'Cash',
+            'payment_date'   => now()->format('Y-m-d'),
+            'invoice_id'     => $this->overdueInvoice->id,
+            'branch_id'      => $branch->id,
+            '_who_added'     => $this->admin->id,
+        ]);
     }
 
     /** @test */

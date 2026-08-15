@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\ExpensePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\DataTables;
 
 class ExpensePaymentController extends Controller
@@ -84,9 +85,10 @@ class ExpensePaymentController extends Controller
     public function store(Request $request)
     {
         Validator::make($request->all(), [
+            'expense_id' => 'required|exists:expenses,id',
             'payment_date' => 'required',
             'amount' => 'required',
-            'payment_method' => 'required',
+            'payment_method' => ['required', Rule::in(ExpensePaymentService::PAYMENT_METHODS)],
             'payment_account' => 'required'
         ], [
             'payment_date.required' => __('validation.attributes.payment_date') . ' ' . __('validation.required'),
@@ -95,7 +97,11 @@ class ExpensePaymentController extends Controller
             'payment_account.required' => __('validation.attributes.payment_account') . ' ' . __('validation.required'),
         ])->validate();
 
-        $status = $this->expensePaymentService->createPayment($request->only(['payment_date', 'amount', 'payment_method', 'payment_account']));
+        // expense_id 此前不在这份 only() 里，而 createPayment() 要读 $data['expense_id'] ——
+        // 表单一直有这个隐藏字段，是在控制器这层被丢掉的，于是每一笔支出付款都 500。
+        $status = $this->expensePaymentService->createPayment(
+            $request->only(['expense_id', 'payment_date', 'amount', 'payment_method', 'payment_account'])
+        );
         if ($status) {
             return response()->json(['message' => __('expense_items.payments.payment_captured_successfully'), 'status' => true]);
         }
@@ -136,7 +142,7 @@ class ExpensePaymentController extends Controller
         Validator::make($request->all(), [
             'payment_date' => 'required',
             'amount' => 'required',
-            'payment_method' => 'required',
+            'payment_method' => ['required', Rule::in(ExpensePaymentService::PAYMENT_METHODS)],
             'payment_account' => 'required'
         ], [
             'payment_date.required' => __('validation.attributes.payment_date') . ' ' . __('validation.required'),

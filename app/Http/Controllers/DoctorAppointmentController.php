@@ -16,6 +16,9 @@ class DoctorAppointmentController extends Controller
     public function __construct(DoctorAppointmentService $service)
     {
         $this->service = $service;
+        // 与 DoctorDashboardController 一致：数据已按 Auth::User()->id 限定本人，
+        // 再用预约权限挡住不该进这个模块的角色。
+        $this->middleware('can:view-appointments');
     }
 
     public function index(Request $request)

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Invoice;
 use App\InvoicePayment;
 use App\MemberTransaction;
+use App\Refund;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -59,7 +60,7 @@ class InvoicePaymentService
      */
     public function createPayment(array $data): ?InvoicePayment
     {
-        return InvoicePayment::create([
+        $payment = InvoicePayment::create([
             'amount' => $data['amount'],
             'payment_date' => $data['payment_date'],
             'payment_method' => $data['payment_method'],
@@ -72,6 +73,10 @@ class InvoicePaymentService
             'branch_id' => Auth::User()->branch_id,
             '_who_added' => Auth::User()->id,
         ]);
+
+        $this->syncInvoicePaidAmount((int) $data['invoice_id']);
+
+        return $payment;
     }
 
     /**
@@ -79,7 +84,7 @@ class InvoicePaymentService
      */
     public function updatePayment(int $id, array $data): bool
     {
-        return (bool) InvoicePayment::where('id', $id)->update([
+        $updated = (bool) InvoicePayment::where('id', $id)->update([
             'amount' => $data['amount'],
             'payment_date' => $data['payment_date'],
             'payment_method' => $data['payment_method'],
@@ -91,6 +96,17 @@ class InvoicePaymentService
             'branch_id' => Auth::User()->branch_id,
             '_who_added' => Auth::User()->id,
         ]);
+
+        // 改金额同样要让账单跟上 —— 改收款方式的弹窗虽然只提交方式，
+        // 但控制器允许带 amount，别把这条路径漏了。
+        if ($updated) {
+            $invoiceId = (int) InvoicePayment::where('id', $id)->value('invoice_id');
+            if ($invoiceId > 0) {
+                $this->syncInvoicePaidAmount($invoiceId);
+            }
+        }
+
+        return $updated;
     }
 
     /**
@@ -98,7 +114,54 @@ class InvoicePaymentService
      */
     public function deletePayment(int $id): bool
     {
-        return (bool) InvoicePayment::where('id', $id)->delete();
+        // 先取 invoice_id：软删之后这行还在，但没必要多绕一次 withTrashed
+        $invoiceId = (int) InvoicePayment::where('id', $id)->value('invoice_id');
+
+        $deleted = (bool) InvoicePayment::where('id', $id)->delete();
+
+        if ($deleted && $invoiceId > 0) {
+            $this->syncInvoicePaidAmount($invoiceId);
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * 按明细重算账单的已收金额，并连带刷新欠款与付款状态。
+     *
+     * 为什么是「重算」而不是「增减」：
+     *   invoice.paid_amount 是存储列，outstanding_amount 与 payment_status 都由
+     *   Invoice::boot() 的 saving 钩子据它派生。此前只有 processMixedPayment() 会
+     *   bcadd 一次，走 /payments 的单笔收款、改金额、撤销收款统统不碰它 —— 账单
+     *   列表靠子查询算 computed_paid 才显示对，而存储的 payment_status 一直停在
+     *   「未付」，凡是按这个字段筛的地方（欠费报表、催收）就都不准。
+     *   增量加减一旦漂就再也回不来；按明细重算能自愈，且与列表的 computed_paid
+     *   同源，两边不会再各说各话。
+     *
+     * 公式是「付款合计 − 已通过退费合计」：退费通过时 RefundService::executeRefund()
+     * 会把退款从 paid_amount 里扣掉，只按付款求和会把这笔扣减抹平，已退费的账单
+     * 会跳回全额已付。
+     *
+     * InvoicePayment 与 Refund 都用了 SoftDeletes，撤销的记录自动不计入。
+     */
+    public function syncInvoicePaidAmount(int $invoiceId): void
+    {
+        $invoice = Invoice::find($invoiceId);
+
+        if (!$invoice) {
+            return;
+        }
+
+        $paid = (string) InvoicePayment::where('invoice_id', $invoiceId)->sum('amount');
+
+        $refunded = (string) Refund::where('invoice_id', $invoiceId)
+            ->where('approval_status', Refund::APPROVAL_APPROVED)
+            ->sum('refund_amount');
+
+        $net = bcsub($paid, $refunded, 2);
+
+        $invoice->paid_amount = bccomp($net, '0', 2) >= 0 ? $net : '0';
+        $invoice->save();
     }
 
     /**
@@ -184,9 +247,11 @@ class InvoicePaymentService
                 ]);
             }
 
-            // Update invoice paid amount (AG-065: bcmath)
-            $invoice->paid_amount = bcadd((string) ($invoice->paid_amount ?? 0), $totalPayment, 2);
-            $invoice->save();
+            // 与单笔收款走同一套重算，避免两条路径各写各的。
+            // 顺带修掉一处旧偏差：上面的循环会 continue 掉 amount <= 0 的项（不建收款行），
+            // 而 $totalPayment 把它们算进去了 —— 原先的 bcadd 会让账单虚增这部分。
+            $this->syncInvoicePaidAmount($invoice->id);
+            $invoice->refresh();
 
             // Update total consumption
             if ($patient) {
