@@ -1,5 +1,17 @@
 @extends('printer_pdf.layout')
 @section('content')
+@php
+    // 与 refunds/create 的下拉选项一一对应；库里存英文枚举值，直接输出会露出 cash 这种原始值
+    $methodLabels = [
+        'cash'         => __('invoices.cash'),
+        'wechat'       => __('invoices.wechat_pay'),
+        'alipay'       => __('invoices.alipay'),
+        'card'         => __('invoices.bank_card'),
+        'stored_value' => __('invoices.stored_value'),
+    ];
+    // 模型的 datetime cast 只作用于 toArray()，直接 echo Carbon 会带出秒
+    $dateTime = fn ($value) => $value ? \Illuminate\Support\Carbon::parse($value)->format('Y-m-d H:i') : '-';
+@endphp
     <style type="text/css">
         .refund-title {
             text-align: center;
@@ -54,7 +66,7 @@
     <table width="100%" class="meta-table">
         <tr>
             <td align="left">{{ __('invoices.refund_no') }}: {{ $refund->refund_no }}</td>
-            <td align="right">{{ __('invoices.refund_date') }}: {{ $refund->refund_date ?: $refund->created_at }}</td>
+            <td align="right">{{ __('invoices.refund_date') }}: {{ $dateTime($refund->refund_date ?: $refund->created_at) }}</td>
         </tr>
     </table>
 
@@ -77,7 +89,7 @@
         </tr>
         <tr>
             <th>{{ __('invoices.refund_method') }}</th>
-            <td>{{ $refund->refund_method ?: '-' }}</td>
+            <td>{{ $methodLabels[$refund->refund_method] ?? ($refund->refund_method ?: '-') }}</td>
         </tr>
         <tr>
             <th>{{ __('invoices.refund_reason') }}</th>
@@ -92,7 +104,7 @@
             <td>
                 {{ $refund->approvedBy ? $refund->approvedBy->surname . $refund->approvedBy->othername : '-' }}
                 @if($refund->approved_at)
-                    ({{ $refund->approved_at }})
+                    ({{ $dateTime($refund->approved_at) }})
                 @endif
             </td>
         </tr>

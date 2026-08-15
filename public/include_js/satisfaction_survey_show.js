@@ -66,9 +66,15 @@ $(document).ready(function () {
             return;
         }
 
+        // 按「点了复制」记派发，而不是按「剪贴板写成功」记。
+        // 上面那段注释说得很清楚：诊所内网多为 http，navigator.clipboard 在非安全
+        // 上下文里根本不可用，回退的 execCommand 也可能被拒。挂在成功回调上的话，
+        // 前台手工选中链接发给了患者，系统这边却一直记成「未派发」——那这个状态
+        // 就白加了。点这个按钮本身就是「我要把链接拿去发给患者」的意思，按它记。
+        markDispatched($btn);
+
         copyToClipboard(text).then(function () {
             toastr.success(LanguageManager.trans('satisfaction.link_copied'));
-            markDispatched($btn);
         }).catch(function () {
             toastr.warning(LanguageManager.trans('satisfaction.copy_failed'));
         });

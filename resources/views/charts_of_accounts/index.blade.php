@@ -63,8 +63,11 @@
                                                                                 <i class="icon-check"></i>
                                                                             </a>
                                                                         </div>
+                                                                        {{-- charts_of_accounts_index.js 里的 deleteRecord() 一直没有调用点：
+                                                                             函数、确认文案、后端路由都在，唯独这里没渲染出入口。 --}}
                                                                         <div class="list-datetime">
                                                                             <a href="javascript:;" onclick="editRecord('{{ $item->id }}')">{{ __('common.edit') }}</a>
+                                                                            <a href="javascript:;" class="text-danger" onclick="deleteRecord('{{ $item->id }}')">{{ __('common.delete') }}</a>
                                                                         </div>
                                                                         <div class="list-item-content">
                                                                             <h3 class="uppercase">

@@ -54,7 +54,7 @@ return [
         'instore' => '店内',
     ],
     'date' => '填写日期',
-    'created_at' => '发送时间',
+    'created_at' => '创建时间',
     'branch' => '门店',
     'patient' => '患者',
     'doctor' => '医生',

@@ -54,7 +54,7 @@ return [
         'instore' => 'In-Store',
     ],
     'date' => 'Survey Date',
-    'created_at' => 'Sent At',
+    'created_at' => 'Created At',
     'branch' => 'Branch',
     'patient' => 'Patient',
     'doctor' => 'Doctor',

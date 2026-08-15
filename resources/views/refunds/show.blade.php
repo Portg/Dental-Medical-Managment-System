@@ -10,6 +10,19 @@
         \App\Refund::APPROVAL_APPROVED => __('invoices.refund_approved'),
         \App\Refund::APPROVAL_REJECTED => __('invoices.refund_rejected'),
     ];
+
+    // 与 refunds/create 的下拉选项一一对应；库里存的是英文枚举值，
+    // 直接输出会在页面上露出 cash / stored_value 这种原始值。
+    $methodLabels = [
+        'cash'         => __('invoices.cash'),
+        'wechat'       => __('invoices.wechat_pay'),
+        'alipay'       => __('invoices.alipay'),
+        'card'         => __('invoices.bank_card'),
+        'stored_value' => __('invoices.stored_value'),
+    ];
+
+    // 模型的 datetime cast 只作用于 toArray()，直接 echo Carbon 会带出秒。
+    $dateTime = fn ($value) => $value ? \Illuminate\Support\Carbon::parse($value)->format('Y-m-d H:i') : '-';
 @endphp
 
 <div class="row">
@@ -65,11 +78,11 @@
                                 </tr>
                                 <tr>
                                     <th>{{ __('invoices.refund_method') }}</th>
-                                    <td>{{ $refund->refund_method ?: '-' }}</td>
+                                    <td>{{ $methodLabels[$refund->refund_method] ?? ($refund->refund_method ?: '-') }}</td>
                                 </tr>
                                 <tr>
                                     <th>{{ __('invoices.refund_date') }}</th>
-                                    <td>{{ $refund->refund_date ?: '-' }}</td>
+                                    <td>{{ $dateTime($refund->refund_date) }}</td>
                                 </tr>
                                 <tr>
                                     <th>{{ __('invoices.refund_reason') }}</th>
@@ -107,14 +120,14 @@
                                 </tr>
                                 <tr>
                                     <th>{{ __('invoices.requested_at') }}</th>
-                                    <td>{{ $refund->created_at ?: '-' }}</td>
+                                    <td>{{ $dateTime($refund->created_at) }}</td>
                                 </tr>
                                 <tr>
                                     <th>{{ __('invoices.approved_by') }}</th>
                                     <td>
                                         @if($refund->approvedBy)
                                             {{ $refund->approvedBy->surname . $refund->approvedBy->othername }}
-                                            <span class="approved-at">{{ $refund->approved_at }}</span>
+                                            <span class="approved-at">{{ $dateTime($refund->approved_at) }}</span>
                                         @else
                                             -
                                         @endif
