@@ -181,6 +181,23 @@ class MedicalCaseController extends Controller
      * @param int $patient_id
      * @return \Illuminate\Http\Response
      */
+    /**
+     * 某患者的病历历史（渲染好的侧栏片段）。
+     *
+     * 走「新建病历」通用入口时患者是后选的，而历史记录是服务端渲染的 ——
+     * 不补这一条，选完患者侧栏永远停在「暂无历史记录」，医生看不到这个人以前
+     * 看过什么。从患者进来新建、或编辑已有病历这两条路本来就带着历史，
+     * 只有通用入口断在这里。
+     *
+     * 返回片段而不是 JSON：省得把这段 Blade 在 JS 里再写一遍，两处各自漂移。
+     */
+    public function patientHistory($patient_id)
+    {
+        return response()->view('medical_cases.partials.sidebar_history_body', [
+            'historyRecords' => $this->medicalCaseService->getPatientHistory((int) $patient_id),
+        ]);
+    }
+
     public function createForPatient($patient_id)
     {
         $data = $this->medicalCaseService->getCreateForPatientData((int) $patient_id);

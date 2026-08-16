@@ -1,0 +1,7 @@
+/* 新建/编辑患者弹窗的表单标签。
+   标签列是 col-md-4，「建档日期」「出生日期」这类四字标签在弹窗宽度下会被
+   折成「建档日 期」，看着像错别字。这几个标签本来就该整体不折行。 */
+#patient-modal .control-label,
+.modal-form .control-label {
+    white-space: nowrap;
+}

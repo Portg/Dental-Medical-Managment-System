@@ -366,6 +366,9 @@ Route::group(['middleware' => ['auth']], function () {
     // Medical Cases System
     Route::resource('medical-cases', 'MedicalCaseController');
     Route::get('patient-medical-cases/{patient_id}', 'MedicalCaseController@patientCases');
+    // 选完患者后异步加载侧栏「历史记录」。前缀刻意不用 medical-cases/，
+    // 否则会被上面 Route::resource 的 medical-cases/{id} 先匹配走。
+    Route::get('medical-case-history/{patient_id}', 'MedicalCaseController@patientHistory');
     Route::get('medical-case-new/{patient_id}', 'MedicalCaseController@createForPatient');
     Route::get('api/medical-case/{id}', 'MedicalCaseController@getCase');
     Route::get('api/icd10-codes', 'MedicalCaseController@searchIcd10');

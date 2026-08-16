@@ -116,12 +116,7 @@ class MedicalCaseService
         $case = MedicalCase::with(['patient', 'doctor'])->findOrFail($id);
         $doctors = $this->getDoctors();
 
-        $historyRecords = MedicalCase::where('patient_id', $case->patient_id)
-            ->where('id', '!=', $id)
-            ->whereNull('deleted_at')
-            ->orderBy('case_date', 'desc')
-            ->limit(10)
-            ->get();
+        $historyRecords = $this->getPatientHistory((int) $case->patient_id, $id);
 
         return compact('case', 'doctors', 'historyRecords');
     }
@@ -147,6 +142,22 @@ class MedicalCaseService
     }
 
     /**
+     * 某患者最近的病历，供侧栏「历史记录」使用。
+     *
+     * 三条路径共用：编辑已有病历（排除自己）、从患者进来新建、以及走通用入口
+     * 选完患者之后的异步加载。原先每处各写一遍同样的查询，通用入口那条干脆漏了。
+     */
+    public function getPatientHistory(int $patientId, ?int $excludeCaseId = null): Collection
+    {
+        return MedicalCase::where('patient_id', $patientId)
+            ->when($excludeCaseId, fn ($q) => $q->where('id', '!=', $excludeCaseId))
+            ->whereNull('deleted_at')
+            ->orderBy('case_date', 'desc')
+            ->limit(10)
+            ->get();
+    }
+
+    /**
      * Get data for creating a case for a specific patient.
      */
     public function getCreateForPatientData(int $patientId): array
@@ -154,11 +165,7 @@ class MedicalCaseService
         $patient = Patient::findOrFail($patientId);
         $doctors = $this->getDoctors();
 
-        $historyRecords = MedicalCase::where('patient_id', $patientId)
-            ->whereNull('deleted_at')
-            ->orderBy('case_date', 'desc')
-            ->limit(10)
-            ->get();
+        $historyRecords = $this->getPatientHistory($patientId);
 
         $hasExistingCase = MedicalCase::where('patient_id', $patientId)->exists();
 

@@ -132,7 +132,7 @@
                 <th width="15%">{{ __('medical_cases.case_no') }}</th>
                 <td width="35%">{{ $case->case_no }}</td>
                 <th width="15%">{{ __('medical_cases.case_date') }}</th>
-                <td width="35%">{{ $case->case_date }}</td>
+                <td width="35%">{{ $case->case_date?->format('Y-m-d') }}</td>
             </tr>
             <tr>
                 <th>{{ __('medical_cases.patient') }}</th>
@@ -306,7 +306,7 @@
         <table>
             <tr>
                 <th>{{ __('medical_cases.next_visit_date') }}</th>
-                <td>{{ $case->next_visit_date }}</td>
+                <td>{{ $case->next_visit_date?->format('Y-m-d') }}</td>
             </tr>
             @if($case->next_visit_note)
             <tr>

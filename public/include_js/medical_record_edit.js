@@ -748,8 +748,34 @@ function enableFormWithPatient() {
     // Enable buttons
     $('#btn-save-draft, #btn-submit-record').prop('disabled', false);
 
+    // 侧栏的「历史记录」是服务端渲染的，走通用「新建病历」入口时患者是后选的，
+    // 不补这一步就永远停在「暂无历史记录」—— 医生看不到这个人以前看过什么，
+    // 而那恰恰是写病历时最需要的一栏。
+    loadCaseHistory(selectedPatientData.id);
+
     // Focus on first field
     $('#chief_complaint').focus();
+}
+
+/**
+ * 拉取该患者的病历历史，替换侧栏列表。
+ *
+ * 服务端返回渲染好的片段（medical_cases.partials.sidebar_history_body），
+ * 不在这里拼 HTML —— 两处各写一份迟早会漂移。
+ */
+function loadCaseHistory(patientId) {
+    var $body = $('#caseHistorySidebarBody');
+    if (!patientId || $body.length === 0) {
+        return;
+    }
+
+    $.get('/medical-case-history/' + patientId)
+        .done(function (html) {
+            $body.html(html);
+        })
+        .fail(function () {
+            // 拉不到就保持原样：历史记录是参考信息，不该因为它挡住写病历
+        });
 }
 
 /**

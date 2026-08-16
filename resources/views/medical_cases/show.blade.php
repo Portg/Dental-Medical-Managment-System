@@ -59,7 +59,7 @@
                     </div>
                     <div class="col-md-3">
                         <p><strong>{{ __('medical_cases.case_date') }}:</strong><br>
-                            {{ $case->case_date }}
+                            {{ $case->case_date?->format('Y-m-d') }}
                         </p>
                     </div>
                     <div class="col-md-3">
@@ -168,7 +168,7 @@
                     <div class="row">
                         <div class="col-md-12">
                             <p><strong>{{ __('medical_cases.next_visit_date') }}:</strong><br>
-                                {{ $case->next_visit_date ?: '-' }}
+                                {{ $case->next_visit_date?->format('Y-m-d') ?: '-' }}
                                 @if($case->next_visit_note)
                                     <br><small class="text-muted">{{ $case->next_visit_note }}</small>
                                 @endif

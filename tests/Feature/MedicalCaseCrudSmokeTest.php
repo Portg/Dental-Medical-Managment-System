@@ -209,5 +209,76 @@ class MedicalCaseCrudSmokeTest extends TestCase
                 "录入的「{$entered}」应当在病历详情页上显示出来"
             );
         }
+
+        // case_date 有 date:Y-m-d cast，但那个格式只作用于 toArray()；
+        // Blade 的 {{ }} 走 Carbon 的 __toString()，会输出 2025-12-14 00:00:00。
+        $this->assertStringNotContainsString(
+            $case->case_date->format('Y-m-d') . ' 00:00:00',
+            $html,
+            '就诊日期不该带零点时分秒'
+        );
+    }
+
+    /**
+     * 选完患者要能看到这个人的病历历史。
+     *
+     * 走通用「新建病历」入口时患者是后选的，而侧栏历史是服务端渲染的：
+     * getCreateData() 根本没查 historyRecords，edit.blade 用的是 $historyRecords ?? []，
+     * 于是那一栏永远停在「暂无历史记录」—— 医生看不到这个人以前看过什么，
+     * 而那恰恰是写病历时最需要参考的一栏。
+     */
+    /** @test */
+    public function case_history_can_be_loaded_for_a_patient(): void
+    {
+        $patient = Patient::create([
+            'patient_no' => 'MC-HIST-001',
+            'surname'    => '历史',
+            'othername'  => '患者',
+            'gender'     => 'Male',
+            'phone_no'   => '13800138003',
+            '_who_added' => $this->admin->id,
+        ]);
+
+        \App\MedicalCase::create([
+            'case_no'         => 'MC-HIST-0001',
+            'patient_id'      => $patient->id,
+            'doctor_id'       => $this->admin->id,
+            'case_date'       => now()->subMonth()->toDateString(),
+            'title'           => '上次就诊',
+            'chief_complaint' => '左下牙隐痛',
+            'diagnosis'       => '牙隐裂',
+            '_who_added'      => $this->admin->id,
+        ]);
+
+        $html = $this->actingAs($this->admin)
+            ->get('/medical-case-history/' . $patient->id)
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('上次就诊', $html);
+        $this->assertStringContainsString('左下牙隐痛', $html);
+        $this->assertStringNotContainsString(
+            __('medical_cases.no_history_records'),
+            $html,
+            '这个患者有历史病历，不该显示「暂无历史记录」'
+        );
+    }
+
+    /** @test */
+    public function case_history_is_empty_for_a_patient_without_cases(): void
+    {
+        $patient = Patient::create([
+            'patient_no' => 'MC-HIST-002',
+            'surname'    => '新',
+            'othername'  => '患者',
+            'gender'     => 'Female',
+            'phone_no'   => '13800138004',
+            '_who_added' => $this->admin->id,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->get('/medical-case-history/' . $patient->id)
+            ->assertOk()
+            ->assertSee(__('medical_cases.no_history_records'));
     }
 }

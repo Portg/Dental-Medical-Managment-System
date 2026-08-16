@@ -8,6 +8,11 @@
      Required Sections
      ======================================================================== --}}
 
+@section('page_css')
+    {{-- 弹窗里四字标签（建档日期/出生日期）会折成「建档日 期」，这里只做不折行 --}}
+    <link rel="stylesheet" href="{{ asset('css/patient-create-modal.css') }}?v={{ filemtime(public_path('css/patient-create-modal.css')) }}">
+@endsection
+
 @section('page_title')
     {{ __('patient.patient_list') }}
 @endsection
