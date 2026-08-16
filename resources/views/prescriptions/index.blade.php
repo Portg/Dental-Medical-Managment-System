@@ -36,7 +36,9 @@ $(document).ready(function() {
             {data: 'created_at', name: 'created_at', render: function(data) {
                 return data ? data.substring(0, 10) : '-';
             }},
-            {data: 'viewBtn', name: 'viewBtn', orderable: false, searchable: false}
+            {{-- 控制器给的列名是 action（见 PrescriptionController::listAll），
+                 声明成 viewBtn 的话这一列永远是空的，操作按钮根本渲染不出来 --}}
+            {data: 'action', name: 'action', orderable: false, searchable: false}
         ],
         dom: 'rtip',
         language: LanguageManager.getDataTableLang(),

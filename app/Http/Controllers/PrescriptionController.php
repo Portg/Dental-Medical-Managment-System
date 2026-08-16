@@ -29,13 +29,17 @@ class PrescriptionController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('status_label', fn ($row) => $this->renderStatusLabel($row->status))
+                // 这一列原先渲染 viewPrescription/editPrescription/deletePrescription
+                // 三个按钮，但本页（prescriptions/index）不加载 prescriptions.js —— 那三个
+                // 函数只存在于诊疗页，点了必然 ReferenceError。处方的增删改本来就在
+                // 诊疗页做，这里是总览，给一个能跳过去的链接才对。
                 ->addColumn('action', function ($row) {
-                    $btns = '<a href="#" onclick="viewPrescription(' . $row->id . ')" class="btn btn-info btn-sm">' . __('common.view') . '</a> ';
-                    $btns .= '<a href="#" onclick="editPrescription(' . $row->id . ')" class="btn btn-primary btn-sm">' . __('common.edit') . '</a> ';
-                    if (is_null($row->invoice_id)) {
-                        $btns .= '<a href="#" onclick="deletePrescription(' . $row->id . ')" class="btn btn-danger btn-sm">' . __('common.delete') . '</a>';
+                    if (empty($row->appointment_id)) {
+                        return '<span class="text-muted">-</span>';
                     }
-                    return $btns;
+
+                    return '<a href="' . url('medical-treatment/' . $row->appointment_id) . '" class="btn btn-info btn-sm">'
+                        . __('common.view') . '</a>';
                 })
                 ->rawColumns(['status_label', 'action'])
                 ->make(true);

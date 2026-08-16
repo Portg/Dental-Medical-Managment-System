@@ -324,4 +324,63 @@ class PrescriptionWorkflowTest extends TestCase
 
         $this->assertFalse($result['status']);
     }
+
+    /**
+     * 按预约开处方时要把 patient_id 一并落库。
+     *
+     * createPrescriptions() 原先只写 appointment_id，而处方列表按
+     * prescriptions.patient_id 关联患者表 —— 那批记录在列表上「患者编号」
+     * 「患者姓名」两列全是空的，前台看不出这张处方是给谁开的。
+     */
+    public function test_prescriptions_created_for_an_appointment_carry_the_patient(): void
+    {
+        $appointment = \App\Appointment::create([
+            'appointment_no' => \App\Appointment::AppointmentNo(),
+            'patient_id'     => $this->patient->id,
+            'doctor_id'      => $this->admin->id,
+            '_who_added'     => $this->admin->id,
+        ]);
+
+        $this->prescriptionService->createPrescriptions($appointment->id, [
+            ['drug' => '阿莫西林胶囊', 'qty' => 12, 'directions' => '口服 每次1粒'],
+        ]);
+
+        $this->assertDatabaseHas('prescriptions', [
+            'appointment_id' => $appointment->id,
+            'patient_id'     => $this->patient->id,
+            'drug'           => '阿莫西林胶囊',
+        ]);
+    }
+
+    /**
+     * 历史处方只写了 appointment_id，列表要能经预约回落取到患者。
+     */
+    public function test_legacy_prescription_without_patient_id_still_shows_the_patient(): void
+    {
+        $appointment = \App\Appointment::create([
+            'appointment_no' => \App\Appointment::AppointmentNo(),
+            'patient_id'     => $this->patient->id,
+            'doctor_id'      => $this->admin->id,
+            '_who_added'     => $this->admin->id,
+        ]);
+
+        // 绕开服务层直接建，模拟升级前留下的那批 patient_id 为 NULL 的记录
+        \App\Prescription::create([
+            'drug'           => '历史药',
+            'qty'            => 1,
+            'directions'     => '历史用法',
+            'appointment_id' => $appointment->id,
+            '_who_added'     => $this->admin->id,
+        ]);
+
+        $row = $this->prescriptionService->getAllPrescriptions()
+            ->firstWhere('drug', '历史药');
+
+        $this->assertNotNull($row);
+        $this->assertSame(
+            $this->patient->patient_no,
+            $row->patient_no,
+            '历史处方应当经预约回落取到患者，否则列表上患者列是空的'
+        );
+    }
 }

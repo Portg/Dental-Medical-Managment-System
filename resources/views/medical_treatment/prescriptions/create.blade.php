@@ -44,7 +44,7 @@
             <div class="modal-footer">
 
                 <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.close') }}</button>
-                <button type="button" class="btn btn-success" id="btn-save" onclick="save_prescription()">{{ __('medical_treatment.save_prescription') }}
+                <button type="button" class="btn btn-success" id="btn-save-prescription" onclick="save_prescription()">{{ __('medical_treatment.save_prescription') }}
                 </button>
             </div>
         </div>

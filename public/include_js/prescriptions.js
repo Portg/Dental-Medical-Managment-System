@@ -47,8 +47,8 @@ function load_prescriptions() {
 function AddPrescription(id) {
     $("#prescription-form")[0].reset();
     $('#prescription_id').val('');
-    $('#prescription-modal #btn-save').attr('disabled', false);
-    $('#prescription-modal #btn-save').text(mt('save_prescription', 'Save Prescription'));
+    $('#btn-save-prescription').attr('disabled', false);
+    $('#btn-save-prescription').text(mt('save_prescription', 'Save Prescription'));
 
     $('#prescription_appointment_id').val(id);
     $('#prescription-modal').modal('show');
@@ -98,8 +98,8 @@ $("#add").click(function () {
 
 function save_prescription() {
     $('.loading').show();
-    $('#prescription-modal #btn-save').attr('disabled', true);
-    $('#prescription-modal #btn-save').text(mt('processing', 'Processing...'));
+    $('#btn-save-prescription').attr('disabled', true);
+    $('#btn-save-prescription').text(mt('processing', 'Processing...'));
     $.ajax({
         type: 'POST',
         data: $('#prescription-form').serialize(),
@@ -115,8 +115,8 @@ function save_prescription() {
         },
         error: function (request) {
             $('.loading').hide();
-            $('#prescription-modal #btn-save').attr('disabled', false);
-            $('#prescription-modal #btn-save').text(mt('save_prescription', 'Save Prescription'));
+            $('#btn-save-prescription').attr('disabled', false);
+            $('#btn-save-prescription').text(mt('save_prescription', 'Save Prescription'));
             var json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
                 $('.alert-danger').show();
@@ -130,7 +130,7 @@ function editPrescription(id) {
     $('.loading').show();
     $("#edit-prescription-form")[0].reset();
     $('#prescription_id').val('');
-    $('#edit-prescription-modal #btn-save').attr('disabled', false);
+    $('#btn-save-prescription-edit').attr('disabled', false);
     $.ajax({
         type: 'get',
         url: "/prescriptions/" + id + "/edit",
@@ -142,7 +142,7 @@ function editPrescription(id) {
             $('[name="directions"]').val(data.directions);
 
             $('.loading').hide();
-            $('#edit-prescription-modal #btn-save').text(mt('update_record', 'Update Record'));
+            $('#btn-save-prescription-edit').text(mt('update_record', 'Update Record'));
             $('#edit-prescription-modal').modal('show');
         },
         error: function () {
@@ -153,8 +153,8 @@ function editPrescription(id) {
 
 function update_prescription_record() {
     $('.loading').show();
-    $('#edit-prescription-modal #btn-save').attr('disabled', true);
-    $('#edit-prescription-modal #btn-save').text(mt('updating', 'Updating...'));
+    $('#btn-save-prescription-edit').attr('disabled', true);
+    $('#btn-save-prescription-edit').text(mt('updating', 'Updating...'));
     $.ajax({
         type: 'PUT',
         data: $('#edit-prescription-form').serialize(),
@@ -170,8 +170,8 @@ function update_prescription_record() {
         },
         error: function (request) {
             $('.loading').hide();
-            $('#edit-prescription-modal #btn-save').attr('disabled', false);
-            $('#edit-prescription-modal #btn-save').text(mt('update_record', 'Update Record'));
+            $('#btn-save-prescription-edit').attr('disabled', false);
+            $('#btn-save-prescription-edit').text(mt('update_record', 'Update Record'));
             var json = $.parseJSON(request.responseText);
             $.each(json.errors, function (key, value) {
                 $('.alert-danger').show();

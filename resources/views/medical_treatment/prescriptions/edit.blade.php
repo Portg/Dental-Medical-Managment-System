@@ -32,7 +32,7 @@
             <div class="modal-footer">
 
                 <button type="button" class="btn btn-default" data-dismiss="modal">{{ __('common.close') }}</button>
-                <button type="button" class="btn btn-primary" id="btn-save" onclick="update_prescription_record()">{{ __('common.save_changes') }}</button>
+                <button type="button" class="btn btn-primary" id="btn-save-prescription-edit" onclick="update_prescription_record()">{{ __('common.save_changes') }}</button>
             </div>
         </div>
     </div>

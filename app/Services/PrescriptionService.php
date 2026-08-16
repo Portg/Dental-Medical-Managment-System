@@ -20,8 +20,11 @@ class PrescriptionService
      */
     public function getAllPrescriptions(): Collection
     {
+        // 历史处方只写了 appointment_id、没写 patient_id（见 createPrescriptions 的注释），
+        // 关联患者时经预约回落一次，否则那批记录的患者列永远是空的。
         return DB::table('prescriptions')
-            ->leftJoin('patients', 'patients.id', 'prescriptions.patient_id')
+            ->leftJoin('appointments', 'appointments.id', 'prescriptions.appointment_id')
+            ->leftJoin('patients', 'patients.id', DB::raw('COALESCE(prescriptions.patient_id, appointments.patient_id)'))
             ->leftJoin('users', 'users.id', 'prescriptions.doctor_id')
             ->leftJoin('invoices', 'invoices.id', 'prescriptions.invoice_id')
             ->whereNull('prescriptions.deleted_at')
@@ -330,12 +333,18 @@ class PrescriptionService
      */
     public function createPrescriptions(int $appointmentId, array $items): void
     {
+        // patient_id 必须一并落库。只写 appointment_id 的话，处方列表按
+        // prescriptions.patient_id 关联患者表就永远落空 —— 列表上「患者编号」
+        // 「患者姓名」两列全是空的，前台看不出这张处方是给谁开的。
+        $patientId = \App\Appointment::where('id', $appointmentId)->value('patient_id');
+
         foreach ($items as $value) {
             Prescription::create([
                 'drug' => $value['drug'],
                 'qty' => $value['qty'],
                 'directions' => $value['directions'],
                 'appointment_id' => $appointmentId,
+                'patient_id' => $patientId,
                 '_who_added' => Auth::id(),
             ]);
         }

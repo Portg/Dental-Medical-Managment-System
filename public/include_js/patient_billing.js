@@ -470,10 +470,12 @@ var BillingModule = (function() {
                     // Clear billing form
                     resetBillingForm();
 
-                    // Reload invoices table if loaded
-                    if (invoicesTableLoaded && $.fn.DataTable.isDataTable('#patient_invoices_table')) {
-                        $('#patient_invoices_table').DataTable().ajax.reload();
-                    }
+                    // 走统一入口：它同时刷新账单表和顶部汇总栏。
+                    // 原先这里直接操作 DataTable，绕过了 reloadInvoicesTable()，
+                    // 于是划价收费之后顶部的消费总额/未付余额一直停在旧值 ——
+                    // 前台刚收完 3200 元，抬头一看还是 ¥0.00。
+                    reloadInvoicesTable();
+                    reloadReceiptsTable();
 
                     // Print if requested
                     if (printAfter && resp.invoice_id) {
