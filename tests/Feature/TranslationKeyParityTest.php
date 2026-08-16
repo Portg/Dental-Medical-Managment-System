@@ -15,6 +15,40 @@ use Tests\TestCase;
 class TranslationKeyParityTest extends TestCase
 {
     /** @test */
+    public function every_referenced_messages_key_exists_in_both_supported_locales(): void
+    {
+        $referenced = array_filter(
+            array_keys($this->referencedKeys()),
+            static fn (string $key): bool => str_starts_with($key, 'messages.')
+        );
+        $missing = [];
+
+        foreach (['zh-CN', 'en'] as $locale) {
+            $messages = $this->flatten(require resource_path("lang/{$locale}/messages.php"));
+
+            foreach ($referenced as $fullKey) {
+                $key = substr($fullKey, strlen('messages.'));
+
+                if (! array_key_exists($key, $messages)) {
+                    $missing[] = "{$locale}:{$fullKey}";
+                }
+            }
+        }
+
+        sort($missing);
+
+        $this->assertSame(
+            [],
+            $missing,
+            "以下 messages 翻译键代码里在用，但语言包中不存在：\n" . implode("\n", $missing)
+        );
+
+        $zh = require resource_path('lang/zh-CN/messages.php');
+        $this->assertSame('成功', $zh['success']);
+        $this->assertSame('错误', $zh['error']);
+    }
+
+    /** @test */
     public function every_referenced_key_exists_in_english(): void
     {
         $referenced = $this->referencedKeys();

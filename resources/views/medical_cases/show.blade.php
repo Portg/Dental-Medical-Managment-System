@@ -2,6 +2,7 @@
 @section('content')
 @section('css')
     @include('layouts.page_loader')
+    <link rel="stylesheet" href="{{ asset('css/medical_cases_show.css') }}?v={{ filemtime(public_path('css/medical_cases_show.css')) }}">
 @endsection
 <div class="row">
     <div class="col-md-12">
@@ -84,6 +85,113 @@
                             <p><strong>{{ __('medical_cases.history_of_present_illness') }}:</strong><br>
                                 {{ $case->history_of_present_illness }}
                             </p>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- 检查 / 辅助检查 / 诊断 / 治疗 / 医嘱 / 复诊
+                     这几段本来只有打印页（print.blade.php）渲染，详情页只显示主诉和现病史 ——
+                     医生录完病历回来看，除了这两项什么都看不到，会以为资料没保存上。
+                     数据一直是完整的，缺的只是展示，字段口径与打印页保持一致。 --}}
+                @if($case->examination || ($case->examination_teeth && count($case->examination_teeth)))
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>{{ __('medical_cases.examination') }}:</strong><br>
+                                {{ $case->examination ?: '-' }}
+                                @if($case->examination_teeth && count($case->examination_teeth) > 0)
+                                    <br><small class="text-muted">
+                                        {{ __('medical_cases.examination_teeth') }}:
+                                        {{ implode(', ', $case->examination_teeth) }}
+                                    </small>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($case->auxiliary_examination)
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>{{ __('medical_cases.auxiliary_examination') }}:</strong><br>
+                                {{ $case->auxiliary_examination }}
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($case->diagnosis || $case->diagnosis_code || ($case->related_teeth && count($case->related_teeth)))
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>{{ __('medical_cases.diagnosis') }}:</strong><br>
+                                {{ $case->diagnosis ?: '-' }}
+                                @if($case->diagnosis_code)
+                                    <br><small class="text-muted">ICD-10: {{ $case->diagnosis_code }}</small>
+                                @endif
+                                @if($case->related_teeth && count($case->related_teeth) > 0)
+                                    <br><small class="text-muted">
+                                        {{ __('medical_cases.related_teeth') }}:
+                                        {{ implode(', ', $case->related_teeth) }}
+                                    </small>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($case->treatment || ($case->treatment_services && count($case->treatment_services)))
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>{{ __('medical_cases.treatment') }}:</strong><br>
+                                {{ $case->treatment ?: '-' }}
+                                @if($case->treatment_services && count($case->treatment_services) > 0)
+                                    <br><small class="text-muted">
+                                        {{ __('medical_cases.treatment_services') }}:
+                                        {{ collect($case->treatment_services)->pluck('name')->filter()->implode(', ') }}
+                                    </small>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($case->medical_orders)
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>{{ __('medical_cases.medical_orders') }}:</strong><br>
+                                {{ $case->medical_orders }}
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($case->next_visit_date || $case->next_visit_note)
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>{{ __('medical_cases.next_visit_date') }}:</strong><br>
+                                {{ $case->next_visit_date ?: '-' }}
+                                @if($case->next_visit_note)
+                                    <br><small class="text-muted">{{ $case->next_visit_note }}</small>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- 影像资料：related_images 存的是上传后的相对路径数组 --}}
+                @if($case->related_images && count($case->related_images) > 0)
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>{{ __('medical_cases.related_images') }}:</strong></p>
+                            <div class="case-image-strip">
+                                @foreach($case->related_images as $image)
+                                    @php($path = is_array($image) ? ($image['path'] ?? null) : $image)
+                                    @if($path)
+                                        <a href="{{ asset('storage/' . ltrim($path, '/')) }}" target="_blank">
+                                            <img src="{{ asset('storage/' . ltrim($path, '/')) }}" alt="">
+                                        </a>
+                                    @endif
+                                @endforeach
+                            </div>
                         </div>
                     </div>
                 @endif

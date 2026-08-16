@@ -10,6 +10,11 @@ return [
     | Messages returned by controllers for various operations
     |
     */
+    // Common Dialog Titles
+    'success' => 'Success',
+    'error' => 'Error',
+    'unauthorized' => 'Unauthorized',
+
     // Success Messages
     'operation_successful' => 'Operation successful!',
     'data_saved_successfully' => 'Data saved successfully!',

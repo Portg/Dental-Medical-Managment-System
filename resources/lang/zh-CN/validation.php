@@ -278,6 +278,29 @@ return [
     */
 
     // 自定义属性名称
+    /*
+     * required_if 之类的消息里会带上「另一个字段的值」（:value）。库里存的是
+     * 'Cheque' / 'Self Account' 这类英文枚举，不映射的话提示就变成
+     * 「当 支付方式 为 Cheque 时，支票号 字段是必填的。」—— 半中半英。
+     * 这里的键是字段名，值是该字段各枚举值的中文，与
+     * InvoicePaymentService::PAYMENT_METHODS 对齐。
+     */
+    'values' => [
+        'payment_method' => [
+            'Cash' => '现金',
+            'WeChat' => '微信',
+            'Alipay' => '支付宝',
+            'BankCard' => '银行卡',
+            'StoredValue' => '储值卡',
+            'Insurance' => '保险',
+            'Online Wallet' => '在线钱包',
+            'Mobile Money' => '移动支付',
+            'Cheque' => '支票',
+            'Self Account' => '往来账户',
+            'Credit' => '挂账',
+        ],
+    ],
+
     'attributes' => [
         // 患者信息
         'surname' => '姓氏',
@@ -327,6 +350,12 @@ return [
         'payment_date' => '支付日期',
         'payment_method' => '支付方式',
         'payment_account' => '支付账户',
+        // 非现金收款的附加信息。缺了这几条，校验消息会直出英文字段名
+        //（「cheque no 字段是必填的。」），前台看到的就是半中半英的提示。
+        'cheque_no' => '支票号',
+        'bank_name' => '银行名称',
+        'account_name' => '账户名',
+        'self_account_id' => '往来账户',
 
         // 采购相关
         'purchase_date' => '采购日期',
@@ -347,7 +376,13 @@ return [
         'invoice_id' => '账单',
         'invoice_no' => '账单号',
 
+        // 报价单相关
+        'quotation_id' => '报价单',
+        'medical_service_id' => '诊疗项目',
+        'tooth_no' => '牙位',
+
         // 预约相关
+        'appointment_id' => '预约',
         'appointment_date' => '预约日期',
         'appointment_time' => '预约时间',
         'patient_id' => '患者',

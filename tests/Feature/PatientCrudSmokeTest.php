@@ -193,6 +193,52 @@ class PatientCrudSmokeTest extends TestCase
                  ->assertJsonPath('success', true);
     }
 
+    // ─── 建档日期（补录）────────────────────────────────────────────
+
+    /**
+     * 建档日期要能补录。
+     *
+     * 此前患者表只有 date_of_birth 和时间戳，「建档日期」用的就是 created_at ——
+     * 新建时自动取当天、改不了。诊所把纸质档案或旧系统的患者补录进来时全部记成
+     * 录入当天，而患者列表的日期筛选和新增患者报表都按这一列算，
+     * 「本月新增」里就混进了二十年前建档的老患者。
+     */
+    public function test_registered_at_can_be_back_filled(): void
+    {
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/patients', $this->validPatientData(['registered_at' => '2015-03-08']))
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('patients', ['registered_at' => '2015-03-08']);
+    }
+
+    public function test_registered_at_defaults_to_today(): void
+    {
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/patients', $this->validPatientData())
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('patients', ['registered_at' => now()->toDateString()]);
+    }
+
+    /**
+     * created_at 仍然是纯审计时间戳 —— 补录不该把「这条记录什么时候进的系统」也改掉。
+     */
+    public function test_back_filling_does_not_touch_created_at(): void
+    {
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/patients', $this->validPatientData(['registered_at' => '2015-03-08']))
+            ->assertStatus(201);
+
+        $patient = \App\Patient::where('registered_at', '2015-03-08')->firstOrFail();
+
+        $this->assertSame(
+            now()->toDateString(),
+            $patient->created_at->toDateString(),
+            'created_at 应当还是录入当天'
+        );
+    }
+
     // ─── Auth guard ────────────────────────────────────────────────
 
     public function test_unauthenticated_cannot_access_patients(): void

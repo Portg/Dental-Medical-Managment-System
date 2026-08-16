@@ -79,6 +79,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('patients/{patientId}/medicalHistory', 'PatientController@patientMedicalHistory');
     Route::post('patients/{id}/reveal-pii', 'PatientController@revealPii');
     Route::post('patients/{id}/quick-info', 'PatientController@updateQuickInfo');
+    // 账单页签收款/退款后用它刷新顶部汇总栏，免得前台得强制刷新整页
+    Route::get('patients/{id}/billing-summary', 'PatientController@billingSummary');
 
     Route::get('export-patients', 'PatientController@exportPatients');
     Route::get('search-patient', 'PatientController@filterPatients');

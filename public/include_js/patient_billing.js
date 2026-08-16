@@ -1089,12 +1089,51 @@ var BillingModule = (function() {
         if ($.fn.DataTable.isDataTable('#patient_invoices_table')) {
             $('#patient_invoices_table').DataTable().ajax.reload(null, false);
         }
+        // 开账单同样会改变消费总额与未付余额
+        reloadBillingSummary();
     }
 
     function reloadReceiptsTable() {
         if ($.fn.DataTable.isDataTable('#patient_receipts_table')) {
             $('#patient_receipts_table').DataTable().ajax.reload(null, false);
         }
+        // 收款/退款改变的是钱，顶部汇总栏也得跟着走
+        reloadBillingSummary();
+    }
+
+    /**
+     * 刷新页面顶部那条汇总栏（消费总额 / 未付余额 / 储值余额）。
+     *
+     * 那三个数是服务端渲染进 patients/show.blade.php 的，只重载 DataTable 的话
+     * 它们会一直停在打开页面时的旧值 —— 前台收完款看不到新的未付金额，只能
+     * 强制刷新整页。这里按 id 就地改文本，不动页面其它部分。
+     */
+    var summaryPending = false;
+
+    function reloadBillingSummary() {
+        if (!patientId || summaryPending) {
+            return;
+        }
+
+        // 开账单/收款那几处会连着调 reloadInvoicesTable + reloadReceiptsTable，
+        // 同一拍里去重，别为一次操作发两遍请求
+        summaryPending = true;
+        setTimeout(function () { summaryPending = false; }, 0);
+
+        $.getJSON('/patients/' + patientId + '/billing-summary', function (res) {
+            if (!res || !res.status || !res.data) {
+                return;
+            }
+
+            var money = function (v) {
+                return '¥' + (parseFloat(v) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            };
+
+            $('#summaryTotalSpending').text(money(res.data.total_spending));
+            $('#summaryTotalOutstanding').text(money(res.data.total_outstanding));
+            // 非会员患者页面上没有这一项，选择器落空是正常的
+            $('#summaryMemberBalance').text(money(res.data.member_balance));
+        });
     }
 
     // ─── Public API ────────────────────────────────────────────────

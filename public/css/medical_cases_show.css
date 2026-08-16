@@ -1,0 +1,17 @@
+/* 病历详情页的影像资料缩略图条。
+   related_images 存的是上传后的相对路径，详情页原先完全不展示这一段，
+   医生录完回来看会以为资料没保存上。 */
+.case-image-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.case-image-strip img {
+    width: 120px;
+    height: 90px;
+    object-fit: cover;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}

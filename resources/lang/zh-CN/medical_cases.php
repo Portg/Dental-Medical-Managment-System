@@ -189,6 +189,8 @@ return [
     'examination_section' => '检查',
     'examination_hint' => '客观检查发现',
     'related_teeth' => '关联牙位',
+    'diagnosis_code' => '诊断编码',
+    'related_images' => '影像资料',
     'select_teeth' => '选择牙位',
     'auxiliary_exam_section' => '辅助检查',
     'auxiliary_exam_hint' => 'X光、CT等检查结果',

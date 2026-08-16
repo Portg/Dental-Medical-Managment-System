@@ -18,6 +18,8 @@ class Patient extends Model
         'patient_no', 'patient_code', 'status', 'merged_to_id',
         // 注意：没有 dob——它是只读派生属性（见 getDobAttribute），写入用 date_of_birth
         'surname', 'othername', 'gender', 'date_of_birth', 'age',
+        // 建档日期，可补录；created_at 保持纯审计时间戳，不给人工改
+        'registered_at',
         'ethnicity', 'marital_status', 'education', 'blood_type',
         'email', 'phone_no', 'alternative_no', 'address',
         'medication_history', 'drug_allergies', 'drug_allergies_other',
@@ -103,6 +105,7 @@ class Patient extends Model
         'systemic_diseases' => 'array',
         'tags' => 'array',
         'date_of_birth' => 'date:Y-m-d',
+        'registered_at' => 'date:Y-m-d',
         'member_since' => 'date:Y-m-d',
         'member_expiry' => 'date:Y-m-d',
         'member_balance' => 'decimal:2',

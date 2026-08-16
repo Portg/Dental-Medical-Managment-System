@@ -208,20 +208,23 @@
 
     <div class="summary-divider"></div>
 
+    {{-- 这三个数是服务端渲染的，账单页签收款/退款后由 patient_billing.js 按 id
+         就地更新（GET patients/{id}/billing-summary）；没有这几个 id 的话，
+         前台得强制刷新整页才看得到新的总金额与未付金额。 --}}
     <span class="summary-item">
-        {{ __('patient.total_spending') }}: <span class="amount">&yen;{{ number_format($totalSpending, 2) }}</span>
+        {{ __('patient.total_spending') }}: <span class="amount" id="summaryTotalSpending">&yen;{{ number_format($totalSpending, 2) }}</span>
     </span>
 
     <div class="summary-divider"></div>
 
     <span class="summary-item">
-        {{ __('patient.outstanding_balance') }}: <span class="amount">&yen;{{ number_format($totalOutstanding, 2) }}</span>
+        {{ __('patient.outstanding_balance') }}: <span class="amount" id="summaryTotalOutstanding">&yen;{{ number_format($totalOutstanding, 2) }}</span>
     </span>
 
     @if($patient->member_status === 'Active')
         <div class="summary-divider"></div>
         <span class="summary-item">
-            {{ __('patient.member_balance') }}: <span class="amount">&yen;{{ number_format($patient->member_balance ?? 0, 2) }}</span>
+            {{ __('patient.member_balance') }}: <span class="amount" id="summaryMemberBalance">&yen;{{ number_format($patient->member_balance ?? 0, 2) }}</span>
         </span>
     @endif
 

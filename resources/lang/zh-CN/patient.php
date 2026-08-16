@@ -33,6 +33,8 @@ return [
     'last_name' => '姓',
     'full_name' => '姓名',
     'date_of_birth' => '出生日期',
+    'registered_at' => '建档日期',
+    'registered_at_hint' => '补录旧患者时改成当年的建档日期',
     'age' => '年龄',
     'age_placeholder' => '请输入年龄',
     'age_hint' => '可选，可根据出生日期自动计算',

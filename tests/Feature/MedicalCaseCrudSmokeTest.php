@@ -97,7 +97,10 @@ class MedicalCaseCrudSmokeTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJson(['status' => true]);
+            ->assertJson([
+                'status'  => true,
+                'message' => '草稿已保存',
+            ]);
         $this->assertDatabaseHas('medical_cases', [
             'patient_id' => $patient->id,
             'doctor_id'  => $doctor->id,
@@ -147,5 +150,64 @@ class MedicalCaseCrudSmokeTest extends TestCase
         $this->assertSame($case->id, $data['case']->id);
         $this->assertNotNull($data['latestVitalSign'], '按 patient_id 应能取到该患者的体征');
         $this->assertEquals(72, $data['latestVitalSign']->heart_rate);
+    }
+
+    /**
+     * 病历详情页要把录入的内容显示出来。
+     *
+     * 此前详情页只渲染主诉和现病史，检查/辅助检查/诊断/治疗/医嘱/复诊一概不展示 ——
+     * 医生录完回来看，除了这两项什么都看不到，会以为资料没保存上。
+     * 数据一直是完整的（打印页渲染了全部字段），缺的只是详情页的展示。
+     */
+    /** @test */
+    public function case_detail_page_shows_what_was_entered(): void
+    {
+        $patient = Patient::create([
+            'patient_no' => 'MC-SHOW-001',
+            'surname'    => '展示',
+            'othername'  => '患者',
+            'gender'     => 'Male',
+            'phone_no'   => '13800138002',
+            '_who_added' => $this->admin->id,
+        ]);
+
+        $case = \App\MedicalCase::create([
+            'case_no'               => 'MC-SHOW-0001',
+            'patient_id'            => $patient->id,
+            'doctor_id'             => $this->admin->id,
+            'case_date'             => now()->toDateString(),
+            'chief_complaint'       => '右下后牙冷热痛',
+            'examination'           => '46 叩痛阳性',
+            'examination_teeth'     => ['46'],
+            'auxiliary_examination' => '根尖片示根周膜增宽',
+            'diagnosis'             => '慢性根尖周炎',
+            'diagnosis_code'        => 'K04.5',
+            'related_teeth'         => ['46'],
+            'treatment'             => '根管治疗',
+            'medical_orders'        => '避免patient患侧咀嚼',
+            'next_visit_date'       => now()->addWeek()->toDateString(),
+            'next_visit_note'       => '复诊换药',
+            '_who_added'            => $this->admin->id,
+        ]);
+
+        $html = $this->actingAs($this->admin)
+            ->get('/medical-cases/' . $case->id)
+            ->assertOk()
+            ->getContent();
+
+        foreach ([
+            '46 叩痛阳性',
+            '根尖片示根周膜增宽',
+            '慢性根尖周炎',
+            'K04.5',
+            '根管治疗',
+            '复诊换药',
+        ] as $entered) {
+            $this->assertStringContainsString(
+                $entered,
+                $html,
+                "录入的「{$entered}」应当在病历详情页上显示出来"
+            );
+        }
     }
 }

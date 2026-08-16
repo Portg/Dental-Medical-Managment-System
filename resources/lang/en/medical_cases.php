@@ -189,6 +189,8 @@ return [
     'examination_section' => 'Examination',
     'examination_hint' => 'Objective clinical findings',
     'related_teeth' => 'Related Teeth',
+    'diagnosis_code' => 'Diagnosis Code',
+    'related_images' => 'Images',
     'select_teeth' => 'Select Teeth',
     'auxiliary_exam_section' => 'Auxiliary Examination',
     'auxiliary_exam_hint' => 'X-ray, CT scan results, etc.',

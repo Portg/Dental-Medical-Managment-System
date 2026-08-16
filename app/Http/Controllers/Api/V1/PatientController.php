@@ -71,7 +71,7 @@ class PatientController extends ApiController
     {
         $patientFields = $request->only([
             'full_name', 'surname', 'othername', 'gender', 'telephone',
-            'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
+            'dob', 'registered_at', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
             'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
             'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
             'insurance_company_id', 'source_id', 'notes',
@@ -100,7 +100,7 @@ class PatientController extends ApiController
     {
         $patientFields = $request->only([
             'full_name', 'surname', 'othername', 'gender', 'telephone',
-            'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
+            'dob', 'registered_at', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
             'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
             'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
             'insurance_company_id', 'source_id', 'notes',

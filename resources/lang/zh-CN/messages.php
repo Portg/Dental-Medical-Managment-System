@@ -11,6 +11,11 @@ return [
     |
     */
 
+    // Common Dialog Titles
+    'success' => '成功',
+    'error' => '错误',
+    'unauthorized' => '无权执行此操作',
+
     // Success Messages
     'operation_successful' => '操作成功！',
     'data_saved_successfully' => '数据保存成功！',

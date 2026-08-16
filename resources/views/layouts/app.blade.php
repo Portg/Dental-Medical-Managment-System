@@ -245,6 +245,13 @@
             todayHighlight: true,
         });
 
+        // 建档日期（新建患者）：补录老患者时要能往回选，所以不限制最大日期
+        $('#registered_at_picker').datepicker({
+            autoclose: true,
+            todayHighlight: true,
+            format: 'yyyy-mm-dd',
+        });
+
         $('.start_date').datepicker({
             autoclose: true,
             todayHighlight: true,

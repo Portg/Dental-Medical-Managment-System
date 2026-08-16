@@ -27,6 +27,9 @@ class PatientService
      */
     private const OPTIONAL_FIELDS = [
         'dob' => 'date_of_birth',
+        // 建档日期，可补录（纸质档案/旧系统迁进来的患者要记原始日期）；
+        // 不填时由 store() 兜底成当天
+        'registered_at' => 'registered_at',
         'age' => 'age',
         'ethnicity' => 'ethnicity',
         'marital_status' => 'marital_status',
@@ -109,8 +112,11 @@ class PatientService
         }
 
         // Date range filter
+        // 按建档日期筛，不按 created_at —— 补录进来的老患者建档日期是当年的，
+        // 而 created_at 是录入当天。用后者会让「本月新增」把补录的老患者算进来。
+        // COALESCE 兜底：迁移已回填，这里只防「迁移没跑到」的边缘情况。
         if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
-            $query->whereBetween(DB::raw('DATE(patients.created_at)'), [
+            $query->whereBetween(DB::raw('DATE(COALESCE(patients.registered_at, patients.created_at))'), [
                 $filters['start_date'], $filters['end_date'],
             ]);
         }
@@ -216,7 +222,8 @@ class PatientService
             ->select('patients.*', 'insurance_companies.name as insurance_company');
 
         if ($from && $to) {
-            $query->whereBetween(DB::raw('DATE(patients.created_at)'), [$from, $to]);
+            // 同上：新增患者的口径是建档日期
+            $query->whereBetween(DB::raw('DATE(COALESCE(patients.registered_at, patients.created_at))'), [$from, $to]);
         }
 
         return $query->orderBy('created_at', 'ASC')->get();
@@ -300,6 +307,38 @@ class PatientService
     }
 
     /**
+     * 患者页顶部汇总栏的金额：消费总额、未付余额、储值余额。
+     *
+     * 单独抽出来是因为这三个数是**服务端渲染**进 patients/show.blade.php 的，
+     * 而账单页签里收款、退款、撤销收款之后只重载了两张 DataTable ——
+     * 汇总栏原地不动，前台必须强制刷新整页才看得到新的总金额和未付金额。
+     * 详情页首次渲染与收款后的局部刷新共用这一段，两边不会各算各的。
+     *
+     * @return array{total_spending: string, total_outstanding: string, member_balance: string}
+     */
+    public function getBillingSummary(int $id): array
+    {
+        $ownedByPatient = fn ($query) => $query
+            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
+            ->where(DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'), $id)
+            ->whereNull('invoices.deleted_at');
+
+        // 消费总额 (total spending)
+        $totalSpending = $ownedByPatient(DB::table('invoices'))->sum('invoices.total_amount');
+
+        // 未付余额：与未收款报表保持一致，仅汇总仍未结清的账单。
+        $totalOutstanding = $ownedByPatient(DB::table('invoices'))
+            ->whereIn('invoices.payment_status', ['unpaid', 'partial', 'overdue'])
+            ->sum('invoices.outstanding_amount');
+
+        return [
+            'total_spending'    => (string) $totalSpending,
+            'total_outstanding' => (string) $totalOutstanding,
+            'member_balance'    => (string) (Patient::where('id', $id)->value('member_balance') ?? 0),
+        ];
+    }
+
+    /**
      * Get patient detail with related data counts.
      */
     public function getPatientDetail(int $id): array
@@ -339,20 +378,9 @@ class PatientService
             ->orderBy('start_date', 'desc')
             ->first();
 
-        // 消费总额 (total spending)
-        $totalSpending = DB::table('invoices')
-            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->where(DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'), $id)
-            ->whereNull('invoices.deleted_at')
-            ->sum('invoices.total_amount');
-
-        // 未付余额：与未收款报表保持一致，仅汇总仍未结清的账单。
-        $totalOutstanding = DB::table('invoices')
-            ->leftJoin('appointments', 'appointments.id', 'invoices.appointment_id')
-            ->where(DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'), $id)
-            ->whereNull('invoices.deleted_at')
-            ->whereIn('invoices.payment_status', ['unpaid', 'partial', 'overdue'])
-            ->sum('invoices.outstanding_amount');
+        $summary = $this->getBillingSummary($id);
+        $totalSpending = $summary['total_spending'];
+        $totalOutstanding = $summary['total_outstanding'];
 
         // 所有标签（用于左侧面板复选框）
         $allTags = \App\PatientTag::orderBy('name')->get(['id', 'name']);
@@ -464,6 +492,11 @@ class PatientService
         if (!$isUpdate) {
             $data['patient_no'] = Patient::PatientNumber();
             $data['_who_added'] = Auth::User()->id;
+            // 建档日期没填就是当天。补录纸质档案/旧系统患者时可以指定，
+            // 患者列表的日期筛选与新增患者报表都按它算（不再按 created_at）。
+            $data['registered_at'] = !empty($input['registered_at'])
+                ? $input['registered_at']
+                : now()->toDateString();
         }
 
         // Optional fields

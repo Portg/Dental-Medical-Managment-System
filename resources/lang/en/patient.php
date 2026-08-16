@@ -40,6 +40,8 @@ return [
     'female' => 'Female',
     'dob' => 'DOB',
     'date_of_birth' => 'Date of Birth',
+    'registered_at' => 'Registration Date',
+    'registered_at_hint' => 'Set the original date when back-filling an existing patient',
     'age' => 'Age',
     'age_placeholder' => 'Enter age',
     'age_hint' => 'Optional, auto-calculated from DOB',

@@ -165,6 +165,19 @@
                                         'select2' => true,
                                     ])
                                 </div>
+                                {{-- 建档日期：默认今天，补录纸质档案或旧系统患者时改成当年的日期。
+                                     患者列表的日期筛选与新增患者报表都按这个字段算。 --}}
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="control-label col-md-4">{{ __('patient.registered_at') }}</label>
+                                        <div class="col-md-8">
+                                            <input type="text" name="registered_at" placeholder="yyyy-mm-dd"
+                                                   class="form-control" id="registered_at_picker"
+                                                   value="{{ now()->format('Y-m-d') }}">
+                                            <span class="help-block">{{ __('patient.registered_at_hint') }}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             {{-- Row 3: Referred By + Email + Address --}}

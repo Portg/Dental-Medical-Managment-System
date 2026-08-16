@@ -113,7 +113,7 @@ class PatientController extends Controller
     {
         $patientFields = $request->only([
             'full_name', 'surname', 'othername', 'gender', 'telephone',
-            'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
+            'dob', 'registered_at', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
             'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
             'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
             'insurance_company_id', 'source_id', 'referred_by', 'patient_group', 'notes',
@@ -205,6 +205,20 @@ class PatientController extends Controller
     /**
      * Update tags and group from the detail page left panel (AJAX).
      */
+    /**
+     * 患者页顶部汇总栏的金额，供账单页签在收款/退款/撤销之后局部刷新。
+     *
+     * 那三个数是服务端渲染的，收款后只重载 DataTable 的话汇总栏会一直停在旧值，
+     * 前台得强制刷新整页才看得到新的总金额与未付金额。
+     */
+    public function billingSummary($id)
+    {
+        return response()->json([
+            'status' => true,
+            'data'   => $this->patientService->getBillingSummary((int) $id),
+        ]);
+    }
+
     public function updateQuickInfo(Request $request, $id)
     {
         $patient = Patient::findOrFail($id);
@@ -233,7 +247,7 @@ class PatientController extends Controller
     {
         $patientFields = $request->only([
             'full_name', 'surname', 'othername', 'gender', 'telephone',
-            'dob', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
+            'dob', 'registered_at', 'age', 'ethnicity', 'marital_status', 'education', 'blood_type',
             'email', 'phone_no', 'alternative_no', 'address', 'medication_history',
             'nin', 'profession', 'next_of_kin', 'next_of_kin_no', 'next_of_kin_address',
             'insurance_company_id', 'source_id', 'referred_by', 'patient_group', 'notes',

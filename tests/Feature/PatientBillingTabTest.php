@@ -246,6 +246,7 @@ class PatientBillingTabTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonPath('status', 1)
+                 ->assertJsonPath('message', '补收成功')
                  ->assertJsonPath('data.new_outstanding', '300.00');
 
         $this->assertDatabaseHas('invoice_payments', [
@@ -436,5 +437,58 @@ class PatientBillingTabTest extends TestCase
             ]);
 
         $response->assertStatus(422);
+    }
+
+    /**
+     * 顶部汇总栏的金额得能单独取到。
+     *
+     * 那三个数是服务端渲染进 patients/show.blade.php 的，账单页签收款后只重载了
+     * 两张 DataTable —— 汇总栏一直停在打开页面时的旧值，前台收完款看不到新的
+     * 未付金额，只能强制刷新整页。有了这个接口，JS 才能就地把它改掉。
+     */
+    /** @test */
+    public function billing_summary_endpoint_returns_the_figures_shown_in_the_header(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->getJson('/patients/' . $this->patient->id . '/billing-summary');
+
+        $response->assertOk()
+            ->assertJsonPath('status', true)
+            ->assertJsonStructure(['data' => ['total_spending', 'total_outstanding', 'member_balance']]);
+
+        // 与页面首次渲染同源：两张账单 500（已付清）+ 逾期那张
+        $expected = app(\App\Services\PatientService::class)->getBillingSummary($this->patient->id);
+
+        $this->assertEquals($expected['total_spending'], $response->json('data.total_spending'));
+        $this->assertEquals($expected['total_outstanding'], $response->json('data.total_outstanding'));
+    }
+
+    /** @test */
+    public function billing_summary_follows_a_payment(): void
+    {
+        $before = $this->actingAs($this->admin)
+            ->getJson('/patients/' . $this->patient->id . '/billing-summary')
+            ->json('data.total_outstanding');
+
+        $this->assertGreaterThan(0, (float) $before, '前提：这个患者还有未付余额');
+
+        // 走账单页签真实用的那个入口把逾期那张收满
+        $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $this->overdueInvoice->id . '/add-overdue-payment', [
+                'amount'         => $this->overdueInvoice->outstanding_amount,
+                'payment_method' => 'Cash',
+                'payment_date'   => now()->format('Y-m-d'),
+            ])
+            ->assertJson(['status' => 1]);
+
+        $after = $this->actingAs($this->admin)
+            ->getJson('/patients/' . $this->patient->id . '/billing-summary')
+            ->json('data.total_outstanding');
+
+        $this->assertLessThan(
+            (float) $before,
+            (float) $after,
+            '收款之后未付余额必须跟着降，否则汇总栏刷新了也还是旧数'
+        );
     }
 }
