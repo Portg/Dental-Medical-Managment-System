@@ -221,6 +221,15 @@ class InvoicePaymentService
             // 改金额同样要让账单跟上 —— 改收款方式的弹窗虽然只提交方式，
             // 但控制器允许带 amount，别把这条路径漏了。
             if ($updated) {
+                // 累计消费与积分是按「这笔收多少、什么方式」算出来的，改了就得重算：
+                // 收 500 后改成 100，不重算的话累计消费还停在 500，之后撤销只减 100，
+                // 患者账上白留 400。先按原值冲销、再按新值发放，两步都在同一个事务里。
+                $fresh = InvoicePayment::find($id);
+
+                $this->reverseMemberBenefits($payment);
+                $this->awardMemberBenefits($invoice, $fresh);
+                $this->checkMemberUpgrade($invoice->patient);
+
                 $this->syncInvoicePaidAmount((int) $invoice->id);
             }
 
@@ -248,14 +257,18 @@ class InvoicePaymentService
     /**
      * Delete a payment record.
      *
-     * 账单上只要有已通过的退费，就不许再撤销收款。
+     * 账单上只要挂着退费（待审批或已通过），就不许再撤销收款。
      *
      * 撤销走的是「按这笔付款的全额退回」，而退费退的是账单层面的金额，两者没有
      * 分摊关系：储值支付 300 → 退费 100 → 再撤销那笔付款，患者卡里一共多出 400，
      * 凭空多了 100。非储值的方式虽然不动外部余额，但同样会算出「实收为负、
-     * 钱却已经退出去了」的账。要调整先撤销退费，顺序反过来才说得清。
+     * 钱却已经退出去了」的账。
      *
-     * @throws \RuntimeException 账单已有通过的退费
+     * 待审批的也要挡：先撤销收款、再去把那张待审批的退费单批掉，钱一样会退出去，
+     * 只是把重复入账推迟到审批那一刻。审批侧另有一道复核（RefundService 会重新
+     * 核对可退金额），两道一起才堵得住。要调整先处理退费单，顺序反过来才说得清。
+     *
+     * @throws \RuntimeException 账单挂着未处理或已通过的退费
      */
     public function deletePayment(int $id): bool
     {
@@ -268,11 +281,11 @@ class InvoicePaymentService
 
             $invoiceId = (int) $payment->invoice_id;
 
-            $hasApprovedRefund = Refund::where('invoice_id', $invoiceId)
-                ->where('approval_status', Refund::APPROVAL_APPROVED)
+            $hasOpenRefund = Refund::where('invoice_id', $invoiceId)
+                ->whereIn('approval_status', [Refund::APPROVAL_PENDING, Refund::APPROVAL_APPROVED])
                 ->exists();
 
-            if ($hasApprovedRefund) {
+            if ($hasOpenRefund) {
                 throw new \RuntimeException(__('invoices.payment_locked_by_refund'));
             }
 
@@ -352,7 +365,13 @@ class InvoicePaymentService
      */
     private function awardMemberBenefits(Invoice $invoice, InvoicePayment $payment): void
     {
-        $patient = $invoice->patient;
+        if (!$invoice->patient_id) {
+            return;
+        }
+
+        // 锁住患者行再读写累计消费与积分：同一患者同时结两张现金账单时，
+        // 「读 → 加 → 存」不锁会互相覆盖，只累计到其中一笔。
+        $patient = \App\Patient::where('id', $invoice->patient_id)->lockForUpdate()->first();
 
         if (!$patient) {
             return;
@@ -362,6 +381,11 @@ class InvoicePaymentService
 
         $patient->total_consumption = bcadd((string) ($patient->total_consumption ?? 0), $amount, 2);
         $patient->save();
+
+        // 打上标记：撤销时据此判断这笔当初到底发没发过，
+        // 历史收款（本次改动之前建的）保持 false，不会被错误冲减。
+        $payment->member_benefits_awarded = true;
+        $payment->save();
 
         if (!$patient->memberLevel || !SystemSetting::get('member.points_enabled', true)) {
             return;
@@ -401,11 +425,25 @@ class InvoicePaymentService
      * 积分按当初那条流水的 points_change 冲，不重算 —— 见 awardMemberBenefits()。
      * 积分与累计消费都不允许被冲成负数：历史数据里有先积分后手工调整的情况，
      * 硬减会把患者的账户改成负值，比少冲一点更难解释。
+     *
+     * 只冲 member_benefits_awarded 为真的收款。本次改动之前，走 /payments 的单笔
+     * 收款从来不加累计消费；不看这个标记就会把患者原本就有的累计消费白白减掉，
+     * 严重时还会把会员等级降下去。
      */
     private function reverseMemberBenefits(InvoicePayment $payment): void
     {
+        if (!$payment->member_benefits_awarded) {
+            return;
+        }
+
         $invoice = Invoice::find($payment->invoice_id);
-        $patient = $invoice?->patient;
+
+        if (!$invoice || !$invoice->patient_id) {
+            return;
+        }
+
+        // 与发放同样要锁患者行，理由见 awardMemberBenefits()
+        $patient = \App\Patient::where('id', $invoice->patient_id)->lockForUpdate()->first();
 
         if (!$patient) {
             return;
@@ -520,13 +558,27 @@ class InvoicePaymentService
      *
      * 没有这一步的话，撤销收款只是把账单的已收金额减掉，患者卡里那笔钱就凭空
      * 消失了 —— 而且是无声的，患者下次消费才会发现余额不对。
+     *
+     * 退回哪张卡，以**当初扣款那条流水**记下的 patient_id 为准，而不是现在重新
+     * 解析共享卡关系：付款之后共享卡可能被解绑或改绑，按当前关系退会把钱退给
+     * 另一个人 —— 一个人凭空多一笔，另一个人凭空少一笔。
      */
     private function refundStoredValue(InvoicePayment $payment): void
     {
         $invoice = Invoice::find($payment->invoice_id);
-        $patient = $invoice?->patient;
 
-        if (!$patient) {
+        // 当初扣的就是这个人，认它
+        $chargedPatientId = MemberTransaction::where('invoice_payment_id', $payment->id)
+            ->where('transaction_type', 'Consumption')
+            ->value('patient_id');
+
+        // 没有流水的只可能是本次改动之前的历史记录，退而求其次按当前关系解析
+        $payingPatientId = $chargedPatientId
+            ?: ($invoice?->patient_id
+                ? app(MemberService::class)->resolvePrimaryMember((int) $invoice->patient_id)->id
+                : null);
+
+        if (!$payingPatientId) {
             // 账单或患者已经不在了，退无可退；记一笔日志好过静默吞掉
             Log::warning('Stored-value payment reversed without a patient to credit', [
                 'payment_id' => $payment->id,
@@ -536,7 +588,16 @@ class InvoicePaymentService
             return;
         }
 
-        $payingPatient = $this->lockPayingMember($patient->id);
+        $payingPatient = \App\Patient::where('id', $payingPatientId)->lockForUpdate()->first();
+
+        if (!$payingPatient) {
+            Log::warning('Stored-value payment reversed but the paying patient is gone', [
+                'payment_id' => $payment->id,
+                'patient_id' => $payingPatientId,
+            ]);
+
+            return;
+        }
         $balanceBefore = (string) ($payingPatient->member_balance ?? 0);
         $amount = (string) $payment->amount;
 
@@ -550,8 +611,8 @@ class InvoicePaymentService
             'amount' => $amount,
             'balance_before' => $balanceBefore,
             'balance_after' => $payingPatient->member_balance,
-            'description' => __('invoices.stored_value_payment_reversed', ['invoice_no' => $invoice->invoice_no]),
-            'invoice_id' => $invoice->id,
+            'description' => __('invoices.stored_value_payment_reversed', ['invoice_no' => $invoice?->invoice_no]),
+            'invoice_id' => $invoice?->id,
             'invoice_payment_id' => $payment->id,
             '_who_added' => Auth::id(),
         ]);

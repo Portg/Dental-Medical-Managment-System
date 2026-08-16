@@ -795,6 +795,43 @@ class InvoicePaymentControllerTest extends TestCase
         $this->assertEquals(100, $payment->fresh()->amount);
     }
 
+    /**
+     * 挂着退费时撤销收款要返回可读的 422，不能冒成 500。
+     *
+     * 服务层改成抛 RuntimeException 之后，两个删除入口都没接，前台看到的是
+     * 「服务器错误」，既不知道为什么撤不掉，也不知道该先去处理退费单。
+     */
+    /** @test */
+    public function 挂着退费时撤销收款返回422而不是500(): void
+    {
+        $this->actingAs($this->cashier)
+            ->postJson('/payments', $this->paymentPayload(['amount' => 500]))
+            ->assertJson(['status' => true]);
+
+        $payment = InvoicePayment::first();
+
+        Refund::create([
+            'refund_no'       => Refund::generateRefundNo(),
+            'invoice_id'      => $this->invoice->id,
+            'patient_id'      => $this->invoice->patient_id,
+            'refund_amount'   => 200,
+            'refund_reason'   => '待审批',
+            'refund_date'     => now(),
+            'refund_method'   => 'cash',
+            'approval_status' => Refund::APPROVAL_PENDING,
+            'branch_id'       => $this->invoice->branch_id,
+            '_who_added'      => $this->cashier->id,
+        ]);
+
+        $response = $this->actingAs($this->cashier)
+            ->deleteJson('/payments/' . $payment->id)
+            ->assertStatus(422)
+            ->assertJson(['status' => false]);
+
+        $this->assertNotEmpty($response->json('message'));
+        $this->assertNotNull($payment->fresh(), '收款不该被撤销');
+    }
+
     /** @test */
     public function 保险收款会保存保险公司(): void
     {

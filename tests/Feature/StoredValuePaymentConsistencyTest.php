@@ -277,8 +277,14 @@ class StoredValuePaymentConsistencyTest extends TestCase
         }
     }
 
+    /**
+     * 待审批的退费同样要挡住撤销收款。
+     *
+     * 先撤销收款、再把那张待审批的退费单批掉，钱一样会退出去，只是把重复入账
+     * 推迟到审批那一刻 —— 上一版只拦已通过的退费，正好漏掉这条路。
+     */
     /** @test */
-    public function 待审批的退费不挡撤销收款(): void
+    public function 待审批的退费也挡撤销收款(): void
     {
         $payment = $this->service->createPayment($this->storedValuePayload(300));
 
@@ -295,8 +301,189 @@ class StoredValuePaymentConsistencyTest extends TestCase
             '_who_added'      => $this->cashier->id,
         ]);
 
-        $this->assertTrue($this->service->deletePayment($payment->id));
-        $this->assertEquals(2000, $this->patient->fresh()->member_balance);
+        $this->expectException(\RuntimeException::class);
+
+        try {
+            $this->service->deletePayment($payment->id);
+        } finally {
+            $this->assertNotNull($payment->fresh(), '收款不该被撤销');
+            $this->assertEquals(1700, $this->patient->fresh()->member_balance);
+        }
+    }
+
+    /**
+     * 审批退费时要按当下的实收再核一次可退金额。
+     *
+     * 建单时核对过，但审批可能是几天以后的事，中间收款可能被改小 —— 直接批就会
+     * 退出账上根本没有的钱。这是「挡撤销」之外的第二道，两道一起才堵得住。
+     */
+    /** @test */
+    public function 审批退费时按当下实收复核可退金额(): void
+    {
+        $payment = $this->service->createPayment([
+            'amount'         => 800,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+            'invoice_id'     => $this->invoice->id,
+        ]);
+
+        $refund = \App\Refund::create([
+            'refund_no'       => \App\Refund::generateRefundNo(),
+            'invoice_id'      => $this->invoice->id,
+            'patient_id'      => $this->patient->id,
+            'refund_amount'   => 800,
+            'refund_reason'   => '取消治疗',
+            'refund_date'     => now(),
+            'refund_method'   => 'cash',
+            'approval_status' => \App\Refund::APPROVAL_PENDING,
+            'branch_id'       => $this->invoice->branch_id,
+            '_who_added'      => $this->cashier->id,
+        ]);
+
+        // 审批前收款被改小到 200（改收款不受退费单影响，只有撤销才挡）
+        $this->service->updatePayment($payment->id, [
+            'amount'         => 200,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+        ]);
+
+        $result = app(\App\Services\RefundService::class)->approveRefund($refund->id, $this->cashier->id);
+
+        $this->assertFalse($result['status'], '实收只剩 200，不该批得下 800 的退费');
+        $this->assertSame(
+            \App\Refund::APPROVAL_PENDING,
+            $refund->fresh()->approval_status,
+            '复核不通过时退费单不该被改成已批准'
+        );
+    }
+
+    /**
+     * 改收款金额之后，累计消费与积分要跟着重算。
+     *
+     * 收 500 后改成 100，不重算的话累计消费还停在 500；之后撤销只减 100，
+     * 患者账上白留 400。
+     */
+    /** @test */
+    public function 改收款金额会同步重算累计消费(): void
+    {
+        $payment = $this->service->createPayment([
+            'amount'         => 500,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+            'invoice_id'     => $this->invoice->id,
+        ]);
+
+        $this->assertEquals(500, $this->patient->fresh()->total_consumption);
+
+        $this->service->updatePayment($payment->id, [
+            'amount'         => 100,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+        ]);
+
+        $this->assertEquals(100, $this->patient->fresh()->total_consumption, '改金额后累计消费没跟着走');
+
+        $this->service->deletePayment($payment->id);
+
+        $this->assertEquals(0, $this->patient->fresh()->total_consumption, '撤销后累计消费应当归零');
+    }
+
+    /**
+     * 历史收款（本次改动之前建的，从没加过累计消费）撤销时不能倒扣。
+     *
+     * 迁移只加列不回填，所以老记录的 member_benefits_awarded 是 false；
+     * 不看这个标记就会把患者原本就有的累计消费白白减掉，还可能把等级降下去。
+     */
+    /** @test */
+    public function 历史收款撤销不会倒扣累计消费(): void
+    {
+        $this->patient->update(['total_consumption' => 5000]);
+
+        // 直接建记录，绕开 createPayment —— 模拟升级前留下的那批数据
+        $legacy = InvoicePayment::create([
+            'amount'         => 300,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+            'invoice_id'     => $this->invoice->id,
+            'branch_id'      => $this->invoice->branch_id,
+            '_who_added'     => $this->cashier->id,
+        ]);
+
+        $this->assertFalse((bool) $legacy->fresh()->member_benefits_awarded);
+
+        $this->service->deletePayment($legacy->id);
+
+        $this->assertEquals(
+            5000,
+            $this->patient->fresh()->total_consumption,
+            '历史收款从没加过累计消费，撤销时不该倒扣'
+        );
+    }
+
+    /**
+     * 储值撤销要退给当初真正扣款的那张卡，而不是按现在的共享卡关系重新解析。
+     *
+     * 付款之后共享卡可能被解绑或改绑，按当前关系退会把钱退给另一个人 ——
+     * 一个人凭空多一笔，另一个人凭空少一笔。
+     */
+    /** @test */
+    public function 储值撤销按当初扣款的那张卡退回(): void
+    {
+        $primary = Patient::create([
+            'patient_no'     => '20260703',
+            'surname'        => '孙',
+            'othername'      => '主卡',
+            'gender'         => 'Male',
+            'member_balance' => 5000,
+            '_who_added'     => $this->cashier->id,
+        ]);
+
+        $holder = \App\MemberSharedHolder::create([
+            'primary_patient_id' => $primary->id,
+            'shared_patient_id'  => $this->patient->id,
+            'is_active'          => true,
+            '_who_added'         => $this->cashier->id,
+        ]);
+
+        $payment = $this->service->createPayment($this->storedValuePayload(300));
+        $this->assertEquals(4700, $primary->fresh()->member_balance);
+
+        // 付款之后解绑共享关系：现在 resolvePrimaryMember 会解析成患者自己
+        $holder->update(['is_active' => false]);
+
+        $this->service->deletePayment($payment->id);
+
+        $this->assertEquals(5000, $primary->fresh()->member_balance, '钱是从主卡扣的，就该退回主卡');
+        $this->assertEquals(2000, $this->patient->fresh()->member_balance, '副卡不该凭空多出一笔');
+    }
+
+    /** @test */
+    public function 发放与冲销会员权益前会锁患者行(): void
+    {
+        $lockCount = 0;
+
+        \Illuminate\Support\Facades\DB::listen(function ($query) use (&$lockCount) {
+            $sql = strtolower($query->sql);
+
+            if (str_starts_with($sql, 'select') && str_contains($sql, 'patients')
+                && str_contains($sql, 'for update')) {
+                $lockCount++;
+            }
+        });
+
+        $payment = $this->service->createPayment([
+            'amount'         => 300,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+            'invoice_id'     => $this->invoice->id,
+        ]);
+
+        $this->assertGreaterThan(0, $lockCount, '发放累计消费前没锁患者行，并发结账会互相覆盖');
+
+        $lockCount = 0;
+        $this->service->deletePayment($payment->id);
+
+        $this->assertGreaterThan(0, $lockCount, '冲销累计消费前没锁患者行');
     }
 
     /**

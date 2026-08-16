@@ -104,7 +104,12 @@ class InvoicePaymentController extends ApiController
 
     public function destroy(int $id): JsonResponse
     {
-        $status = $this->service->deletePayment($id);
+        try {
+            $status = $this->service->deletePayment($id);
+        } catch (\RuntimeException $e) {
+            // 账单挂着退费时不许撤销收款
+            return $this->error($e->getMessage(), 422);
+        }
 
         if (!$status) {
             return $this->error('Failed to delete payment', 500);

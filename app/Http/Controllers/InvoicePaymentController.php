@@ -202,7 +202,13 @@ class InvoicePaymentController extends Controller
      */
     public function destroy($id)
     {
-        $status = $this->invoicePaymentService->deletePayment((int) $id);
+        try {
+            $status = $this->invoicePaymentService->deletePayment((int) $id);
+        } catch (\RuntimeException $e) {
+            // 账单挂着退费时不许撤销收款 —— 得给出原因，不能让它冒成 500
+            return response()->json(['message' => $e->getMessage(), 'status' => false], 422);
+        }
+
         if ($status) {
             return response()->json(['message' => __('messages.payment_deleted_successfully'), 'status' => true]);
         }

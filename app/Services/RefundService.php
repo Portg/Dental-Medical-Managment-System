@@ -213,6 +213,29 @@ class RefundService
 
             // 锁住 invoice 行，防止并发修改 paid_amount
             $invoice = Invoice::lockForUpdate()->findOrFail($refund->invoice_id);
+
+            // 建单时核对过一次可退金额，但审批可能是几天后的事，中间收款可能被撤销
+            // 或改小。批的时候按当下的实收再核一次，否则会退出账上根本没有的钱。
+            //
+            // 已退金额要**排除正在批的这一单**：上面几行刚把它置成 APPROVED，而
+            // Invoice::total_refunded 这个访问器统计的正是已通过的退费，直接用会
+            // 把本单算两遍，任何一单都会被自己挤成「可退 0」。
+            $otherRefunded = (string) Refund::where('invoice_id', $invoice->id)
+                ->where('approval_status', Refund::APPROVAL_APPROVED)
+                ->where('id', '<>', $refund->id)
+                ->sum('refund_amount');
+
+            $maxRefundable = bcsub((string) $invoice->paid_amount, $otherRefunded, 2);
+
+            if (bccomp((string) $refund->refund_amount, $maxRefundable, 2) > 0) {
+                DB::rollBack();
+
+                return [
+                    'message' => __('invoices.refund_exceeds_paid', ['max' => number_format((float) $maxRefundable, 2)]),
+                    'status'  => false,
+                ];
+            }
+
             $this->executeRefund($refund, $invoice);
 
             DB::commit();
