@@ -495,7 +495,7 @@
                 <button type="button" id="btnSaveAndContinue" class="btn btn-info" onclick="save_data(true)">
                     {{ __('common.save_and_continue') }}
                 </button>
-                <button type="button" id="btnSave" class="btn btn-primary" onclick="save_data(false)">
+                <button type="button" id="btnSavePatient" class="btn btn-primary" onclick="save_data(false)">
                     {{ __('common.save') }}
                 </button>
             </div>

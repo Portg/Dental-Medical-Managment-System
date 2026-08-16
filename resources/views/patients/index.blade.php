@@ -563,7 +563,7 @@
     function createRecord() {
         $("#patient-form")[0].reset();
         $('#id').val('');
-        $('#btnSave').attr('disabled', false);
+        $('#btnSavePatient').attr('disabled', false);
         $('#btnSaveAndContinue').attr('disabled', false);
         $('#source_id').val(null).trigger('change');
         $('#company').val([]).trigger('change');
@@ -588,7 +588,7 @@
     function editRecord(id) {
         $("#patient-form")[0].reset();
         $('#id').val('');
-        $('#btnSave').attr('disabled', false);
+        $('#btnSavePatient').attr('disabled', false);
 
         // Reset left panel state
         if (typeof resetAvatar === 'function') resetAvatar();
@@ -873,9 +873,9 @@
 
     function save_new_record(continueAdding) {
         $.LoadingOverlay("show");
-        $('#btnSave').attr('disabled', true);
+        $('#btnSavePatient').attr('disabled', true);
         $('#btnSaveAndContinue').attr('disabled', true);
-        $('#btnSave').html('{{ __("common.saving") }}');
+        $('#btnSavePatient').html('{{ __("common.saving") }}');
 
         var formData = buildPatientFormData();
 
@@ -887,9 +887,9 @@
             contentType: false,
             success: function(data) {
                 $.LoadingOverlay("hide");
-                $('#btnSave').attr('disabled', false);
+                $('#btnSavePatient').attr('disabled', false);
                 $('#btnSaveAndContinue').attr('disabled', false);
-                $('#btnSave').html('{{ __("common.save") }}');
+                $('#btnSavePatient').html('{{ __("common.save") }}');
 
                 if (data.status) {
                     if (continueAdding) {
@@ -922,9 +922,9 @@
             },
             error: function(request) {
                 $.LoadingOverlay("hide");
-                $('#btnSave').attr('disabled', false);
+                $('#btnSavePatient').attr('disabled', false);
                 $('#btnSaveAndContinue').attr('disabled', false);
-                $('#btnSave').html('{{ __("common.save") }}');
+                $('#btnSavePatient').html('{{ __("common.save") }}');
                 var json = $.parseJSON(request.responseText);
                 $.each(json.errors, function(key, value) {
                     $('.alert-danger').show();
@@ -936,8 +936,8 @@
 
     function update_record() {
         $.LoadingOverlay("show");
-        $('#btnSave').attr('disabled', true);
-        $('#btnSave').text("{{ __('common.updating') }}");
+        $('#btnSavePatient').attr('disabled', true);
+        $('#btnSavePatient').text("{{ __('common.updating') }}");
 
         var formData = buildPatientFormData();
         formData.append('_method', 'PUT');
@@ -959,8 +959,8 @@
             },
             error: function(request) {
                 $.LoadingOverlay("hide");
-                $('#btnSave').attr('disabled', false);
-                $('#btnSave').text("{{ __('common.update_record') }}");
+                $('#btnSavePatient').attr('disabled', false);
+                $('#btnSavePatient').text("{{ __('common.update_record') }}");
                 var json = $.parseJSON(request.responseText);
                 $.each(json.errors, function(key, value) {
                     $('.alert-danger').show();

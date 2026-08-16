@@ -1065,6 +1065,14 @@ a:focus {
     gap: 8px !important;
 }
 
+/* 日期输入不能被 flex 压到放不下一个完整日期。
+   预约页这一行是 col-md-4 里塞了「起始 + 至 + 结束 + 高级筛选按钮」四样，
+   两个 flex:1 的输入各自只分到 92px，而 yyyy-mm-dd 需要 100px —— 末位被切掉，
+   2026-08-16 显示成 2026-08-1，前台会以为日期填错了。 */
+.date-range-wrapper .form-control {
+    min-width: 108px !important;
+}
+
 .date-range-wrapper .date-separator {
     color: #757575 !important;
     font-size: 13px !important;

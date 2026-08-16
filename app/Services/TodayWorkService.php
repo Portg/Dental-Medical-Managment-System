@@ -468,7 +468,9 @@ class TodayWorkService
         return [
             'by_method' => $byMethod->map(function ($item) {
                 return [
-                    'method' => $item->payment_method ?? 'Unknown',
+                    // 库里存的是 'Cash'/'WeChat' 这类英文枚举，直出到对账表上就是一行英文。
+                    // 映射本来就在 InvoicePaymentService::methodLabel() 里，接上它即可。
+                    'method' => InvoicePaymentService::methodLabel($item->payment_method),
                     'total'  => round((float) $item->total, 2),
                     'count'  => (int) $item->count,
                 ];
@@ -705,7 +707,7 @@ class TodayWorkService
                     'patient_id'     => $row->patient_id,
                     'patient_name'   => NameHelper::join($row->surname, $row->othername),
                     'patient_phone'  => $row->phone_no ? substr($row->phone_no, 0, 3) . '****' . substr($row->phone_no, -4) : '',
-                    'payment_method' => $row->payment_method ?? '',
+                    'payment_method' => InvoicePaymentService::methodLabel($row->payment_method),
                     'amount'         => round((float) $row->amount, 2),
                     'invoice_no'     => $row->invoice_no ?? '',
                 ];

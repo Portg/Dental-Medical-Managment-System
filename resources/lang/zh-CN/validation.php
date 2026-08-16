@@ -288,7 +288,7 @@ return [
     'values' => [
         'payment_method' => [
             'Cash' => '现金',
-            'WeChat' => '微信',
+            'WeChat' => '微信支付',
             'Alipay' => '支付宝',
             'BankCard' => '银行卡',
             'StoredValue' => '储值卡',
@@ -296,7 +296,7 @@ return [
             'Online Wallet' => '在线钱包',
             'Mobile Money' => '移动支付',
             'Cheque' => '支票',
-            'Self Account' => '往来账户',
+            'Self Account' => '自付账户',
             'Credit' => '挂账',
         ],
     ],
