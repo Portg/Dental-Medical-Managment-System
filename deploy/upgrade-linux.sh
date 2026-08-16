@@ -660,19 +660,44 @@ ok "文件权限已修复"
 
 cd "$PROJECT_DIR"
 
-# artisan 基本检查
-if ! php artisan --version >/dev/null 2>&1; then
-    fail "php artisan 命令执行失败，系统可能已损坏"
+# 本步的检查一律留下失败原因，不再把输出丢进 /dev/null。
+#
+# 2026-08-16 的 Windows 实机升级就栽在这上面：脚本传了 Laravel 11 已删除的
+# route:list --compact，操作员只看到一句「路由加载失败」，真正的原因只能翻
+# laravel-*.log 才找得到。参数问题修掉了，但「失败不留证据」这个模式不修的话，
+# 下一次误判同样是黑盒。
+HEALTH_LOG="${BACKUP_DIR:-/tmp}/health-check.log"
+
+health_failed() {
+    fail "$1"
+    echo
+    echo "  命令输出:"
+    echo "  ---------------------------------------------------------"
+    [[ -f "$HEALTH_LOG" ]] && cat "$HEALTH_LOG"
+    echo "  ---------------------------------------------------------"
+    echo
+    echo "  应用停在维护模式，数据库未被改动；文件与迁移已按新版本落地。"
+    echo "  请先看上面的输出判断是真故障还是检查本身的问题："
+    echo "    - 若应用其实正常: php artisan up"
+    echo "    - 若确需回滚，备份在 ${BACKUP_DIR:-未记录}"
+    echo
     exit 1
+}
+
+# artisan 基本检查
+if ! php artisan --version > "$HEALTH_LOG" 2>&1; then
+    health_failed "php artisan 命令执行失败，系统可能已损坏"
 fi
 ok "artisan 命令 ...... OK"
 
 # 路由加载检查
-if ! php artisan route:list --compact --no-interaction >/dev/null 2>&1; then
-    fail "路由加载失败，应用可能无法正常运行"
-    exit 1
+# Laravel 11 已删除 route:list 的 --compact 选项。保留它会让一次实际成功的升级
+# 在最后一步被误判失败，并在 Windows 路径触发整库回滚。
+if ! php artisan route:list --no-interaction > "$HEALTH_LOG" 2>&1; then
+    health_failed "路由加载失败，应用可能无法正常运行"
 fi
 ok "路由加载 .......... OK"
+rm -f "$HEALTH_LOG"
 
 # 数据库连接检查
 if mysql_cmd -e "SELECT COUNT(*) FROM users LIMIT 1" >/dev/null 2>&1; then

@@ -2315,6 +2315,60 @@ fi
 # 前面每一步缺件时大多只是 warn，于是可以一路「成功」地产出一个装不上的包。
 # 这里是最后一道闸：Win7 全量包必须齐的东西，缺一样就失败，不许出包。
 # ═══════════════════════════════════════════════════════════════════════
+if [[ "$UPGRADE" == true ]]; then
+    step "校验升级脚本兼容性"
+
+    case "$TARGET" in
+        win)   UPGRADE_SCRIPT="$DIST_DIR/upgrade-win.bat" ;;
+        linux|mac) UPGRADE_SCRIPT="$DIST_DIR/upgrade-linux.sh" ;;
+    esac
+
+    if [[ ! -f "$UPGRADE_SCRIPT" ]]; then
+        fatal "升级包缺少升级脚本: $(basename "$UPGRADE_SCRIPT")"
+    fi
+
+    # 健康检查用的 artisan 命令，必须**真跑一次**再出包。
+    #
+    # 2026-08-16 实机升级就死在 route:list --compact 上：Laravel 11 删了这个选项，
+    # 命令退出码 1，目标机在代码、迁移、缓存全部成功之后误判「路由损坏」并恢复
+    # 整库备份。查字符串只能防住这一个已知参数，下一个被框架删掉的选项照样出包；
+    # 而 route:list 不连数据库，构建机上完全跑得起来 —— 那就直接跑，按退出码卡住。
+    #
+    # 做法：把升级脚本里 `artisan <命令>` 的调用抠出来，在**打包后的代码**上执行。
+    # 只挑健康检查这类只读命令，migrate / db:seed 这些会改库的绝不在此执行。
+    step "实跑升级脚本的健康检查命令"
+
+    HEALTH_CMDS=()
+    while IFS= read -r line; do
+        HEALTH_CMDS+=("$line")
+    done < <(grep -oE 'artisan (route:list|--version|about)[^"|>&]*' "$UPGRADE_SCRIPT" \
+             | sed -E 's/^artisan //; s/[[:space:]]+$//' | sort -u)
+
+    if [[ ${#HEALTH_CMDS[@]} -eq 0 ]]; then
+        fatal "$(basename "$UPGRADE_SCRIPT") 里找不到任何健康检查命令，闸门失效"
+    fi
+
+    for cmd in "${HEALTH_CMDS[@]}"; do
+        # 在打包产物上跑，验的是真要发出去的那份代码
+        if ! (cd "$DIST_DIR" && php artisan $cmd >/dev/null 2>&1); then
+            fatal "升级脚本的健康检查命令在本版代码上会失败: php artisan $cmd
+       目标机会据此误判应用损坏。请修正 $(basename "$UPGRADE_SCRIPT")。"
+        fi
+        info "健康检查命令可用: artisan $cmd"
+    done
+
+    if [[ "$TARGET" == "win" ]]; then
+        if [[ ! -f "$DIST_DIR/batch-helpers/create_desktop_shortcut.ps1" ]]; then
+            fatal "Windows 升级包缺少桌面快捷方式生成器"
+        fi
+        if ! grep -qF 'create_desktop_shortcut.ps1' "$UPGRADE_SCRIPT"; then
+            fatal "upgrade-win.bat 未在升级成功后补建桌面快捷方式"
+        fi
+    fi
+
+    info "升级脚本健康检查参数兼容 Laravel 11"
+fi
+
 if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
     step "校验发布包内容"
 
@@ -2358,6 +2412,7 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
     fi
     assert_exists     "install-win.bat"     "安装脚本"
     assert_exists     "install-win.ps1"     "配置脚本"
+    assert_exists     "batch-helpers/create_desktop_shortcut.ps1" "桌面快捷方式生成器"
 
     # setup.bat 必须允许安装包直接解压到 C:\DentalClinic 后重复执行。
     # 回归测试验证同目录检测、跳过自复制、复制错误显式失败三件事。
@@ -2415,6 +2470,10 @@ if [[ "$TARGET" == "win" ]] && [[ "$UPGRADE" != true ]]; then
     fi
     if [[ -f "$DIST_DIR/install-win.ps1" ]] && ! grep -qF 'DentalClinic-ServiceWatchdog' "$DIST_DIR/install-win.ps1"; then
         error "  ✗ install-win.ps1 未注册 Win7 后台服务健康检查任务"
+        ASSERT_FAIL=true
+    fi
+    if [[ -f "$DIST_DIR/install-win.ps1" ]] && ! grep -qF 'create_desktop_shortcut.ps1' "$DIST_DIR/install-win.ps1"; then
+        error "  ✗ install-win.ps1 未创建桌面快捷方式"
         ASSERT_FAIL=true
     fi
     if [[ -f "$DIST_DIR/start-win.bat" ]] && ! grep -qF 'PHP FastCGI' "$DIST_DIR/start-win.bat"; then

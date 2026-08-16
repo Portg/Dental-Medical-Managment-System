@@ -622,21 +622,36 @@ echo  +----------------------------------------------------------+
 
 cd /d "%PROJECT_DIR%"
 
+REM 本步的检查一律**留下失败原因**，不再 >nul 2>&1 吞掉。
+REM
+REM 2026-08-16 的实机升级就栽在这上面：脚本传了 Laravel 11 已删除的
+REM route:list --compact，命令退出码 1，操作员只看到一句「路由加载失败」，
+REM 真正的原因（选项不存在）只能翻 storage/logs/laravel-*.log 才找得到，
+REM 而此时整个数据库已经被自动恢复了。参数问题修掉了，但「失败不留证据」
+REM 这个模式不修的话，下一次误判同样是黑盒。
+set "HEALTH_LOG=%BACKUP_DIR%\health-check.log"
+set "HEALTH_FAILED="
+
 REM 检查 artisan 基本功能
-"!PHP!" artisan --version >nul 2>&1
+"!PHP!" artisan --version > "!HEALTH_LOG!" 2>&1
 if !ERRORLEVEL! neq 0 (
     echo  [错误] php artisan 命令执行失败，系统可能已损坏
-    goto :rollback
+    set "HEALTH_FAILED=artisan"
+    goto :health_failed
 )
 echo        artisan 命令 ...... OK
 
 REM 路由加载检查
-"!PHP!" artisan route:list --compact --no-interaction >nul 2>&1
+REM Laravel 11 已删除 route:list 的 --compact 选项。全量安装脚本早已去掉，
+REM 升级脚本如果仍传这个参数，会把「检查命令参数错误」误判成「路由损坏」。
+"!PHP!" artisan route:list --no-interaction > "!HEALTH_LOG!" 2>&1
 if !ERRORLEVEL! neq 0 (
     echo  [错误] 路由加载失败，应用可能无法正常运行
-    goto :rollback
+    set "HEALTH_FAILED=route:list"
+    goto :health_failed
 )
 echo        路由加载 .......... OK
+del "!HEALTH_LOG!" >nul 2>&1
 
 REM 数据库连接检查
 if defined MYSQL (
@@ -670,6 +685,18 @@ if "!MAINTENANCE_MODE!"=="1" (
     echo.
 )
 
+REM 升级既要更新已有快捷方式的图标/参数，也要给以前通过 ZIP 安装、从未生成
+REM 桌面入口的机器补建。失败只提示，不应让业务升级回滚。
+set "SHORTCUT_HELPER=%INSTALL_DIR%\batch-helpers\create_desktop_shortcut.ps1"
+if exist "!SHORTCUT_HELPER!" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "!SHORTCUT_HELPER!" -InstallDir "%INSTALL_DIR%" -ProjectDir "%PROJECT_DIR%"
+    if !ERRORLEVEL! neq 0 (
+        echo        [警告] 桌面快捷方式创建失败，可继续使用浏览器收藏
+    )
+) else (
+    echo        [警告] 缺少桌面快捷方式创建工具
+)
+
 REM ═══════════════════════════════════════════════════════════════
 REM  升级成功
 REM ═══════════════════════════════════════════════════════════════
@@ -695,7 +722,48 @@ echo.
 goto :done
 
 REM ═══════════════════════════════════════════════════════════════
-REM  自动回滚
+REM  健康检查未通过 —— 不自动回滚，交给人判断
+REM ═══════════════════════════════════════════════════════════════
+REM
+REM 走到这里时，文件、迁移、缓存都已经成功落地，坏的只是「应用跑不跑得起来」
+REM 这个判断。此时自动恢复数据库是代价与风险完全不对称的一步：
+REM   - 恢复数据库**不可逆**，会连升级窗口内产生的业务数据一起盖掉；
+REM   - 而检查失败的原因可能只是检查本身有问题（2026-08-16 就是这样：
+REM     应用完全正常，是脚本传了一个 Laravel 11 已删除的选项），
+REM     为此毁掉一次成功的升级纯属倒赔。
+REM
+REM 所以这里只做三件事：保持维护模式（应用真坏了也不会被用户看到）、
+REM 把失败原因原样打出来、告诉操作员回滚需要哪几条命令。要不要回滚由人决定。
+:health_failed
+echo.
+echo  +=========================================================+
+echo  ^|  [警告] 健康检查未通过 -- 未自动回滚                    ^|
+echo  +=========================================================+
+echo.
+echo   失败的检查: !HEALTH_FAILED!
+echo.
+echo   命令输出:
+echo  ---------------------------------------------------------
+if exist "!HEALTH_LOG!" type "!HEALTH_LOG!"
+echo  ---------------------------------------------------------
+echo.
+echo   应用已停在维护模式，外部访问不到，数据库**未**被改动。
+echo   文件、数据库迁移与缓存都已按 !NEW_VERSION! 落地。
+echo.
+echo   请先看上面的命令输出判断是真故障还是检查本身的问题：
+echo     - 若应用其实正常: "!PHP!" artisan up
+echo     - 若确需回滚，备份在 %BACKUP_DIR%
+echo         1. 恢复应用文件: xcopy "!FILES_BACKUP_DIR!\*" "%PROJECT_DIR%\" /E /H /Y
+echo         2. 恢复 .env:    copy "!ENV_BACKUP_FILE!" "%PROJECT_DIR%\.env"
+echo         3. 恢复数据库:   "!MYSQL!" -u !DB_USER! !DB_NAME! ^< "!DB_BACKUP_FILE!"
+echo         4. "!PHP!" artisan up
+echo.
+echo   完整输出另存于: !HEALTH_LOG!
+echo.
+goto :done
+
+REM ═══════════════════════════════════════════════════════════════
+REM  自动回滚（仅用于文件复制 / 迁移 / 缓存等确实改坏了东西的步骤）
 REM ═══════════════════════════════════════════════════════════════
 :rollback
 echo.

@@ -611,8 +611,23 @@ class InstallCjkPdfFont extends Command
 
         $want = $normalize($expected);
 
+        if ($want === '') {
+            return true;
+        }
+
         foreach ($baseFonts as $name) {
-            if ($normalize($name) !== $want) {
+            $got = $normalize($name);
+
+            // 子集名可能只有前缀、后面是空的 —— Windows 自带的中文字体就是这样：
+            // 2026-08-16 的实机日志里 simhei 装完是 `SUBAAB+`，加号后面什么都没有。
+            // 这种情况下比不出名字，不能据此判「装了另一份字体」：那会在字体其实
+            // 正常的机器上报一条吓人的错。取不到就跳过这一项，交给上面
+            // /FontFile2 与「没有回退到 base-14」两条继续兜底。
+            if ($got === '') {
+                continue;
+            }
+
+            if ($got !== $want) {
                 return false;
             }
         }

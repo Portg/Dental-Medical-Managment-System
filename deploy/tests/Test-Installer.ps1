@@ -427,6 +427,37 @@ Check "upgrade-win.bat 在 xampp 下用扁平的 PHP/MySQL 路径" `
       ($upgBat -match 'PHP_DIR=%XAMPP_DIR%\\php' -and $upgBat -match 'MYSQL_DIR=%XAMPP_DIR%\\mysql') "仍只按 laragon 布局探测"
 Check "部署脚本不被复制进项目目录" ($upgBat -match 'echo install-win\.ps1>>') "会污染 htdocs\dental"
 Check "升级会刷新 %INSTALL_DIR% 下的部署脚本" ($upgBat -match '刷新部署脚本') "脚本修复送不到目标机"
+# 只查 `route:list --compact` 相邻的写法会漏掉 `route:list --no-interaction --compact`，
+# 所以按「同一行里出现 route:list 且出现 --compact」判定。
+# 注释行要排除：这两个脚本的注释里正好都在讲这个坑，原样匹配会误伤自己。
+$upgLinux = [System.IO.File]::ReadAllText((Join-Path $repo 'upgrade-linux.sh'))
+function Test-NoCompactFlag([string]$text, [string]$commentPrefix) {
+    $bad = ($text -split "`n") | Where-Object {
+        $_ -notmatch "^\s*$commentPrefix" -and $_ -match 'route:list' -and $_ -match '--compact'
+    }
+    return (-not $bad)
+}
+Check "upgrade-win.bat 的 route:list 不传 --compact" `
+      (Test-NoCompactFlag $upgBat 'REM') "Laravel 11 会返回退出码 1，导致成功升级被自动回滚"
+Check "upgrade-linux.sh 的 route:list 不传 --compact" `
+      (Test-NoCompactFlag $upgLinux '#') "Laravel 11 会把健康检查误判为失败"
+# 健康检查失败必须留下命令输出并交由人判断，不能吞掉输出后自动恢复整库
+Check "upgrade-win.bat 健康检查保留命令输出" `
+      ($upgBat -match 'HEALTH_LOG') "失败原因仍被 >nul 吞掉，操作员拿不到线索"
+Check "upgrade-win.bat 健康检查失败不自动回滚" `
+      ($upgBat -match ':health_failed') "只读诊断失败仍会触发不可逆的整库恢复"
+Check "upgrade-linux.sh 健康检查保留命令输出" `
+      ($upgLinux -match 'HEALTH_LOG') "失败原因仍被 /dev/null 吞掉"
+$shortcutHelperPath = Join-Path $repo 'batch-helpers\create_desktop_shortcut.ps1'
+$shortcutHelper = [System.IO.File]::ReadAllText($shortcutHelperPath)
+Check "桌面快捷方式 helper 存在且兼容公共桌面" `
+      ((Test-Path $shortcutHelperPath) -and $shortcutHelper -match 'CommonDesktopDirectory' -and $shortcutHelper -match 'CreateShortcut') "ZIP 安装不会产生桌面入口"
+Check "快捷方式先运行 start-win.bat 再开网页" `
+      ($shortcutHelper -match "start-win\.bat" -and $shortcutHelper -match 'favicon\.ico') "快捷方式可能绕过服务启动或没有应用图标"
+Check "安装与升级都会创建快捷方式" `
+      ($psText -match 'create_desktop_shortcut\.ps1' -and $upgBat -match 'create_desktop_shortcut\.ps1') "旧机器升级后仍没有桌面入口"
+Check "卸载会删除桌面快捷方式" `
+      ($uninBat -match 'create_desktop_shortcut\.ps1.*-Remove') "卸载后会残留桌面入口"
 # 三个脚本对形态的判据必须完全一致，否则会出现「装的是 xampp、升级当成 laragon」
 $flavorProbe = 'if exist "%XAMPP_DIR%\apache\bin\httpd.exe" set "RUNTIME_FLAVOR=xampp"'
 foreach ($f in @('start-win.bat', 'stop-win.bat', 'upgrade-win.bat')) {

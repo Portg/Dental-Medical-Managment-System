@@ -245,6 +245,36 @@ class PdfCjkFontTest extends TestCase
     }
 
     /**
+     * 子集名为空时不能判成「装了另一份字体」。
+     *
+     * Windows 自带的中文字体就是这样：2026-08-16 的 Win7 实机日志里，simhei 装完
+     * 回读到的是 `SUBAAB+, SUBAAC+` —— 加号后面什么都没有。名字比不出来时应当跳过
+     * 这一项（交给 /FontFile2 与「没回退到 base-14」兜底），而不是报错说装错了字体：
+     * 那会在字体其实完全正常的机器上吓人一跳。名字确实对不上时仍然要判失败。
+     */
+    public function test_an_empty_subset_name_is_not_treated_as_a_different_font(): void
+    {
+        $command = (new \ReflectionClass(InstallCjkPdfFont::class))->newInstanceWithoutConstructor();
+        $match = (new \ReflectionClass(InstallCjkPdfFont::class))->getMethod('baseFontsMatch');
+        $match->setAccessible(true);
+
+        // 真机上的形态：只有子集前缀，没有字体名
+        $this->assertTrue(
+            $match->invoke($command, ['SUBAAB+', 'SUBAAC+'], 'SimHei'),
+            '空的子集名比不出名字，不该判成装错了字体'
+        );
+
+        $this->assertTrue($match->invoke($command, ['SUBAAB+ArialUnicodeMS'], 'ArialUnicodeMS'));
+
+        // 但名字确实对不上时，这道校验仍要拦住
+        $this->assertFalse(
+            $match->invoke($command, ['SUBAAB+DejaVuSans'], 'SimHei'),
+            '名字对不上仍须判失败，否则这道校验就白加了'
+        );
+        $this->assertFalse($match->invoke($command, ['SUBAAB+', 'SUBAAC+DejaVuSans'], 'SimHei'));
+    }
+
+    /**
      * 命令的自检必须真的看产物，而不是「渲染没抛异常就算过」。
      *
      * 回退到 dompdf 自带的 base-14 字体时（中文变问号的那种状态），PDF 里
