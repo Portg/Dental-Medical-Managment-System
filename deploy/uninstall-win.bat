@@ -368,6 +368,13 @@ echo        DentalClinic-ServiceWatchdog                      [OK]
 schtasks /delete /tn "DentalClinic-LogCleanup" /f >nul 2>&1
 echo        DentalClinic-LogCleanup                           [OK]
 
+REM ZIP 安装和升级由同一个 helper 创建公共桌面快捷方式；Inno 安装器创建的
+REM 同名入口也位于这里。文件还没被删，趁此阶段统一清理。
+if exist "%INSTALL_DIR%\batch-helpers\create_desktop_shortcut.ps1" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%INSTALL_DIR%\batch-helpers\create_desktop_shortcut.ps1" -Remove >nul 2>&1
+)
+echo        桌面快捷方式                                      [OK]
+
 REM ═══════════════════════════════════════════════════════════════
 REM  Step 4: 删除安装目录
 REM

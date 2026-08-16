@@ -2817,6 +2817,20 @@ if ($RUNTIME_FLAVOR -eq "xampp") {
         }
     }
 
+    # ZIP/setup.bat 安装路径此前没有桌面入口，只有另行编译的 Inno 安装器会建。
+    # 统一由 Win7 兼容 helper 创建：快捷方式先运行幂等的 start-win.bat，确保
+    # 服务就绪后再打开浏览器，而不是在刚开机时直接打开一个尚未监听的 URL。
+    $shortcutHelper = Join-Path $HELPER_DIR 'create_desktop_shortcut.ps1'
+    if (Test-Path $shortcutHelper) {
+        try {
+            & $shortcutHelper -InstallDir $INSTALL_DIR -ProjectDir $PROJECT_DIR
+        } catch {
+            Write-Host ("        Desktop shortcut ........ warning: {0}" -f $_.Exception.Message)
+        }
+    } else {
+        Write-Host "        Desktop shortcut ........ warning (helper missing)"
+    }
+
     $script:Step++
     Write-Section "Final validation"
     # 必须重跑：OCR 步骤若把 OCR_ENABLED 改为 false，只有这次 config:cache
