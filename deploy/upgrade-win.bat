@@ -541,6 +541,21 @@ if defined COMPOSER (
     )
 )
 
+REM 先清掉「上次回滚没清干净」留下的孤立表，否则迁移会死在 CREATE TABLE 上。
+REM 只删待执行迁移声明要建、且**当前是空表**的那些；有数据就停下来交给人。
+REM 详见 App\Console\Commands\RepairOrphanMigrationTables。
+echo        检查上次回滚遗留的孤立表...
+set "REPAIR_LOG=%BACKUP_DIR%\repair-orphan-tables.log"
+"!PHP!" artisan upgrade:repair-orphan-tables --no-interaction > "!REPAIR_LOG!" 2>&1
+if !ERRORLEVEL! neq 0 (
+    type "!REPAIR_LOG!"
+    echo.
+    echo  [错误] 发现带数据的孤立表，已停止升级
+    echo         这份数据能不能扔只有你知道，请人工确认后重试
+    goto :rollback
+)
+type "!REPAIR_LOG!"
+
 echo        运行数据库迁移...
 set "MIGRATE_LOG=%BACKUP_DIR%\migrate.log"
 "!PHP!" artisan migrate --force --no-interaction > "!MIGRATE_LOG!" 2>&1
@@ -552,23 +567,21 @@ if !ERRORLEVEL! neq 0 (
     REM 数据库恢复不是权威的（旧版本的备份没带 CREATE DATABASE，只按表覆盖），
     REM 于是新建的表留了下来、migrations 表却被恢复成没跑过。库卡在这个状态后，
     REM 每一次升级都会死在同一条 CREATE TABLE 上，光看 SQL 报错完全看不出原因。
+    REM 走到这里说明上面的自动修复没能覆盖 —— 多半是表里有数据（那种情况会更早
+    REM 停下），或者是自动修复认不出的其它不一致。把线索给足，别让人对着 SQL 报错猜。
     findstr /C:"already exists" "!MIGRATE_LOG!" >nul 2>&1 && (
         echo.
         echo  +---------------------------------------------------------+
-        echo  ^|  这是「上次回滚没清干净」留下的不一致状态                ^|
+        echo  ^|  报错说表已存在，但 migrations 表里没有对应记录          ^|
         echo  +---------------------------------------------------------+
-        echo   报错说表已存在，但 migrations 表里没有对应记录 —— 说明之前有一次
-        echo   升级跑完了迁移又回滚，而那次恢复只覆盖了备份里已有的表。
+        echo   典型成因是之前有一次升级跑完了迁移又回滚，而那次恢复只覆盖了备份里
+        echo   已有的表。本脚本会在迁移前自动清理这类空的孤立表，既然还是撞上了，
+        echo   说明那张表里有数据，或者情况不属于这一类。
         echo.
-        echo   修复办法（二选一，都在升级前做）:
-        echo     A. 用本次备份之前的完整备份重建库:
-        echo          "!MYSQL!" -u !DB_USER! -e "DROP DATABASE IF EXISTS !DB_NAME!"
-        echo          "!MYSQL!" -u !DB_USER! ^< ^<干净的备份.sql^>
-        echo     B. 只删掉那几张孤立的表，让迁移重新建（表里应当是空的，
-        echo        因为回滚后的旧版本根本不使用它们）:
-        echo          "!MYSQL!" -u !DB_USER! !DB_NAME! -e "DROP TABLE IF EXISTS ^<表名^>"
-        echo.
-        echo   本次备份在 %BACKUP_DIR%，完整迁移输出见 !MIGRATE_LOG!
+        echo   请把下面两个文件发给维护方，不要自行删表:
+        echo     !REPAIR_LOG!
+        echo     !MIGRATE_LOG!
+        echo   本次备份在 %BACKUP_DIR%
         echo.
     )
     goto :rollback

@@ -616,6 +616,14 @@ if ! run_composer install --no-dev --optimize-autoloader --no-interaction 2>&1; 
 fi
 ok "PHP 依赖安装完成"
 
+# 先清掉「上次回滚没清干净」留下的孤立表，否则迁移会死在 CREATE TABLE 上。
+# 只删待执行迁移声明要建、且当前是空表的那些；有数据就停下来交给人。
+info "检查上次回滚遗留的孤立表..."
+if ! php artisan upgrade:repair-orphan-tables --no-interaction 2>&1; then
+    fail "发现带数据的孤立表，已停止升级；这份数据能不能扔只有你知道，请人工确认后重试"
+    exit 1
+fi
+
 info "运行数据库迁移..."
 if ! php artisan migrate --force --no-interaction 2>&1; then
     fail "数据库迁移失败"
