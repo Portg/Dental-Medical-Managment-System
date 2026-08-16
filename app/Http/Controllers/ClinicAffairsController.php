@@ -106,8 +106,14 @@ class ClinicAffairsController extends Controller
 
     public function reviewDisinfection(int $id): JsonResponse
     {
-        $this->service->reviewDisinfection($id);
-        return $this->success(__('clinic_affairs.review_completed'));
+        try {
+            $this->service->reviewDisinfection($id);
+            return $this->success(__('clinic_affairs.review_completed'));
+        } catch (\RuntimeException $e) {
+            // 重复复核（多半是两个人同时点，或按钮没随列表刷新）走 409，
+            // 与 updateDisinfection 的「已复核不可改」同一档
+            return response()->json(['status' => 0, 'message' => $e->getMessage()], 409);
+        }
     }
 
     public function storeEquipment(Request $request): JsonResponse

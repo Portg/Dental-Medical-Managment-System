@@ -17,7 +17,7 @@ class TranslationKeyParityTest extends TestCase
     /** @test */
     public function every_referenced_key_exists_in_english(): void
     {
-        $source = $this->sourceText();
+        $referenced = $this->referencedKeys();
         $missing = [];
 
         foreach (glob(resource_path('lang/zh-CN/*.php')) as $zhFile) {
@@ -35,7 +35,7 @@ class TranslationKeyParityTest extends TestCase
             foreach (array_diff_key($zh, $en) as $key => $value) {
                 $full = "{$group}.{$key}";
 
-                if (str_contains($source, "'{$full}'") || str_contains($source, "\"{$full}\"")) {
+                if (isset($referenced[$full])) {
                     $missing[] = "{$full}  (zh-CN: {$value})";
                 }
             }
@@ -52,15 +52,22 @@ class TranslationKeyParityTest extends TestCase
     }
 
     /**
-     * 全部业务源码拼成一段文本，用来判断某个键有没有被引用。
+     * 业务源码里以字面量形式出现的翻译键，收成一张 key => true 的表。
      *
      * 只认字面量。`__('sms.' . $row->status)` 这类拼出来的键静态查不了，
      * 但它们本来也不会因为「zh 有 en 没有」而露馅——那种缺失在两边都缺。
+     *
+     * 原先是把全部源码（约 5MB）拼成一个字符串再 str_contains。那已经贴着
+     * memory_limit 128M 的天花板了：字符串扩容时要同时持有新旧两份，源码再多几百
+     * 字节就整片 OOM，还报在这条用例上，看不出跟改了什么有关。改成逐文件正则提取，
+     * 峰值只跟单个文件大小走。
+     *
+     * @return array<string, true>
      */
-    private function sourceText(): string
+    private function referencedKeys(): array
     {
         $roots = [app_path(), resource_path('views'), public_path('include_js'), base_path('routes')];
-        $text = '';
+        $keys = [];
 
         foreach ($roots as $root) {
             if (! is_dir($root)) {
@@ -76,11 +83,20 @@ class TranslationKeyParityTest extends TestCase
                     continue;
                 }
 
-                $text .= file_get_contents($file->getPathname());
+                $contents = file_get_contents($file->getPathname());
+
+                // 'group.key' / "group.key"，与原先 str_contains 的判据一致
+                if (preg_match_all('/[\'"]([a-z0-9_]+(?:\.[a-zA-Z0-9_-]+)+)[\'"]/', $contents, $matches)) {
+                    foreach ($matches[1] as $key) {
+                        $keys[$key] = true;
+                    }
+                }
+
+                unset($contents);
             }
         }
 
-        return $text;
+        return $keys;
     }
 
     /**

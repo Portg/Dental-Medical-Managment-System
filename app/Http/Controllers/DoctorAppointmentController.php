@@ -18,7 +18,12 @@ class DoctorAppointmentController extends Controller
         $this->service = $service;
         // 与 DoctorDashboardController 一致：数据已按 Auth::User()->id 限定本人，
         // 再用预约权限挡住不该进这个模块的角色。
+        //
+        // view-appointments 全院角色都有（见 DefaultRolePermissionsSeeder），
+        // 单靠它挡不住护士/前台 POST /doctor-appointments 把自己排成接诊医生，
+        // 所以另加 is_doctor 判据。同 DoctorSelfClaimController。
         $this->middleware('can:view-appointments');
+        $this->middleware('doctor');
     }
 
     public function index(Request $request)

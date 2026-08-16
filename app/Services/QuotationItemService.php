@@ -36,6 +36,7 @@ class QuotationItemService
             // quotation_items 根本没有这一列、$fillable 里也没有 —— 批量赋值保护
             // 把它静默丢掉，于是每条报价项的金额都是空的。
             'amount' => $input['price'],
+            'tooth_no' => $input['tooth_no'] ?? null,
             'medical_service_id' => $input['medical_service_id'],
             'quotation_id' => $input['quotation_id'],
             '_who_added' => Auth::User()->id,
@@ -63,6 +64,7 @@ class QuotationItemService
             'qty' => $input['qty'],
             // 同 create()：列名 amount，存的是单价
             'amount' => $input['price'],
+            'tooth_no' => $input['tooth_no'] ?? null,
             'medical_service_id' => $input['medical_service_id'],
             '_who_added' => Auth::User()->id,
         ]);

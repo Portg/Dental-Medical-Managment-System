@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Services\InvoicePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Yajra\DataTables\DataTables;
 
 class InvoicePaymentController extends Controller
@@ -87,14 +86,37 @@ class InvoicePaymentController extends Controller
      */
     public function store(Request $request)
     {
+        // 登记收款此前只校验「有没有填」，比同一控制器里的 update() 宽得多：
+        // amount 可以是 -500 或 "abc"（落库变 0），payment_method 可以是任意字符串
+        // （收据打印页认不出就原样印出去），invoice_id 指到不存在的账单只会在
+        // 服务层炸成 500。四个字段一起补齐，与 update() 的规则对齐。
+        // 登记收款此前只校验「有没有填」，比同一控制器里的 update() 宽得多：
+        // amount 可以是 -500 或 "abc"（落库变 0），payment_method 可以是任意字符串
+        // （收据打印页认不出就原样印出去），invoice_id 指到不存在的账单只会在
+        // 服务层炸成 500。四个字段一起补齐，与 update() 的规则对齐。
+        //
+        // 支票号 / 银行 / 保险公司 / 往来账户这四项弹窗一直在提交
+        // （resources/views/invoices/payment/create.blade.php），但既没校验、
+        // 也没往服务层传 —— createPayment() 里那几个 `?? null` 于是永远取到 null。
+        // 结果是支票、保险、自有账户三种收款都能保存成功，单据上却查不到是哪张
+        // 支票、哪家保司，对账时无从追溯。规则与 update() 保持一致。
         Validator::make($request->all(), [
-            'amount' => 'required',
-            'payment_date' => 'required',
-            'payment_method' => 'required',
-            'invoice_id' => 'required'
-        ])->validate();
+            'amount' => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'invoice_id' => 'required|integer|exists:invoices,id',
+        ] + InvoicePaymentService::detailRules())->validate();
 
-        $status = $this->invoicePaymentService->createPayment($request->only(['amount', 'payment_date', 'payment_method', 'invoice_id']));
+        try {
+            $status = $this->invoicePaymentService->createPayment($request->only([
+                'amount', 'payment_date', 'payment_method', 'invoice_id',
+                'cheque_no', 'bank_name', 'account_name',
+                'insurance_company_id', 'self_account_id',
+            ]));
+        } catch (\RuntimeException $e) {
+            // 超收 / 折扣待审批：把真实原因给到柜台，别一律「稍后再试」
+            return response()->json(['message' => $e->getMessage(), 'status' => false], 422);
+        }
+
         if ($status) {
             return response()->json(['message' => __('messages.payment_recorded_successfully'), 'status' => true]);
         }
@@ -138,14 +160,9 @@ class InvoicePaymentController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'payment_method'       => ['required', 'string', Rule::in(array_keys(InvoicePaymentService::PAYMENT_METHODS))],
-            'cheque_no'            => 'required_if:payment_method,Cheque',
-            'bank_name'            => 'required_if:payment_method,Cheque',
-            'insurance_company_id' => 'required_if:payment_method,Insurance|nullable|exists:insurance_companies,id',
-            'self_account_id'      => 'required_if:payment_method,Self Account|nullable|exists:self_accounts,id',
-            'amount'               => 'nullable|numeric|min:0',
-            'payment_date'         => 'nullable|date',
-        ]);
+            'amount'       => 'nullable|numeric|min:0',
+            'payment_date' => 'nullable|date',
+        ] + InvoicePaymentService::detailRules());
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first(), 'status' => false], 422);
@@ -164,7 +181,13 @@ class InvoicePaymentController extends Controller
             ])
         );
 
-        $status = $this->invoicePaymentService->updatePayment((int) $id, $data);
+        try {
+            $status = $this->invoicePaymentService->updatePayment((int) $id, $data);
+        } catch (\RuntimeException $e) {
+            // 超收 / 折扣待审批 / 储值收款不可就地改
+            return response()->json(['message' => $e->getMessage(), 'status' => false], 422);
+        }
+
         if ($status) {
             return response()->json(['message' => __('invoices.payment_method_updated'), 'status' => true]);
         }
@@ -196,9 +219,8 @@ class InvoicePaymentController extends Controller
         $validator = Validator::make($request->all(), [
             'invoice_id' => 'required|exists:invoices,id',
             'payments' => 'required|array|min:1',
-            'payments.*.payment_method' => 'required|string',
             'payments.*.amount' => 'required|numeric|min:0.01',
-        ]);
+        ] + InvoicePaymentService::detailRules('payments.*.'));
 
         if ($validator->fails()) {
             return response()->json([

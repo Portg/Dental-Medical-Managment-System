@@ -228,4 +228,181 @@ class DoctorSelfServiceOwnershipTest extends TestCase
 
         $this->assertEquals(777, $mine->fresh()->claim_amount);
     }
+
+    // ── 提交提成（POST /claims）──────────────────────────────────────
+    //
+    // 上面几条钉的都是「按 id 读改删别人的记录」，但提成是先有 store 才有那些
+    // 记录 —— 而 store 此前只校验两个字段非空，谁的预约、提没提过、金额是不是
+    // 数字，一概不问。
+
+    private function activeRateFor(User $doctor): ClaimRate
+    {
+        return ClaimRate::create([
+            'cash_rate'      => 10,
+            'insurance_rate' => 20,
+            'status'         => ClaimRate::STATUS_ACTIVE,
+            'doctor_id'      => $doctor->id,
+            '_who_added'     => $doctor->id,
+        ]);
+    }
+
+    /** @test */
+    public function 医生提得了自己接诊的提成(): void
+    {
+        $this->activeRateFor($this->doctorA);
+        $mine = $this->appointmentFor($this->doctorA);
+
+        $this->actingAs($this->doctorA)
+            ->postJson('/claims', ['appointment_id' => $mine->id, 'amount' => 500])
+            ->assertStatus(200)
+            ->assertJson(['status' => true]);
+
+        $this->assertDatabaseHas('doctor_claims', [
+            'appointment_id' => $mine->id,
+            'claim_amount'   => 500,
+            '_who_added'     => $this->doctorA->id,
+        ]);
+    }
+
+    /**
+     * 列表和日历都按 appointments.doctor_id 过滤，界面上看不到别人的预约；
+     * 但 POST 的 appointment_id 来自请求体，换个数字就能给同事的接诊
+     * 开一张自己的提成单，而且套的是自己的提成比例。
+     */
+    /** @test */
+    public function 医生提不了别人接诊的提成(): void
+    {
+        $this->activeRateFor($this->doctorA);
+        $others = $this->appointmentFor($this->doctorB);
+
+        $this->actingAs($this->doctorA)
+            ->postJson('/claims', ['appointment_id' => $others->id, 'amount' => 500])
+            ->assertStatus(422);
+
+        $this->assertDatabaseMissing('doctor_claims', ['appointment_id' => $others->id]);
+    }
+
+    /**
+     * 一个预约只能提一次成。
+     *
+     * DoctorAppointmentService::appointmentHasClaim() 只是用来决定要不要显示
+     * 「申请提成」按钮，接口侧从没跟上 —— 重复 POST 就能对同一次就诊反复提成。
+     */
+    /** @test */
+    public function 同一个预约不能重复提成(): void
+    {
+        $this->activeRateFor($this->doctorA);
+        $mine = $this->appointmentFor($this->doctorA);
+
+        $this->actingAs($this->doctorA)
+            ->postJson('/claims', ['appointment_id' => $mine->id, 'amount' => 500])
+            ->assertJson(['status' => true]);
+
+        $this->actingAs($this->doctorA)
+            ->postJson('/claims', ['appointment_id' => $mine->id, 'amount' => 500])
+            ->assertStatus(422);
+
+        $this->assertSame(1, DoctorClaim::where('appointment_id', $mine->id)->count());
+    }
+
+    /**
+     * 「查不存在 → 建」之间的并发窗口必须被锁住。
+     *
+     * 上一条测的是顺序重复提交（第二次能查到已有提成，所以拦得住）；真正的窗口是
+     * 连点两次或两个标签页同时提交，两个请求都查不到提成，各建一条。单进程造不出
+     * 真并发，这里钉的是结构：归属查询要在事务里、且带 for update，
+     * 提成插入也要在同一个事务里。少了这两样，锁就不存在。
+     *
+     * 不用 appointment_id 的唯一索引：提成是软删的，唯一索引会让「删掉重提」永久失败。
+     */
+    /** @test */
+    public function 提成创建在事务内锁住预约行(): void
+    {
+        $this->activeRateFor($this->doctorA);
+        $mine = $this->appointmentFor($this->doctorA);
+
+        // RefreshDatabase 自己就把用例包在一层事务里，「level > 0」恒真，要跟基线比
+        $baseline = \Illuminate\Support\Facades\DB::transactionLevel();
+
+        $lockedRead = false;
+        $insertLevel = null;
+
+        \Illuminate\Support\Facades\DB::listen(function ($query) use (&$lockedRead, &$insertLevel) {
+            $sql = strtolower($query->sql);
+
+            if (str_starts_with($sql, 'select') && str_contains($sql, 'appointments')
+                && str_contains($sql, 'for update')) {
+                $lockedRead = \Illuminate\Support\Facades\DB::transactionLevel() > 0;
+            }
+
+            if (str_starts_with($sql, 'insert') && str_contains($sql, 'doctor_claims')) {
+                $insertLevel = \Illuminate\Support\Facades\DB::transactionLevel();
+            }
+        });
+
+        $this->actingAs($this->doctorA)
+            ->postJson('/claims', ['appointment_id' => $mine->id, 'amount' => 500])
+            ->assertJson(['status' => true]);
+
+        $this->assertTrue($lockedRead, '归属查询没有在事务里加 for update，同一预约的并发提成不会排队');
+        $this->assertNotNull($insertLevel, '没有观察到提成插入');
+        $this->assertGreaterThan($baseline, $insertLevel, '提成插入落在自己的事务外，锁跨不到写入这一步');
+    }
+
+    /** @test */
+    public function 提成金额必须是非负数字(): void
+    {
+        $this->activeRateFor($this->doctorA);
+        $mine = $this->appointmentFor($this->doctorA);
+
+        foreach ([-1, 'abc'] as $amount) {
+            $this->actingAs($this->doctorA)
+                ->postJson('/claims', ['appointment_id' => $mine->id, 'amount' => $amount])
+                ->assertStatus(422);
+        }
+
+        $this->actingAs($this->doctorA)
+            ->putJson('/claims/' . $this->claimFor($this->doctorA)->id, ['amount' => -500])
+            ->assertStatus(422);
+
+        $this->assertSame(0, DoctorClaim::where('appointment_id', $mine->id)->count());
+    }
+
+    /**
+     * 模块门禁不能只靠 view-appointments。
+     *
+     * DefaultRolePermissionsSeeder 把这条权限同时发给了医生、护士、前台和管理员，
+     * 上面那条「没有预约权限的角色进不了」用的是一个人为构造的、不持有该权限的
+     * 前台，与正式权限配置对不上，所以测不出这个洞。这里按种子里真实的前台来 ——
+     * 有 view-appointments，但不是医生。
+     */
+    /** @test */
+    public function 持有预约权限的前台仍然进不了医生模块(): void
+    {
+        $frontDesk = User::factory()->create([
+            // 与 setUp 里的前台同角色，因此同样持有 view-appointments
+            'role_id'   => $this->doctorA->role_id,
+            'branch_id' => $this->doctorA->branch_id,
+            'is_doctor' => false,
+            'password'  => bcrypt('password'),
+        ]);
+
+        $this->assertTrue(
+            $frontDesk->can('view-appointments'),
+            '前提：这个账号持有 view-appointments，否则测的就不是门禁本身'
+        );
+
+        $this->actingAs($frontDesk)->getJson('/claims')->assertStatus(403);
+        $this->actingAs($frontDesk)->getJson('/doctor-appointments')->assertStatus(403);
+
+        $this->activeRateFor($frontDesk);
+        $this->actingAs($frontDesk)
+            ->postJson('/claims', [
+                'appointment_id' => $this->appointmentFor($this->doctorA)->id,
+                'amount'         => 500,
+            ])
+            ->assertStatus(403);
+
+        $this->assertSame(0, DoctorClaim::count());
+    }
 }

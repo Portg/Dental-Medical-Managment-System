@@ -78,10 +78,16 @@ class InstallCjkPdfFont extends Command
 
     public function handle(): int
     {
+        // 「已注册」不等于「注册对了」。旧版本的本命令不做任何字形校验，装错字体
+        // 也会写下这份映射；之后升级再跑本命令时直接在这里返回成功，新加的校验
+        // 一次都碰不到 —— 目标机于是一直印着问号，而每次升级都报「已安装」。
+        // 所以这条路径上也回读一次，过不了就当场重装。
         if ($this->isInstalled() && !$this->option('force')) {
-            $this->info('A CJK font is already registered. Use --force to reinstall.');
+            if ($this->verifyExistingInstall()) {
+                return self::SUCCESS;
+            }
 
-            return self::SUCCESS;
+            $this->warn('The registered CJK font failed verification - reinstalling.');
         }
 
         $source = $this->resolveSource();
@@ -92,10 +98,16 @@ class InstallCjkPdfFont extends Command
 
         $this->line('Using font: ' . $source);
 
+        if (!$this->assertChineseCoverage($source)) {
+            return self::FAILURE;
+        }
+
         $staged = $this->stageInsideChroot($source);
         if ($staged === null) {
             return self::FAILURE;
         }
+
+        $this->purgeExistingRegistration();
 
         if (!$this->register($staged)) {
             $this->error('dompdf refused to register the font. Check that storage/fonts is writable.');
@@ -120,6 +132,110 @@ class InstallCjkPdfFont extends Command
         $installed = json_decode((string) file_get_contents($manifest), true);
 
         return is_array($installed) && isset($installed[self::FAMILY]);
+    }
+
+    /**
+     * 已注册的那份字体现在还好用吗。
+     *
+     * 两条都要过，缺一不可：
+     *   1. 注册到 cjk 名下的那几个 TTF 真的有中文字形；
+     *   2. 渲染出来的 PDF 确实嵌了它，而不是回退到自带字体。
+     *
+     * 只查第 2 条是不够的 —— 把一份纯拉丁字体登记成 cjk，渲染照样会嵌入
+     * TrueType（/FontFile2 在、BaseFont 是子集名），回读全绿而中文仍是问号。
+     * 旧版本的本命令不做任何字形校验，Win7 上留下的正是这种错误登记。
+     *
+     * 返回 false 时调用方会走完整的重装流程。
+     */
+    private function verifyExistingInstall(): bool
+    {
+        $registered = $this->registeredFontFiles();
+
+        if ($registered === []) {
+            $this->warn('The CJK registration points at font files that are missing; reinstalling.');
+
+            return false;
+        }
+
+        foreach ($registered as $path) {
+            $missing = $this->missingChineseGlyphs($path);
+
+            if ($missing === null) {
+                // cmap 读不出来，这一层给不出结论 —— 不当成通过，交给重装
+                $this->warn('Could not read the character map of ' . basename($path) . '.');
+
+                return false;
+            }
+
+            if ($missing !== []) {
+                $this->warn(
+                    'The font registered as "' . self::FAMILY . '" has no glyphs for: ' . implode(' ', $missing)
+                );
+
+                return false;
+            }
+        }
+
+        $html = sprintf(
+            '<html><body style="font-family: %s"><p>中文测试</p><p style="font-weight:bold">粗体中文</p></body></html>',
+            self::FAMILY
+        );
+
+        try {
+            $bytes = Pdf::loadHTML($html)->output();
+        } catch (\Throwable $e) {
+            $this->warn('The registered CJK font could not be rendered: ' . $e->getMessage());
+
+            return false;
+        }
+
+        if (!$this->pdfEmbedsTheFont($bytes)) {
+            return false;
+        }
+
+        $this->info('A CJK font is already registered and still renders Chinese. Use --force to reinstall.');
+
+        return true;
+    }
+
+    /**
+     * 注册到 cjk 名下的字体文件（每个字面一个）。
+     *
+     * installed-fonts.json 里存的是**不带扩展名**的路径，dompdf 用时再拼 .ttf；
+     * 而且同一份清单里绝对路径和相对文件名会混着出现（相对的以 font_dir 为基准）。
+     */
+    private function registeredFontFiles(): array
+    {
+        $fontDir  = config('dompdf.options.font_dir');
+        $manifest = $fontDir . '/installed-fonts.json';
+
+        if (!is_file($manifest)) {
+            return [];
+        }
+
+        $installed = json_decode((string) file_get_contents($manifest), true);
+        $family = $installed[self::FAMILY] ?? null;
+
+        if (!is_array($family)) {
+            return [];
+        }
+
+        $files = [];
+
+        foreach ($family as $path) {
+            if (!is_string($path) || $path === '') {
+                continue;
+            }
+
+            $isAbsolute = str_starts_with($path, '/') || (bool) preg_match('#^[A-Za-z]:[\\\\/]#', $path);
+            $ttf = ($isAbsolute ? $path : $fontDir . '/' . $path) . '.ttf';
+
+            if (is_file($ttf)) {
+                $files[] = $ttf;
+            }
+        }
+
+        return array_values(array_unique($files));
     }
 
     /**
@@ -178,6 +294,85 @@ class InstallCjkPdfFont extends Command
     }
 
     /**
+     * 这份 TTF 到底有没有中文字形。
+     *
+     * registerFont() 对字形一无所知：给它一份纯拉丁的 DejaVuSans 也照样返回 true，
+     * 之后单据上的中文全是问号，而安装过程从头到尾显示成功。cmap 里查一次
+     * 就能当场判定，比渲染完再猜便宜得多，所以放在注册之前。
+     *
+     * 用的是 dompdf 自带的 php-font-lib，getData() 只读 cmap 这一张表，
+     * 不会像子集化那样把整份字体展开成 PHP 数组，内存开销可以忽略。
+     */
+    private function assertChineseCoverage(string $path): bool
+    {
+        $missing = $this->missingChineseGlyphs($path);
+
+        if ($missing === null) {
+            // 读不出 cmap 就当不通过。
+            //
+            // 原先这里放行，指望 verify() 的回读兜底 —— 但那一步只能证明「嵌进去的
+            // 是这份字体」，证明不了这份字体有中文字形。两条都不成立时放行，
+            // 等于又回到「命令成功、单据问号」的假成功，而这正是本命令要根治的。
+            // 何况解析 cmap 用的就是 dompdf 嵌入字体时用的 php-font-lib：
+            // 这里读不出来，嵌入本身也靠不住。
+            $this->error('Could not read this font\'s character map, so its Chinese coverage cannot be verified.');
+            $this->line('Refusing to install it - an unverified font is how printed Chinese became question marks.');
+            $this->line('Pick a plain .ttf Chinese font, e.g. C:/Windows/Fonts/simhei.ttf');
+
+            return false;
+        }
+
+        if ($missing !== []) {
+            $this->error('This font has no glyphs for: ' . implode(' ', $missing));
+            $this->line('Installing it would leave printed Chinese as question marks.');
+            $this->line('Pick a Chinese font, e.g. C:/Windows/Fonts/simhei.ttf');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 这份 TTF 缺哪些中文字形。
+     *
+     * 返回空数组表示都有；返回 null 表示 cmap 读不出来，调用方自行决定怎么处理
+     * （装新字体时放行交给回读兜底，校验旧登记时按不通过处理）。
+     *
+     * @return array<int, string>|null
+     */
+    private function missingChineseGlyphs(string $path): ?array
+    {
+        // 探针取自本命令的验证页与真实单据的高频字，覆盖常用汉字区（U+4E00–U+9FFF）
+        $probes = ['中', '文', '测', '试', '粗', '体', '患', '者', '元'];
+
+        try {
+            $font = \FontLib\Font::load($path);
+            $charMap = $font === null ? null : $font->getUnicodeCharMap();
+        } catch (\Throwable $e) {
+            $this->warn('Could not read the font ' . basename($path) . ': ' . $e->getMessage());
+
+            return null;
+        }
+
+        if (!is_array($charMap) || $charMap === []) {
+            return null;
+        }
+
+        $missing = [];
+
+        foreach ($probes as $char) {
+            $codepoint = mb_ord($char, 'UTF-8');
+
+            if ($codepoint === false || !isset($charMap[$codepoint])) {
+                $missing[] = $char;
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
      * 复制进项目内。dompdf 的 file:// 校验要求源文件位于 chroot 之下，
      * 直接读 C:\Windows\Fonts 会被拒（见类注释第 2 条）。
      */
@@ -200,6 +395,46 @@ class InstallCjkPdfFont extends Command
         }
 
         return $target;
+    }
+
+    /**
+     * 注册前先把 cjk 名下的旧登记清干净。
+     *
+     * 不清的话「重装」是个静默空操作。dompdf 的 registerFont() 是这么定名的：
+     *
+     *     $remoteHash = md5($remoteFile);            // 源**路径**的 md5，不是内容
+     *     $localFile  = "cjk_normal_" . $remoteHash;
+     *     if (isset($entry[$style]) && $localFilePath == $entry[$style]) {
+     *         return true;                           // 已登记同一路径 → 直接返回，不重读字体
+     *     }
+     *
+     * 而本命令的暂存路径恒为 storage/app/fonts/cjk.ttf —— 换哪一份字体，算出来的
+     * 目标名都一样。于是「检测到旧字体不对 → 重装」会返回 true 却什么都没换，
+     * 旧字节原样留在 font_dir 里；--force 换字体同样换不掉。
+     */
+    private function purgeExistingRegistration(): void
+    {
+        $fontDir = config('dompdf.options.font_dir');
+
+        foreach ((array) @glob($fontDir . '/' . self::FAMILY . '_*') as $stale) {
+            @unlink($stale);
+        }
+
+        $manifest = $fontDir . '/installed-fonts.json';
+
+        if (!is_file($manifest)) {
+            return;
+        }
+
+        $installed = json_decode((string) file_get_contents($manifest), true);
+
+        if (!is_array($installed) || !isset($installed[self::FAMILY])) {
+            return;
+        }
+
+        unset($installed[self::FAMILY]);
+
+        @file_put_contents($manifest, json_encode($installed, JSON_PRETTY_PRINT));
     }
 
     /**
@@ -248,10 +483,21 @@ class InstallCjkPdfFont extends Command
     }
 
     /**
-     * 真渲染一份带中文的 PDF 并回读，确认字形是嵌进去了而不是变成问号。
+     * 真渲染一份带中文的 PDF，并回读产物确认用的是这份字体而不是回退字体。
      *
-     * 不做这一步的话，registerFont() 返回 true 但 PDF 里仍是 `?` 也发现不了 ——
-     * 这一整轮排查的教训就是「没验证过的成功不算成功」。
+     * 此前这个方法的注释写着「回读确认中文不是问号」，实际只看了文件大小然后
+     * 无条件 return true —— 装一份没有中文字形的 TTF 也会显示安装成功，等于
+     * 把「没验证过的成功不算成功」这条教训自己违反了一遍。
+     *
+     * 现在按两条独立证据判定，都不依赖 pdftotext（目标机是 Win7，没有）：
+     *
+     * 1. **字体本身有没有中文字形** —— 由 assertChineseCoverage() 在注册前查
+     *    cmap，直接排除「选错了一份纯拉丁 TTF」。
+     * 2. **dompdf 有没有真用上它** —— 回读 PDF：嵌入 TrueType 时产物里必然有
+     *    /FontFile2 与 `SUBxxx+字体名` 形式的 /BaseFont；一旦字族没解析上而
+     *    回退到自带的 Helvetica，就只有 `/BaseFont /Helvetica`、没有
+     *    /FontFile2 —— 那正是中文变问号的那种状态。实测两种情况的字节特征
+     *    完全可分。
      */
     private function verify(string $fontPath): bool
     {
@@ -279,12 +525,111 @@ class InstallCjkPdfFont extends Command
             $this->warn('That PDF is unexpectedly large - font subsetting may be disabled.');
         }
 
+        if (!$this->pdfEmbedsTheFont($bytes, $fontPath)) {
+            return false;
+        }
+
         $this->reportMemoryHeadroom($fontPath);
 
         $this->info('Done. Chinese text will now render in printed PDFs.');
         $this->line('Registered as font-family: ' . self::FAMILY . ' (used by resources/views/printer_pdf/layout.blade.php)');
 
         return true;
+    }
+
+    /**
+     * 回读产物：这页中文用的必须是嵌入的 TrueType，而不是 dompdf 自带的字体。
+     *
+     * 判据来自 PDF 结构，不需要解压页面内容流：
+     *   嵌入 TrueType → FontDescriptor 里有 /FontFile2，/BaseFont 形如 /SUBAAB+SimHei
+     *   回退 base-14  → 没有 /FontFile2，只有 /BaseFont /Helvetica
+     * 这两个字典都是明文，不受内容流压缩影响。
+     */
+    private function pdfEmbedsTheFont(string $bytes, ?string $expectedFontPath = null): bool
+    {
+        if (strncmp($bytes, '%PDF', 4) !== 0) {
+            $this->error('The verification render did not produce a PDF.');
+
+            return false;
+        }
+
+        preg_match_all('#/BaseFont\s*/([A-Za-z0-9+,.\-]+)#', $bytes, $matches);
+        $baseFonts = array_unique($matches[1] ?? []);
+
+        if (strpos($bytes, '/FontFile2') === false) {
+            $this->error('The verification PDF embeds no TrueType font program (/FontFile2 is missing).');
+            $this->line('dompdf fell back to a built-in font, so Chinese would still print as question marks.');
+            $this->line('Fonts used by that PDF: ' . ($baseFonts ? implode(', ', $baseFonts) : '(none found)'));
+            $this->line('Check that ' . config('dompdf.options.font_dir') . '/installed-fonts.json lists "' . self::FAMILY . '".');
+
+            return false;
+        }
+
+        // 页面上只有两段中文，任何一段落到 base-14 都说明字面没配齐
+        // （典型是只注册了 normal，粗体那段回退成 Helvetica）。
+        $fellBack = array_filter($baseFonts, static fn ($name) => strpos($name, '+') === false);
+
+        if ($fellBack !== []) {
+            $this->error('Part of the verification page fell back to a built-in font: ' . implode(', ', $fellBack));
+            $this->line('That text would print as question marks. Re-run with --force.');
+
+            return false;
+        }
+
+        // 嵌的必须是刚装的那一份。
+        //
+        // FontMetrics::getFont() 有一个进程级的 static $cache：本进程里只要渲染过
+        // 一次 cjk，之后重新注册也换不动它。上面只查「嵌了某个 TrueType」的话，
+        // 重装后回读到的可能仍是被替换掉的旧字体，而命令报成功 —— 这次修 Win7
+        // 遗留错误登记时就实打实碰到了这个假绿。
+        if ($expectedFontPath !== null) {
+            $expected = $this->postscriptName($expectedFontPath);
+
+            if ($expected !== null && !$this->baseFontsMatch($baseFonts, $expected)) {
+                $this->error('The verification PDF embedded a different font than the one just installed.');
+                $this->line('Expected: ' . $expected . '  Got: ' . implode(', ', $baseFonts));
+                $this->line('Re-run the command in a fresh process: php artisan pdf:install-cjk-font --force');
+
+                return false;
+            }
+        }
+
+        $this->line('Readback OK - embedded font: ' . implode(', ', $baseFonts));
+
+        return true;
+    }
+
+    /**
+     * PDF 里的 /BaseFont 是 `SUBAAB+ArialUnicodeMS` 这种子集名，去掉前缀后
+     * 与字体的 PostScript 名比对；两边都归一化掉连字符与空格。
+     */
+    private function baseFontsMatch(array $baseFonts, string $expected): bool
+    {
+        $normalize = static fn (string $name): string => strtolower(
+            preg_replace('/[^A-Za-z0-9]/', '', preg_replace('/^[A-Z]{6}\+/', '', $name))
+        );
+
+        $want = $normalize($expected);
+
+        foreach ($baseFonts as $name) {
+            if ($normalize($name) !== $want) {
+                return false;
+            }
+        }
+
+        return $baseFonts !== [];
+    }
+
+    private function postscriptName(string $path): ?string
+    {
+        try {
+            $font = \FontLib\Font::load($path);
+            $name = $font === null ? null : $font->getFontPostscriptName();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return is_string($name) && $name !== '' ? $name : null;
     }
 
     /**

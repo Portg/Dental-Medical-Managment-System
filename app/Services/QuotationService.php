@@ -65,6 +65,9 @@ class QuotationService
                 // 原先只取 $value['amount']，Web 侧就是个不存在的键，
                 // 新建报价单必然抛「Column 'amount' cannot be null」，从来没能用过。
                 'amount' => $value['amount'] ?? $value['price'],
+                // 新建页 addmore[N][tooth_no] 一直在提交，此前没人接 —— 打印模板里
+                // 那句 `$row->tooth_no ?? ''` 于是永远是空的
+                'tooth_no' => $value['tooth_no'] ?? null,
                 'quotation_id' => $quotation->id,
                 'medical_service_id' => $value['medical_service_id'],
                 '_who_added' => $userId,

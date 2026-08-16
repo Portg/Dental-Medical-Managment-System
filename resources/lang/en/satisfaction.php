@@ -122,4 +122,5 @@ return [
     'not_dispatched'   => 'Not dispatched (link generated, not yet sent to the patient)',
     'dispatched_at'    => 'Dispatched at :time',
     'marked_dispatched' => 'Dispatch time recorded',
+    'mark_dispatched_manually' => 'I have sent the link to the patient',
 ];

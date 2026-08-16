@@ -352,5 +352,8 @@ return [
     'patient_required_for_stored_value' => 'Stored-value payment requires a linked patient',
     'insufficient_stored_balance'      => 'Insufficient stored-value balance',
     'stored_value_payment'             => 'Stored-value payment: invoice :invoice_no',
+    'stored_value_payment_reversed'    => 'Stored-value payment reversed: invoice :invoice_no',
+    'stored_value_payment_not_editable' => 'A stored-value payment cannot be edited in place. Cancel it (the balance is credited back) and record a new one.',
+    'payment_locked_by_refund' => 'This invoice has an approved refund, so payments can no longer be cancelled. Cancel the refund first.',
 
 ];

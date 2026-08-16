@@ -379,7 +379,14 @@ class RefundService
 
         // BR-041: stored_value refund goes back to patient balance
         if ($refund->refund_method === 'stored_value') {
-            $patient = Patient::lockForUpdate()->find($refund->patient_id);
+            // 共享卡：钱是从主卡持有人余额里扣的
+            // （InvoicePaymentService::chargeStoredValue → resolvePrimaryMember），
+            // 退也必须退回同一张卡。原先直接给 refund->patient_id 加余额，副卡患者
+            // 消费时就成了「主卡扣款、副卡退款」—— 两个人的余额各错一笔。
+            $payingPatientId = app(\App\Services\MemberService::class)
+                ->resolvePrimaryMember((int) $refund->patient_id)->id;
+
+            $patient = Patient::where('id', $payingPatientId)->lockForUpdate()->first();
             if ($patient) {
                 $originalBalance = (string)($patient->member_balance ?? '0');
                 $patient->member_balance = bcadd($originalBalance, (string)$refund->refund_amount, 2);

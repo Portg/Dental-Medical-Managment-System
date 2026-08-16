@@ -40,6 +40,7 @@ return [
     'review' => 'Review',
     'review_completed' => 'Review completed',
     'reviewed_record_locked' => 'Reviewed records cannot be changed or deleted.',
+    'already_reviewed' => 'This record has already been reviewed.',
     'equipment_code' => 'Equipment Code',
     'equipment_name' => 'Equipment Name',
     'equipment_category' => 'Category',

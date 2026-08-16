@@ -18,7 +18,13 @@ class DoctorSelfClaimController extends Controller
         $this->service = $service;
         // 医生自助提成：数据已按 _who_added 限定本人，这里挡住不该进本模块的角色。
         // manage-doctor-claims 是后台审批他人提成的权限（DoctorClaimController），别混用。
+        //
+        // 只挂 can:view-appointments 是挡不住的 —— 那条权限在
+        // DefaultRolePermissionsSeeder 里同时发给了医生、护士、前台和管理员。
+        // 列表按 _who_added 过滤所以看着是空的，但 POST /claims 不看这个。
+        // 「是不是医生」由 users.is_doctor 回答，与 DoctorReportController 同一判据。
         $this->middleware('can:view-appointments');
+        $this->middleware('doctor');
     }
 
     public function index(Request $request)
@@ -77,10 +83,18 @@ class DoctorSelfClaimController extends Controller
     public function store(Request $request)
     {
         Validator::make($request->all(), [
-            'appointment_id' => 'required',
-            'amount' => 'required'
+            'appointment_id' => 'required|integer|exists:appointments,id',
+            // 只校验 required 的话，负数和 "abc" 都收 —— 后者落库成 0，
+            // 前者直接冲掉当月提成合计。
+            'amount' => 'required|numeric|min:0',
         ])->validate();
-        $claim = $this->service->createClaim((int) $request->appointment_id, $request->amount);
+
+        try {
+            $claim = $this->service->createClaim((int) $request->appointment_id, (float) $request->amount);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage(), 'status' => false], 422);
+        }
+
         if ($claim === null) {
             return response()->json(['message' => __('doctor_claims.no_claim_rate_in_system'), 'status' => false]);
         }
@@ -96,9 +110,9 @@ class DoctorSelfClaimController extends Controller
     public function update(Request $request, $id)
     {
         Validator::make($request->all(), [
-            'amount' => 'required'
+            'amount' => 'required|numeric|min:0',
         ])->validate();
-        $status = $this->service->updateClaim((int) $id, $request->amount);
+        $status = $this->service->updateClaim((int) $id, (float) $request->amount);
         if ($status) {
             return response()->json(['message' => __('doctor_claims.claim_updated_successfully'), 'status' => true]);
         }

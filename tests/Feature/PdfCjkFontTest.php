@@ -108,6 +108,163 @@ class PdfCjkFontTest extends TestCase
     }
 
     /**
+     * 一份没有中文字形的 TTF 必须当场被拒，不能装完显示成功。
+     *
+     * registerFont() 对字形一无所知，给它纯拉丁字体照样返回 true；此前 verify()
+     * 只看 PDF 大小然后无条件 return true，于是「安装成功」和「单据全是问号」
+     * 可以同时成立。DejaVuSans 是 dompdf 自带的，正好是这种字体。
+     */
+    public function test_a_font_without_chinese_glyphs_is_rejected(): void
+    {
+        $latinOnly = base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSans.ttf');
+
+        if (!is_file($latinOnly)) {
+            $this->markTestSkipped('dompdf 自带字体不在预期位置，跳过');
+        }
+
+        $this->artisan('pdf:install-cjk-font', ['path' => $latinOnly, '--force' => true])
+            ->expectsOutputToContain('no glyphs for')
+            ->assertExitCode(1);
+
+        // 拒绝要发生在注册之前，不能把这份字体写进 installed-fonts.json
+        $manifest = config('dompdf.options.font_dir') . '/installed-fonts.json';
+        if (is_file($manifest)) {
+            $installed = json_decode((string) File::get($manifest), true);
+            $family = $installed[InstallCjkPdfFont::FAMILY] ?? null;
+
+            if (is_array($family)) {
+                foreach ($family as $path) {
+                    $this->assertStringNotContainsString(
+                        'DejaVuSans',
+                        (string) $path,
+                        '拉丁字体被注册成了中文字体族'
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * 旧版本留下的错误登记不能被「已安装」短路掉。
+     *
+     * 早先的本命令不做任何字形校验，装错字体也会写下这份映射。之后升级再跑本命令
+     * 时若直接在 isInstalled() 返回成功，新加的校验一次都碰不到 —— 目标机一直印着
+     * 问号，而每次升级都报「已安装」。
+     *
+     * 这条不需要本机有中文字体：把纯拉丁的 DejaVuSans 登记成 cjk，再不带 --force
+     * 跑一次，命令必须发现登记有问题并走重装流程（本例里重装源同样是那份纯拉丁
+     * 字体，所以最终以「没有中文字形」失败）。旧实现会直接退 0。
+     */
+    public function test_a_bad_legacy_registration_is_not_reported_as_installed(): void
+    {
+        $latinOnly = base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSans.ttf');
+
+        if (!is_file($latinOnly)) {
+            $this->markTestSkipped('dompdf 自带字体不在预期位置，跳过');
+        }
+
+        $this->restoreFontDirAfterwards();
+        $this->registerAsCjk($latinOnly);
+
+        $this->artisan('pdf:install-cjk-font', ['path' => $latinOnly])
+            ->expectsOutputToContain('no glyphs for')
+            ->assertExitCode(1);
+    }
+
+    /**
+     * 发现旧登记不对之后，必须真的换掉那份字体。
+     *
+     * dompdf 的 registerFont() 按**源路径**的 md5 命名缓存文件，而本命令的暂存路径
+     * 恒为 storage/app/fonts/cjk.ttf —— 换哪份字体算出来的目标名都一样，于是
+     * 「已登记同一路径」这条短路会让重装变成静默空操作，旧字节原样留着。
+     * 实测过：不清理时重装完回读到的仍是被替换掉的 DejaVuSans。
+     */
+    public function test_a_bad_legacy_registration_is_actually_replaced(): void
+    {
+        if (!$this->cjkFontAvailable()) {
+            $this->markTestSkipped('本机没有可用的中文 TrueType 字体，跳过');
+        }
+
+        if ($this->memoryLimitBytes() !== null && $this->memoryLimitBytes() < 384 * 1048576) {
+            $this->markTestSkipped('memory_limit 低于 384M，嵌入中文字体的渲染会 OOM');
+        }
+
+        $latinOnly = base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSans.ttf');
+        $this->restoreFontDirAfterwards();
+        $this->registerAsCjk($latinOnly);
+
+        $this->artisan('pdf:install-cjk-font')
+            ->expectsOutputToContain('no glyphs for')
+            ->expectsOutputToContain('Readback OK')
+            ->assertExitCode(0);
+
+        $bytes = Pdf::loadHTML(sprintf(
+            '<html><body style="font-family: %s"><p>中文测试</p></body></html>',
+            InstallCjkPdfFont::FAMILY
+        ))->output();
+
+        $this->assertStringNotContainsString(
+            'DejaVuSans',
+            $bytes,
+            '重装是空操作：被替换掉的旧字体仍然嵌在产物里'
+        );
+    }
+
+    /**
+     * 把指定字体登记到 cjk 名下，用来伪造「旧版本留下的错误登记」。
+     *
+     * 必须先把已有的 cjk 登记清干净，否则这个辅助方法自己就会踩上它要复现的那个坑：
+     * registerFont() 见到 cjk/normal 已经指向同一个目标路径（目标名由**源路径**的
+     * md5 算出，而暂存路径恒为 storage/app/fonts/cjk.ttf）就直接 return true，
+     * 伪造的坏登记根本没写进去 —— 本机原本装了中文字体时，这两条用例会假过。
+     */
+    private function registerAsCjk(string $source): void
+    {
+        $fontDir = config('dompdf.options.font_dir');
+
+        foreach ((array) @glob($fontDir . '/' . InstallCjkPdfFont::FAMILY . '_*') as $stale) {
+            File::delete($stale);
+        }
+
+        $manifest = $fontDir . '/installed-fonts.json';
+        if (is_file($manifest)) {
+            $installed = json_decode(File::get($manifest), true);
+            unset($installed[InstallCjkPdfFont::FAMILY]);
+            File::put($manifest, json_encode($installed, JSON_PRETTY_PRINT));
+        }
+
+        $staged = storage_path('app/fonts/' . InstallCjkPdfFont::FAMILY . '.ttf');
+        File::ensureDirectoryExists(dirname($staged));
+        File::copy($source, $staged);
+
+        $metrics = Pdf::loadHTML('<p>x</p>')->getDomPDF()->getFontMetrics();
+
+        foreach ([['weight' => 'normal', 'style' => 'normal'], ['weight' => 'bold', 'style' => 'normal']] as $style) {
+            $metrics->registerFont(['family' => InstallCjkPdfFont::FAMILY] + $style, $staged);
+        }
+    }
+
+    /**
+     * 命令的自检必须真的看产物，而不是「渲染没抛异常就算过」。
+     *
+     * 回退到 dompdf 自带的 base-14 字体时（中文变问号的那种状态），PDF 里
+     * 只有 /BaseFont /Helvetica、没有 /FontFile2；嵌入 TrueType 时两者都在，
+     * 且 BaseFont 形如 SUBAAB+字体名。这条钉的就是这个可分性 —— 它是
+     * InstallCjkPdfFont::pdfEmbedsTheFont() 的判据来源。
+     */
+    public function test_a_fallback_render_is_distinguishable_from_an_embedded_one(): void
+    {
+        $fallback = Pdf::loadHTML('<p style="font-family: helvetica">Hello</p>')->output();
+        $embedded = Pdf::loadHTML('<p style="font-family: DejaVu Sans">Hello</p>')->output();
+
+        $this->assertStringNotContainsString('/FontFile2', $fallback, '回退渲染不该嵌入字体程序');
+        $this->assertStringContainsString('/BaseFont /Helvetica', $fallback);
+
+        $this->assertStringContainsString('/FontFile2', $embedded, '嵌入渲染必须带字体程序');
+        $this->assertMatchesRegularExpression('#/BaseFont\s*/[A-Z]{6}\+#', $embedded);
+    }
+
+    /**
      * 端到端：装好字体后，中文（含粗体）必须真的渲染出来。
      *
      * 粗体单独探一次：只注册常规字面时，正文中文正常而标题/表头是问号 ——
@@ -132,6 +289,12 @@ class PdfCjkFontTest extends TestCase
                 . 'tests/Feature/PdfCjkFontTest.php'
             );
         }
+
+        // 装完必须还原。dompdf 的注册是写进 storage/fonts 的全局状态，留在那儿会
+        // 让**之后每一次**跑套件的 PDF 渲染都嵌入这份 20MB+ 的字体 —— 在
+        // memory_limit 128M 的机器上（本条用例正是因此被跳过的那种机器）整片 OOM，
+        // 而且报在 Cpdf.php 上，看不出跟这条用例有关。
+        $this->restoreFontDirAfterwards();
 
         $this->artisan('pdf:install-cjk-font', ['--force' => true])->assertExitCode(0);
 
@@ -183,6 +346,61 @@ class PdfCjkFontTest extends TestCase
         }
 
         $this->assertStringNotContainsString('Image not found', $text);
+    }
+
+    /**
+     * 记下 dompdf 字体目录的当前状态，用例结束后还原。
+     *
+     * 装字体改的是 storage/fonts 里的全局注册（installed-fonts.json + 每个字面
+     * 一份 20MB+ 的副本），不还原就会漏给之后所有跑套件的人。
+     *
+     * 只记文件名是不够的：安装命令的 purgeExistingRegistration() 会**删掉** cjk_*
+     * 再重建，所以本机原本就装了中文字体时，那几个文件的内容会被换掉、或换成
+     * 另一个哈希名。清单恢复了、文件却对不上，等于把开发机的字体注册搞坏。
+     * 因此连字节一起备份 —— 只备份 cjk_* 与暂存文件，其余字面（Helvetica.afm.json
+     * 之类）本命令不碰。
+     */
+    private function restoreFontDirAfterwards(): void
+    {
+        $fontDir  = config('dompdf.options.font_dir');
+        $manifest = $fontDir . '/installed-fonts.json';
+        $staged   = storage_path('app/fonts/' . InstallCjkPdfFont::FAMILY . '.ttf');
+
+        $before         = is_dir($fontDir) ? array_flip((array) scandir($fontDir)) : [];
+        $manifestBefore = is_file($manifest) ? File::get($manifest) : null;
+        $stagedBefore   = is_file($staged) ? File::get($staged) : null;
+
+        // 命令会动的那批文件，连内容一起留底
+        $bytesBefore = [];
+        foreach ((array) @glob($fontDir . '/' . InstallCjkPdfFont::FAMILY . '_*') as $owned) {
+            $bytesBefore[basename($owned)] = File::get($owned);
+        }
+
+        $this->beforeApplicationDestroyed(function () use ($fontDir, $manifest, $staged, $before, $manifestBefore, $stagedBefore, $bytesBefore) {
+            foreach ((array) (is_dir($fontDir) ? scandir($fontDir) : []) as $entry) {
+                if ($entry !== '.' && $entry !== '..' && !isset($before[$entry])) {
+                    @unlink($fontDir . '/' . $entry);
+                }
+            }
+
+            // 被 purge 删掉或被覆盖的，按原字节写回去
+            foreach ($bytesBefore as $name => $bytes) {
+                File::put($fontDir . '/' . $name, $bytes);
+            }
+
+            if ($manifestBefore === null) {
+                @unlink($manifest);
+            } else {
+                File::put($manifest, $manifestBefore);
+            }
+
+            if ($stagedBefore === null) {
+                @unlink($staged);
+            } else {
+                File::ensureDirectoryExists(dirname($staged));
+                File::put($staged, $stagedBefore);
+            }
+        });
     }
 
     private function memoryLimitBytes(): ?int

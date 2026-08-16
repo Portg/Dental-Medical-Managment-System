@@ -326,6 +326,9 @@ return [
     'patient_required_for_stored_value' => '储值卡支付需要关联患者',
     'insufficient_stored_balance' => '储值余额不足',
     'stored_value_payment' => '储值支付：账单 :invoice_no',
+    'stored_value_payment_reversed' => '撤销储值支付：账单 :invoice_no',
+    'stored_value_payment_not_editable' => '储值支付不能直接修改，请先撤销该笔收款（余额会退回）再重新登记',
+    'payment_locked_by_refund' => '该账单已有通过的退费，不能再撤销收款；如需调整请先撤销退费',
 
     // ── 患者收费 Tab 面板 (3.4.7 / 3.4.9 / 3.4.11) ──
     'panel_invoice_detail'    => '账单详情',

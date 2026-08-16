@@ -183,6 +183,15 @@
                                             <span class="text-warning">{{ __('satisfaction.not_dispatched') }}</span>
                                         @endif
                                     </p>
+                                    {{-- 只在复制失败时露出来。诊所内网多为 http，老 Chrome 上
+                                         clipboard API 不可用、execCommand 也可能被拒；那种情况下
+                                         前台是手动选中复制的，发没发出去只有人知道，由人来确认，
+                                         系统不替他断言 --}}
+                                    <button type="button" class="btn btn-sm btn-default" id="markDispatchedBtn"
+                                            style="display:none"
+                                            data-url="{{ url('satisfaction-surveys/' . $survey->id . '/mark-dispatched') }}">
+                                        <i class="icon-check"></i> {{ __('satisfaction.mark_dispatched_manually') }}
+                                    </button>
                                 </div>
 
                                 <button type="button" class="btn btn-primary" id="resendBtn"

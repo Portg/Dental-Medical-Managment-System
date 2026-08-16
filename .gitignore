@@ -31,3 +31,5 @@ deploy/output/
 .claude/
 # 构建打包时的瞬态暂存目录（正常构建结束会改回 deploy/dist/，中断时可能残留）
 deploy/dental-clinic-*/
+# 由 deploy/build-README.md 渲染出来的构建产物，跟着源文件走，不入库
+deploy/build-README.pdf

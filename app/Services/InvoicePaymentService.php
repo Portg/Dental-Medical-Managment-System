@@ -10,11 +10,15 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use App\SystemSetting;
 use App\Services\MemberService;
 
 class InvoicePaymentService
 {
+    /** 储值支付要动患者余额，几条路径都要特判，别再写字面量 */
+    public const METHOD_STORED_VALUE = 'StoredValue';
+
     /**
      * Supported payment methods (PRD 4.1.3).
      */
@@ -77,74 +81,221 @@ class InvoicePaymentService
     }
 
     /**
+     * 一笔收款明细的校验规则，四个入口共用。
+     *
+     * 此前每个入口各写各的：Web 单笔补齐了白名单与条件字段，Web 混合支付、
+     * API 的单笔与混合支付却仍只校验 payment_method 是字符串 —— 于是同一条
+     * 业务规则在一个入口拦得住、换个入口就绕过去了：任意付款方式、没有支票号
+     * 的支票、没有保险公司的保险收款都能落库。规则集中在这里，加一种付款方式
+     * 或多一个必填项时不会再漏改某个入口。
+     *
+     * @param string $prefix 混合支付传 'payments.*.'；required_if 里的 *
+     *                       由 Laravel 按当前下标替换成同一笔的 payment_method
+     */
+    public static function detailRules(string $prefix = ''): array
+    {
+        $method = $prefix . 'payment_method';
+
+        return [
+            $method => ['required', 'string', Rule::in(array_keys(self::PAYMENT_METHODS))],
+            $prefix . 'cheque_no' => "required_if:{$method},Cheque|nullable|string|max:100",
+            $prefix . 'bank_name' => "required_if:{$method},Cheque|nullable|string|max:255",
+            $prefix . 'account_name' => 'nullable|string|max:255',
+            $prefix . 'insurance_company_id' => "required_if:{$method},Insurance|nullable|exists:insurance_companies,id",
+            $prefix . 'self_account_id' => "required_if:{$method},Self Account|nullable|exists:self_accounts,id",
+        ];
+    }
+
+    /**
      * Create a new payment record.
+     *
+     * 与 processMixedPayment() 走同一套前置判断：锁住账单、确认可收款、确认不超收。
+     * 此前这条路径三样都没有 —— 欠款 1000 的账单能登记 1500，折扣还没审批也照收，
+     * 两笔并发的单笔收款同样能一起挤进来。超收只能靠退费纠正，而退费要走审批。
+     *
+     * @throws \RuntimeException 账单不存在、折扣待审批、或金额超过欠款
      */
     public function createPayment(array $data): ?InvoicePayment
     {
-        $payment = InvoicePayment::create([
-            'amount' => $data['amount'],
-            'payment_date' => $data['payment_date'],
-            'payment_method' => $data['payment_method'],
-            'cheque_no' => $data['cheque_no'] ?? null,
-            'account_name' => $data['account_name'] ?? null,
-            'bank_name' => $data['bank_name'] ?? null,
-            'invoice_id' => $data['invoice_id'],
-            'insurance_company_id' => $data['insurance_company_id'] ?? null,
-            'self_account_id' => $data['self_account_id'] ?? null,
-            'branch_id' => Auth::User()->branch_id,
-            '_who_added' => Auth::User()->id,
-        ]);
+        return DB::transaction(function () use ($data) {
+            $invoiceId = (int) $data['invoice_id'];
 
-        $this->syncInvoicePaidAmount((int) $data['invoice_id']);
+            $invoice = Invoice::where('id', $invoiceId)->lockForUpdate()->first();
 
-        return $payment;
+            if (!$invoice) {
+                throw new \RuntimeException(__('messages.record_not_found'));
+            }
+
+            if (!$invoice->canAcceptPayment()) {
+                throw new \RuntimeException(__('invoices.discount_approval_required'));
+            }
+
+            if (bccomp((string) $data['amount'], $this->outstandingFor($invoice), 2) > 0) {
+                throw new \RuntimeException(__('invoices.payment_exceeds_outstanding'));
+            }
+
+            $payment = InvoicePayment::create([
+                'amount' => $data['amount'],
+                'payment_date' => $data['payment_date'],
+                'payment_method' => $data['payment_method'],
+                'cheque_no' => $data['cheque_no'] ?? null,
+                'account_name' => $data['account_name'] ?? null,
+                'bank_name' => $data['bank_name'] ?? null,
+                'invoice_id' => $invoiceId,
+                'insurance_company_id' => $data['insurance_company_id'] ?? null,
+                'self_account_id' => $data['self_account_id'] ?? null,
+                'branch_id' => Auth::User()->branch_id,
+                '_who_added' => Auth::User()->id,
+            ]);
+
+            // 储值支付要真的从患者卡里扣钱。放在插入之后、重算之前：
+            // 余额不足会抛异常，整个事务连收款记录一起回滚。
+            if (($data['payment_method'] ?? null) === self::METHOD_STORED_VALUE) {
+                $this->chargeStoredValue($invoice, (string) $data['amount'], $payment);
+            }
+
+            // 积分与累计消费与混合支付同一段逻辑，别再让「走哪个入口」决定患者拿不拿得到积分
+            $this->awardMemberBenefits($invoice, $payment);
+            $this->checkMemberUpgrade($invoice->patient);
+
+            $this->syncInvoicePaidAmount($invoiceId);
+
+            return $payment;
+        });
     }
 
     /**
      * Update an existing payment record.
+     *
+     * 与 createPayment() 同样要锁账单、看折扣审批、卡超收 —— 少了这三样，
+     * 「把已有的 500 改成 1500」就是一条绕过所有收款校验的后门，
+     * API 的 update 恰好允许传新金额。判超收时要先把这笔自己的旧金额摘出去，
+     * 否则改小金额也会被自己挡住。
+     *
+     * @throws \RuntimeException 折扣待审批、金额超过欠款、或改动涉及储值支付
      */
     public function updatePayment(int $id, array $data): bool
     {
-        $updated = (bool) InvoicePayment::where('id', $id)->update([
-            'amount' => $data['amount'],
-            'payment_date' => $data['payment_date'],
-            'payment_method' => $data['payment_method'],
-            'cheque_no' => $data['cheque_no'] ?? null,
-            'account_name' => $data['account_name'] ?? null,
-            'bank_name' => $data['bank_name'] ?? null,
-            'insurance_company_id' => $data['insurance_company_id'] ?? null,
-            'self_account_id' => $data['self_account_id'] ?? null,
-            'branch_id' => Auth::User()->branch_id,
-            '_who_added' => Auth::User()->id,
-        ]);
+        return DB::transaction(function () use ($id, $data) {
+            $payment = InvoicePayment::where('id', $id)->lockForUpdate()->first();
 
-        // 改金额同样要让账单跟上 —— 改收款方式的弹窗虽然只提交方式，
-        // 但控制器允许带 amount，别把这条路径漏了。
-        if ($updated) {
-            $invoiceId = (int) InvoicePayment::where('id', $id)->value('invoice_id');
-            if ($invoiceId > 0) {
-                $this->syncInvoicePaidAmount($invoiceId);
+            if (!$payment) {
+                return false;
             }
-        }
 
-        return $updated;
+            $invoice = Invoice::where('id', $payment->invoice_id)->lockForUpdate()->first();
+
+            if (!$invoice) {
+                return false;
+            }
+
+            $this->assertNotStoredValueEdit($payment, $data['payment_method'] ?? null);
+
+            if (!$invoice->canAcceptPayment()) {
+                throw new \RuntimeException(__('invoices.discount_approval_required'));
+            }
+
+            $newAmount = (string) ($data['amount'] ?? $payment->amount);
+
+            // 别的明细加起来还剩多少额度：总额 −（当前实收 − 这笔自己的旧金额）
+            $others = bcsub($this->netPaidFor((int) $invoice->id), (string) $payment->amount, 2);
+            $room = bcsub((string) $invoice->total_amount, $others, 2);
+
+            if (bccomp($newAmount, $room, 2) > 0) {
+                throw new \RuntimeException(__('invoices.payment_exceeds_outstanding'));
+            }
+
+            $updated = (bool) InvoicePayment::where('id', $id)->update([
+                'amount' => $data['amount'],
+                'payment_date' => $data['payment_date'],
+                'payment_method' => $data['payment_method'],
+                'cheque_no' => $data['cheque_no'] ?? null,
+                'account_name' => $data['account_name'] ?? null,
+                'bank_name' => $data['bank_name'] ?? null,
+                'insurance_company_id' => $data['insurance_company_id'] ?? null,
+                'self_account_id' => $data['self_account_id'] ?? null,
+                'branch_id' => Auth::User()->branch_id,
+                '_who_added' => Auth::User()->id,
+            ]);
+
+            // 改金额同样要让账单跟上 —— 改收款方式的弹窗虽然只提交方式，
+            // 但控制器允许带 amount，别把这条路径漏了。
+            if ($updated) {
+                $this->syncInvoicePaidAmount((int) $invoice->id);
+            }
+
+            return $updated;
+        });
+    }
+
+    /**
+     * 储值支付不允许就地改。
+     *
+     * 改金额要同步调余额、改方式要一进一出，两边都得再写会员流水；就地改等于
+     * 让一条流水对应两种事实，对账时说不清哪笔钱去了哪儿。正确做法是撤销原收款
+     * （余额会退回去，见 deletePayment）再重新登记一笔。
+     */
+    private function assertNotStoredValueEdit(InvoicePayment $payment, ?string $newMethod): void
+    {
+        $wasStoredValue = $payment->payment_method === self::METHOD_STORED_VALUE;
+        $becomesStoredValue = $newMethod === self::METHOD_STORED_VALUE;
+
+        if ($wasStoredValue || $becomesStoredValue) {
+            throw new \RuntimeException(__('invoices.stored_value_payment_not_editable'));
+        }
     }
 
     /**
      * Delete a payment record.
+     *
+     * 账单上只要有已通过的退费，就不许再撤销收款。
+     *
+     * 撤销走的是「按这笔付款的全额退回」，而退费退的是账单层面的金额，两者没有
+     * 分摊关系：储值支付 300 → 退费 100 → 再撤销那笔付款，患者卡里一共多出 400，
+     * 凭空多了 100。非储值的方式虽然不动外部余额，但同样会算出「实收为负、
+     * 钱却已经退出去了」的账。要调整先撤销退费，顺序反过来才说得清。
+     *
+     * @throws \RuntimeException 账单已有通过的退费
      */
     public function deletePayment(int $id): bool
     {
-        // 先取 invoice_id：软删之后这行还在，但没必要多绕一次 withTrashed
-        $invoiceId = (int) InvoicePayment::where('id', $id)->value('invoice_id');
+        return DB::transaction(function () use ($id) {
+            $payment = InvoicePayment::where('id', $id)->lockForUpdate()->first();
 
-        $deleted = (bool) InvoicePayment::where('id', $id)->delete();
+            if (!$payment) {
+                return false;
+            }
 
-        if ($deleted && $invoiceId > 0) {
-            $this->syncInvoicePaidAmount($invoiceId);
-        }
+            $invoiceId = (int) $payment->invoice_id;
 
-        return $deleted;
+            $hasApprovedRefund = Refund::where('invoice_id', $invoiceId)
+                ->where('approval_status', Refund::APPROVAL_APPROVED)
+                ->exists();
+
+            if ($hasApprovedRefund) {
+                throw new \RuntimeException(__('invoices.payment_locked_by_refund'));
+            }
+
+            $deleted = (bool) InvoicePayment::where('id', $id)->delete();
+
+            if (!$deleted) {
+                return false;
+            }
+
+            // 撤销储值收款要把钱退回患者卡里，否则那笔余额就凭空消失了
+            if ($payment->payment_method === self::METHOD_STORED_VALUE) {
+                $this->refundStoredValue($payment);
+            }
+
+            // 这笔当初给出去的积分与累计消费一并冲销，否则「收了再撤」就是白拿积分
+            $this->reverseMemberBenefits($payment);
+
+            if ($invoiceId > 0) {
+                $this->syncInvoicePaidAmount($invoiceId);
+            }
+
+            return $deleted;
+        });
     }
 
     /**
@@ -164,15 +315,253 @@ class InvoicePaymentService
      * 会跳回全额已付。
      *
      * InvoicePayment 与 Refund 都用了 SoftDeletes，撤销的记录自动不计入。
+     *
+     * 「读明细 → 求和 → 写回账单」这三步必须在一个事务里、并且先把账单行锁住。
+     * 否则两笔并发收款会这样交错：
+     *   A 插入 100 → A 求和得 100 → B 插入 200 → B 求和得 300 → B 写 300 → A 写 100
+     * 后落地的是 A 那份过期的汇总，账单的已收金额就停在 100，payment_status 跟着
+     * 一起错 —— 正是这个方法本来要根治的那种漂移，只是换成了并发触发。
+     * 退费审批与撤销收款同时发生也是同一条路径。
      */
     public function syncInvoicePaidAmount(int $invoiceId): void
     {
-        $invoice = Invoice::find($invoiceId);
+        // processMixedPayment() 已经开了事务，这里会退化成 savepoint，不会嵌套报错。
+        DB::transaction(function () use ($invoiceId) {
+            // lockForUpdate 让并发的重算排队：拿到锁之后再求和，读到的一定是
+            // 对方已提交的全部明细。SQLite（测试）没有行锁，但也没有并发写。
+            $invoice = Invoice::where('id', $invoiceId)->lockForUpdate()->first();
 
-        if (!$invoice) {
+            if (!$invoice) {
+                return;
+            }
+
+            $invoice->paid_amount = $this->netPaidFor($invoiceId);
+            $invoice->save();
+        });
+    }
+
+    /**
+     * 一笔收款该给的累计消费与会员积分。
+     *
+     * 原先只有 processMixedPayment() 会做这件事，而且是「整批加总记一条流水」：
+     *   - 同样一笔 500 元现金，走 /payments/mixed 有积分，走 /payments 没有；
+     *   - 撤销收款时积分不回退，一笔一笔地攒出「免费积分」。
+     * 现在两条路径共用这一段，并按**笔**记流水（invoice_payment_id），
+     * 撤销时才能反查出这一笔当初真给了多少，而不是拿费率重算 ——
+     * 会员等级中途变过的话，重算出来的数跟当初就对不上了。
+     */
+    private function awardMemberBenefits(Invoice $invoice, InvoicePayment $payment): void
+    {
+        $patient = $invoice->patient;
+
+        if (!$patient) {
             return;
         }
 
+        $amount = (string) $payment->amount;
+
+        $patient->total_consumption = bcadd((string) ($patient->total_consumption ?? 0), $amount, 2);
+        $patient->save();
+
+        if (!$patient->memberLevel || !SystemSetting::get('member.points_enabled', true)) {
+            return;
+        }
+
+        $rate = $patient->memberLevel->getPointsRateForMethod($payment->payment_method);
+        $points = (int) floor((float) $amount * $rate);
+
+        if ($points <= 0) {
+            return;
+        }
+
+        $patient->member_points = ($patient->member_points ?? 0) + $points;
+        $patient->save();
+
+        $expiryDays = (int) SystemSetting::get('member.points_expiry_days', 0);
+
+        MemberTransaction::create([
+            'transaction_no'     => MemberTransaction::generateTransactionNo(),
+            'transaction_type'   => 'Points',
+            'patient_id'         => $patient->id,
+            'amount'             => 0,
+            'balance_before'     => $patient->member_balance,
+            'balance_after'      => $patient->member_balance,
+            'points_change'      => $points,
+            'points_expires_at'  => $expiryDays > 0 ? now()->addDays($expiryDays)->toDateString() : null,
+            'description'        => __('members.type_points') . ' +' . $points,
+            'invoice_id'         => $invoice->id,
+            'invoice_payment_id' => $payment->id,
+            '_who_added'         => Auth::id(),
+        ]);
+    }
+
+    /**
+     * 撤销一笔收款时，把这笔给出去的累计消费与积分冲销掉。
+     *
+     * 积分按当初那条流水的 points_change 冲，不重算 —— 见 awardMemberBenefits()。
+     * 积分与累计消费都不允许被冲成负数：历史数据里有先积分后手工调整的情况，
+     * 硬减会把患者的账户改成负值，比少冲一点更难解释。
+     */
+    private function reverseMemberBenefits(InvoicePayment $payment): void
+    {
+        $invoice = Invoice::find($payment->invoice_id);
+        $patient = $invoice?->patient;
+
+        if (!$patient) {
+            return;
+        }
+
+        $amount = (string) $payment->amount;
+
+        $consumption = bcsub((string) ($patient->total_consumption ?? 0), $amount, 2);
+        $patient->total_consumption = bccomp($consumption, '0', 2) >= 0 ? $consumption : '0';
+
+        $awarded = (int) MemberTransaction::where('invoice_payment_id', $payment->id)
+            ->where('transaction_type', 'Points')
+            ->sum('points_change');
+
+        if ($awarded > 0) {
+            $patient->member_points = max(0, (int) ($patient->member_points ?? 0) - $awarded);
+        }
+
+        $patient->save();
+
+        if ($awarded > 0) {
+            MemberTransaction::create([
+                'transaction_no'     => MemberTransaction::generateTransactionNo(),
+                'transaction_type'   => 'Points',
+                'patient_id'         => $patient->id,
+                'amount'             => 0,
+                'balance_before'     => $patient->member_balance,
+                'balance_after'      => $patient->member_balance,
+                'points_change'      => -$awarded,
+                'description'        => __('members.type_points') . ' -' . $awarded,
+                'invoice_id'         => $invoice->id,
+                'invoice_payment_id' => $payment->id,
+                '_who_added'         => Auth::id(),
+            ]);
+        }
+    }
+
+    /**
+     * 消费之后复核会员等级。累计消费变过就该看一眼有没有升档。
+     */
+    private function checkMemberUpgrade(?\App\Patient $patient): void
+    {
+        if ($patient && $patient->member_level_id) {
+            $patient->refresh();
+            app(MemberService::class)->checkAndUpgrade($patient);
+        }
+    }
+
+    /**
+     * 取出该扣款/退款的那张卡，并把这一行锁住。
+     *
+     * 共享卡扣的是主卡持有人的余额，所以先 resolvePrimaryMember 再按主卡 id 上锁。
+     *
+     * 锁是必须的：「读余额 → 判够不够 → 写回」不锁的话，同一个会员同时结两张账单
+     * 会这样交错 —— 两边都读到 2000、都判定够付 300、都写回 1700，卡里少扣了一笔
+     * 300。余额是真金白银，漂了只能靠人工盘。RefundService::executeRefund() 早就
+     * 是 lockForUpdate 了，这里当时漏了。
+     */
+    private function lockPayingMember(int $patientId): \App\Patient
+    {
+        $primaryId = app(MemberService::class)->resolvePrimaryMember($patientId)->id;
+
+        return \App\Patient::where('id', $primaryId)->lockForUpdate()->firstOrFail();
+    }
+
+    /**
+     * 从患者储值余额里扣一笔，并留下会员流水。
+     *
+     * 此前这段只长在 processMixedPayment() 里，于是「谁扣余额」取决于走哪个入口：
+     * API 单笔收款选储值、把现金改成储值，都只写收款记录不动余额；撤销一笔储值
+     * 收款也不退回余额。账单上写着「储值已付」，患者的卡里却分文未动 —— 对账时
+     * 两边永远合不上。抽出来之后，四条路径共用同一段。
+     *
+     * 共享卡：扣的是主卡持有人的余额（resolvePrimaryMember）。
+     *
+     * @throws \RuntimeException 账单没有关联患者，或余额不足
+     */
+    private function chargeStoredValue(Invoice $invoice, string $amount, ?InvoicePayment $payment = null): void
+    {
+        $patient = $invoice->patient;
+
+        if (!$patient) {
+            throw new \RuntimeException(__('invoices.patient_required_for_stored_value'));
+        }
+
+        $payingPatient = $this->lockPayingMember($patient->id);
+        $balanceBefore = (string) ($payingPatient->member_balance ?? 0);
+
+        if (bccomp($amount, $balanceBefore, 2) > 0) {
+            throw new \RuntimeException(__('invoices.insufficient_stored_balance'));
+        }
+
+        $payingPatient->member_balance = bcsub($balanceBefore, $amount, 2);
+        $payingPatient->save();
+
+        MemberTransaction::create([
+            'transaction_no' => MemberTransaction::generateTransactionNo(),
+            'transaction_type' => 'Consumption',
+            'patient_id' => $payingPatient->id,
+            'amount' => bcmul($amount, '-1', 2),
+            'balance_before' => $balanceBefore,
+            'balance_after' => $payingPatient->member_balance,
+            'description' => __('invoices.stored_value_payment', ['invoice_no' => $invoice->invoice_no]),
+            'invoice_id' => $invoice->id,
+            'invoice_payment_id' => $payment?->id,
+            '_who_added' => Auth::id(),
+        ]);
+    }
+
+    /**
+     * 撤销一笔储值收款时把余额退回去，并留下反向流水。
+     *
+     * 没有这一步的话，撤销收款只是把账单的已收金额减掉，患者卡里那笔钱就凭空
+     * 消失了 —— 而且是无声的，患者下次消费才会发现余额不对。
+     */
+    private function refundStoredValue(InvoicePayment $payment): void
+    {
+        $invoice = Invoice::find($payment->invoice_id);
+        $patient = $invoice?->patient;
+
+        if (!$patient) {
+            // 账单或患者已经不在了，退无可退；记一笔日志好过静默吞掉
+            Log::warning('Stored-value payment reversed without a patient to credit', [
+                'payment_id' => $payment->id,
+                'invoice_id' => $payment->invoice_id,
+            ]);
+
+            return;
+        }
+
+        $payingPatient = $this->lockPayingMember($patient->id);
+        $balanceBefore = (string) ($payingPatient->member_balance ?? 0);
+        $amount = (string) $payment->amount;
+
+        $payingPatient->member_balance = bcadd($balanceBefore, $amount, 2);
+        $payingPatient->save();
+
+        MemberTransaction::create([
+            'transaction_no' => MemberTransaction::generateTransactionNo(),
+            'transaction_type' => 'Refund',
+            'patient_id' => $payingPatient->id,
+            'amount' => $amount,
+            'balance_before' => $balanceBefore,
+            'balance_after' => $payingPatient->member_balance,
+            'description' => __('invoices.stored_value_payment_reversed', ['invoice_no' => $invoice->invoice_no]),
+            'invoice_id' => $invoice->id,
+            'invoice_payment_id' => $payment->id,
+            '_who_added' => Auth::id(),
+        ]);
+    }
+
+    /**
+     * 按明细算出的实收：付款合计 − 已通过退费合计，下限 0。
+     */
+    private function netPaidFor(int $invoiceId): string
+    {
         $paid = (string) InvoicePayment::where('invoice_id', $invoiceId)->sum('amount');
 
         $refunded = (string) Refund::where('invoice_id', $invoiceId)
@@ -181,8 +570,22 @@ class InvoicePaymentService
 
         $net = bcsub($paid, $refunded, 2);
 
-        $invoice->paid_amount = bccomp($net, '0', 2) >= 0 ? $net : '0';
-        $invoice->save();
+        return bccomp($net, '0', 2) >= 0 ? $net : '0';
+    }
+
+    /**
+     * 按明细算出的欠款，用于「这笔收款超没超」的判断。
+     *
+     * 不读 invoices.outstanding_amount 那一列：它由 paid_amount 派生，而
+     * paid_amount 正是可能漂掉的那个值（历史数据里就有账单记着 900、明细一条
+     * 都没有的情况）。拿漂掉的欠款去卡收款，会把本该收得下的钱拦掉；按明细算
+     * 与 syncInvoicePaidAmount() 同源，判断和写回用的是同一个事实。
+     */
+    private function outstandingFor(Invoice $invoice): string
+    {
+        $outstanding = bcsub((string) $invoice->total_amount, $this->netPaidFor((int) $invoice->id), 2);
+
+        return bccomp($outstanding, '0', 2) >= 0 ? $outstanding : '0';
     }
 
     /**
@@ -192,12 +595,8 @@ class InvoicePaymentService
      */
     public function processMixedPayment(int $invoiceId, array $payments, ?string $paymentDate = null): array
     {
-        $invoice = Invoice::findOrFail($invoiceId);
-
-        // Check if invoice can accept payment
-        if (!$invoice->canAcceptPayment()) {
-            return ['status' => false, 'message' => __('invoices.discount_approval_required')];
-        }
+        // 账单不存在是 404 级别的错误，不必进事务
+        Invoice::findOrFail($invoiceId);
 
         // AG-065: bcmath for all monetary accumulation
         $totalPayment = array_reduce(
@@ -205,14 +604,32 @@ class InvoicePaymentService
             fn ($carry, $p) => bcadd($carry, (string) ($p['amount'] ?? 0), 2),
             '0'
         );
-        $outstanding = (string) $invoice->outstanding_amount;
-
-        if (bccomp($totalPayment, $outstanding, 2) > 0) {
-            return ['status' => false, 'message' => __('invoices.payment_exceeds_outstanding')];
-        }
 
         DB::beginTransaction();
         try {
+            // 读欠款必须在事务里、并且先锁住账单行。
+            //
+            // 原先「先读 outstanding_amount 判断超没超，再开事务插收款」中间是敞开的：
+            // 欠款 1000 的账单上两笔并发的 600 元各自都读到 1000、各自都判定没超，
+            // 最后收进 1200 —— 超收要靠退费才能纠正，而退费得走审批。
+            // 锁放在这里，后到的那笔会等前一笔提交后再读，读到的欠款是 400，当场被拦。
+            $invoice = Invoice::where('id', $invoiceId)->lockForUpdate()->firstOrFail();
+
+            if (!$invoice->canAcceptPayment()) {
+                DB::rollBack();
+
+                return ['status' => false, 'message' => __('invoices.discount_approval_required')];
+            }
+
+            // 按明细算欠款，与 createPayment() 同源 —— 见 outstandingFor() 的注释
+            $outstanding = $this->outstandingFor($invoice);
+
+            if (bccomp($totalPayment, $outstanding, 2) > 0) {
+                DB::rollBack();
+
+                return ['status' => false, 'message' => __('invoices.payment_exceeds_outstanding')];
+            }
+
             $paymentDate = $paymentDate ?? now()->format('Y-m-d');
             $patient = $invoice->patient;
 
@@ -222,37 +639,7 @@ class InvoicePaymentService
 
                 if ($amount <= 0) continue;
 
-                // StoredValue special handling
-                if ($method === 'StoredValue') {
-                    if (!$patient) {
-                        throw new \Exception(__('invoices.patient_required_for_stored_value'));
-                    }
-
-                    // Resolve primary member for shared card holders
-                    $payingPatient = app(MemberService::class)->resolvePrimaryMember($patient->id);
-                    $storedBalance = $payingPatient->member_balance ?? 0;
-                    if ($amount > $storedBalance) {
-                        throw new \Exception(__('invoices.insufficient_stored_balance'));
-                    }
-
-                    $payingPatient->member_balance = bcsub((string) $storedBalance, (string) $amount, 2);
-                    $payingPatient->save();
-
-                    if (class_exists('\App\MemberTransaction')) {
-                        MemberTransaction::create([
-                            'transaction_no' => MemberTransaction::generateTransactionNo(),
-                            'transaction_type' => 'Consumption',
-                            'patient_id' => $payingPatient->id,
-                            'amount' => -$amount,
-                            'balance_before' => $storedBalance,
-                            'balance_after' => $payingPatient->member_balance,
-                            'description' => __('invoices.stored_value_payment', ['invoice_no' => $invoice->invoice_no]),
-                            '_who_added' => Auth::id(),
-                        ]);
-                    }
-                }
-
-                InvoicePayment::create([
+                $created = InvoicePayment::create([
                     'amount' => $amount,
                     'payment_date' => $paymentDate,
                     'payment_method' => $method,
@@ -266,6 +653,13 @@ class InvoicePaymentService
                     'branch_id' => Auth::user()->branch_id ?? null,
                     '_who_added' => Auth::id(),
                 ]);
+
+                if ($method === self::METHOD_STORED_VALUE) {
+                    $this->chargeStoredValue($invoice, (string) $amount, $created);
+                }
+
+                // 积分与累计消费按笔记，与单笔收款同一段逻辑
+                $this->awardMemberBenefits($invoice, $created);
             }
 
             // 与单笔收款走同一套重算，避免两条路径各写各的。
@@ -274,53 +668,8 @@ class InvoicePaymentService
             $this->syncInvoicePaidAmount($invoice->id);
             $invoice->refresh();
 
-            // Update total consumption
-            if ($patient) {
-                $patient->total_consumption = bcadd((string) ($patient->total_consumption ?? 0), $totalPayment, 2);
-                $patient->save();
-            }
-
-            // Update member points (BR-036) — per-payment-method rates
-            if ($patient && $patient->memberLevel && SystemSetting::get('member.points_enabled', true)) {
-                $level = $patient->memberLevel;
-                $totalPoints = 0;
-
-                foreach ($payments as $pd) {
-                    $m = $pd['payment_method'];
-                    $a = (float) $pd['amount'];
-                    if ($a <= 0) continue;
-
-                    $rate = $level->getPointsRateForMethod($m);
-                    $totalPoints += floor($a * $rate);
-                }
-
-                if ($totalPoints > 0) {
-                    $patient->member_points = ($patient->member_points ?? 0) + $totalPoints;
-                    $patient->save();
-
-                    // Record points transaction with optional expiry
-                    $expiryDays = (int) SystemSetting::get('member.points_expiry_days', 0);
-                    MemberTransaction::create([
-                        'transaction_no'    => MemberTransaction::generateTransactionNo(),
-                        'transaction_type'  => 'Points',
-                        'patient_id'        => $patient->id,
-                        'amount'            => 0,
-                        'balance_before'    => $patient->member_balance,
-                        'balance_after'     => $patient->member_balance,
-                        'points_change'     => $totalPoints,
-                        'points_expires_at' => $expiryDays > 0 ? now()->addDays($expiryDays)->toDateString() : null,
-                        'description'       => __('members.type_points') . ' +' . $totalPoints,
-                        'invoice_id'        => $invoice->id,
-                        '_who_added'        => Auth::id(),
-                    ]);
-                }
-            }
-
-            // Auto-upgrade check
-            if ($patient && $patient->member_level_id) {
-                $patient->refresh();
-                app(MemberService::class)->checkAndUpgrade($patient);
-            }
+            // 积分与累计消费已在循环里按笔结算，这里只做一次等级复核
+            $this->checkMemberUpgrade($patient);
 
             DB::commit();
 

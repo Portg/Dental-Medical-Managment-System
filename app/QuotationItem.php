@@ -10,7 +10,7 @@ class QuotationItem extends Model
 {
     use SerializesDatesInAppTimezone;
     use SoftDeletes;
-    protected $fillable = ['qty', 'amount', 'quotation_id', 'medical_service_id', '_who_added'];
+    protected $fillable = ['qty', 'amount', 'tooth_no', 'quotation_id', 'medical_service_id', '_who_added'];
 
     public function medical_service()
     {

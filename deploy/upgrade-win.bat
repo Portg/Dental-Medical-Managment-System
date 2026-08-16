@@ -32,6 +32,10 @@ REM ═════════════════════════�
 REM ── 参数解析 ────────────────────────────────────────────────────
 set "INSTALL_DIR=%~1"
 if "%INSTALL_DIR%"=="" set "INSTALL_DIR=C:\DentalClinic"
+REM 先规范成绝对路径再用。参数是人手敲的，写成 .\DentalClinic、
+REM C:\Dental\..\DentalClinic 这类等价写法都很常见 —— 下面「升级包是不是落在
+REM 项目目录里」那条保护是纯字符串比较，不规范化就直接漏判。
+for %%I in ("%INSTALL_DIR%") do set "INSTALL_DIR=%%~fI"
 if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
 
 REM 升级包所在目录（构建产物中脚本位于升级包根目录）
@@ -158,9 +162,21 @@ if not exist "%PROJECT_DIR%\artisan" (
 )
 
 REM 升级包必须解压在项目目录之外：本脚本是把包内文件 xcopy 到 PROJECT_DIR，
-REM 两者相同的话等于源和目标同一个位置 —— 备份的是已被覆盖的状态，
+REM 落在项目里等于源和目标同一个位置 —— 备份的是已被覆盖的状态，
 REM 「保留 .env / storage\app」也失去意义，出了问题回滚不到升级前。
-if /i "%UPGRADE_PKG_DIR%"=="%PROJECT_DIR%" (
+REM
+REM 原先只做一次 %UPGRADE_PKG_DIR%=="%PROJECT_DIR%" 的字符串比较，两种情况漏判：
+REM   1. 等价但写法不同的同一目录（相对路径、. 与 ..、8.3 短名 PROGRA~1）；
+REM   2. 解压到项目的子目录（...\www\dental\upgrade）—— 同样会被 xcopy 覆盖，
+REM      相等比较根本看不见。
+REM 因此改为「是否位于项目目录之下」，长名短名各判一次；INSTALL_DIR 已在
+REM 参数解析处规范成绝对路径，%~dp0 本身就是绝对路径。
+for %%I in ("%UPGRADE_PKG_DIR%") do set "PKG_SHORT=%%~sI"
+for %%I in ("%PROJECT_DIR%") do set "PROJ_SHORT=%%~sI"
+set "PKG_INSIDE="
+call :path_is_inside "%UPGRADE_PKG_DIR%" "%PROJECT_DIR%" && set "PKG_INSIDE=1"
+call :path_is_inside "%PKG_SHORT%" "%PROJ_SHORT%" && set "PKG_INSIDE=1"
+if defined PKG_INSIDE (
     echo  [错误] 升级包不能解压到项目目录内
     echo         升级包位置: %UPGRADE_PKG_DIR%
     echo         项目目录:   %PROJECT_DIR%
@@ -767,6 +783,27 @@ echo  ^|  请检查错误信息后重新尝试升级                           ^
 echo  +=========================================================+
 echo.
 goto :done
+
+REM %1 = 候选目录，%2 = 父目录（都不带末尾 \）
+REM 候选与父目录相同、或位于其下，返回 0；否则返回 1。
+REM
+REM 实现上是从候选目录逐级往上走、每级比一次，而不是用
+REM %VAR:search=replace% 做前缀替换 —— 后者的搜索串里带盘符冒号时，
+REM cmd 的解析规则很容易出意外，这个循环则是确定的。
+:path_is_inside
+setlocal
+set "CHILD=%~1"
+set "PARENT=%~2"
+:path_is_inside_loop
+if /i "%CHILD%"=="%PARENT%" (endlocal & exit /b 0)
+REM 到盘符根（C:）就停，再往上取会拿到该盘的当前目录，会绕圈
+if "%CHILD:~-1%"==":" (endlocal & exit /b 1)
+for %%I in ("%CHILD%") do set "UP=%%~dpI"
+if "%UP:~-1%"=="\" set "UP=%UP:~0,-1%"
+if "%UP%"=="" (endlocal & exit /b 1)
+if /i "%UP%"=="%CHILD%" (endlocal & exit /b 1)
+set "CHILD=%UP%"
+goto :path_is_inside_loop
 
 :merge_env_patch
 "!PHP!" "!HELPER_DIR!\merge_missing_env.php" "%PROJECT_DIR%\.env" "!ENV_PATCH!"

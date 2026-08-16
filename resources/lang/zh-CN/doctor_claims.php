@@ -62,6 +62,8 @@ return [
     // 错误消息
     'no_claim_rate_in_system' => '抱歉，系统中没有您的理赔费率，请联系系统管理员',
     'amounts_not_matching' => '保险和现金总金额与治疗金额不匹配',
+    'appointment_not_yours' => '该预约不是您的接诊记录，无法提交提成',
+    'claim_already_exists' => '该预约已提交过提成，不能重复提交',
 
     'payments' => [
 

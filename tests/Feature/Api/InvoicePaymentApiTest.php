@@ -146,6 +146,93 @@ class InvoicePaymentApiTest extends TestCase
                  ->assertJsonPath('success', false);
     }
 
+    /**
+     * 收款规则不能只在 Web 入口成立。
+     *
+     * 付款方式白名单与「支票要支票号 / 保险要保司 / 往来账户要账户」这几条，
+     * 此前只有 Web 单笔入口有；API 侧 payment_method 只校验是字符串，
+     * 换个入口就全绕过去了。规则现在集中在
+     * InvoicePaymentService::detailRules()，四个入口共用。
+     */
+    public function test_create_payment_rejects_an_unknown_method(): void
+    {
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/invoice-payments', [
+                'amount'         => 100,
+                'payment_method' => 'Bitcoin',
+                'payment_date'   => now()->format('Y-m-d'),
+                'invoice_id'     => $this->invoice->id,
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(0, InvoicePayment::count());
+    }
+
+    public function test_create_payment_requires_the_details_a_method_implies(): void
+    {
+        // 支票没有支票号与银行
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/invoice-payments', [
+                'amount'         => 100,
+                'payment_method' => 'Cheque',
+                'payment_date'   => now()->format('Y-m-d'),
+                'invoice_id'     => $this->invoice->id,
+            ])
+            ->assertStatus(422);
+
+        // 保险没有保险公司
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/invoice-payments', [
+                'amount'         => 100,
+                'payment_method' => 'Insurance',
+                'payment_date'   => now()->format('Y-m-d'),
+                'invoice_id'     => $this->invoice->id,
+            ])
+            ->assertStatus(422);
+
+        // 往来账户没有账户
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/invoice-payments', [
+                'amount'         => 100,
+                'payment_method' => 'Self Account',
+                'payment_date'   => now()->format('Y-m-d'),
+                'invoice_id'     => $this->invoice->id,
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(0, InvoicePayment::count());
+    }
+
+    /**
+     * 单笔收款也不能超收。此前只有混合支付这一条路上有欠款判断，
+     * /invoice-payments 与 /payments 都能给欠款 200 的账单登记 500。
+     */
+    public function test_create_payment_cannot_exceed_the_outstanding_amount(): void
+    {
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/invoice-payments', [
+                'amount'         => 500,
+                'payment_method' => 'Cash',
+                'payment_date'   => now()->format('Y-m-d'),
+                'invoice_id'     => $this->invoice->id,
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(0, InvoicePayment::count());
+        $this->assertEquals(0, $this->invoice->fresh()->paid_amount);
+    }
+
+    public function test_mixed_payment_rejects_an_unknown_method(): void
+    {
+        $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/invoice-payments/' . $this->invoice->id . '/process-mixed', [
+                'payments' => [['payment_method' => 'Bitcoin', 'amount' => 100]],
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(0, InvoicePayment::count());
+    }
+
     // ─── Show ──────────────────────────────────────────────────────
 
     public function test_show_payment(): void
@@ -182,11 +269,15 @@ class InvoicePaymentApiTest extends TestCase
 
         $paymentId = $create->json('data.id');
 
+        // 改成支票就必须给出支票号与银行 —— 这条规则 Web 端一直有，
+        // API 侧此前只校验 payment_method 是字符串，能存下一张查不到号的支票。
         $response = $this->withHeaders($this->authHeader())
             ->putJson("/api/v1/invoice-payments/{$paymentId}", [
                 'amount'         => 150,
                 'payment_method' => 'Cheque',
                 'payment_date'   => now()->format('Y-m-d'),
+                'cheque_no'      => 'CHQ-77',
+                'bank_name'      => '建设银行',
             ]);
 
         $response->assertOk()
@@ -196,6 +287,34 @@ class InvoicePaymentApiTest extends TestCase
             'id'             => $paymentId,
             'amount'         => 150,
             'payment_method' => 'Cheque',
+            'cheque_no'      => 'CHQ-77',
+            'bank_name'      => '建设银行',
+        ]);
+    }
+
+    public function test_update_payment_requires_the_details_a_method_implies(): void
+    {
+        $create = $this->withHeaders($this->authHeader())
+            ->postJson('/api/v1/invoice-payments', [
+                'amount'         => 100,
+                'payment_method' => 'Cash',
+                'payment_date'   => now()->format('Y-m-d'),
+                'invoice_id'     => $this->invoice->id,
+            ]);
+
+        $paymentId = $create->json('data.id');
+
+        $this->withHeaders($this->authHeader())
+            ->putJson("/api/v1/invoice-payments/{$paymentId}", [
+                'amount'         => 100,
+                'payment_method' => 'Cheque',
+                'payment_date'   => now()->format('Y-m-d'),
+            ])
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('invoice_payments', [
+            'id'             => $paymentId,
+            'payment_method' => 'Cash',
         ]);
     }
 

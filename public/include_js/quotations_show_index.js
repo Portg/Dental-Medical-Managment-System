@@ -98,9 +98,13 @@ function editItem(id) {
             $.LoadingOverlay("hide");
             $('#id').val(id);
             $('[name="qty"]').val(data.qty);
-            $('[name="price"]').val(data.price);
-            $('[name="total_amount"]').val(data.price * data.qty);
-            $('[name="tooth_no"]').val(data.tooth_no);
+            // 接口回的是 quotation_items 的原始行，单价存在 amount 列里
+            // （列名叫 amount，存的是单价，见 QuotationItemService::create）。
+            // 读 data.price 拿到的是 undefined —— 编辑弹窗的单价一直是空的，
+            // 小计还会算成 NaN。
+            $('[name="price"]').val(data.amount);
+            $('[name="total_amount"]').val(data.amount * data.qty);
+            $('[name="tooth_no"]').val(data.tooth_no || '');
 
             var service_data = {
                 id: data.medical_service_id,

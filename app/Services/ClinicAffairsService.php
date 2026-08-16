@@ -74,10 +74,32 @@ class ClinicAffairsService
         return $record->fresh(['operator', 'reviewer']);
     }
 
+    /**
+     * 复核只能做一次。
+     *
+     * updateDisinfection() 与 delete() 都拦「已复核」，唯独复核接口本身不看
+     * reviewed_at —— 再点一次就把复核人和复核时间换成后来者，原始的合规签名
+     * 无迹可寻。院感记录的复核签名正是要留痕的那一项，允许覆盖就没意义了。
+     * 要改复核结论应当先撤销复核（目前没有这个动作），而不是静默重写。
+     *
+     * 判定必须放进带 whereNull('reviewed_at') 的更新里，靠影响行数决定谁抢到。
+     * 「先读 reviewed_at 再更新」挡不住并发：两个人同时点复核，都会读到 null，
+     * 后落地的一份照样把复核人和时间盖掉 —— 与 SatisfactionSurveyService
+     * 里 regenerateToken()/submitSurvey() 用的是同一条路子。
+     */
     public function reviewDisinfection(int $id): ClinicDisinfectionRecord
     {
+        // 仍先按门店取一次：不属于本门店的记录应当是 404，而不是「已复核」
         $record = $this->findForBranch(ClinicDisinfectionRecord::query(), $id);
-        $record->update(['reviewer_id' => Auth::id(), 'reviewed_at' => now()]);
+
+        $affected = ClinicDisinfectionRecord::where('id', $record->id)
+            ->whereNull('reviewed_at')
+            ->update(['reviewer_id' => Auth::id(), 'reviewed_at' => now()]);
+
+        if ($affected === 0) {
+            throw new \RuntimeException(__('clinic_affairs.already_reviewed'));
+        }
+
         return $record->fresh(['operator', 'reviewer']);
     }
 

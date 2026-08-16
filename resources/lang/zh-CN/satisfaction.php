@@ -122,4 +122,5 @@ return [
     'not_dispatched'   => '未派发（链接已生成，尚未发给患者）',
     'dispatched_at'    => '已于 :time 派发',
     'marked_dispatched' => '已记录派发时间',
+    'mark_dispatched_manually' => '我已把链接发给患者',
 ];

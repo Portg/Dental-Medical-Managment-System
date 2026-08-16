@@ -29,15 +29,14 @@ $(document).ready(function () {
     }
 
     /**
-     * 复制成功即视为「链接已交给患者」。
+     * 回填派发时间。
      *
-     * 建问卷时不写 sent_at —— 那时只是生成了链接，没人把它发出去。复制是这套
+     * 建问卷时不写 sent_at —— 那时只是生成了链接，没人把它发出去。复制成功是这套
      * 人工流程里唯一能观测到的派发动作，所以在这里回填，「已派发/未派发」才有意义。
      * 回填失败不影响复制本身：链接已经在剪贴板里了，没必要弹错吓人，
      * 只把状态留在「未派发」，前台下次复制会再试一次。
      */
-    function markDispatched($btn) {
-        var url = $btn.data('url');
+    function markDispatched(url, onFailure) {
         if (!url) {
             return;
         }
@@ -54,29 +53,55 @@ $(document).ready(function () {
                         LanguageManager.trans('satisfaction.dispatched_at', { time: res.sent_at })
                     )
                 );
+                // 记上了，人工确认按钮就没用了（没露出来时是空操作）
+                $('#markDispatchedBtn').hide();
+                return;
+            }
+
+            if (onFailure) {
+                onFailure();
+            }
+        }).fail(function () {
+            // 403（只有 view-surveys）、掉线、500 —— 状态没写进去，
+            // 调用方据此决定要不要把确认按钮留着让人重试
+            if (onFailure) {
+                onFailure();
             }
         });
     }
 
     $('#copyLinkBtn').on('click', function () {
-        var $btn = $(this);
+        var url = $(this).data('url');
         var text = $url.val();
         if (!text) {
             toastr.warning(LanguageManager.trans('satisfaction.no_link_yet'));
             return;
         }
 
-        // 按「点了复制」记派发，而不是按「剪贴板写成功」记。
-        // 上面那段注释说得很清楚：诊所内网多为 http，navigator.clipboard 在非安全
-        // 上下文里根本不可用，回退的 execCommand 也可能被拒。挂在成功回调上的话，
-        // 前台手工选中链接发给了患者，系统这边却一直记成「未派发」——那这个状态
-        // 就白加了。点这个按钮本身就是「我要把链接拿去发给患者」的意思，按它记。
-        markDispatched($btn);
-
         copyToClipboard(text).then(function () {
+            // 复制真的成了，才算链接到了前台手上
             toastr.success(LanguageManager.trans('satisfaction.link_copied'));
+            markDispatched(url);
         }).catch(function () {
+            // 诊所内网多为 http，navigator.clipboard 在非安全上下文不可用，
+            // 回退的 execCommand 也可能被拒。这时 copyToClipboard 已经把链接选中，
+            // 前台会手动 Ctrl+C —— 但发没发出去只有他知道，系统不替他断言。
+            // 露出确认按钮，由人点一下再记派发。
             toastr.warning(LanguageManager.trans('satisfaction.copy_failed'));
+            $('#markDispatchedBtn').show();
+        });
+    });
+
+    // 复制失败后的人工确认：这条路径上「已派发」是前台自己声明的，不是系统猜的。
+    // 按钮先禁用不隐藏 —— 请求可能 403/掉线，那时状态并没写进去，
+    // 直接隐藏会让人以为记上了，且再没有第二次机会。
+    $('#markDispatchedBtn').on('click', function () {
+        var $btn = $(this);
+        $btn.prop('disabled', true);
+
+        markDispatched($btn.data('url'), function () {
+            toastr.error(LanguageManager.trans('satisfaction.network_error'));
+            $btn.prop('disabled', false);
         });
     });
 
@@ -103,6 +128,8 @@ $(document).ready(function () {
                         LanguageManager.trans('satisfaction.not_dispatched')
                     )
                 );
+                // 上一条链接的人工确认按钮跟着作废，别让它把新链接标成已派发
+                $('#markDispatchedBtn').hide();
                 toastr.success(res.message);
             } else {
                 toastr.error((res && res.message) || LanguageManager.trans('satisfaction.network_error'));

@@ -24,6 +24,8 @@ class MemberTransaction extends Model
         'bonus_amount',
         'patient_id',
         'invoice_id',
+        // 按笔挂到收款记录上，撤销收款时据此精确冲销积分与储值消费
+        'invoice_payment_id',
         '_who_added',
     ];
 

@@ -16,8 +16,11 @@ class SatisfactionSurveyController extends Controller
         // 满意度调查属于患者关怀日常运营（前台为主力），不是系统设置。
         // 但「看」和「改」必须分开：view-patients 授予了全部业务角色，
         // 挂在整个控制器上等于让任何能看患者的人都能批量生成问卷、重置患者填写链接。
+        // markDispatched 也在这一档：它写 surveys.sent_at，是「改」不是「看」。
+        // 漏在 view-surveys 里的话，医生和护士（只有只读权限）也能把任意问卷
+        // 标成已派发 —— 派发记录是回访考核的依据，得跟生成/重置链接同权。
         $this->middleware('can:view-surveys');
-        $this->middleware('can:manage-surveys')->only(['store', 'sendBatch', 'regenerateLink']);
+        $this->middleware('can:manage-surveys')->only(['store', 'sendBatch', 'regenerateLink', 'markDispatched']);
     }
 
     /**

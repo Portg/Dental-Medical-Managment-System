@@ -43,6 +43,7 @@ return [
     'review' => '复核',
     'review_completed' => '复核完成',
     'reviewed_record_locked' => '已复核记录不可修改或删除',
+    'already_reviewed' => '该记录已复核，不能重复复核',
     'equipment_code' => '设备编号',
     'equipment_name' => '设备名称',
     'equipment_category' => '设备类别',

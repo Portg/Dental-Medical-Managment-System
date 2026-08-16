@@ -62,6 +62,8 @@ return [
     // 错误消息
     'no_claim_rate_in_system' => 'Sorry you dont have claim rate in the system, please contact the system admin',
     'amounts_not_matching' => 'Total insurance & Cash Amounts are not matching with the treatment amount',
+    'appointment_not_yours' => 'That appointment is not yours, you cannot claim on it',
+    'claim_already_exists' => 'A claim has already been submitted for this appointment',
 
     'payments' => [
 

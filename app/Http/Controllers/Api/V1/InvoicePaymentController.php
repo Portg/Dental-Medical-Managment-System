@@ -47,23 +47,24 @@ class InvoicePaymentController extends ApiController
 
     public function store(Request $request): JsonResponse
     {
+        // 付款方式白名单与条件必填走 InvoicePaymentService::detailRules()，
+        // 与 Web 入口同一份规则 —— 各写各的就会出现「Web 拦得住、API 绕得过」。
         $validator = Validator::make($request->all(), [
-            'amount'               => 'required|numeric|min:0.01',
-            'payment_method'       => 'required|string|max:50',
-            'payment_date'         => 'required|date',
-            'invoice_id'           => 'required|exists:invoices,id',
-            'account_name'         => 'nullable|string|max:255',
-            'cheque_no'            => 'nullable|string|max:100',
-            'bank_name'            => 'nullable|string|max:255',
-            'insurance_company_id' => 'nullable|exists:insurance_companies,id',
-            'self_account_id'      => 'nullable|exists:self_accounts,id',
-        ]);
+            'amount'       => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'invoice_id'   => 'required|exists:invoices,id',
+        ] + InvoicePaymentService::detailRules());
 
         if ($validator->fails()) {
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $payment = $this->service->createPayment($request->only(['amount', 'payment_method', 'payment_date', 'invoice_id', 'account_name', 'cheque_no', 'bank_name', 'insurance_company_id', 'self_account_id']));
+        try {
+            $payment = $this->service->createPayment($request->only(['amount', 'payment_method', 'payment_date', 'invoice_id', 'account_name', 'cheque_no', 'bank_name', 'insurance_company_id', 'self_account_id']));
+        } catch (\RuntimeException $e) {
+            // 超收 / 折扣待审批
+            return $this->error($e->getMessage(), 422);
+        }
 
         if (!$payment) {
             return $this->error('Failed to create payment', 500);
@@ -77,21 +78,20 @@ class InvoicePaymentController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'amount'               => 'required|numeric|min:0.01',
-            'payment_method'       => 'required|string|max:50',
-            'payment_date'         => 'required|date',
-            'account_name'         => 'nullable|string|max:255',
-            'cheque_no'            => 'nullable|string|max:100',
-            'bank_name'            => 'nullable|string|max:255',
-            'insurance_company_id' => 'nullable|exists:insurance_companies,id',
-            'self_account_id'      => 'nullable|exists:self_accounts,id',
-        ]);
+            'amount'       => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+        ] + InvoicePaymentService::detailRules());
 
         if ($validator->fails()) {
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $status = $this->service->updatePayment($id, $request->only(['amount', 'payment_method', 'payment_date', 'account_name', 'cheque_no', 'bank_name', 'insurance_company_id', 'self_account_id']));
+        try {
+            $status = $this->service->updatePayment($id, $request->only(['amount', 'payment_method', 'payment_date', 'account_name', 'cheque_no', 'bank_name', 'insurance_company_id', 'self_account_id']));
+        } catch (\RuntimeException $e) {
+            // 超收 / 折扣待审批 / 储值收款不可就地改
+            return $this->error($e->getMessage(), 422);
+        }
 
         if (!$status) {
             return $this->error('Failed to update payment', 500);
@@ -116,16 +116,10 @@ class InvoicePaymentController extends ApiController
     public function processMixed(Request $request, int $invoiceId): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'payments'                    => 'required|array|min:1',
-            'payments.*.payment_method'   => 'required|string|max:50',
-            'payments.*.amount'           => 'required|numeric|min:0.01',
-            'payments.*.cheque_no'        => 'nullable|string|max:100',
-            'payments.*.account_name'     => 'nullable|string|max:255',
-            'payments.*.bank_name'        => 'nullable|string|max:255',
-            'payments.*.insurance_company_id' => 'nullable|exists:insurance_companies,id',
-            'payments.*.self_account_id'  => 'nullable|exists:self_accounts,id',
-            'payment_date'                => 'nullable|date',
-        ]);
+            'payments'          => 'required|array|min:1',
+            'payments.*.amount' => 'required|numeric|min:0.01',
+            'payment_date'      => 'nullable|date',
+        ] + InvoicePaymentService::detailRules('payments.*.'));
 
         if ($validator->fails()) {
             return $this->error('Validation failed', 422, $validator->errors());

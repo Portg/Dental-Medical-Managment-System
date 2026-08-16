@@ -149,6 +149,74 @@ class ClinicAffairsTest extends TestCase
             ->assertStatus(409);
     }
 
+    /**
+     * 复核只能做一次。
+     *
+     * 编辑和删除都拦「已复核」，唯独复核接口本身不看 reviewed_at —— 再点一次
+     * 就把复核人和复核时间换成后来者，原始的合规签名无迹可寻。院感记录的复核
+     * 签名正是要留痕的那一项。
+     */
+    public function test_a_reviewed_record_cannot_be_reviewed_again(): void
+    {
+        $record = $this->seedDisinfection('pass', '消毒室');
+
+        $this->actingAs($this->manager)
+            ->postJson('/clinic-affairs/disinfection/' . $record->id . '/review')
+            ->assertOk();
+
+        $first = $record->fresh();
+
+        $other = User::factory()->create([
+            'role_id'   => $this->manager->role_id,
+            'branch_id' => $this->branch->id,
+            'status'    => User::STATUS_ACTIVE,
+        ]);
+
+        $this->actingAs($other)
+            ->postJson('/clinic-affairs/disinfection/' . $record->id . '/review')
+            ->assertStatus(409);
+
+        $after = $record->fresh();
+        $this->assertEquals($first->reviewer_id, $after->reviewer_id, '复核人被后来者覆盖了');
+        $this->assertEquals(
+            $first->reviewed_at->format('Y-m-d H:i:s'),
+            $after->reviewed_at->format('Y-m-d H:i:s'),
+            '复核时间被后来者覆盖了'
+        );
+    }
+
+    /**
+     * 复核的判定必须落在 UPDATE 的 WHERE 里，不能是「先读 reviewed_at 再更新」。
+     *
+     * 上一条测的是顺序重复请求 —— 那种写法也能过，因为第二次会重新读到已复核。
+     * 真正的窗口是两个人同时点：都读到 null，后写的一份把复核人和时间盖掉。
+     * 单进程造不出真并发（RefreshDatabase 把每个用例包在事务里，另一条连接看不到
+     * 这些数据），所以这里钉的是结构：那条 UPDATE 必须自带 reviewed_at is null。
+     * 少了它，并发下就是后到者覆盖。
+     */
+    public function test_review_decides_the_winner_inside_the_update_statement(): void
+    {
+        $record = $this->seedDisinfection('pass', '消毒室');
+
+        $updates = [];
+        \Illuminate\Support\Facades\DB::listen(function ($query) use (&$updates) {
+            if (stripos($query->sql, 'update') === 0
+                && stripos($query->sql, 'clinic_disinfection_records') !== false) {
+                $updates[] = $query->sql;
+            }
+        });
+
+        $this->actingAs($this->manager)
+            ->postJson('/clinic-affairs/disinfection/' . $record->id . '/review')
+            ->assertOk();
+
+        $this->assertNotEmpty($updates, '没有观察到复核的 UPDATE 语句');
+        $this->assertTrue(
+            (bool) preg_grep('/reviewed_at.{0,4} is null/i', $updates),
+            '复核的 UPDATE 没带 reviewed_at is null 条件，并发下后到者会覆盖原复核人'
+        );
+    }
+
     public function test_records_are_scoped_to_the_users_branch(): void
     {
         $otherBranch = Branch::create(['name' => 'Other Branch', 'is_active' => true]);

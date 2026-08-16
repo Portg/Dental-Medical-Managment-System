@@ -411,6 +411,34 @@ class SatisfactionSurveyFlowTest extends TestCase
             ->assertStatus(403);
     }
 
+    /**
+     * 标记「已派发」是写操作，不能只靠 view-surveys 放行。
+     *
+     * markDispatched 写 surveys.sent_at，而派发记录是回访考核的依据；漏在
+     * 只读那一档里的话，只有 view-surveys 的医生和护士也能把任意问卷标成
+     * 已派发。控制器自己的注释就写着「看和改必须分开」，这个方法当时没跟上。
+     */
+    public function test_view_only_role_cannot_mark_a_survey_dispatched(): void
+    {
+        $doctor = $this->userWithPermissions('doctor-readonly', ['view-surveys']);
+        $survey = $this->actingAs($this->admin)->service()->sendBatch(now()->format('Y-m-d'), 'wechat')[0];
+
+        $this->actingAs($doctor)
+            ->postJson('/satisfaction-surveys/' . $survey->id . '/mark-dispatched')
+            ->assertStatus(403);
+
+        $this->assertNull($survey->fresh()->sent_at);
+
+        // 前台（view + manage）照常可用 —— 复制链接本来就是他们的日常作业
+        $frontDesk = $this->userWithPermissions('front-desk', ['view-surveys', 'manage-surveys']);
+
+        $this->actingAs($frontDesk)
+            ->postJson('/satisfaction-surveys/' . $survey->id . '/mark-dispatched')
+            ->assertStatus(200);
+
+        $this->assertNotNull($survey->fresh()->sent_at);
+    }
+
     private function userWithPermissions(string $roleSlug, array $permissionSlugs): User
     {
         $role = Role::create(['name' => $roleSlug, 'slug' => $roleSlug]);
