@@ -314,8 +314,10 @@ class StoredValuePaymentConsistencyTest extends TestCase
     /**
      * 审批退费时要按当下的实收再核一次可退金额。
      *
-     * 建单时核对过，但审批可能是几天以后的事，中间收款可能被改小 —— 直接批就会
-     * 退出账上根本没有的钱。这是「挡撤销」之外的第二道，两道一起才堵得住。
+     * 这是最后一道。前面的 assertNoOpenRefund 已经挡住了「挂着退费还去改金额/撤销」
+     * 的正常路径，但实收仍可能因为别的原因与建单时对不上：升级前留下的退费单、
+     * 直接改库的历史数据、以及日后新增的其他调整入口。所以这里绕开服务层直接改库，
+     * 模拟「前置守卫没拦住」的状态，确认批的那一刻还会再核一次。
      */
     /** @test */
     public function 审批退费时按当下实收复核可退金额(): void
@@ -340,12 +342,10 @@ class StoredValuePaymentConsistencyTest extends TestCase
             '_who_added'      => $this->cashier->id,
         ]);
 
-        // 审批前收款被改小到 200（改收款不受退费单影响，只有撤销才挡）
-        $this->service->updatePayment($payment->id, [
-            'amount'         => 200,
-            'payment_date'   => now()->format('Y-m-d'),
-            'payment_method' => 'Cash',
-        ]);
+        // 绕开服务层直接改库：模拟前置守卫之外的途径让实收缩水到 200
+        InvoicePayment::where('id', $payment->id)->update(['amount' => 200]);
+        $this->service->syncInvoicePaidAmount($this->invoice->id);
+        $this->assertEquals(200, $this->invoice->fresh()->paid_amount);
 
         $result = app(\App\Services\RefundService::class)->approveRefund($refund->id, $this->cashier->id);
 
@@ -583,6 +583,209 @@ class StoredValuePaymentConsistencyTest extends TestCase
         $afterCancel = $this->patient->fresh();
         $this->assertEquals(0, $afterCancel->total_consumption, '撤销收款没有冲回累计消费');
         $this->assertEquals(0, $afterCancel->member_points, '撤销收款没有冲回积分——白拿积分');
+    }
+
+    /**
+     * 挂着退费时，改金额和撤销一样要挡。
+     *
+     * 撤销那条已经堵上了，改金额是同一个洞的另一半：收 500 → 退费 500 已批 →
+     * 再把这笔改成 100，退出去的钱就超过实收了。
+     */
+    /** @test */
+    public function 挂着退费时改不了收款金额(): void
+    {
+        $payment = $this->service->createPayment([
+            'amount'         => 500,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+            'invoice_id'     => $this->invoice->id,
+        ]);
+
+        \App\Refund::create([
+            'refund_no'       => \App\Refund::generateRefundNo(),
+            'invoice_id'      => $this->invoice->id,
+            'patient_id'      => $this->patient->id,
+            'refund_amount'   => 500,
+            'refund_reason'   => '取消治疗',
+            'refund_date'     => now(),
+            'refund_method'   => 'cash',
+            'approval_status' => \App\Refund::APPROVAL_APPROVED,
+            'branch_id'       => $this->invoice->branch_id,
+            '_who_added'      => $this->cashier->id,
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+
+        try {
+            $this->service->updatePayment($payment->id, [
+                'amount'         => 100,
+                'payment_date'   => now()->format('Y-m-d'),
+                'payment_method' => 'Cash',
+            ]);
+        } finally {
+            $this->assertEquals(500, $payment->fresh()->amount, '金额不该被改小');
+        }
+    }
+
+    /** @test */
+    public function 挂着退费时仍可只改收款方式(): void
+    {
+        $payment = $this->service->createPayment([
+            'amount'         => 500,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+            'invoice_id'     => $this->invoice->id,
+        ]);
+
+        \App\Refund::create([
+            'refund_no'       => \App\Refund::generateRefundNo(),
+            'invoice_id'      => $this->invoice->id,
+            'patient_id'      => $this->patient->id,
+            'refund_amount'   => 200,
+            'refund_reason'   => '部分退',
+            'refund_date'     => now(),
+            'refund_method'   => 'cash',
+            'approval_status' => \App\Refund::APPROVAL_APPROVED,
+            'branch_id'       => $this->invoice->branch_id,
+            '_who_added'      => $this->cashier->id,
+        ]);
+
+        // 金额没变，只是纠正收款方式 —— 不影响退费金额，应当放行
+        $this->assertTrue($this->service->updatePayment($payment->id, [
+            'amount'         => 500,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'WeChat',
+        ]));
+
+        $this->assertSame('WeChat', $payment->fresh()->payment_method);
+    }
+
+    /**
+     * 历史收款只改方式，不能凭空补上一份累计消费与积分。
+     *
+     * 老记录的 member_benefits_awarded 是 false，冲销会跳过（对的）；若照样重新
+     * 发放，就等于给一笔从没计过消费的老单补一份，累计消费平白多出来。
+     */
+    /** @test */
+    public function 改历史收款不会凭空补发会员权益(): void
+    {
+        $this->patient->update(['total_consumption' => 5000, 'member_points' => 0]);
+
+        $legacy = InvoicePayment::create([
+            'amount'         => 300,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+            'invoice_id'     => $this->invoice->id,
+            'branch_id'      => $this->invoice->branch_id,
+            '_who_added'     => $this->cashier->id,
+        ]);
+
+        $this->service->updatePayment($legacy->id, [
+            'amount'         => 300,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'WeChat',
+        ]);
+
+        $this->assertEquals(
+            5000,
+            $this->patient->fresh()->total_consumption,
+            '历史收款从没计过消费，改方式不该给它补上一份'
+        );
+        $this->assertFalse((bool) $legacy->fresh()->member_benefits_awarded);
+    }
+
+    /**
+     * 积分已经被兑换掉时，撤销收款要拒绝而不是静默抹平。
+     *
+     * 原先是 max(0, 现有 − 当初发放)：账上只减得到剩下那点，流水却记「全额已冲销」，
+     * 兑出去的储值追不回来，积分流水也对不平。这种情况得由人来决定怎么处理。
+     */
+    /** @test */
+    public function 积分已被兑换时拒绝撤销收款(): void
+    {
+        $level = \App\MemberLevel::create([
+            'name'          => '金卡',
+            'level_code'    => 'GOLD2',
+            'min_amount'    => 0,
+            'points_rate'   => 1,
+            'discount_rate' => 100,
+            'is_active'     => true,
+        ]);
+
+        $this->patient->update(['member_level_id' => $level->id, 'member_points' => 0]);
+
+        $payment = $this->service->createPayment([
+            'amount'         => 500,
+            'payment_date'   => now()->format('Y-m-d'),
+            'payment_method' => 'Cash',
+            'invoice_id'     => $this->invoice->id,
+        ]);
+
+        $awarded = (int) $this->patient->fresh()->member_points;
+        $this->assertGreaterThan(0, $awarded);
+
+        // 患者把积分兑换掉了，账上只剩一点
+        $this->patient->update(['member_points' => 1]);
+
+        $this->expectException(\RuntimeException::class);
+
+        try {
+            $this->service->deletePayment($payment->id);
+        } finally {
+            $this->assertNotNull($payment->fresh(), '积分已用掉，这笔收款不该被撤销');
+            $this->assertEquals(1, $this->patient->fresh()->member_points, '不该把剩余积分也抹掉');
+        }
+    }
+
+    /**
+     * 退费审批也要退给当初真正扣款的那张卡。
+     *
+     * 上一轮只修了「撤销收款」那条路径，退费审批仍按当前共享卡关系解析 ——
+     * 付款到审批之间解绑共享卡，钱就退进了副卡。
+     */
+    /** @test */
+    public function 退费审批按当初扣款的那张卡退回(): void
+    {
+        $primary = Patient::create([
+            'patient_no'     => '20260704',
+            'surname'        => '周',
+            'othername'      => '主卡',
+            'gender'         => 'Male',
+            'member_balance' => 5000,
+            '_who_added'     => $this->cashier->id,
+        ]);
+
+        $holder = \App\MemberSharedHolder::create([
+            'primary_patient_id' => $primary->id,
+            'shared_patient_id'  => $this->patient->id,
+            'is_active'          => true,
+            '_who_added'         => $this->cashier->id,
+        ]);
+
+        $this->service->createPayment($this->storedValuePayload(300));
+        $this->assertEquals(4700, $primary->fresh()->member_balance);
+
+        $refund = \App\Refund::create([
+            'refund_no'       => \App\Refund::generateRefundNo(),
+            'invoice_id'      => $this->invoice->id,
+            'patient_id'      => $this->patient->id,
+            'refund_amount'   => 300,
+            'refund_reason'   => '取消治疗',
+            'refund_date'     => now(),
+            'refund_method'   => 'stored_value',
+            'approval_status' => \App\Refund::APPROVAL_PENDING,
+            'branch_id'       => $this->invoice->branch_id,
+            '_who_added'      => $this->cashier->id,
+        ]);
+
+        // 审批之前共享关系被解除
+        $holder->update(['is_active' => false]);
+
+        $result = app(\App\Services\RefundService::class)->approveRefund($refund->id, $this->cashier->id);
+        $this->assertTrue($result['status'], $result['message'] ?? '');
+
+        $this->assertEquals(5000, $primary->fresh()->member_balance, '钱是从主卡扣的，就该退回主卡');
+        $this->assertEquals(2000, $this->patient->fresh()->member_balance, '副卡不该凭空多出一笔');
     }
 
     /**

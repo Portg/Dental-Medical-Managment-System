@@ -195,7 +195,13 @@ class InvoicePaymentService
                 throw new \RuntimeException(__('invoices.discount_approval_required'));
             }
 
+            // 挂着退费时不许改金额。撤销已经挡住了，改金额是同一个洞的另一半：
+            // 收 500 → 退费 500 已批 → 再把这笔改成 100，退出去的钱就超过实收了。
             $newAmount = (string) ($data['amount'] ?? $payment->amount);
+
+            if (bccomp($newAmount, (string) $payment->amount, 2) !== 0) {
+                $this->assertNoOpenRefund((int) $invoice->id);
+            }
 
             // 别的明细加起来还剩多少额度：总额 −（当前实收 − 这笔自己的旧金额）
             $others = bcsub($this->netPaidFor((int) $invoice->id), (string) $payment->amount, 2);
@@ -224,17 +230,42 @@ class InvoicePaymentService
                 // 累计消费与积分是按「这笔收多少、什么方式」算出来的，改了就得重算：
                 // 收 500 后改成 100，不重算的话累计消费还停在 500，之后撤销只减 100，
                 // 患者账上白留 400。先按原值冲销、再按新值发放，两步都在同一个事务里。
-                $fresh = InvoicePayment::find($id);
-
-                $this->reverseMemberBenefits($payment);
-                $this->awardMemberBenefits($invoice, $fresh);
-                $this->checkMemberUpgrade($invoice->patient);
+                //
+                // 只对**当初真发过**权益的收款做这一对操作。历史收款的
+                // member_benefits_awarded 是 false，冲销会跳过（对的），但若照样重新
+                // 发放，就等于给一笔从没计过消费的老单凭空补上一份 —— 只改个收款方式
+                // 也会让累计消费和积分平白多一份。
+                if ($payment->member_benefits_awarded) {
+                    $this->reverseMemberBenefits($payment);
+                    $this->awardMemberBenefits($invoice, InvoicePayment::find($id));
+                    $this->checkMemberUpgrade($invoice->patient);
+                }
 
                 $this->syncInvoicePaidAmount((int) $invoice->id);
             }
 
             return $updated;
         });
+    }
+
+    /**
+     * 账单挂着退费（待审批或已通过）时，收款金额既不能改也不能撤。
+     *
+     * 两条路都会让「退出去的钱」超过「实际收到的钱」：撤销是把这笔整个抹掉，
+     * 改小金额是把它缩水，退费那边却已经按原来的金额批过或正在等着批。
+     * 要调整先处理退费单，顺序反过来才说得清。
+     *
+     * @throws \RuntimeException
+     */
+    private function assertNoOpenRefund(int $invoiceId): void
+    {
+        $hasOpenRefund = Refund::where('invoice_id', $invoiceId)
+            ->whereIn('approval_status', [Refund::APPROVAL_PENDING, Refund::APPROVAL_APPROVED])
+            ->exists();
+
+        if ($hasOpenRefund) {
+            throw new \RuntimeException(__('invoices.payment_locked_by_refund'));
+        }
     }
 
     /**
@@ -281,13 +312,7 @@ class InvoicePaymentService
 
             $invoiceId = (int) $payment->invoice_id;
 
-            $hasOpenRefund = Refund::where('invoice_id', $invoiceId)
-                ->whereIn('approval_status', [Refund::APPROVAL_PENDING, Refund::APPROVAL_APPROVED])
-                ->exists();
-
-            if ($hasOpenRefund) {
-                throw new \RuntimeException(__('invoices.payment_locked_by_refund'));
-            }
+            $this->assertNoOpenRefund($invoiceId);
 
             $deleted = (bool) InvoicePayment::where('id', $id)->delete();
 
@@ -459,7 +484,21 @@ class InvoicePaymentService
             ->sum('points_change');
 
         if ($awarded > 0) {
-            $patient->member_points = max(0, (int) ($patient->member_points ?? 0) - $awarded);
+            $current = (int) ($patient->member_points ?? 0);
+
+            // 积分已经被兑换掉（换了储值/礼品）就不能硬冲。
+            //
+            // 原先是 max(0, current − awarded)：账上只减得到剩下那点，流水却记
+            // 「全额已冲销」—— 兑出去的储值追不回来，积分流水也对不平。这种情况
+            // 需要人去决定是追回兑换所得还是走退费，不该由撤销按钮悄悄抹平。
+            if ($current < $awarded) {
+                throw new \RuntimeException(__('invoices.payment_points_already_spent', [
+                    'awarded' => $awarded,
+                    'current' => $current,
+                ]));
+            }
+
+            $patient->member_points = $current - $awarded;
         }
 
         $patient->save();

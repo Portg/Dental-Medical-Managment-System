@@ -328,7 +328,8 @@ return [
     'stored_value_payment' => '储值支付：账单 :invoice_no',
     'stored_value_payment_reversed' => '撤销储值支付：账单 :invoice_no',
     'stored_value_payment_not_editable' => '储值支付不能直接修改，请先撤销该笔收款（余额会退回）再重新登记',
-    'payment_locked_by_refund' => '该账单已有通过的退费，不能再撤销收款；如需调整请先撤销退费',
+    'payment_locked_by_refund' => '该账单挂着未处理或已通过的退费，收款金额不能修改或撤销；如需调整请先处理退费单',
+    'payment_points_already_spent' => '这笔收款产生的 :awarded 积分已被使用（当前仅剩 :current），无法撤销或修改；请改走退费流程，或先追回已兑换的部分',
 
     // ── 患者收费 Tab 面板 (3.4.7 / 3.4.9 / 3.4.11) ──
     'panel_invoice_detail'    => '账单详情',

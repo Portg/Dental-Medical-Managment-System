@@ -406,8 +406,19 @@ class RefundService
             // （InvoicePaymentService::chargeStoredValue → resolvePrimaryMember），
             // 退也必须退回同一张卡。原先直接给 refund->patient_id 加余额，副卡患者
             // 消费时就成了「主卡扣款、副卡退款」—— 两个人的余额各错一笔。
-            $payingPatientId = app(\App\Services\MemberService::class)
-                ->resolvePrimaryMember((int) $refund->patient_id)->id;
+            //
+            // 而且要认**当初扣款那条流水**记下的人，不是现在重新解析共享卡关系：
+            // 付款到审批之间共享卡可能被解绑或改绑，按当前关系退会退给另一个人。
+            // 与 InvoicePaymentService::refundStoredValue() 同一条判据。
+            $chargedPatientId = \App\MemberTransaction::where('invoice_id', $invoice->id)
+                ->where('transaction_type', 'Consumption')
+                ->orderByDesc('id')
+                ->value('patient_id');
+
+            // 没有流水的只可能是本次改动之前的历史数据，退而求其次按当前关系解析
+            $payingPatientId = $chargedPatientId
+                ?: app(\App\Services\MemberService::class)
+                    ->resolvePrimaryMember((int) $refund->patient_id)->id;
 
             $patient = Patient::where('id', $payingPatientId)->lockForUpdate()->first();
             if ($patient) {
