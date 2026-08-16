@@ -160,9 +160,19 @@ mysql_cmd() {
     MYSQL_PWD="${DB_PASS}" "${cmd[@]}" "$@"
 }
 
+# --databases 让转储自带 CREATE DATABASE / USE，回滚时才能「先删库再整库导入」。
+# 不加的话转储里只有 DROP TABLE IF EXISTS + CREATE TABLE，**只覆盖备份时存在的表**；
+# 迁移新建的表在回滚后会原样留下，而 migrations 表被恢复成没跑过 —— 库就此卡在
+# 不一致状态，之后每次升级都死在第一条 CREATE TABLE 上（2026-08-16 Windows 实机如此）。
 mysql_dump_cmd() {
     local cmd=(mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER"
-               --single-transaction --routines --triggers "$DB_NAME")
+               --single-transaction --routines --triggers --databases "$DB_NAME")
+    MYSQL_PWD="${DB_PASS}" "${cmd[@]}" "$@"
+}
+
+# 不指定库名的 mysql，用于导入自带 USE 的整库转储
+mysql_server_cmd() {
+    local cmd=(mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER")
     MYSQL_PWD="${DB_PASS}" "${cmd[@]}" "$@"
 }
 
@@ -218,7 +228,17 @@ cleanup_on_failure() {
     # 恢复数据库
     if [[ "$ROLLBACK_DB" -eq 1 && -n "$DB_BACKUP_FILE" && -f "$DB_BACKUP_FILE" ]]; then
         info "恢复数据库（可能需要几分钟）..."
-        if mysql_cmd < "$DB_BACKUP_FILE" 2>/dev/null; then
+        # 转储自带 CREATE DATABASE 时先删库再整库导入，恢复才是权威的：
+        # 迁移新建的表会随库一起消失。旧版本的备份没有这一行，只能沿用按表覆盖。
+        if grep -qi "CREATE DATABASE" "$DB_BACKUP_FILE"; then
+            mysql_server_cmd -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`" 2>/dev/null
+            restore_ok=$(mysql_server_cmd < "$DB_BACKUP_FILE" 2>/dev/null && echo 1 || echo 0)
+        else
+            warn "备份文件不含 CREATE DATABASE，只能按表覆盖；升级新建的表不会被清掉"
+            restore_ok=$(mysql_cmd < "$DB_BACKUP_FILE" 2>/dev/null && echo 1 || echo 0)
+        fi
+
+        if [[ "$restore_ok" == "1" ]]; then
             ok "数据库已恢复"
         else
             fail "数据库自动恢复失败！请手动导入: ${DB_BACKUP_FILE}"

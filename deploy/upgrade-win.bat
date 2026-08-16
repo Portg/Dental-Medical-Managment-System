@@ -329,11 +329,17 @@ set "DB_BACKUP_FILE=%BACKUP_DIR%\backup_%TIMESTAMP%.sql"
 if defined SKIP_DB_BACKUP (
     echo          [跳过] mysqldump 不可用
 ) else (
+    REM --databases 让转储自带 CREATE DATABASE / USE，回滚时才能「先删库再整库导入」。
+    REM 不加的话转储里只有 DROP TABLE IF EXISTS + CREATE TABLE，**只覆盖备份时存在的表**；
+    REM 迁移新建的表在回滚后会原样留下，而 migrations 表被恢复成没跑过 ——
+    REM 库就此卡在不一致状态，之后每次升级都会死在第一条 CREATE TABLE 上。
+    REM 2026-08-16 目标机就是这样：第一次回滚留下 clinic_disinfection_records，
+    REM 第二次升级直接报 1050 Table already exists。
     echo          正在导出数据库 !DB_NAME!（可能需要几分钟）...
     if "!DB_PASS!"=="" (
-        "!MYSQLDUMP!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! --single-transaction --routines --triggers "!DB_NAME!" > "!DB_BACKUP_FILE!" 2>nul
+        "!MYSQLDUMP!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! --single-transaction --routines --triggers --databases "!DB_NAME!" > "!DB_BACKUP_FILE!" 2>nul
     ) else (
-        "!MYSQLDUMP!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! -p"!DB_PASS!" --single-transaction --routines --triggers "!DB_NAME!" > "!DB_BACKUP_FILE!" 2>nul
+        "!MYSQLDUMP!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! -p"!DB_PASS!" --single-transaction --routines --triggers --databases "!DB_NAME!" > "!DB_BACKUP_FILE!" 2>nul
     )
     if !ERRORLEVEL! neq 0 (
         echo  [错误] 数据库备份失败，请确认 MySQL 已启动
@@ -536,11 +542,38 @@ if defined COMPOSER (
 )
 
 echo        运行数据库迁移...
-"!PHP!" artisan migrate --force --no-interaction
+set "MIGRATE_LOG=%BACKUP_DIR%\migrate.log"
+"!PHP!" artisan migrate --force --no-interaction > "!MIGRATE_LOG!" 2>&1
 if !ERRORLEVEL! neq 0 (
+    type "!MIGRATE_LOG!"
+    echo.
     echo  [错误] 数据库迁移失败
+    REM 「表已存在」几乎只有一个来源：上一次升级跑完迁移后回滚，而那次回滚的
+    REM 数据库恢复不是权威的（旧版本的备份没带 CREATE DATABASE，只按表覆盖），
+    REM 于是新建的表留了下来、migrations 表却被恢复成没跑过。库卡在这个状态后，
+    REM 每一次升级都会死在同一条 CREATE TABLE 上，光看 SQL 报错完全看不出原因。
+    findstr /C:"already exists" "!MIGRATE_LOG!" >nul 2>&1 && (
+        echo.
+        echo  +---------------------------------------------------------+
+        echo  ^|  这是「上次回滚没清干净」留下的不一致状态                ^|
+        echo  +---------------------------------------------------------+
+        echo   报错说表已存在，但 migrations 表里没有对应记录 —— 说明之前有一次
+        echo   升级跑完了迁移又回滚，而那次恢复只覆盖了备份里已有的表。
+        echo.
+        echo   修复办法（二选一，都在升级前做）:
+        echo     A. 用本次备份之前的完整备份重建库:
+        echo          "!MYSQL!" -u !DB_USER! -e "DROP DATABASE IF EXISTS !DB_NAME!"
+        echo          "!MYSQL!" -u !DB_USER! ^< ^<干净的备份.sql^>
+        echo     B. 只删掉那几张孤立的表，让迁移重新建（表里应当是空的，
+        echo        因为回滚后的旧版本根本不使用它们）:
+        echo          "!MYSQL!" -u !DB_USER! !DB_NAME! -e "DROP TABLE IF EXISTS ^<表名^>"
+        echo.
+        echo   本次备份在 %BACKUP_DIR%，完整迁移输出见 !MIGRATE_LOG!
+        echo.
+    )
     goto :rollback
 )
+type "!MIGRATE_LOG!"
 echo        数据库迁移完成
 echo.
 
@@ -801,10 +834,32 @@ if defined DB_BACKUP_FILE (
     if exist "!DB_BACKUP_FILE!" (
         echo  [回滚] 恢复数据库（可能需要几分钟）...
         if defined MYSQL (
-            if "!DB_PASS!"=="" (
-                "!MYSQL!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! "!DB_NAME!" < "!DB_BACKUP_FILE!" 2>nul
+            REM 转储自带 CREATE DATABASE（--databases）时，先把整个库删掉再导入，
+            REM 恢复才是**权威**的：迁移新建的表会随库一起消失。只按表覆盖的话，
+            REM 那些表会留下来而 migrations 表被恢复成没跑过，库就卡在不一致状态，
+            REM 之后每次升级都死在同一条 CREATE TABLE 上（2026-08-16 实机如此）。
+            REM
+            REM 旧版本的备份文件没有 CREATE DATABASE，只能沿用按表覆盖的老路径 ——
+            REM 那种备份本来就恢复不干净，这里至少不要把它弄得更糟。
+            set "DUMP_HAS_CREATE_DB="
+            findstr /I /C:"CREATE DATABASE" "!DB_BACKUP_FILE!" >nul 2>&1 && set "DUMP_HAS_CREATE_DB=1"
+
+            if defined DUMP_HAS_CREATE_DB (
+                if "!DB_PASS!"=="" (
+                    "!MYSQL!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! -e "DROP DATABASE IF EXISTS `!DB_NAME!`" 2>nul
+                    "!MYSQL!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! < "!DB_BACKUP_FILE!" 2>nul
+                ) else (
+                    "!MYSQL!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! -p"!DB_PASS!" -e "DROP DATABASE IF EXISTS `!DB_NAME!`" 2>nul
+                    "!MYSQL!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! -p"!DB_PASS!" < "!DB_BACKUP_FILE!" 2>nul
+                )
             ) else (
-                "!MYSQL!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! -p"!DB_PASS!" "!DB_NAME!" < "!DB_BACKUP_FILE!" 2>nul
+                echo          [警告] 备份文件不含 CREATE DATABASE，只能按表覆盖；
+                echo                 升级新建的表不会被清掉，回滚后请核对 migrations 表
+                if "!DB_PASS!"=="" (
+                    "!MYSQL!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! "!DB_NAME!" < "!DB_BACKUP_FILE!" 2>nul
+                ) else (
+                    "!MYSQL!" -h !DB_HOST! -P !DB_PORT! -u !DB_USER! -p"!DB_PASS!" "!DB_NAME!" < "!DB_BACKUP_FILE!" 2>nul
+                )
             )
             if !ERRORLEVEL! equ 0 (
                 echo          数据库已恢复
