@@ -255,13 +255,17 @@ set "IS_SAME=0"
 if "!CURRENT_VERSION!"=="!NEW_VERSION!" set "IS_SAME=1"
 if "!IS_SAME!"=="1" (
     echo.
-    echo  [警告] 当前已是 !CURRENT_VERSION! 版本，无需升级。
-    set /p "FORCE_UPGRADE=  是否强制重新安装? ^(y/N^): "
+    echo  [提示] 包内版本与当前安装版本相同: !CURRENT_VERSION!
+    echo         多为改了代码但没提升 VERSION 就重新打包，不代表升级包有问题。
+    echo.
+    echo         继续将按完整升级流程重新应用包内代码（备份 -^> 覆盖 -^> 迁移 -^> 清缓存），
+    echo         不是重装，.env 与 storage\app 会保留。
+    set /p "FORCE_UPGRADE=  是否继续? ^(y/N^): "
     if /i not "!FORCE_UPGRADE!"=="y" (
         echo  操作已取消。
         goto :done
     )
-    echo        继续强制重新安装...
+    echo        继续应用同版本代码...
 )
 
 echo        版本校验通过: !CURRENT_VERSION! -^> !NEW_VERSION!

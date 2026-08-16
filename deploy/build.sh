@@ -1330,9 +1330,14 @@ step "复制部署脚本和配置"
 cp "$PROJECT_ROOT/deploy/.env.deploy" "$DIST_DIR/.env.deploy"
 info "复制 .env.deploy 模板"
 
-# 复制 VERSION 文件
-cp "$PROJECT_ROOT/VERSION" "$DIST_DIR/VERSION"
-info "复制 VERSION"
+# 写入 VERSION 文件
+#
+# 必须用 $VERSION 而不是直接 cp 仓库的 VERSION：--version 覆盖时，前者才是
+# 使用者真正要发的版本号。此前这里是 cp，于是 --version 只改了包名和日志，
+# 包内 VERSION 仍是仓库里的旧值 —— 目标机比对「当前版本 vs 包版本」发现相同，
+# 弹出「是否强制重新安装」，看起来像升级包坏了。
+echo "$VERSION" > "$DIST_DIR/VERSION"
+info "写入 VERSION: $VERSION"
 
 # 运维工具（所有平台通用）
 for tool in check.sh backup-restore.sh export-data.sh; do
