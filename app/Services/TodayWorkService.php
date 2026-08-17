@@ -448,7 +448,7 @@ class TodayWorkService
     }
 
     /**
-     * 今日对账 — 按支付方式汇总今日收款
+     * 今日对账 — 按支付方式汇总今日收款，另附员工收费明细（员工 × 支付方式）
      */
     public function getTodayBilling(int $branchId, ?string $date = null): array
     {
@@ -475,8 +475,93 @@ class TodayWorkService
                     'count'  => (int) $item->count,
                 ];
             })->values()->toArray(),
+            'staff_detail' => $this->getStaffCollectionDetail($today),
             'total_amount' => round($totalAmount, 2),
             'total_count'  => $totalCount,
+        ];
+    }
+
+    /**
+     * 员工收费明细 —— 谁收了多少钱、收的是哪种钱。
+     *
+     * 「按支付方式汇总」只答得出「今天现金 1200」，答不出「这 1200 谁收的」。
+     * 现金是唯一无痕的支付方式，交班点钞对不上时，没有这张表就无从追溯到人。
+     * 市场上的成熟产品（e看牙的「员工收费明细」）也正是按员工 + 支付方式两个维度出，
+     * 这也是我们选择「不禁止医生收现金、而靠明细可追溯」这条路线的前提 ——
+     * 没有这张表，那条路线就只是放开权限而没有约束。
+     *
+     * 输出是一张矩阵：行是员工，列是当天实际出现过的支付方式（没出现的方式不占列，
+     * 避免十几种支付方式把表撑爆），末列是该员工合计。
+     *
+     * 口径与上面的「按支付方式汇总」严格一致（同样只看未软删的 invoice_payments、
+     * 不含退款），两张表的总计必须能对上 —— 对账表里两个数字不一致比少一张表更糟。
+     * 收款人取 invoice_payments._who_added：非空且有外键约束，四个收款入口
+     * （Web 单笔/混合、API 单笔/混合）都写，不存在漏记。
+     */
+    private function getStaffCollectionDetail(string $date): array
+    {
+        $rows = DB::table('invoice_payments as ip')
+            ->join('users as u', 'u.id', '=', 'ip._who_added')
+            ->where('ip.payment_date', $date)
+            ->whereNull('ip.deleted_at')
+            ->select(
+                'ip._who_added as staff_id',
+                'u.surname as u_surname',
+                'u.othername as u_othername',
+                'ip.payment_method',
+                DB::raw('SUM(ip.amount) as total'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('ip._who_added', 'u.surname', 'u.othername', 'ip.payment_method')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return ['methods' => [], 'rows' => []];
+        }
+
+        // 当天出现过的支付方式，按 PAYMENT_METHODS 的既定顺序排列，
+        // 而不是按 SQL 返回顺序 —— 否则换一天列序就变了，交班时容易看错列。
+        $order = array_keys(InvoicePaymentService::PAYMENT_METHODS);
+        $present = $rows->pluck('payment_method')->unique()->sortBy(function ($method) use ($order) {
+            $i = array_search($method, $order, true);
+            return $i === false ? PHP_INT_MAX : $i;   // 未知/历史枚举排在最后
+        })->values();
+
+        $staff = [];
+        foreach ($rows as $row) {
+            $id = (int) $row->staff_id;
+            if (!isset($staff[$id])) {
+                $staff[$id] = [
+                    'staff_id'   => $id,
+                    'staff_name' => NameHelper::join($row->u_surname, $row->u_othername),
+                    'amounts'    => array_fill_keys($present->all(), 0.0),
+                    'counts'     => array_fill_keys($present->all(), 0),
+                    'total'      => 0.0,
+                    'count'      => 0,
+                ];
+            }
+            $amount = (float) $row->total;
+            $staff[$id]['amounts'][$row->payment_method] = round($amount, 2);
+            $staff[$id]['counts'][$row->payment_method]  = (int) $row->count;
+            $staff[$id]['total'] += $amount;
+            $staff[$id]['count'] += (int) $row->count;
+        }
+
+        // 收得多的排前面：交班先看大额
+        $list = array_values($staff);
+        usort($list, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+        return [
+            'methods' => $present->map(fn ($m) => [
+                'key'   => $m,
+                'label' => InvoicePaymentService::methodLabel($m),
+            ])->all(),
+            'rows' => array_map(function ($row) {
+                $row['total'] = round($row['total'], 2);
+                // 前端按 methods 的顺序取值，这里把 key 保持成原始枚举
+                $row['amounts'] = array_map(fn ($v) => round((float) $v, 2), $row['amounts']);
+                return $row;
+            }, $list),
         ];
     }
 

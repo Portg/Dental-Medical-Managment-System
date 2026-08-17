@@ -84,6 +84,8 @@ return [
     'billing_amount'     => 'Amount',
     'billing_total'      => 'Total',
     'billing_no_data'    => 'No payments today',
+    'staff_detail_title'  => 'Staff Collection Detail',
+    'staff_name'          => 'Collected By',
 
     // Follow-ups
     'followup_type'      => 'Type',

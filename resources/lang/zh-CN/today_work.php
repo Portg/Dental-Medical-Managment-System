@@ -84,6 +84,8 @@ return [
     'billing_amount'     => '金额',
     'billing_total'      => '合计',
     'billing_no_data'    => '今日暂无收款记录',
+    'staff_detail_title'  => '员工收费明细',
+    'staff_name'          => '收款人',
 
     // 今日回访
     'followup_type'      => '回访类型',

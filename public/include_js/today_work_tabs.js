@@ -102,6 +102,63 @@ function renderBillingTab(data) {
     html += '<td>' + data.total_count + '</td>';
     html += '<td>&yen;' + Number(data.total_amount).toFixed(2) + '</td></tr>';
     html += '</tbody></table></div></div>';
+    html += renderStaffCollectionTable(data.staff_detail);
+    return html;
+}
+
+/**
+ * 员工收费明细：行 = 员工，列 = 当天出现过的支付方式，末列合计。
+ *
+ * 交班点钞对不上时，要能一眼看到「现金这一列谁收的」。列由后端给（只给当天
+ * 出现过的方式并排好序），前端严格按 methods 的顺序取值，不要在这里自己排序，
+ * 否则表头和单元格会错位。
+ */
+function renderStaffCollectionTable(detail) {
+    if (!detail || !detail.rows || detail.rows.length === 0) return '';
+
+    var methods = detail.methods || [];
+    var html = '<div class="portlet light bordered"><div class="portlet-title"><div class="caption">';
+    html += '<i class="fa fa-users"></i> <span class="caption-subject bold uppercase">';
+    html += LanguageManager.trans('today_work.staff_detail_title') + '</span></div></div>';
+    html += '<div class="portlet-body"><div class="table-responsive"><table class="table tw-info-table">';
+    html += '<thead><tr><th>' + LanguageManager.trans('today_work.staff_name') + '</th>';
+    methods.forEach(function(m) {
+        html += '<th class="text-right">' + _escHtml(m.label) + '</th>';
+    });
+    html += '<th class="text-right">' + LanguageManager.trans('today_work.billing_total') + '</th>';
+    html += '<th class="text-right">' + LanguageManager.trans('today_work.billing_count') + '</th>';
+    html += '</tr></thead><tbody>';
+
+    detail.rows.forEach(function(row) {
+        html += '<tr><td>' + _escHtml(row.staff_name) + '</td>';
+        methods.forEach(function(m) {
+            var amt = Number(row.amounts[m.key] || 0);
+            // 该员工没收过这种方式就留白，不写 ¥0.00 —— 满屏的零会盖掉真正有钱的格子
+            html += '<td class="text-right">' + (amt ? '&yen;' + amt.toFixed(2) : '<span class="text-muted">-</span>') + '</td>';
+        });
+        html += '<td class="text-right" style="font-weight:600;">&yen;' + Number(row.total).toFixed(2) + '</td>';
+        html += '<td class="text-right">' + row.count + '</td></tr>';
+    });
+
+    // 合计行按可见行累加（而不是另取后端的总计）：这一行的用处就是让人一眼确认
+    // 「明细各行加起来 = 上面按支付方式的总计」。若改成直接显示后端总计，两表数字
+    // 永远一致，也就永远发现不了明细漏行。
+    var colTotals = {}, grandTotal = 0, grandCount = 0;
+    methods.forEach(function(m) { colTotals[m.key] = 0; });
+    detail.rows.forEach(function(row) {
+        methods.forEach(function(m) { colTotals[m.key] += Number(row.amounts[m.key] || 0); });
+        grandTotal += Number(row.total);
+        grandCount += Number(row.count);
+    });
+
+    html += '<tr style="font-weight:600;background:#f8f9fa;"><td>' + LanguageManager.trans('today_work.billing_total') + '</td>';
+    methods.forEach(function(m) {
+        html += '<td class="text-right">&yen;' + colTotals[m.key].toFixed(2) + '</td>';
+    });
+    html += '<td class="text-right">&yen;' + grandTotal.toFixed(2) + '</td>';
+    html += '<td class="text-right">' + grandCount + '</td></tr>';
+
+    html += '</tbody></table></div></div></div>';
     return html;
 }
 
