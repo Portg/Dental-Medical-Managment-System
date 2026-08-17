@@ -33,6 +33,8 @@ class MedicalTreatmentService
             'patient' => $patient,
             'medical_cards' => $medicalCards,
             'appointment_id' => $appointmentId,
+            // 划价面板的「操作医生」下拉，与患者页同一份列表
+            'doctors' => \App\User::activeDoctorOptions(),
         ];
     }
 }

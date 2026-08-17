@@ -102,6 +102,24 @@ class User extends Authenticatable
     }
 
     /**
+     * 在职医生的 [{id, name}] 列表，供划价面板的「操作医生」下拉用。
+     *
+     * 患者页和诊疗页共用同一个划价面板，两边都要这份列表；抽出来是为了别在两个
+     * Service 里各写一遍查询 —— 一边加了 status 过滤另一边没加，下拉里就会出现
+     * 离职医生，而提成是按这个 id 记的。
+     */
+    public static function activeDoctorOptions(): \Illuminate\Support\Collection
+    {
+        return self::where('is_doctor', true)
+            ->whereNull('deleted_at')
+            ->where('status', self::STATUS_ACTIVE)
+            ->orderBy('surname')
+            ->get(['id', 'surname', 'othername'])
+            ->map(fn ($d) => ['id' => $d->id, 'name' => $d->full_name])
+            ->values();
+    }
+
+    /**
      * Mark user as resigned (AG-027: clear all tokens).
      */
     public function markAsResigned(): void

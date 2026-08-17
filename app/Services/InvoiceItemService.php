@@ -27,7 +27,18 @@ class InvoiceItemService
             ->leftJoin('invoices', 'invoices.id', 'invoice_items.invoice_id')
             ->whereNull('invoice_items.deleted_at')
             ->where('invoices.appointment_id', $appointmentId)
-            ->select('invoice_items.*', 'medical_services.name as service_name')
+            ->select(
+                'invoice_items.*',
+                'medical_services.name as service_name',
+                // invoice_items.amount 是 2019 年的遗留列，两条开单路径（createInvoice 与
+                // createBillingInvoice）都从未写它，MySQL 非严格模式下补 0 —— 于是诊疗页
+                // 「本次已划价」表的金额列一直显示 0。真正的金额在 actual_paid（患者实付），
+                // 老数据这两列为 NULL 时退回 price * qty。
+                //
+                // 用 COALESCE 而不是 NULLIF(x, 0)：actual_paid 真的是 0 的情况是合法的
+                // （赠送项目），不该被当成缺值而回退到原价。
+                DB::raw('COALESCE(invoice_items.actual_paid, invoice_items.discounted_price, invoice_items.price * invoice_items.qty) as line_amount')
+            )
             ->get();
     }
 

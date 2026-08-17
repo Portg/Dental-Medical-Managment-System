@@ -31,91 +31,11 @@ function load_dental_billing() {
     });
 }
 
-function AddInvoice(appointment_id) {
-    $('#invoicing_appointment_id').val(appointment_id);
-    $('#New-invoice-modal').modal('show');
-}
+// 旧的「开单弹窗」路径（AddInvoice / save_invoice / #addInvoiceItem → POST /invoices）
+// 已删除：诊疗页改用与患者页共用的划价面板（billing.partials.charge_panel +
+// BillingModule → POST /billing/create），两条路合成一条。
+// 预约页与今日工作页各有自己的内联实现，不依赖本文件。
 
-$(document).on('click', '.remove-tr-item', function () {
-
-    $(this).parents('tr').remove();
-
-});
-
-
-let x = 0;
-$("#addInvoiceItem").click(function () {
-    ++i;
-
-    $("#InvoicesTable").append('<tr>' +
-        '<td><select id="service_append' + i + '" name="addmore[' + i + '][medical_service_id]" class="form-control"\n' +
-        '                                        style="width: 100%;border: 1px solid #a29e9e;"></select></td>' +
-        '<td> <input type="text" name="addmore[' + i + '][tooth_no]" placeholder="' +
-            LanguageManager.trans('medical_treatment.enter_tooth_number') + '"\n' +
-        '                                       class="form-control"/></td>' +
-        '<td> <input type="number"  id="procedure_price' + i + '" name="addmore[' + i + '][amount]" placeholder="' +
-            LanguageManager.trans('medical_treatment.enter_amount') + '"\n' +
-        '                                       class="form-control"/></td>' +
-        '<td><button type="button" class="btn btn-danger remove-tr">' +
-            LanguageManager.trans('common.remove') + '</button></td></tr>');
-
-    $('#service_append' + i).select2({
-        placeholder: LanguageManager.trans('medical_treatment.select_procedure'),
-        minimumInputLength: 2,
-        ajax: {
-            url: '/search-medical-service',
-            dataType: 'json',
-            delay: 300,
-            data: function (params) {
-                return {
-                    q: $.trim(params.term)
-                };
-            },
-            processResults: function (data) {
-                return {
-                    results: data
-                };
-            },
-            cache: true
-        }
-    }).on("select2:select", function (e) {
-        let price = e.params.data.price;
-        if (price != "" || price != 0) {
-            $('#procedure_price' + i).val(price);
-        } else {
-            $('#procedure_price' + i).val('');
-        }
-    });
-
-});
-
-function save_invoice() {
-    $('.loading').show();
-    $('#btnSave').attr('disabled', true);
-    $('#btnSave').text(LanguageManager.trans('medical_treatment.processing'));
-    $.ajax({
-        type: 'POST',
-        data: $('#New-invoice-form').serialize(),
-        url: "/invoices",
-        success: function (data) {
-            $('#New-invoice-modal').modal('hide');
-            $('.loading').hide();
-            if (data.status) {
-                alert_dental_billing(data.message, "success");
-            } else {
-                alert_dental_billing(data.message, "danger");
-            }
-        },
-        error: function (request, status, error) {
-            $('.loading').hide();
-            json = $.parseJSON(request.responseText);
-            $.each(json.errors, function (key, value) {
-                $('.alert-danger').show();
-                $('.alert-danger').append('<p>' + value + '</p>');
-            });
-        }
-    });
-}
 
 
 function editItem(id) {

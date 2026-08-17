@@ -31,6 +31,7 @@ return [
     'treatment_form' => 'Treatment Form',
     'enter_clinical_notes' => 'Enter clinical Notes here',
     'procedure' => 'Procedure',
+    'billed_this_visit' => 'Billed this visit',
     'enter_procedure' => 'Enter procedure',
     'tooth_number' => 'Tooth Number',
     'select_tooth_number' => 'select tooth number',

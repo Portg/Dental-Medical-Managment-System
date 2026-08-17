@@ -31,6 +31,7 @@ return [
     'treatment_form' => '治疗表单',
     'enter_clinical_notes' => '在此输入临床记录',
     'procedure' => '治疗项目',
+    'billed_this_visit' => '本次已划价',
     'enter_procedure' => '输入治疗项目',
     'tooth_number' => '牙位号',
     'select_tooth_number' => '选择牙位号',

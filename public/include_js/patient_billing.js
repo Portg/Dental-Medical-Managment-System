@@ -6,6 +6,10 @@ var BillingModule = (function() {
     'use strict';
 
     var patientId = null;
+    // 诊疗页划价时带上：账单要挂到这次就诊上，否则诊疗页「本次已划价」表看不到
+    // （该表按 invoices.appointment_id 过滤）。患者页划价无就诊上下文，保持 null。
+    var appointmentId = null;
+    var onSaved = null;
     var categoryData = {};
     var billingItems = [];
     var itemCounter = 0;
@@ -27,10 +31,19 @@ var BillingModule = (function() {
     ];
 
     // ─── Init ──────────────────────────────────────────────────────
-    function init(pid, doctorList) {
+    /**
+     * @param {number} pid        患者 id
+     * @param {Array}  doctorList 在职医生 [{id, name}]
+     * @param {Object} [options]  {appointmentId, onSaved}
+     *   appointmentId —— 诊疗页传；onSaved —— 划价成功后的回调（诊疗页用它刷明细表）
+     */
+    function init(pid, doctorList, options) {
         if (initialized) return;
         patientId = pid;
         doctors = doctorList || [];
+        options = options || {};
+        appointmentId = options.appointmentId || null;
+        onSaved = typeof options.onSaved === 'function' ? options.onSaved : null;
         initialized = true;
 
         loadServiceCategories();
@@ -445,7 +458,8 @@ var BillingModule = (function() {
             payments: payments,
             order_discount_rate: parseFloat($('#orderDiscountRate').val()) || 100,
             payment_date: paymentDate,
-            billing_mode: mode
+            billing_mode: mode,
+            appointment_id: appointmentId
         };
 
         $('.loading').show();
@@ -476,6 +490,10 @@ var BillingModule = (function() {
                     // 前台刚收完 3200 元，抬头一看还是 ¥0.00。
                     reloadInvoicesTable();
                     reloadReceiptsTable();
+
+                    // 宿主页面的额外刷新（诊疗页用它刷「本次已划价」表）。
+                    // 上面两个 reload 只认患者页的表，诊疗页没有那两张表时是空转。
+                    if (onSaved) { onSaved(resp); }
 
                     // Print if requested
                     if (printAfter && resp.invoice_id) {

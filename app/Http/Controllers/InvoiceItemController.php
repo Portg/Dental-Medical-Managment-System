@@ -94,7 +94,10 @@ class InvoiceItemController extends Controller
                     return $row->service_name;
                 })
                 ->addColumn('amount', function ($row) {
-                    return number_format($row->amount);
+                    // 读 line_amount（见 InvoiceItemService::getItemsByAppointment 的注释）：
+                    // 遗留列 invoice_items.amount 没人写，一直是 0。保留两位小数，
+                    // 原来 number_format 不给精度，2999.50 会显示成 3,000。
+                    return number_format((float) $row->line_amount, 2);
                 })
                 ->addColumn('editBtn', function ($row) {
                     if (!Gate::allows('edit-invoices')) {

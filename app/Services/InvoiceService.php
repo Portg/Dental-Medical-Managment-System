@@ -573,13 +573,20 @@ class InvoiceService
      * @param string $billingMode     'direct' or 'front_desk'
      * @return array{status: bool, message: string, invoice_id?: int}
      */
+    /**
+     * @param int|null $appointmentId 诊疗页划价时带上，账单才能挂到这次就诊上。
+     *   诊疗页的「本次已划价」表按 invoices.appointment_id 过滤（见
+     *   InvoiceItemService::getItemsByAppointment），不传的话医生在诊疗页开完单，
+     *   同一个页面的明细表里什么都看不到。患者页划价没有就诊上下文，传 null。
+     */
     public function createBillingInvoice(
         int $patientId,
         array $items,
         array $payments,
         float $orderDiscountRate = 100,
         ?string $paymentDate = null,
-        string $billingMode = 'direct'
+        string $billingMode = 'direct',
+        ?int $appointmentId = null
     ): array {
         if (empty($items)) {
             return ['status' => false, 'message' => __('invoices.no_billing_items')];
@@ -616,6 +623,7 @@ class InvoiceService
                 'invoice_no'           => Invoice::InvoiceNo(),
                 'invoice_date'         => $paymentDate ?? now()->format('Y-m-d'),
                 'patient_id'           => $patientId,
+                'appointment_id'       => $appointmentId,
                 'subtotal'             => $subtotal,
                 'discount_amount'      => $discountAmount,
                 'order_discount_rate'  => $orderDiscountRate,
@@ -676,7 +684,7 @@ class InvoiceService
             $this->stockOutService->createBillingStockOut(
                 $invoice->id,
                 $patientId,
-                null, // 直接划价账单无 appointment_id
+                $appointmentId, // 诊疗页划价会带；患者页划价无就诊上下文，为 null
                 $items
             );
 

@@ -4,6 +4,8 @@
 @section('css')
     @include('layouts.page_loader')
     <link href="{{ asset('css/dental-chart-editor.css') }}?v={{ filemtime(public_path('css/dental-chart-editor.css')) }}" rel="stylesheet" type="text/css"/>
+    {{-- 划价面板样式，与患者页同一份 --}}
+    <link href="{{ asset('css/patient-billing.css') }}?v={{ filemtime(public_path('css/patient-billing.css')) }}" rel="stylesheet" type="text/css"/>
 @endsection
 
 <div class="note note-success">
@@ -166,18 +168,31 @@
                                         </div>
                                     </div>
                                     <div class="tab-pane" id="dental_billing_tab">
+                                        {{-- 划价面板与患者页共用同一个 partial + 同一个 BillingModule。
+                                             此前这里是另一条路（AddInvoice 弹窗 → POST /invoices），
+                                             与患者页的 /billing/create 各自实现折扣、牙位、医生归属，
+                                             改一处漏一处。现在只剩一套。
+
+                                             面板提交时会带上 appointment_id，账单挂到这次就诊上，
+                                             下面「本次已划价」表才看得到（该表按 invoices.appointment_id 过滤）。 --}}
+                                        @can('create-invoices')
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <div class="portlet light bordered">
+                                                        <div class="portlet-body">
+                                                            @include('billing.partials.charge_panel')
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endcan
+
                                         <div class="row">
                                             <div class="portlet light">
                                                 <div class="portlet-title">
-
-                                                    {{-- 开单提交到 /invoices，后端要求 create-invoices；
-                                                         无该权限的角色（如只读医生）不应看到按钮。 --}}
-                                                    @can('create-invoices')
-                                                        <button type="button" class="btn blue btn-outline btn-circle btn-sm"
-                                                           onclick="AddInvoice({{ $appointment_id  }})">
-                                                            {{ __('medical_treatment.create_invoice') }}
-                                                        </button>
-                                                    @endcan
+                                                    <div class="caption">
+                                                        <span class="caption-subject font-dark bold uppercase">{{ __('medical_treatment.billed_this_visit') }}</span>
+                                                    </div>
                                                 </div>
                                                 <div class="portlet-body">
                                                     <table class="table table-striped table-bordered table-hover table-checkable order-column"
@@ -297,14 +312,29 @@
 @include('medical_treatment.treatment.create')
 
 {{--//dental invoicing--}}
-@include('appointments.invoices.create')
+{{-- 原来这里还 include 了 appointments.invoices.create（开单弹窗）。
+     诊疗页已改用共享划价面板，那个弹窗在本页没有任何触发点了，去掉。
+     预约页与今日工作页各自 include 并各有自己的内联实现，不受影响。 --}}
 @include('invoices.show.edit_invoice')
+
+{{-- 划价面板的右侧详情抽屉由 BillingModule 使用 --}}
+<div class="billing-panel-overlay" id="billingPanelOverlay"></div>
+<div class="billing-side-panel" id="billingSidePanel" role="dialog" aria-modal="true">
+    <div class="billing-panel-header">
+        <h4 id="billingPanelTitle">{{ __('invoices.panel_invoice_detail') }}</h4>
+        <button class="billing-panel-close" id="billingPanelClose" aria-label="Close">&#x2715;</button>
+    </div>
+    <div class="billing-panel-body" id="billingPanelBody"></div>
+</div>
 
 @endsection
 @section('js')
     <script>
         LanguageManager.loadFromPHP(@json(__('odontogram')), 'odontogram');
         LanguageManager.loadFromPHP(@json(__('medical_treatment')), 'medical_treatment');
+        {{-- 划价面板（BillingModule）用的是 invoices.* 与 messages.* 两组键 --}}
+        LanguageManager.loadFromPHP(@json(__('invoices')), 'invoices');
+        LanguageManager.loadFromPHP(@json(__('messages')), 'messages');
         let global_patient_id = ($('#global_patient_id').val() || '').trim();
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
@@ -316,7 +346,34 @@
 
     {{--    //dental invoicing--}}
     <script src="{{ asset('include_js/invoicing.js') }}?v={{ filemtime(public_path('include_js/invoicing.js')) }}"></script>
+    @can('create-invoices')
+        {{-- 与患者页同一个划价模块 --}}
+        <script src="{{ asset('include_js/patient_billing.js') }}?v={{ filemtime(public_path('include_js/patient_billing.js')) }}"></script>
+    @endcan
     <script src="{{ asset('include_js/dental_chart_editor.js') }}?v={{ filemtime(public_path('include_js/dental_chart_editor.js')) }}"></script>
+
+    @can('create-invoices')
+        @if(!empty($patient))
+            <script>
+                {{-- 划价面板在划价 Tab 首次展开时初始化：面板一进来就要拉服务目录，
+                     不展开就初始化等于每次打开诊疗页都白拉一次。
+                     invoicing.js 的 #dental_billing_tab_link click 负责刷明细表，
+                     这里用 shown.bs.tab，两者不冲突。 --}}
+                $('#dental_billing_tab_link a').on('shown.bs.tab', function () {
+                    if (typeof BillingModule === 'undefined') return;
+                    BillingModule.init({{ $patient->id }}, {!! json_encode($doctors ?? []) !!}, {
+                        appointmentId: {{ (int) $appointment_id }},
+                        {{-- 划价成功后刷新「本次已划价」表，否则刚开的单要手动刷页面才看得到 --}}
+                        onSaved: function () {
+                            if (typeof load_dental_billing === 'function') {
+                                load_dental_billing();
+                            }
+                        }
+                    });
+                });
+            </script>
+        @endif
+    @endcan
 
     <script type="text/javascript">
         //save appointment status

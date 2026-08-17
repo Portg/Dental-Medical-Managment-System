@@ -337,10 +337,29 @@ class InvoiceController extends Controller
             'items.*.qty'              => 'required|integer|min:1',
             'items.*.price'            => 'required|numeric|min:0',
             'billing_mode'             => 'in:direct,front_desk',
+            'appointment_id'           => 'nullable|integer|exists:appointments,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first(), 'status' => false]);
+        }
+
+        // 诊疗页划价会带 appointment_id，账单才能挂到这次就诊上。
+        // 但 exists 只保证这个预约存在，不保证是这个患者的 —— 前端传来的两个 id
+        // 各自独立，改一下请求就能把账单挂到别人的就诊记录上。这里必须交叉核对。
+        $appointmentId = $request->appointment_id ? (int) $request->appointment_id : null;
+
+        if ($appointmentId) {
+            $belongsToPatient = \App\Appointment::where('id', $appointmentId)
+                ->where('patient_id', (int) $request->patient_id)
+                ->exists();
+
+            if (!$belongsToPatient) {
+                return response()->json([
+                    'message' => __('invoices.appointment_patient_mismatch'),
+                    'status'  => false,
+                ], 422);
+            }
         }
 
         // 划价本身只要 create-invoices（控制器中间件已挡），但这个接口顺带能收钱：
@@ -363,7 +382,8 @@ class InvoiceController extends Controller
             $request->payments ?? [],
             (float) ($request->order_discount_rate ?? 100),
             $request->payment_date,
-            $request->billing_mode ?? 'direct'
+            $request->billing_mode ?? 'direct',
+            $appointmentId
         );
 
         return response()->json($result);
