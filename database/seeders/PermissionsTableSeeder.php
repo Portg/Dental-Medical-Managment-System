@@ -70,6 +70,7 @@ class PermissionsTableSeeder extends Seeder
             // 财务管理
             ['name' => '管理报价单', 'slug' => 'manage-quotations', 'module' => '财务管理', 'description' => '管理报价单'],
             ['name' => '管理退款', 'slug' => 'manage-refunds', 'module' => '财务管理', 'description' => '管理退款记录'],
+            ['name' => '收款', 'slug' => 'collect-payments', 'module' => '账单管理', 'description' => '登记收款（现金/微信/储值等），与开单 create-invoices 分开'],
             ['name' => '管理医生提成', 'slug' => 'manage-doctor-claims', 'module' => '财务管理', 'description' => '管理医生提成与佣金'],
             ['name' => '管理费用', 'slug' => 'manage-expenses', 'module' => '财务管理', 'description' => '管理支出费用'],
             ['name' => '管理会计', 'slug' => 'manage-accounting', 'module' => '财务管理', 'description' => '管理会计科目表'],

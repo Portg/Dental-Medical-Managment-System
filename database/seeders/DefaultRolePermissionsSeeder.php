@@ -35,6 +35,8 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'view-patients', 'create-patients', 'edit-patients', 'delete-patients',
                 'view-appointments', 'create-appointments', 'edit-appointments', 'delete-appointments',
                 'view-invoices', 'create-invoices', 'edit-invoices', 'delete-invoices',
+                // 收款与开单分开（见 2026_08_17_100000 迁移）；口径与迁移回填一致：谁能开单谁就能收款
+                'collect-payments',
                 'view-users', 'create-users', 'edit-users',
                 'view-branches', 'create-branches', 'edit-branches',
                 'view-chairs', 'create-chairs', 'edit-chairs', 'delete-chairs',
@@ -123,6 +125,8 @@ class DefaultRolePermissionsSeeder extends Seeder
                 'view-patients', 'create-patients', 'edit-patients',
                 'view-appointments', 'create-appointments', 'edit-appointments',
                 'view-invoices', 'create-invoices',
+                // 收款与开单分开（见 2026_08_17_100000 迁移）；口径与迁移回填一致：谁能开单谁就能收款
+                'collect-payments',
                 'manage-quotations', 'manage-schedules', 'manage-shifts',
                 // 前台是办卡/储值/核销优惠券与日常杂费录入的第一线
                 'manage-members', 'manage-expenses',

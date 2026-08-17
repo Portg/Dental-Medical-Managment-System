@@ -39,12 +39,14 @@ class InvoicePaymentControllerTest extends TestCase
         $viewerRole  = Role::create(['name' => 'Viewer', 'slug' => 'viewer']);
 
         $perms = [];
-        foreach (['view-invoices', 'create-invoices', 'edit-invoices'] as $slug) {
-            $perms[$slug] = Permission::create([
-                'name'   => $slug,
-                'slug'   => $slug,
-                'module' => '账单管理',
-            ]);
+        // collect-payments 是从 create-invoices 拆出来的收款权限
+        // （见 2026_08_17_100000 迁移）。收银角色两条都要有。
+        foreach (['view-invoices', 'create-invoices', 'edit-invoices', 'collect-payments'] as $slug) {
+            // firstOrCreate：collect-payments 已由权限种子建好，create 会撞唯一约束
+            $perms[$slug] = Permission::firstOrCreate(
+                ['slug' => $slug],
+                ['name' => $slug, 'module' => '账单管理']
+            );
         }
 
         // 收银：看得到、能收款、能改

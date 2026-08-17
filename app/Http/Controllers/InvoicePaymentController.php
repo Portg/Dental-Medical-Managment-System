@@ -25,7 +25,10 @@ class InvoicePaymentController extends Controller
         //
         // 医生持有 view-invoices，据此可查看收款记录，但不能登记、修改或删除。
         $this->middleware('can:view-invoices')->only(['index', 'show', 'create', 'getPaymentMethods', 'calculateChange']);
-        $this->middleware('can:create-invoices')->only(['store', 'storeMixed']);
+        // 收款走 collect-payments，与开单（create-invoices）分开。
+        // 拆分理由见 2026_08_17_100000_split_collect_payments_permission 迁移：
+        // 一条权限管两件事，「医生划价、前台收费」这种行业标准分工就没法表达。
+        $this->middleware('can:collect-payments')->only(['store', 'storeMixed']);
         $this->middleware('can:edit-invoices')->only(['edit', 'update', 'destroy']);
     }
 

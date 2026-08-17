@@ -354,6 +354,7 @@ return [
     'stored_value_payment'             => 'Stored-value payment: invoice :invoice_no',
     'stored_value_payment_reversed'    => 'Stored-value payment reversed: invoice :invoice_no',
     'stored_value_payment_not_editable' => 'A stored-value payment cannot be edited in place. Cancel it (the balance is credited back) and record a new one.',
+    'no_permission_to_collect' => 'You do not have permission to collect payments. Hand the bill to the front desk.',
     'payment_locked_by_refund' => 'This invoice has a pending or approved refund, so payment amounts can no longer be changed or cancelled. Deal with the refund first.',
     'payment_points_already_spent' => 'The :awarded points earned by this payment have already been spent (only :current left), so it cannot be cancelled or changed. Use the refund flow, or claw back what was redeemed first.',
 

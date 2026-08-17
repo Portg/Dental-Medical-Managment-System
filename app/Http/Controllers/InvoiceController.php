@@ -343,6 +343,20 @@ class InvoiceController extends Controller
             return response()->json(['message' => $validator->errors()->first(), 'status' => false]);
         }
 
+        // 划价本身只要 create-invoices（控制器中间件已挡），但这个接口顺带能收钱：
+        // billing_mode=direct 且带 payments 时会当场登记收款。不在这里判一次的话，
+        // 只有开单权限的人（比如医生）能从划价接口绕过 collect-payments 直接收钱，
+        // 那条权限就形同虚设。前端隐藏按钮不算防护。
+        $collectsMoney = ($request->billing_mode ?? 'direct') === 'direct'
+            && !empty($request->payments);
+
+        if ($collectsMoney && !$request->user()->can('collect-payments')) {
+            return response()->json([
+                'message' => __('invoices.no_permission_to_collect'),
+                'status'  => false,
+            ], 403);
+        }
+
         $result = $this->invoiceService->createBillingInvoice(
             (int) $request->patient_id,
             $request->items,
