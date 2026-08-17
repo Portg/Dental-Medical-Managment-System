@@ -355,6 +355,8 @@ return [
     'stored_value_payment_reversed'    => 'Stored-value payment reversed: invoice :invoice_no',
     'stored_value_payment_not_editable' => 'A stored-value payment cannot be edited in place. Cancel it (the balance is credited back) and record a new one.',
     'no_permission_to_collect' => 'You do not have permission to collect payments. Hand the bill to the front desk.',
+    'no_permission_to_write_off' => 'You do not have permission to write off the balance. Please contact an administrator.',
+    'overdue_nothing_to_do' => 'Enter a payment amount or a write-off amount',
     'no_collect_permission_hint' => 'You do not have collection permission. Use "Front Desk Billing" and let the front desk collect.',
     'appointment_patient_mismatch' => 'That appointment does not belong to this patient',
     'payment_locked_by_refund' => 'This invoice has a pending or approved refund, so payment amounts can no longer be changed or cancelled. Deal with the refund first.',

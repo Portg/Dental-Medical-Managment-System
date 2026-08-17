@@ -46,6 +46,14 @@ class PatientBillingTabTest extends TestCase
         RolePermission::create(['role_id' => $role->id, 'permission_id' => $perm2->id]);
         $perm3 = Permission::create(['name' => 'View Patients', 'slug' => 'view-patients', 'module' => 'patients']);
         RolePermission::create(['role_id' => $role->id, 'permission_id' => $perm3->id]);
+        // 补收欠款要 collect-payments（收款已从开单/改单里拆出来，
+        // 见 2026_08_17_100000 迁移与 InvoiceController::addOverduePayment 的注释）。
+        // firstOrCreate：这条权限由迁移建好，create 会撞唯一约束。
+        $perm4 = Permission::firstOrCreate(
+            ['slug' => 'collect-payments'],
+            ['name' => '收款', 'module' => '账单管理']
+        );
+        RolePermission::create(['role_id' => $role->id, 'permission_id' => $perm4->id]);
 
         $doctorRole = Role::create(['name' => 'Doctor', 'slug' => 'doctor']);
         $this->doctor = User::factory()->create([

@@ -23,7 +23,10 @@ class InvoiceController extends Controller
 
         $this->middleware('can:view-invoices')->only(['index', 'show', 'previewInvoice', 'invoiceShareDetails', 'sendInvoice', 'invoiceAmount', 'patientInvoices', 'printReceipt', 'exportReport', 'invoiceProceduresToJson', 'searchInvoices', 'getServiceCategories', 'patientReceipts', 'billingDetail']);
         $this->middleware('can:create-invoices')->only(['create', 'store', 'createBilling']);
-        $this->middleware('can:edit-invoices')->only(['edit', 'update', 'pendingDiscountApprovals', 'approveDiscount', 'rejectDiscount', 'setCredit', 'addOverduePayment']);
+        $this->middleware('can:edit-invoices')->only(['edit', 'update', 'pendingDiscountApprovals', 'approveDiscount', 'rejectDiscount', 'setCredit']);
+        // addOverduePayment 不在这一行：它干两件事（补收欠款 / 减免尾款），
+        // 权限按请求实际带了什么在方法里分别判，见该方法开头的注释。
+        $this->middleware('can:view-invoices')->only(['addOverduePayment']);
         $this->middleware('can:delete-invoices')->only(['destroy']);
     }
 
@@ -196,11 +199,40 @@ class InvoiceController extends Controller
         return response()->json(['status' => 1, 'data' => $data]);
     }
 
+    /**
+     * 补收欠款 / 减免尾款。
+     *
+     * 这个接口干两件性质不同的事，权限按请求实际带了什么分别判，而不是一条
+     * edit-invoices 全包：
+     *   amount              → 收钱，要 collect-payments
+     *   additional_discount → 减免尾款（把欠款一笔勾掉），是授权动作，要 edit-invoices
+     *
+     * 原来整个方法挂在 edit-invoices 上，而 edit-invoices 只有 super-admin 和 admin
+     * 有 —— 前台，诊所里唯一负责收钱的人，补收不了欠款。那不是权限设计上的取舍，
+     * 是漏配。改法与 createBilling 里的判定同一个模式。
+     */
     public function addOverduePayment(Request $request, $id)
     {
         $invoice = \App\Invoice::find($id);
         if (!$invoice) {
             return response()->json(['message' => __('messages.record_not_found'), 'status' => 0], 404);
+        }
+
+        $collectsMoney = bccomp((string) ($request->input('amount') ?? '0'), '0', 2) > 0;
+        $writesOff     = bccomp((string) ($request->input('additional_discount') ?? '0'), '0', 2) > 0;
+
+        // 两个都是 0 的请求没有意义，而且会绕开上面两道权限判定（都不触发），
+        // 让只有 view-invoices 的角色也能走到 Service 的写入分支。先挡掉。
+        if (!$collectsMoney && !$writesOff) {
+            return response()->json(['message' => __('invoices.overdue_nothing_to_do'), 'status' => 0], 422);
+        }
+
+        if ($collectsMoney && !$request->user()->can('collect-payments')) {
+            return response()->json(['message' => __('invoices.no_permission_to_collect'), 'status' => 0], 403);
+        }
+
+        if ($writesOff && !$request->user()->can('edit-invoices')) {
+            return response()->json(['message' => __('invoices.no_permission_to_write_off'), 'status' => 0], 403);
         }
 
         $validator = Validator::make($request->all(), [

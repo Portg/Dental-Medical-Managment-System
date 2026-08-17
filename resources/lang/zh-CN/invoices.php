@@ -329,6 +329,8 @@ return [
     'stored_value_payment_reversed' => '撤销储值支付：账单 :invoice_no',
     'stored_value_payment_not_editable' => '储值支付不能直接修改，请先撤销该笔收款（余额会退回）再重新登记',
     'no_permission_to_collect' => '您没有收款权限，请将账单转前台收费',
+    'no_permission_to_write_off' => '您没有减免尾款的权限，请联系管理员',
+    'overdue_nothing_to_do' => '请填写补收金额或减免金额',
     'no_collect_permission_hint' => '您没有收款权限，划价后点「前台收费」，由前台完成收款。',
     'appointment_patient_mismatch' => '该就诊记录不属于此患者',
     'payment_locked_by_refund' => '该账单挂着未处理或已通过的退费，收款金额不能修改或撤销；如需调整请先处理退费单',
