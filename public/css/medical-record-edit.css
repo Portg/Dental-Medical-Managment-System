@@ -606,31 +606,66 @@
     gap: 8px;
 }
 
-/* 牙位按钮：固定宽度，让多行的牙位在视觉上对齐成一列 —— 医生扫一眼就能
-   看出这次动了哪几颗牙 */
+/* 牙位：象限十字图（部位记录法 / Palmer 记号）。
+   固定宽度让多行的十字在视觉上对齐成一列 —— 医生扫一眼就知道这次动了哪几个区。 */
 .case-item-tooth {
     flex: 0 0 76px;
-    border: 1px dashed #c9c9c9;
-    background: #fafafa;
+    border: 1px solid transparent;
+    background: transparent;
     border-radius: 3px;
-    color: #999;
-    font-size: 13px;
     cursor: pointer;
-    padding: 4px;
+    padding: 2px;
 }
 
 .case-item-tooth:hover {
-    border-color: #1890ff;
-    color: #1890ff;
+    border-color: #91d5ff;
+    background: #f0f9ff;
 }
 
-.case-item-tooth.has-tooth {
-    border-style: solid;
-    border-color: #91d5ff;
-    background: #e6f7ff;
-    color: #1890ff;
+/* 未选牙位：虚线占位 */
+.tooth-empty {
+    display: block;
+    border: 1px dashed #c9c9c9;
+    border-radius: 3px;
+    color: #999;
+    font-size: 12px;
+    line-height: 34px;
+    background: #fafafa;
+}
+
+/* 十字：2×2 网格，中间的横竖线由格子的边框拼出来。
+   数字落在它真正所属的象限里 —— 医生扫一眼就知道是哪个区。 */
+.tooth-cross {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    width: 72px;
+    height: 38px;
+}
+
+.tooth-cross .tq {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
     font-weight: 600;
-    font-size: 15px;
+    color: #1890ff;
+    line-height: 1;
+}
+
+/* 只给内侧描边，拼出一个十字（左上格的右边+下边 = 十字的两条线） */
+.tooth-cross .tq-tl { border-right: 1.5px solid #333; border-bottom: 1.5px solid #333; }
+.tooth-cross .tq-tr { border-bottom: 1.5px solid #333; }
+.tooth-cross .tq-bl { border-right: 1.5px solid #333; }
+
+/* 非 FDI 编号：不画象限，居中显示 */
+.tooth-cross-plain {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1890ff;
 }
 
 .case-item-content {

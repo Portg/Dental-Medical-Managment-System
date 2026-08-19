@@ -331,6 +331,7 @@ class MedicalCaseService
             'title' => $title,
             'chief_complaint' => $input['chief_complaint'] ?? null,
             'history_of_present_illness' => $input['history_of_present_illness'] ?? null,
+            'past_medical_history' => $input['past_medical_history'] ?? null,
             'examination' => $input['examination'] ?? null,
             'examination_teeth' => !empty($input['examination_teeth']) ? json_decode($input['examination_teeth'], true) : null,
             'auxiliary_examination' => $input['auxiliary_examination'] ?? null,

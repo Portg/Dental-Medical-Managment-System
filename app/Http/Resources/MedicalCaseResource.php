@@ -24,6 +24,7 @@ class MedicalCaseResource extends JsonResource
             // SOAP - Subjective
             'chief_complaint'           => $this->chief_complaint,
             'history_of_present_illness' => $this->history_of_present_illness,
+            'past_medical_history'       => $this->past_medical_history,
 
             // SOAP - Objective
             'examination'         => $this->examination,

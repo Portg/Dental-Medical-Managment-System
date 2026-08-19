@@ -130,7 +130,7 @@ class MedicalCaseController extends Controller
         ])->validate();
 
         $data = $this->medicalCaseService->buildCaseData($request->only([
-            'patient_id', 'case_date', 'chief_complaint', 'history_of_present_illness',
+            'patient_id', 'case_date', 'chief_complaint', 'history_of_present_illness', 'past_medical_history',
             'examination', 'examination_teeth', 'auxiliary_examination', 'related_images',
             'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
             'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
@@ -275,7 +275,7 @@ class MedicalCaseController extends Controller
         ])->validate();
 
         $data = $this->medicalCaseService->buildCaseData($request->only([
-            'patient_id', 'case_date', 'chief_complaint', 'history_of_present_illness',
+            'patient_id', 'case_date', 'chief_complaint', 'history_of_present_illness', 'past_medical_history',
             'examination', 'examination_teeth', 'auxiliary_examination', 'related_images',
             'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
             'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',

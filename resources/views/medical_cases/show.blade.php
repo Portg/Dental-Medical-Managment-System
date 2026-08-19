@@ -89,6 +89,16 @@
                     </div>
                 @endif
 
+                @if($case->past_medical_history)
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p><strong>{{ __('medical_cases.past_history_section') }}:</strong><br>
+                                <span class="case-text">{{ $case->past_medical_history }}</span>
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- 检查 / 辅助检查 / 诊断 / 治疗 / 医嘱 / 复诊
                      这几段本来只有打印页（print.blade.php）渲染，详情页只显示主诉和现病史 ——
                      医生录完病历回来看，除了这两项什么都看不到，会以为资料没保存上。

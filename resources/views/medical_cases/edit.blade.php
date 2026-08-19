@@ -83,6 +83,18 @@
                         'required' => false
                     ])
 
+                    {{-- 既往史 —— 病历叙述部分的标准三段是 主诉/现病史/既往史。
+                         注意与建档时录的 patients.systemic_diseases / drug_allergies 不同：
+                         那是患者层面的长期信息，这里是本次就诊记录的病史陈述。 --}}
+                    @include('medical_cases.partials.soap_section', [
+                        'id' => 'past_medical_history',
+                        'title' => __('medical_cases.past_history_section'),
+                        'hint' => __('medical_cases.past_history_hint'),
+                        'placeholder' => __('medical_cases.past_history_placeholder'),
+                        'value' => $case->past_medical_history ?? '',
+                        'required' => false
+                    ])
+
                     {{-- Examination (O) --}}
                     @include('medical_cases.partials.examination_section', ['case' => $case ?? null])
 

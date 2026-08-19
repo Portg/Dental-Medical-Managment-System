@@ -19,8 +19,38 @@ var CaseItems = (function () {
 
     var SECTIONS = ['examination', 'auxiliary_examination', 'diagnosis', 'treatment'];
 
+    // 段落 → 病历模板类型。与分行之前挂在整段 textarea 上的映射保持一致，
+    // 否则同一个段落按 / 弹出来的模板会换一批。
+    // 辅助检查只给快捷短语不给模板（检查结果因人而异，模板没意义）——原来也是这样。
+    var TEMPLATE_TYPES = {
+        examination: 'progress_note',
+        diagnosis:   'diagnosis',
+        treatment:   'treatment_plan'
+    };
+
     // 当前聚焦的行（侧栏牙位图和模板插入要知道往哪儿写）
     var focusedRow = null;
+
+    /**
+     * FDI 牙位 → 十字图的象限（部位记录法 / Palmer 记号）。
+     *
+     * 十字是「面对患者」画的，所以患者的右侧落在图的左边：
+     *   FDI 1x 右上 → 图的左上格      FDI 2x 左上 → 图的右上格
+     *   FDI 4x 右下 → 图的左下格      FDI 3x 左下 → 图的右下格
+     *   乳牙 5x/8x 同 1x/4x，6x/7x 同 2x/3x
+     *
+     * 参考的那套桌面软件是把数字固定画在右上格的（十字纯装饰，45 明明是右下象限
+     * 也画在右上）。那样十字就没有信息量了，这里按真正的记法定位 ——
+     * 医生扫一眼十字就知道是哪个区，这才是这个图存在的理由。
+     */
+    function toothQuadrant(tooth) {
+        var q = parseInt(String(tooth || '').charAt(0), 10);
+        if (q === 1 || q === 5) return 'tl';   // 患者右上 → 左上格
+        if (q === 2 || q === 6) return 'tr';   // 患者左上 → 右上格
+        if (q === 4 || q === 8) return 'bl';   // 患者右下 → 左下格
+        if (q === 3 || q === 7) return 'br';   // 患者左下 → 右下格
+        return '';                              // 认不出就不定位，居中显示
+    }
 
     function t(key, fallback) {
         if (typeof LanguageManager === 'undefined') return fallback;
@@ -36,16 +66,36 @@ var CaseItems = (function () {
 
     // ─── 渲染 ────────────────────────────────────────────────────
 
+    /** 牙位十字图；无牙位时显示虚线占位 */
+    function toothCrossHtml(tooth) {
+        if (!tooth) {
+            return '<span class="tooth-empty">' + t('medical_cases.pick_tooth', '选牙位') + '</span>';
+        }
+        // 2×2 网格，四个格子对应四个象限；牙位落在它真正所属的那一格。
+        // 用网格而不是绝对定位：格子是结构性的，数字长短不会溢出到别的象限里。
+        var q = toothQuadrant(tooth);
+        var cells = ['tl', 'tr', 'bl', 'br'].map(function (cell) {
+            return '<span class="tq tq-' + cell + '">' +
+                   (cell === q ? escapeHtml(tooth) : '') + '</span>';
+        }).join('');
+
+        // 认不出象限的牙位（非 FDI 编号）不装作知道在哪个区，居中显示
+        return q
+            ? '<span class="tooth-cross">' + cells + '</span>'
+            : '<span class="tooth-cross tooth-cross-plain">' + escapeHtml(tooth) + '</span>';
+    }
+
     function rowHtml(section, tooth, content) {
-        var toothLabel = tooth ? escapeHtml(tooth) : t('medical_cases.pick_tooth', '选牙位');
         return '' +
             '<div class="case-item-row" data-section="' + section + '">' +
               '<button type="button" class="case-item-tooth js-pick-tooth' + (tooth ? ' has-tooth' : '') + '"' +
                       ' title="' + t('medical_cases.pick_tooth', '选牙位') + '">' +
-                '<span class="tooth-value">' + toothLabel + '</span>' +
+                toothCrossHtml(tooth) +
               '</button>' +
               '<input type="hidden" class="case-item-tooth-value" value="' + escapeHtml(tooth || '') + '">' +
-              '<textarea class="case-item-content" rows="2"' +
+              '<textarea class="case-item-content phrase-enabled' +
+                        (TEMPLATE_TYPES[section] ? ' template-enabled' : '') + '" rows="2"' +
+                       (TEMPLATE_TYPES[section] ? ' data-template-type="' + TEMPLATE_TYPES[section] + '"' : '') +
                        ' placeholder="' + t('medical_cases.item_content_placeholder', '描述…') + '">' +
                 escapeHtml(content || '') +
               '</textarea>' +
@@ -137,7 +187,7 @@ var CaseItems = (function () {
     function setRowTooth($row, tooth) {
         $row.find('.case-item-tooth-value').val(tooth || '');
         $row.find('.js-pick-tooth').toggleClass('has-tooth', !!tooth)
-            .find('.tooth-value').text(tooth || t('medical_cases.pick_tooth', '选牙位'));
+            .html(toothCrossHtml(tooth));
 
         // 模板插进来的 __ 占位符换成这一行的牙位。旧实现是拿整段的牙位串去替换，
         // 一行一个牙位之后这里才是对的粒度。
@@ -161,6 +211,39 @@ var CaseItems = (function () {
         var $row = addRow(fallbackSection || 'examination', tooth, '', true);
         if ($row) focusedRow = $row;
         return $row;
+    }
+
+    /**
+     * 往某一行的光标处插入文字，并刷新派生文本。
+     *
+     * 模板与快捷短语原来是直接 $field.val(...) 写整段 textarea 的；分行之后
+     * 必须走这里 —— 一是要写进正确的那一行，二是 .val() 不触发 input 事件，
+     * 不显式刷新的话派生文本还是旧的，保存下去等于没插。
+     */
+    function insertIntoRow($row, text) {
+        if (!$row || !$row.length || !text) return;
+
+        var $ta = $row.find('.case-item-content');
+        var el = $ta[0];
+        var val = $ta.val() || '';
+        var pos = (el && typeof el.selectionStart === 'number') ? el.selectionStart : val.length;
+
+        // 模板里的 __ 用这一行的牙位替换（旧实现用的是整段的牙位串）
+        var tooth = ($row.find('.case-item-tooth-value').val() || '').trim();
+        if (tooth) text = text.split('__').join(tooth);
+
+        $ta.val(val.substring(0, pos) + text + val.substring(pos));
+        if (el && el.setSelectionRange) {
+            el.setSelectionRange(pos + text.length, pos + text.length);
+        }
+        $ta.focus();
+        syncDerived($row.data('section'));
+    }
+
+    /** 该段最后一行；没有行就建一行 —— SOAP 模板批量填充用 */
+    function lastRowOf(section) {
+        var $rows = $('#rows-' + section).find('.case-item-row');
+        return $rows.length ? $rows.last() : addRow(section, '', '', false);
     }
 
     function getFocusedRow() {
@@ -230,6 +313,8 @@ var CaseItems = (function () {
         getFocusedRow: getFocusedRow,
         selectedTeeth: selectedTeeth,
         addRow: addRow,
+        insertIntoRow: insertIntoRow,
+        lastRowOf: lastRowOf,
         syncDerived: syncDerived,
         SECTIONS: SECTIONS
     };

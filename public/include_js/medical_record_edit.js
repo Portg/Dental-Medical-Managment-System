@@ -148,6 +148,16 @@ function initQuickPhrases() {
             $target.val(textBefore + phrase + textAfter);
             $target[0].selectionStart = $target[0].selectionEnd = curPos + phrase.length;
             $target.focus();
+
+            // .val() 不触发 input 事件，不显式刷新的话派生文本还是旧的，
+            // 保存下去等于这条短语没插
+            if (typeof CaseItems !== 'undefined' && $target.hasClass('case-item-content')) {
+                CaseItems.syncDerived($target.closest('.case-item-row').data('section'));
+            }
+        } else if (typeof CaseItems !== 'undefined' && $('.case-items-section').length) {
+            // 兜底：没有聚焦过任何输入框时插到检查段最后一行。
+            // 原来这里写死 $('#examination')，分行之后那是隐藏的派生框。
+            CaseItems.insertIntoRow(CaseItems.lastRowOf('examination'), phrase);
         } else {
             // Fallback: append to examination
             var $exam = $('#examination');
@@ -891,19 +901,20 @@ function initTemplatePicker() {
     // History of present illness - only quick phrases, no templates
     $('#history_of_present_illness').addClass('phrase-enabled');
 
-    // Examination field - uses progress_note templates (for SOAP format)
-    $('#examination').addClass('template-enabled phrase-enabled')
-        .attr('data-template-type', 'progress_note');
+    // 检查/辅助检查/诊断/治疗改成分行录入之后，#examination 这类 id 指向的是
+    // **隐藏的派生 textarea**（由行渲染，不可编辑）。把 / 和 ; 的触发类挂上去
+    // 等于挂在看不见的框上：选择器打不开，模板也插进了不会被保存的地方。
+    // 触发类改挂到每一行的文本框上，由 CaseItems 在建行时打（含后续新增的行）。
+    if (typeof CaseItems === 'undefined' || !$('.case-items-section').length) {
+        $('#examination').addClass('template-enabled phrase-enabled')
+            .attr('data-template-type', 'progress_note');
+        $('#auxiliary_examination').addClass('phrase-enabled');
+        $('#diagnosis').addClass('template-enabled phrase-enabled')
+            .attr('data-template-type', 'diagnosis');
+    }
 
-    // Auxiliary examination - only quick phrases, no templates (results are patient-specific)
-    $('#auxiliary_examination').addClass('phrase-enabled');
-
-    // Diagnosis field - uses diagnosis templates
-    $('#diagnosis').addClass('template-enabled phrase-enabled')
-        .attr('data-template-type', 'diagnosis');
-
-    // Treatment fields - uses treatment_plan templates
-    $('#treatment, #medical_orders').addClass('template-enabled phrase-enabled')
+    // 医嘱仍是整段文本，照旧
+    $('#medical_orders').addClass('template-enabled phrase-enabled')
         .attr('data-template-type', 'treatment_plan');
 
     // Initialize TemplatePicker with custom insert handler
@@ -950,21 +961,36 @@ function handleTemplateInsert(template, $input) {
 
     // If it's a SOAP template (JSON with subjective/objective/assessment/plan)
     if (parsed && typeof parsed === 'object' && (parsed.subjective || parsed.objective || parsed.assessment || parsed.plan)) {
-        var examTeeth = getTeethStringByField('#examination_teeth');
-        var diagTeeth = getTeethStringByField('#related_teeth');
+        var rowMode = (typeof CaseItems !== 'undefined') && $('.case-items-section').length > 0;
+        var examTeeth = rowMode ? '' : getTeethStringByField('#examination_teeth');
+        var diagTeeth = rowMode ? '' : getTeethStringByField('#related_teeth');
 
-        // Fill each field with corresponding content (use field-appropriate teeth)
+        // 主诉始终是整段文本（不按牙位分行），照旧直接写
         if (parsed.subjective) {
             $('#chief_complaint').val(replaceToothPlaceholder(parsed.subjective, examTeeth));
         }
-        if (parsed.objective) {
-            $('#examination').val(replaceToothPlaceholder(parsed.objective, examTeeth));
-        }
-        if (parsed.assessment) {
-            $('#diagnosis').val(replaceToothPlaceholder(parsed.assessment, diagTeeth));
-        }
-        if (parsed.plan) {
-            $('#treatment').val(replaceToothPlaceholder(parsed.plan, diagTeeth));
+
+        // 检查/诊断/治疗分行之后，#examination 这类 id 是隐藏的派生框，
+        // 直接 .val() 写进去等于写进一个不会被保存的地方。填进该段的行里。
+        if (rowMode) {
+            [['objective', 'examination'], ['assessment', 'diagnosis'], ['plan', 'treatment']]
+                .forEach(function (pair) {
+                    if (!parsed[pair[0]]) return;
+                    var $row = CaseItems.lastRowOf(pair[1]);
+                    // 整段模板是覆盖式填充，不是追加
+                    $row.find('.case-item-content').val('');
+                    CaseItems.insertIntoRow($row, parsed[pair[0]]);
+                });
+        } else {
+            if (parsed.objective) {
+                $('#examination').val(replaceToothPlaceholder(parsed.objective, examTeeth));
+            }
+            if (parsed.assessment) {
+                $('#diagnosis').val(replaceToothPlaceholder(parsed.assessment, diagTeeth));
+            }
+            if (parsed.plan) {
+                $('#treatment').val(replaceToothPlaceholder(parsed.plan, diagTeeth));
+            }
         }
 
         // Update character counter
@@ -976,6 +1002,12 @@ function handleTemplateInsert(template, $input) {
         }
 
         return true; // Handled, prevent default insertion
+    }
+
+    // 分行录入：模板插进当前那一行（__ 用该行牙位替换，见 insertIntoRow）
+    if ($input && $input.hasClass('case-item-content')) {
+        CaseItems.insertIntoRow($input.closest('.case-item-row'), content);
+        return true;
     }
 
     // For plain text templates, determine teeth by target field context

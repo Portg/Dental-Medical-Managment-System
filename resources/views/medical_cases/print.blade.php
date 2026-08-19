@@ -179,6 +179,13 @@
         </div>
         @endif
 
+        @if($case->past_medical_history)
+        <div class="soap-section">
+            <div class="soap-label">{{ __('medical_cases.past_history_section') }}</div>
+            <div class="soap-content">{{ $case->past_medical_history }}</div>
+        </div>
+        @endif
+
         <div class="soap-section">
             <div class="soap-label">O - {{ __('medical_cases.examination') }}</div>
             <div class="soap-content">

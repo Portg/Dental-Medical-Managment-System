@@ -25,7 +25,7 @@ class MedicalCase extends Model implements AuditableContract
     const STATUS_FOLLOW_UP = 'follow-up';
 
     protected $fillable = [
-        'case_no', 'title', 'chief_complaint', 'history_of_present_illness',
+        'case_no', 'title', 'chief_complaint', 'history_of_present_illness', 'past_medical_history',
         'examination', 'examination_teeth', // SOAP: O - Objective
         'related_teeth', 'related_images', 'diagnosis_code',
         'auxiliary_examination', 'diagnosis', 'treatment', 'treatment_services', // SOAP: A & P
