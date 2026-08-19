@@ -218,13 +218,23 @@ class MedicalCaseService
                 continue;
             }
 
-            $items[] = [
-                'section'    => $section,
-                'tooth_no'   => $tooth === '' ? null : $tooth,
-                'content'    => $content === '' ? null : $content,
-                'sort_order' => count($bySection[$section] ?? []),
-            ];
-            $bySection[$section][] = end($items);
+            // 一行可以写多颗牙（「16,17 缺失」）—— 那是**写法**上的合并。
+            // 落库仍然一牙一行：MedicalCaseItem::forTooth('16') 得查得到，
+            // 那是这张表存在的理由；存成 '16,17' 就得靠 LIKE 去猜，索引也废了。
+            // 读回来时再按「同段落 + 同内容」合并（见 getCaseItemsForEdit）。
+            $teeth = $tooth === ''
+                ? [null]
+                : array_values(array_filter(array_map('trim', preg_split('/[,，\s]+/u', $tooth))));
+
+            foreach ($teeth === [] ? [null] : $teeth as $one) {
+                $items[] = [
+                    'section'    => $section,
+                    'tooth_no'   => $one === '' ? null : $one,
+                    'content'    => $content === '' ? null : $content,
+                    'sort_order' => count($bySection[$section] ?? []),
+                ];
+                $bySection[$section][] = end($items);
+            }
         }
 
         return ['items' => $items, 'columns' => $this->deriveColumnsFromItems($bySection)];
@@ -299,10 +309,34 @@ class MedicalCaseService
             ->orderBy('sort_order')->orderBy('id')
             ->get(['section', 'tooth_no', 'content']);
 
+        // 按「同段落 + 同内容」把牙位合回一行：落库是一牙一行（为了按牙位可查），
+        // 但医生写的时候「16、17 缺失」本来就是一条，读回来要还原成一条。
+        $merged = [];
         foreach ($existing as $row) {
-            if (isset($out[$row->section])) {
-                $out[$row->section][] = ['tooth_no' => $row->tooth_no, 'content' => $row->content];
+            if (!isset($out[$row->section])) {
+                continue;
             }
+            $key = $row->section . "\0" . (string) $row->content;
+
+            if (isset($merged[$key])) {
+                if ($row->tooth_no !== null && $row->tooth_no !== '') {
+                    $merged[$key]['teeth'][] = $row->tooth_no;
+                }
+                continue;
+            }
+
+            $merged[$key] = [
+                'section' => $row->section,
+                'content' => $row->content,
+                'teeth'   => ($row->tooth_no !== null && $row->tooth_no !== '') ? [$row->tooth_no] : [],
+            ];
+        }
+
+        foreach ($merged as $row) {
+            $out[$row['section']][] = [
+                'tooth_no' => $row['teeth'] === [] ? null : implode(',', array_unique($row['teeth'])),
+                'content'  => $row['content'],
+            ];
         }
 
         foreach (MedicalCaseItem::SECTIONS as $section) {

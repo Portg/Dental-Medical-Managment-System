@@ -10,6 +10,7 @@ use App\Patient;
 use App\WaitingQueue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Yajra\DataTables\DataTables;
 
@@ -402,6 +403,24 @@ class TodayWorkService
         $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
         $actions = '';
 
+        // 病历 / 收费 常驻，不跟队列状态走。
+        //
+        // 原来这两个只在「诊疗中」出现：前台没走完 签到 → 叫号 → 开始诊疗 这条队列
+        // 流程，医生在工作台上就没有写病历的入口 —— 复诊患者尤其容易卡在这儿，
+        // 「复诊没法增加病例」就是这么来的。而看完牙要补一笔收费同理。
+        //
+        // 同类产品的工作台每一行都是「预约 | 叫号 | 病历 | 收费 | 文书」常驻图标，
+        // 状态只决定**主操作**是什么，不决定你能不能写病历。
+        $always = '<button class="btn btn-xs btn-default tw-action-btn" title="' . __('today_work.medical_case') . '"'
+            . ' onclick="quickMedicalCase(' . $row->patient_id . ',' . $row->appointment_id . ')">'
+            . '<i class="fa fa-file-text-o"></i></button> ';
+
+        if (Gate::allows('create-invoices')) {
+            $always .= '<button class="btn btn-xs btn-default tw-action-btn" title="' . __('today_work.invoice') . '"'
+                . ' onclick="quickInvoice(' . $row->appointment_id . ')">'
+                . '<i class="fa fa-money"></i></button> ';
+        }
+
         switch ($status) {
             case 'not_arrived':
                 $actions .= '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCheckIn(' . $row->appointment_id . ')">'
@@ -426,12 +445,9 @@ class TodayWorkService
 
             case 'in_treatment':
                 $actions .= '<div class="tw-quick-actions">';
-                $actions .= '<button class="btn btn-xs btn-default tw-action-btn" onclick="quickMedicalCase(' . $row->patient_id . ',' . $row->appointment_id . ')">'
-                    . '<i class="fa fa-file-text-o"></i> ' . __('today_work.medical_case') . '</button> ';
+                // 病历与收费已在常驻区，这里不重复
                 $actions .= '<button class="btn btn-xs btn-default tw-action-btn" onclick="quickPrescription(' . $row->appointment_id . ')">'
                     . '<i class="fa fa-medkit"></i> ' . __('today_work.prescription') . '</button> ';
-                $actions .= '<button class="btn btn-xs btn-default tw-action-btn" onclick="quickInvoice(' . $row->appointment_id . ')">'
-                    . '<i class="fa fa-money"></i> ' . __('today_work.invoice') . '</button> ';
                 $actions .= $this->renderNextAppointmentButton($row);
                 $actions .= '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCompleteTreatment(' . $row->queue_id . ')">'
                     . '<i class="fa fa-check"></i> ' . __('today_work.complete_treatment') . '</button>';
@@ -444,7 +460,7 @@ class TodayWorkService
                 break;
         }
 
-        return $actions;
+        return $always . $actions;
     }
 
     /**

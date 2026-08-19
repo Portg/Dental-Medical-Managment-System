@@ -180,6 +180,60 @@ class MedicalCaseItemsTest extends TestCase
     /**
      * 用户点了「添加」又没填的空行不该攒在库里。
      */
+    /**
+     * 一行可以写多颗牙（「16、17 缺失」是一条，不用写两遍）。
+     *
+     * 但落库仍然一牙一行 —— forTooth('16') 得查得到，那是这张表存在的理由；
+     * 存成 '16,17' 就得靠 LIKE 去猜，索引也废了。合并只是写法与显示。
+     */
+    /** @test */
+    public function 一行多颗牙落库时按牙拆开(): void
+    {
+        $case = $this->createCaseWithRows([
+            ['section' => 'examination', 'tooth_no' => '16,17', 'content' => '缺失'],
+        ]);
+
+        $rows = MedicalCaseItem::where('medical_case_id', $case->id)->get();
+
+        $this->assertCount(2, $rows, '两颗牙 = 两行');
+        $this->assertSame(['16', '17'], $rows->pluck('tooth_no')->all());
+        $this->assertSame(['缺失', '缺失'], $rows->pluck('content')->all());
+
+        // 按牙位查得到 —— 这条是重点
+        $this->assertCount(1, MedicalCaseItem::forTooth('16')->get());
+        $this->assertCount(1, MedicalCaseItem::forTooth('17')->get());
+    }
+
+    /**
+     * 读回编辑器时按「同段落 + 同内容」合并回一行，医生看到的还是他写的那一条。
+     */
+    /** @test */
+    public function 读回编辑器时同内容的牙位合并回一行(): void
+    {
+        $case = $this->createCaseWithRows([
+            ['section' => 'examination', 'tooth_no' => '16,17', 'content' => '缺失'],
+            ['section' => 'examination', 'tooth_no' => '36',    'content' => '龋坏'],
+        ]);
+
+        $items = $this->service()->getCaseItemsForEdit($case);
+
+        $this->assertCount(2, $items['examination'], '两条内容 = 两行');
+        $this->assertSame('16,17', $items['examination'][0]['tooth_no']);
+        $this->assertSame('缺失', $items['examination'][0]['content']);
+        $this->assertSame('36', $items['examination'][1]['tooth_no']);
+    }
+
+    /** @test */
+    public function 多颗牙时牙位列包含每一颗(): void
+    {
+        $case = $this->createCaseWithRows([
+            ['section' => 'examination', 'tooth_no' => '16, 17', 'content' => '缺失'],
+        ])->fresh();
+
+        $this->assertSame(['16', '17'], $case->examination_teeth);
+        $this->assertSame("16 缺失\n17 缺失", $case->examination);
+    }
+
     /** @test */
     public function 空行被丢弃(): void
     {

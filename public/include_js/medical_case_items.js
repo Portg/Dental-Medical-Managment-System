@@ -87,26 +87,52 @@ var CaseItems = (function () {
         return String(pos);                                // 恒牙
     }
 
-    /** 牙位十字图；无牙位时显示虚线占位 */
+    /** 把 '16,17' 这种拆成数组 */
+    function splitTeeth(value) {
+        return String(value || '').split(/[,，\s]+/).map(function (x) { return x.trim(); })
+            .filter(function (x) { return x !== ''; });
+    }
+
+    /**
+     * 牙位十字图；无牙位时显示虚线占位。
+     *
+     * 一行可以带多颗牙，**同象限的合并在同一格里**：16、17 都在右上区，
+     * 写成一格「76」，不用分两行各写一遍。这就是部位记录法的写法 ——
+     * 十字分区，同区的牙位序号并排写。
+     */
     function toothCrossHtml(tooth) {
-        if (!tooth) {
+        var teeth = splitTeeth(tooth);
+        if (!teeth.length) {
             return '<span class="tooth-empty">' + t('medical_cases.pick_tooth', '选牙位') + '</span>';
         }
-        // 2×2 网格，四个格子对应四个象限；牙位落在它真正所属的那一格。
-        // 用网格而不是绝对定位：格子是结构性的，数字长短不会溢出到别的象限里。
-        var q = toothQuadrant(tooth);
-        var sym = escapeHtml(toothSymbol(tooth));
-        // 完整 FDI 编号放 title：十字里是记法符号，需要精确编号时鼠标一停就能看到
-        var title = ' title="' + escapeHtml(tooth) + '"';
+
+        var title = ' title="' + escapeHtml(teeth.join(', ')) + '"';
+
+        // 按象限归拢；同象限内按牙位序号排序（从中线往外，与牙弓顺序一致）
+        var byQuad = { tl: [], tr: [], bl: [], br: [] };
+        var unknown = [];
+        teeth.forEach(function (tth) {
+            var q = toothQuadrant(tth);
+            if (q) { byQuad[q].push(tth); } else { unknown.push(tth); }
+        });
+
+        if (unknown.length && !teeth.some(toothQuadrant)) {
+            // 全是认不出的编号：不装作知道在哪个区，居中显示
+            return '<span class="tooth-cross tooth-cross-plain"' + title + '>' +
+                   escapeHtml(unknown.join(',')) + '</span>';
+        }
 
         var cells = ['tl', 'tr', 'bl', 'br'].map(function (cell) {
-            return '<span class="tq tq-' + cell + '">' + (cell === q ? sym : '') + '</span>';
+            var list = byQuad[cell].slice().sort(function (a, b) {
+                // 左侧两格靠中线在右，序号大的写在左边；右侧两格反之
+                var d = parseInt(a.charAt(1), 10) - parseInt(b.charAt(1), 10);
+                return (cell === 'tl' || cell === 'bl') ? -d : d;
+            });
+            return '<span class="tq tq-' + cell + '">' +
+                   escapeHtml(list.map(toothSymbol).join('')) + '</span>';
         }).join('');
 
-        // 认不出象限的牙位（非 FDI 编号）不装作知道在哪个区，居中显示
-        return q
-            ? '<span class="tooth-cross"' + title + '>' + cells + '</span>'
-            : '<span class="tooth-cross tooth-cross-plain"' + title + '>' + escapeHtml(tooth) + '</span>';
+        return '<span class="tooth-cross"' + title + '>' + cells + '</span>';
     }
 
     function rowHtml(section, tooth, content) {
@@ -209,15 +235,16 @@ var CaseItems = (function () {
     // ─── 牙位 ────────────────────────────────────────────────────
 
     function setRowTooth($row, tooth) {
-        $row.find('.case-item-tooth-value').val(tooth || '');
-        $row.find('.js-pick-tooth').toggleClass('has-tooth', !!tooth)
-            .html(toothCrossHtml(tooth));
+        var value = Array.isArray(tooth) ? tooth.join(',') : (tooth || '');
+        $row.find('.case-item-tooth-value').val(value);
+        $row.find('.js-pick-tooth').toggleClass('has-tooth', !!value)
+            .html(toothCrossHtml(value));
 
         // 模板插进来的 __ 占位符换成这一行的牙位。旧实现是拿整段的牙位串去替换，
         // 一行一个牙位之后这里才是对的粒度。
         var $content = $row.find('.case-item-content');
-        if (tooth && $content.val() && $content.val().indexOf('__') !== -1) {
-            $content.val($content.val().split('__').join(tooth));
+        if (value && $content.val() && $content.val().indexOf('__') !== -1) {
+            $content.val($content.val().split('__').join(value));
         }
 
         syncDerived($row.data('section'));
@@ -234,6 +261,27 @@ var CaseItems = (function () {
         }
         var $row = addRow(fallbackSection || 'examination', tooth, '', true);
         if ($row) focusedRow = $row;
+        return $row;
+    }
+
+    /**
+     * 在当前行里加/减一颗牙（侧栏牙位图点击用）。
+     *
+     * 一行可以带多颗：16、17 都在右上区，合并写在同一格里，不用分两行。
+     * 已经在这一行里就取消，实现「再点一次去掉」。
+     */
+    function toggleToothOnRow($row, tooth, fallbackSection) {
+        if (!$row || !$row.length) {
+            var $new = addRow(fallbackSection || 'examination', tooth, '', true);
+            if ($new) focusedRow = $new;
+            return $new;
+        }
+
+        var teeth = splitTeeth($row.find('.case-item-tooth-value').val());
+        var i = teeth.indexOf(tooth);
+        if (i === -1) { teeth.push(tooth); } else { teeth.splice(i, 1); }
+
+        setRowTooth($row, teeth);
         return $row;
     }
 
@@ -285,8 +333,9 @@ var CaseItems = (function () {
     function selectedTeeth() {
         var teeth = [];
         $('.case-item-row .case-item-tooth-value').each(function () {
-            var v = ($(this).val() || '').trim();
-            if (v && teeth.indexOf(v) === -1) teeth.push(v);
+            splitTeeth($(this).val()).forEach(function (v) {
+                if (teeth.indexOf(v) === -1) teeth.push(v);
+            });
         });
         return teeth;
     }
@@ -340,18 +389,17 @@ var CaseItems = (function () {
             }
             if (!teeth.length) return;
 
+            // 一行可以带多颗，整段的牙位合并到一行；已有牙位的行不覆盖
             var $rows = $('#rows-' + section).find('.case-item-row');
-            teeth.forEach(function (tooth, i) {
-                var $row = $rows.eq(i);
-                if ($row.length) {
-                    // 空行才填；已经有牙位的行不覆盖
-                    if (!($row.find('.case-item-tooth-value').val() || '').trim()) {
-                        setRowTooth($row, tooth);
-                    }
-                } else {
-                    addRow(section, tooth, '', false);
-                }
-            });
+            var $target = $rows.filter(function () {
+                return !($(this).find('.case-item-tooth-value').val() || '').trim();
+            }).first();
+
+            if ($target.length) {
+                setRowTooth($target, teeth);
+            } else {
+                addRow(section, teeth.join(','), '', false);
+            }
             updateAllCharts();
         });
 
@@ -390,6 +438,8 @@ var CaseItems = (function () {
         collect: collect,
         writeToForm: writeToForm,
         applyTooth: applyTooth,
+        toggleToothOnRow: toggleToothOnRow,
+        splitTeeth: splitTeeth,
         setRowTooth: setRowTooth,
         getFocusedRow: getFocusedRow,
         selectedTeeth: selectedTeeth,

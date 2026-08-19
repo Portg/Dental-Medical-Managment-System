@@ -207,11 +207,9 @@ function initToothMiniChart() {
         // 没有聚焦行时在检查段新建一行 —— 让「先点牙再写字」也能用。
         // 旧结构是往整段的牙位集合里加/减，并把 examination 单向同步到 diagnosis。
         if (typeof CaseItems !== 'undefined' && $('.case-items-section').length) {
-            var $focused = CaseItems.getFocusedRow();
-            var cur = $focused ? ($focused.find('.case-item-tooth-value').val() || '').trim() : '';
-
-            // 再点一次同一颗 = 清掉这一行的牙位
-            CaseItems.applyTooth(cur === toothStr ? '' : toothStr, 'examination');
+            // 往当前行里加/减这颗牙。一行可以带多颗 —— 16、17 都在右上区，
+            // 合并写在同一格里，不用分两行各写一遍。再点一次去掉。
+            CaseItems.toggleToothOnRow(CaseItems.getFocusedRow(), toothStr, 'examination');
             updateMiniChartHighlights();
             return;
         }

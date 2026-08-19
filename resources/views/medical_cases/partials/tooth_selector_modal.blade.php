@@ -127,8 +127,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // 旧结构里牙位是整段共享的标签集合，所以这里读的是段落的隐藏 json。
         var teeth = [];
         if (typeof CaseItems !== 'undefined' && CaseItems.getFocusedRow()) {
-            var cur = (CaseItems.getFocusedRow().find('.case-item-tooth-value').val() || '').trim();
-            if (cur) teeth = [cur];
+            // 一行可能有多颗，全部预选上
+            teeth = CaseItems.splitTeeth(CaseItems.getFocusedRow().find('.case-item-tooth-value').val());
         } else {
             var field = currentToothField || 'examination';
             var inputId = (field === 'related') ? '#related_teeth' : '#examination_teeth';
@@ -216,16 +216,13 @@ function confirmToothSelection() {
         var picked = selectedTeethInModal.slice();
         var $row = CaseItems.getFocusedRow();
 
-        if (!picked.length) {
-            // 全部取消 = 把这一行的牙位清掉（变成无牙位的整体描述）
-            if ($row) CaseItems.setRowTooth($row, '');
-        } else {
-            if ($row) {
-                CaseItems.setRowTooth($row, picked.shift());
-            }
-            picked.forEach(function (tooth) {
-                CaseItems.addRow(field, tooth, '', false);
-            });
+        // 一行可以带多颗：选中的牙位整体写进这一行，同象限的会合并在一格里
+        // （16、17 → 右上格「76」）。原来是第一颗给当前行、其余各建一行，
+        // 同一个区的牙硬拆成两行不符合部位记录法的写法。
+        if ($row) {
+            CaseItems.setRowTooth($row, picked);
+        } else if (picked.length) {
+            CaseItems.addRow(field, picked.join(','), '', false);
         }
 
         updateMiniChartHighlights();
