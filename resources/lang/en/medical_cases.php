@@ -225,6 +225,12 @@ return [
     'expand' => 'Expand',
     'collapse' => 'Collapse',
     'quick_phrases' => 'Quick Phrases',
+    'phrase_category_examination' => 'Examination',
+    'phrase_category_diagnosis' => 'Diagnosis',
+    'phrase_category_treatment' => 'Treatment',
+    'phrase_category_medical_orders' => 'Medical Orders',
+    'phrase_category_chief_complaint' => 'Chief Complaint',
+    'no_quick_phrases' => 'No quick phrases yet',
 
     // Template
     'insert_template' => 'Insert Template',
@@ -370,22 +376,6 @@ return [
     // Template buttons
 
     // Quick phrases
-    'phrase_probe_normal' => 'Probing normal, pocket depth within 3mm',
-    'phrase_probe_normal_short' => 'Probe Normal',
-    'phrase_gum_bleeding' => 'Gingival swelling, bleeding on probing',
-    'phrase_gum_bleeding_short' => 'Gum Bleeding',
-    'phrase_calculus' => 'Visible supragingival/subgingival calculus',
-    'phrase_calculus_short' => 'Calculus',
-    'phrase_cavity' => 'Visible cavity, sensitive to probing',
-    'phrase_cavity_short' => 'Cavity',
-    'phrase_sensitivity' => 'Sensitive to hot/cold stimuli',
-    'phrase_sensitivity_short' => 'Sensitivity',
-    'phrase_mobility' => 'Tooth mobility grade I/II/III',
-    'phrase_mobility_short' => 'Mobility',
-    'phrase_percussion_pain' => 'Percussion pain (+)',
-    'phrase_percussion_short' => 'Percussion Pain',
-    'phrase_xray_normal' => 'X-ray shows normal periapical area',
-    'phrase_xray_normal_short' => 'X-ray Normal',
 
     // Picker hints
     'hint_template_picker' => 'Type :key in a text field to select a case template',

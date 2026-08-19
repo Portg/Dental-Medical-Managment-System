@@ -84,6 +84,18 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('menuTree', collect());
             }
         });
+
+        // 病历页的快捷短语侧栏 —— 从 quick_phrases 表按分类取，而不是写死在 Blade 里。
+        //
+        // 用 View Composer 而不是在 Controller 里传：病历编辑页有三个入口
+        // （edit / create / createForPatient）都渲染 medical_cases.edit，
+        // 逐个去传必定漏一个，漏掉的那个入口侧栏就是空的。
+        View::composer('medical_cases.partials.sidebar_quick_phrases', function ($view) {
+            $view->with(
+                'phrasesByCategory',
+                Auth::check() ? \App\QuickPhrase::groupedForUser(Auth::id()) : collect()
+            );
+        });
     }
 
 }

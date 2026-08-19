@@ -227,6 +227,12 @@ return [
     'expand' => '展开',
     'collapse' => '收起',
     'quick_phrases' => '快捷短语',
+    'phrase_category_examination' => '检查',
+    'phrase_category_diagnosis' => '诊断',
+    'phrase_category_treatment' => '治疗',
+    'phrase_category_medical_orders' => '医嘱',
+    'phrase_category_chief_complaint' => '主诉',
+    'no_quick_phrases' => '暂无快捷短语，可在「快捷短语」页添加',
 
     // Template
     'insert_template' => '插入模板',
@@ -372,22 +378,6 @@ return [
     // Template buttons
 
     // Quick phrases
-    'phrase_probe_normal' => '探诊正常，牙周袋深度3mm以内',
-    'phrase_probe_normal_short' => '探诊正常',
-    'phrase_gum_bleeding' => '牙龈红肿，探诊出血',
-    'phrase_gum_bleeding_short' => '牙龈出血',
-    'phrase_calculus' => '可见龈上/龈下结石',
-    'phrase_calculus_short' => '牙结石',
-    'phrase_cavity' => '可见龋洞，探诊敏感',
-    'phrase_cavity_short' => '龋齿',
-    'phrase_sensitivity' => '冷热刺激敏感',
-    'phrase_sensitivity_short' => '敏感',
-    'phrase_mobility' => '牙齿松动度I/II/III度',
-    'phrase_mobility_short' => '松动',
-    'phrase_percussion_pain' => '叩诊疼痛(+)',
-    'phrase_percussion_short' => '叩痛',
-    'phrase_xray_normal' => 'X光片显示根尖周正常',
-    'phrase_xray_normal_short' => 'X光正常',
 
     // Picker hints
     'hint_template_picker' => '文本框中输入 :key 选择病例模板',
