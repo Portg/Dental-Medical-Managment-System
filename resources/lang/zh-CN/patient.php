@@ -152,7 +152,7 @@ return [
     'filter_patients' => '筛选患者',
 
     // Search & Filter
-    'search_patients' => '搜索患者',
+    'search_patients' => '姓名/首拼/手机号/病历号',
     'filter_by' => '筛选',
     'filter_by_status' => '按状态筛选',
     'filter_by_date' => '按日期筛选',

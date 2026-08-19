@@ -182,7 +182,7 @@ return [
     'emergency_contact' => 'Emergency Contact',
 
     // Search and filter
-    'search_patients' => 'Search by name, phone, ID...',
+    'search_patients' => 'Name / initials / phone / record no.',
     'delete_patient_warning' => 'You will not be able to recover this patient record!',
 
     // Empty state

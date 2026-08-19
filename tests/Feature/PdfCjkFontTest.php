@@ -179,6 +179,21 @@ class PdfCjkFontTest extends TestCase
      * 「已登记同一路径」这条短路会让重装变成静默空操作，旧字节原样留着。
      * 实测过：不清理时重装完回读到的仍是被替换掉的 DejaVuSans。
      */
+    /**
+     * 独立进程跑。
+     *
+     * dompdf 的 FontMetrics::getFont() 里是一个**函数级** static $cache：一旦本用例
+     * 渲染过 CJK 字体，「家族 → cjk_bold_<hash> 文件」这条映射就在当前 PHP 进程里
+     * 定死了，外部没有任何接口能清掉它。用例结束后按字节还原字体目录（文件被删或
+     * 改回原样），可那份缓存还指着已经不存在的路径 —— 同一进程里后面任何一个渲染
+     * PDF 的测试都会挂在 Text.php 的「Undefined array key .../cjk_bold_...」上。
+     *
+     * 这个用例此前一直被 memory_limit 门跳过，所以从没暴露过；把测试内存上限
+     * 显式设成 512M 之后才真的跑起来，RegressionTest 的发票 PDF 当场 500。
+     * 隔离进程是唯一能连静态缓存一起丢掉的办法。
+     */
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function test_a_bad_legacy_registration_is_actually_replaced(): void
     {
         if (!$this->cjkFontAvailable()) {
@@ -300,6 +315,21 @@ class PdfCjkFontTest extends TestCase
      * 粗体单独探一次：只注册常规字面时，正文中文正常而标题/表头是问号 ——
      * 这种「一半对一半错」只探常规是发现不了的。
      */
+    /**
+     * 独立进程跑。
+     *
+     * dompdf 的 FontMetrics::getFont() 里是一个**函数级** static $cache：一旦本用例
+     * 渲染过 CJK 字体，「家族 → cjk_bold_<hash> 文件」这条映射就在当前 PHP 进程里
+     * 定死了，外部没有任何接口能清掉它。用例结束后按字节还原字体目录（文件被删或
+     * 改回原样），可那份缓存还指着已经不存在的路径 —— 同一进程里后面任何一个渲染
+     * PDF 的测试都会挂在 Text.php 的「Undefined array key .../cjk_bold_...」上。
+     *
+     * 这个用例此前一直被 memory_limit 门跳过，所以从没暴露过；把测试内存上限
+     * 显式设成 512M 之后才真的跑起来，RegressionTest 的发票 PDF 当场 500。
+     * 隔离进程是唯一能连静态缓存一起丢掉的办法。
+     */
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function test_chinese_renders_once_the_font_is_installed(): void
     {
         if (!$this->cjkFontAvailable()) {

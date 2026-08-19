@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Traits\EncryptsNin;
+use App\Http\Helper\NameHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
@@ -32,6 +33,26 @@ class Patient extends Model
         'total_consumption', 'member_since', 'member_expiry', 'member_status',
         'member_password', 'referred_by'
     ];
+
+    /**
+     * 姓名首拼（name_py）跟着姓名走。
+     *
+     * 放在模型的 saving 钩子里而不是各个 Service 里：患者有五条写入路径
+     * （建档、API、在线预约、Excel 导入、OCR 识别），逐个去补必定漏一条，
+     * 而漏掉的那条建出来的患者就是搜不到的 —— 前台不会知道为什么。
+     *
+     * 刻意不放进 $fillable：这个值由姓名派生，不该由请求直接写入。
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $patient) {
+            if ($patient->isDirty(['surname', 'othername']) || $patient->name_py === null) {
+                $patient->name_py = NameHelper::abbr(
+                    trim((string) $patient->surname . (string) $patient->othername)
+                );
+            }
+        });
+    }
 
     /**
      * 民族选项（中国56个民族）

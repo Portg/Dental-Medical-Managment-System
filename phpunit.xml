@@ -21,6 +21,15 @@
         </include>
     </source>
     <php>
+        <!-- 显式给测试进程设内存上限。
+
+             原来没设，跑的是机器 php.ini 的出厂默认 128M —— 那不是这个项目选的值。
+             700 个测试跑在一个进程里，128M 已经只剩不到 10MB 余量：加一个用到
+             拼音词典（约 8MB 瞬时峰值）的功能就会把后面的测试撞 OOM，
+             PdfCjkFontTest 里那个「memory_limit 低于 384M 就跳过」的门也是同一个原因。
+
+             这不是把问题藏起来：128M 从来不是刻意的约束，只是没人设过。 -->
+        <ini name="memory_limit" value="512M"/>
         <server name="APP_ENV" value="testing"/>
         <server name="BCRYPT_ROUNDS" value="4"/>
         <server name="CACHE_DRIVER" value="array"/>

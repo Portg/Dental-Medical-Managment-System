@@ -50,14 +50,54 @@ class NameHelper
     }
 
     /**
+     * 姓名的首拼缩写：刘万友 → lwy，Admin User → adminuser。
+     *
+     * 前台接电话时打 lwy 比打中文快得多，这是中文诊所软件的标配检索方式。
+     * 落库存下来（patients.name_py）而不是查询时算：查询时算就没法走索引，
+     * 也没法用 LIKE 前缀匹配。
+     */
+    public static function abbr(string $name): string
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            return '';
+        }
+
+        // 纯英文名不必惊动拼音库
+        if (!preg_match('/[\x{4e00}-\x{9fa5}]/u', $name)) {
+            return strtolower(preg_replace('/[^a-zA-Z]/', '', $name));
+        }
+
+        // 进程内记忆化：每次调用拼音库会有约 8MB 的瞬时峰值（词典用生成器读，
+        // 读完就释放，驻留只有 0.1MB）。生产上无所谓，但测试进程本来就贴着
+        // 128M 跑，一个套件里成百次建患者，反复顶这个峰值会把别的测试撞 OOM。
+        static $memo = [];
+
+        if (!isset($memo[$name])) {
+            // nameAbbr 而不是 abbr：前者按「姓名」处理，复姓走 surnames.php
+            // （单雄信 → xxs 而不是 dxx，欧阳娜娜 → oynn），后者按普通词组切。
+            $memo[$name] = strtolower(\Overtrue\Pinyin\Pinyin::nameAbbr($name)->join(''));
+        }
+
+        return $memo[$name];
+    }
+
+    /**
      * Add name search conditions to a query builder.
      * In zh-CN, also matches CONCAT(surname, othername) for full-name search.
      *
      * @param \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder $query
      * @param string $search
      * @param string $table  Table name prefix (e.g. 'patients', 'users'), empty for no prefix
+     * @param string|null $pinyinColumn 首拼列名，null 表示该表没有首拼列
+     *
+     * 默认值是 'name_py'（患者表的首拼列），而不是 null。理由是调用点 18 个里
+     * 15 个是患者表：默认关掉的话，将来新加的患者侧搜索会**静默地**没有首拼，
+     * 谁也不会发现；默认打开的话，忘了给非患者表传 null 会立刻报「未知列」，
+     * 测试当场就红。少一个功能不会有人报错，SQL 报错会。
      */
-    public static function addNameSearch($query, string $search, string $table = '')
+    public static function addNameSearch($query, string $search, string $table = '', ?string $pinyinColumn = 'name_py')
     {
         $surnameCol = $table ? "{$table}.surname" : 'surname';
         $othernameCol = $table ? "{$table}.othername" : 'othername';
@@ -67,6 +107,13 @@ class NameHelper
 
         if (app()->getLocale() === 'zh-CN') {
             $query->orWhereRaw("CONCAT({$surnameCol}, {$othernameCol}) like ?", ['%' . $search . '%']);
+        }
+
+        // 首拼：前缀匹配而不是两头模糊。lwy 应当命中「刘万友」，
+        // 但 wy 不该命中 —— 两头模糊会让任意两三个字母扫出一大片无关患者。
+        if ($pinyinColumn !== null && $search !== '' && preg_match('/^[a-zA-Z]+$/', $search)) {
+            $pyCol = $table ? "{$table}.{$pinyinColumn}" : $pinyinColumn;
+            $query->orWhere($pyCol, 'like', strtolower($search) . '%');
         }
     }
 }

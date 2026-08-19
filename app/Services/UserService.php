@@ -8,7 +8,6 @@ use App\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Overtrue\Pinyin\Pinyin;
 
 class UserService
 {
@@ -29,7 +28,7 @@ class UserService
         }
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                NameHelper::addNameSearch($q, $search, 'users');
+                NameHelper::addNameSearch($q, $search, 'users', null);   // users 表没有 name_py，首拼靠 username
                 $q->orWhere('users.email', 'like', '%' . $search . '%')
                   ->orWhere('users.phone_no', 'like', '%' . $search . '%');
             });
@@ -50,7 +49,7 @@ class UserService
 
         if ($keyword) {
             $query->where(function ($q) use ($keyword) {
-                NameHelper::addNameSearch($q, $keyword, 'users');
+                NameHelper::addNameSearch($q, $keyword, 'users', null);
             });
         }
 
@@ -73,7 +72,7 @@ class UserService
             ->whereNull('users.deleted_at')
             ->where('users.status', User::STATUS_ACTIVE)
             ->where(function ($q) use ($keyword) {
-                NameHelper::addNameSearch($q, $keyword);
+                NameHelper::addNameSearch($q, $keyword, '', null);       // 查的是 users
             })
             ->select('users.*')
             ->get();
@@ -219,16 +218,9 @@ class UserService
 
     private function nameToAbbr(string $name): string
     {
-        // 检测是否含中文字符
-        if (preg_match('/[\x{4e00}-\x{9fa5}]/u', $name)) {
-            $pinyin = new Pinyin();
-            // v6: abbr() 默认分隔符是空格，需要去掉
-            $abbr = $pinyin->abbr($name, '');
-            return strtolower(str_replace(' ', '', $abbr));
-        }
-
-        // 英文：直接用小写字母（去除非字母字符）
-        return strtolower(preg_replace('/[^a-zA-Z]/', '', $name));
+        // 与患者首拼（patients.name_py）用同一份实现 —— 两处各写一遍的话，
+        // 一边改了分隔符处理另一边没改，同一个名字会算出两种首拼
+        return NameHelper::abbr($name);
     }
 
     /**
