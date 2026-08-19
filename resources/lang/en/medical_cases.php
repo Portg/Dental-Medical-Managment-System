@@ -368,9 +368,6 @@ return [
     'visit_type_emergency' => 'Emergency',
 
     // Template buttons
-    'template_cleaning' => 'Cleaning Template',
-    'template_extraction' => 'Extraction Template',
-    'template_filling' => 'Filling Template',
 
     // Quick phrases
     'phrase_probe_normal' => 'Probing normal, pocket depth within 3mm',

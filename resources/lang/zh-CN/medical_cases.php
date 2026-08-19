@@ -370,9 +370,6 @@ return [
     'visit_type_emergency' => '急诊',
 
     // Template buttons
-    'template_cleaning' => '洁牙模板',
-    'template_extraction' => '拔牙模板',
-    'template_filling' => '补牙模板',
 
     // Quick phrases
     'phrase_probe_normal' => '探诊正常，牙周袋深度3mm以内',

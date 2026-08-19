@@ -404,18 +404,52 @@ function removeService(serviceId) {
 // ==========================================================================
 
 /**
- * Insert template content into a field
+ * 渲染「常用模板」快捷按钮 —— 从库里按使用次数取前几条。
+ *
+ * 原来这里是三个写死的中文串（洁牙/拔牙/补牙），与 medical_templates 表里
+ * 同名模板的内容并不一致，也没有 __ 牙位占位符，诊所在「病历模板」页改了
+ * 也不会跟着变。现在与 / 触发的选择器共用同一份数据和同一个插入函数，
+ * 行为完全一致；保留按钮只是因为 / 这个入口不可见。
  */
-function insertTemplate(field, type) {
-    var templates = {
-        'cleaning': '患者来院要求洁牙，无明显不适',
-        'extraction': '患者要求拔除牙齿，该牙',
-        'filling': '患者主诉牙齿有洞，进食嵌塞'
-    };
-    var template = templates[type] || '';
-    var $field = $('#' + field);
-    $field.val($field.val() + template);
-    $field.focus();
+function renderTemplateQuickButtons() {
+    $('.js-template-quick-buttons').each(function () {
+        var $box = $(this);
+        var fieldId = $box.data('field');
+        var type = $box.data('template-type');
+        if (!type) return;
+
+        $.getJSON('/medical-templates-search', { type: type }, function (resp) {
+            if (!resp || !resp.status || !resp.data || !resp.data.length) return;
+
+            // 只放前 4 个：按钮多了反而挑不动，剩下的走 / 搜索
+            resp.data.slice(0, 4).forEach(function (tpl) {
+                $('<button>', {
+                    type: 'button',
+                    'class': 'template-btn',
+                    text: tpl.name,
+                    title: typeof tpl.content === 'string' ? tpl.content.slice(0, 80) : ''
+                }).on('click', function () {
+                    // 走与 / 选择器完全相同的插入路径：__ 牙位替换、
+                    // SOAP 模板的多字段填充都在这个函数里
+                    handleTemplateInsert(tpl, $('#' + fieldId));
+                    bumpTemplateUsage(tpl.id);
+                }).appendTo($box);
+            });
+        });
+    });
+}
+
+/**
+ * 记一次模板使用 —— 快捷按钮就是按 usage_count 排的，不记的话排序永远不动。
+ * 失败静默：用不上的统计不该打断医生写病历。
+ */
+function bumpTemplateUsage(templateId) {
+    if (!templateId) return;
+    $.ajax({
+        url: '/medical-templates/' + templateId + '/increment-usage',
+        type: 'POST',
+        headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+    });
 }
 
 // ==========================================================================
@@ -862,6 +896,9 @@ function initTemplatePicker() {
             baseUrl: ''
         });
     }
+
+    // 常用模板快捷按钮（与 / 选择器同一份数据）
+    renderTemplateQuickButtons();
 }
 
 /**
