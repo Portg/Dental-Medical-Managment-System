@@ -68,10 +68,28 @@ class LabCaseController extends Controller
             return response()->json(['message' => $validator->errors()->first(), 'status' => false]);
         }
 
+        // exists 只保证记录在，不保证是这个患者的。两个 id 各自独立，改一下请求
+        // 就能把加工单挂到别人的就诊上 —— 与 InvoiceController::createBilling 同一道核对。
+        foreach ([
+            ['appointment_id',  \App\Appointment::class],
+            ['medical_case_id', \App\MedicalCase::class],
+        ] as [$field, $model]) {
+            if ($request->filled($field)
+                && !$model::where('id', $request->input($field))
+                    ->where('patient_id', (int) $request->patient_id)->exists()) {
+                return response()->json([
+                    'message' => __('lab_cases.patient_mismatch'),
+                    'status'  => false,
+                ], 422);
+            }
+        }
+
         $data = $request->only([
             'patient_id', 'doctor_id', 'lab_id', 'processing_days',
             'special_requirements', 'sent_date',
             'expected_return_date', 'lab_fee', 'patient_charge', 'notes',
+            // 挂到具体就诊与病历上，「这次戴牙对应哪次取模」才查得出来
+            'appointment_id', 'medical_case_id',
         ]);
 
         // Build items array

@@ -22,6 +22,7 @@ return [
 
     // Clinical Notes Section
     'add_clinical_notes' => '添加临床记录',
+    'create_lab_case' => '开加工单',
     'clinical_notes' => '临床记录',
     'treatment' => '治疗',
     'added_by' => '添加者',

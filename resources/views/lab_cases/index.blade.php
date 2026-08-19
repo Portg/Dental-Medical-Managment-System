@@ -18,7 +18,7 @@
             <div class="filter-label">{{ __('lab_cases.status') }}</div>
             <select class="form-control" id="filter_status">
                 <option value="">{{ __('lab_cases.all_statuses') }}</option>
-                @foreach(\App\LabCase::STATUSES as $key => $label)
+                @foreach(\App\LabCase::statusOptions() as $key => $label)
                     <option value="{{ $key }}">{{ __('lab_cases.status_' . $key) }}</option>
                 @endforeach
             </select>
@@ -80,4 +80,26 @@
     };
 </script>
 <script src="{{ asset('include_js/lab_case_list.js') }}?v={{ filemtime(public_path('include_js/lab_case_list.js')) }}"></script>
+
+{{-- 诊疗页「开加工单」跳过来时带着上下文：自动开弹窗并预填。
+     入口在诊疗页是因为医生是在那儿决定要做修复体的；加工单表上本来就有
+     appointment_id / medical_case_id 两列，此前没有任何入口会带上。
+
+     必须是独立的 <script>：上面那个带 src 的标签，内容体会被浏览器忽略。 --}}
+@if(request()->filled('patient_id'))
+<script>
+    $(function () {
+        openLabCaseWithContext({
+            patient_id:      @json(request('patient_id')),
+            patient_text:    @json(request('patient_text')),
+            doctor_id:       @json(request('doctor_id')),
+            doctor_text:     @json(request('doctor_text')),
+            appointment_id:  @json(request('appointment_id')),
+            medical_case_id: @json(request('medical_case_id')),
+            teeth:           @json(request('teeth'))
+        });
+    });
+</script>
+@endif
+
 @endsection

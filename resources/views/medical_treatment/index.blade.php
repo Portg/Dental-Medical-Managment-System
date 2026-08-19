@@ -99,6 +99,23 @@
                                                        onclick="AddTreatment({{ $appointment_id  }})">
                                                         {{ __('medical_treatment.add_clinical_notes') }}
                                                     </button>
+
+                                                    {{-- 开加工单 —— 医生是在诊疗页决定要做修复体的，入口就该在这儿。
+                                                         加工单表上一直有 appointment_id / medical_case_id 两列，
+                                                         但此前没有任何入口会带上，加工单挂不到就诊上。
+                                                         跳到加工单页并带上下文，复用那边的弹窗（见 openLabCaseWithContext）。 --}}
+                                                    @can('manage-labs')
+                                                        @if(!empty($patient))
+                                                            <a class="btn green btn-outline btn-circle btn-sm"
+                                                               href="{{ url('lab-cases') }}?{{ http_build_query([
+                                                                    'patient_id'     => $patient->id,
+                                                                    'patient_text'   => $patient->patient_no . ' - ' . $patient->full_name,
+                                                                    'appointment_id' => $appointment_id,
+                                                               ]) }}">
+                                                                <i class="fa fa-cogs"></i> {{ __('medical_treatment.create_lab_case') }}
+                                                            </a>
+                                                        @endif
+                                                    @endcan
                                                 </div>
                                                 <div class="portlet-body">
                                                     <table class="table table-hover" id="dental_treatment_table">

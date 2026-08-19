@@ -533,6 +533,14 @@
             dataTable.draw(true);
         }, 300));
 
+        {{-- 顶部全局搜索框提交的是 GET /patients?search=xxx。
+             页面此前完全不读这个参数：从顶部打「lwy」跳过来，搜索框是空的、
+             列表是全量，等于那个搜索框没用。这里把它填进快捷搜索并触发一次查询。 --}}
+        @if(request()->filled('search'))
+            $('#quickSearch').val(@json(request('search')));
+            dataTable.draw(true);
+        @endif
+
         // Auto-filter on select change
         $('#filter_source, #filter_tags').on('change', function() {
             dataTable.draw(true);

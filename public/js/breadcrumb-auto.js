@@ -68,12 +68,14 @@
         if (!pageHead || currentPath.indexOf(menuPath + '/') !== 0) return '';
 
         var relativePath = currentPath.substring(menuPath.length).replace(/^\/+|\/+$/g, '');
+        var pathSegments = relativePath ? relativePath.split('/') : [];
+        var lastSegment = pathSegments.length ? pathSegments[pathSegments.length - 1] : '';
 
-        if (relativePath === 'create') {
+        if (lastSegment === 'create') {
             return pageHead.getAttribute('data-breadcrumb-add') || '';
         }
 
-        if (/^[^/]+\/edit$/.test(relativePath)) {
+        if (lastSegment === 'edit') {
             return pageHead.getAttribute('data-breadcrumb-edit') || '';
         }
 

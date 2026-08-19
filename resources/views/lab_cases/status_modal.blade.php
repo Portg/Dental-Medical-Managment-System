@@ -14,7 +14,7 @@
                         <label class="text-primary">{{ __('lab_cases.status') }} *</label>
                         <select id="status_value" name="status" class="form-control">
                             <option value="">--</option>
-                            @foreach(\App\LabCase::STATUSES as $key => $label)
+                            @foreach(\App\LabCase::statusOptions() as $key => $label)
                                 <option value="{{ $key }}">{{ __('lab_cases.status_' . $key) }}</option>
                             @endforeach
                         </select>

@@ -40,7 +40,7 @@
                                 <label class="text-primary">{{ __('lab_cases.prosthesis_type') }} *</label>
                                 <select name="prosthesis_type" class="form-control">
                                     <option value="">--</option>
-                                    @foreach(\App\LabCase::PROSTHESIS_TYPES as $key => $label)
+                                    @foreach(\App\LabCase::prosthesisTypeOptions() as $key => $label)
                                         <option value="{{ $key }}">{{ __('lab_cases.type_' . $key) }}</option>
                                     @endforeach
                                 </select>
@@ -53,7 +53,7 @@
                                 <label>{{ __('lab_cases.material') }}</label>
                                 <select name="material" class="form-control">
                                     <option value="">--</option>
-                                    @foreach(\App\LabCase::MATERIALS as $key => $label)
+                                    @foreach(\App\LabCase::materialOptions() as $key => $label)
                                         <option value="{{ $key }}">{{ __('lab_cases.material_' . $key) }}</option>
                                     @endforeach
                                 </select>

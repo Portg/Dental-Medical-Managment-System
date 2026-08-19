@@ -22,6 +22,7 @@ return [
 
     // Clinical Notes Section
     'add_clinical_notes' => 'Add Clinical Notes',
+    'create_lab_case' => 'New Lab Case',
     'clinical_notes' => 'Clinical Notes',
     'treatment' => 'Treatment',
     'added_by' => 'Added By',

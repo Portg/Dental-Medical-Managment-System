@@ -206,4 +206,5 @@ return [
     'unknown_lab'          => '未知技工所',
     'unassigned_doctor'    => '未分配',
 
+    'patient_mismatch' => '该就诊记录或病历不属于此患者',
 ];

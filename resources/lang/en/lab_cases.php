@@ -206,4 +206,5 @@ return [
     'unknown_lab'          => 'Unknown Lab',
     'unassigned_doctor'    => 'Unassigned',
 
+    'patient_mismatch' => 'That appointment or case does not belong to this patient',
 ];

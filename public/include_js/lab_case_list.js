@@ -100,7 +100,45 @@ function createLabCase() {
     $('#create-item-rows').empty();
     labCaseItemIndex = 0;
     addItemRow('create');
+    // 从诊疗页带上下文过来时，把隐藏的关联字段清掉，避免上一次的残留
+    $('#create_appointment_id, #create_medical_case_id').remove();
     $('#create-lab-case-modal').modal('show');
+}
+
+/**
+ * 带上下文开单 —— 诊疗页的「开加工单」跳过来时用。
+ *
+ * 加工单表上一直有 appointment_id / medical_case_id 两列，但没有任何入口会带上，
+ * 于是它是一张挂不到就诊上的孤立单子：「这次戴牙对应哪次取模」查不出来。
+ * 诊疗页按钮跳到本页并带参数，这里预填患者/医生并把关联 id 塞进表单。
+ *
+ * 复用本页的弹窗与 saveLabCase，而不是把弹窗搬到诊疗页 ——
+ * saveLabCase 里有 dataTable.draw()，只有本页有那个表。
+ */
+function openLabCaseWithContext(ctx) {
+    createLabCase();
+
+    if (ctx.patient_id && ctx.patient_text) {
+        $('#create_patient_id')
+            .append(new Option(ctx.patient_text, ctx.patient_id, true, true))
+            .trigger('change');
+    }
+    if (ctx.doctor_id && ctx.doctor_text) {
+        $('#create_doctor_id')
+            .append(new Option(ctx.doctor_text, ctx.doctor_id, true, true))
+            .trigger('change');
+    }
+
+    ['appointment_id', 'medical_case_id'].forEach(function (f) {
+        if (!ctx[f]) return;
+        $('<input type="hidden">').attr({ id: 'create_' + f, name: f }).val(ctx[f])
+            .appendTo('#create-lab-case-form');
+    });
+
+    // 牙位带过来：病历里记了哪几颗，加工单第一行直接填上
+    if (ctx.teeth) {
+        $('#create-item-rows').find('[name$="[teeth_positions]"]').first().val(ctx.teeth);
+    }
 }
 
 function saveLabCase() {
