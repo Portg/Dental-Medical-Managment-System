@@ -9,8 +9,8 @@
 
 @section('css')
     @include('layouts.page_loader')
-    <link rel="stylesheet" href="{{ asset('css/medical-record-edit.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/tooth-selector.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/medical-record-edit.css') }}?v={{ filemtime(public_path('css/medical-record-edit.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/tooth-selector.css') }}?v={{ filemtime(public_path('css/tooth-selector.css')) }}">
 @endsection
 
 @section('content')
@@ -254,7 +254,7 @@ LanguageManager.loadAllFromPHP({
 });
 </script>
 <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
-<script src="{{ asset('include_js/template_picker.js') }}"></script>
+<script src="{{ asset('include_js/template_picker.js') }}?v={{ filemtime(public_path('include_js/template_picker.js')) }}"></script>
 {{-- 分段明细（牙位 + 文字）的分行编辑；必须在 medical_record_edit.js 之前，
      后者的 $(document).ready 会调 CaseItems.init() --}}
 <script src="{{ asset('include_js/medical_case_items.js') }}?v={{ filemtime(public_path('include_js/medical_case_items.js')) }}"></script>

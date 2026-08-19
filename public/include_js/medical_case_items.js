@@ -37,7 +37,7 @@ var CaseItems = (function () {
      * 十字是「面对患者」画的，所以患者的右侧落在图的左边：
      *   FDI 1x 右上 → 图的左上格      FDI 2x 左上 → 图的右上格
      *   FDI 4x 右下 → 图的左下格      FDI 3x 左下 → 图的右下格
-     *   乳牙 5x/8x 同 1x/4x，6x/7x 同 2x/3x
+     *   乳牙 5x/8x 同 1x/4x，6x/7x 同 2x/3x（乳牙序号写罗马数字，见 toothSymbol）
      *
      * 参考的那套桌面软件是把数字固定画在右上格的（十字纯装饰，45 明明是右下象限
      * 也画在右上）。那样十字就没有信息量了，这里按真正的记法定位 ——
@@ -66,6 +66,27 @@ var CaseItems = (function () {
 
     // ─── 渲染 ────────────────────────────────────────────────────
 
+    /**
+     * FDI 编号 → 十字里该写的符号（部位记录法）。
+     *
+     * 十字里只写**牙位序号**，象限由它落在哪一格表示 —— 写整个 FDI 编号是重复的，
+     * 那个首位数字本身就是象限。
+     *   恒牙（FDI 1x-4x）用阿拉伯数字 1-8：16 → 「6」
+     *   乳牙（FDI 5x-8x）用罗马数字 Ⅰ-Ⅴ：55 → 「Ⅴ」
+     * 这是中文牙科的通行写法，恒牙乳牙靠数字形式区分，不靠另加标记。
+     */
+    var ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'];
+
+    function toothSymbol(tooth) {
+        var str = String(tooth || '');
+        var quad = parseInt(str.charAt(0), 10);
+        var pos  = parseInt(str.charAt(1), 10);
+
+        if (!quad || !pos) return str;                    // 非 FDI 编号，原样显示
+        if (quad >= 5 && quad <= 8) return ROMAN[pos] || str;   // 乳牙
+        return String(pos);                                // 恒牙
+    }
+
     /** 牙位十字图；无牙位时显示虚线占位 */
     function toothCrossHtml(tooth) {
         if (!tooth) {
@@ -74,15 +95,18 @@ var CaseItems = (function () {
         // 2×2 网格，四个格子对应四个象限；牙位落在它真正所属的那一格。
         // 用网格而不是绝对定位：格子是结构性的，数字长短不会溢出到别的象限里。
         var q = toothQuadrant(tooth);
+        var sym = escapeHtml(toothSymbol(tooth));
+        // 完整 FDI 编号放 title：十字里是记法符号，需要精确编号时鼠标一停就能看到
+        var title = ' title="' + escapeHtml(tooth) + '"';
+
         var cells = ['tl', 'tr', 'bl', 'br'].map(function (cell) {
-            return '<span class="tq tq-' + cell + '">' +
-                   (cell === q ? escapeHtml(tooth) : '') + '</span>';
+            return '<span class="tq tq-' + cell + '">' + (cell === q ? sym : '') + '</span>';
         }).join('');
 
         // 认不出象限的牙位（非 FDI 编号）不装作知道在哪个区，居中显示
         return q
-            ? '<span class="tooth-cross">' + cells + '</span>'
-            : '<span class="tooth-cross tooth-cross-plain">' + escapeHtml(tooth) + '</span>';
+            ? '<span class="tooth-cross"' + title + '>' + cells + '</span>'
+            : '<span class="tooth-cross tooth-cross-plain"' + title + '>' + escapeHtml(tooth) + '</span>';
     }
 
     function rowHtml(section, tooth, content) {
