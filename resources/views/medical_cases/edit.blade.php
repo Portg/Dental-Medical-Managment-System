@@ -6,6 +6,7 @@
     $isCreateMode = !isset($case);
     $needPatientSelection = $isCreateMode && !$currentPatient;
 @endphp
+@section('page_title', $isCreateMode ? __('medical_cases.add_case') : __('medical_cases.edit_case'))
 
 @section('css')
     @include('layouts.page_loader')

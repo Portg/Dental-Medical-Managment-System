@@ -56,8 +56,21 @@
         {{-- Content --}}
         <div class="page-content-wrapper">
             <div class="page-content">
-                {{-- Breadcrumb (hidden until breadcrumb-auto.js updates it) --}}
-                <div class="page-head" style="visibility:hidden">
+                @php
+                    $breadcrumbCurrentLabel = isset($breadcrumb_current)
+                        ? trim(strip_tags((string) $breadcrumb_current))
+                        : trim(strip_tags($__env->yieldContent('page_title')));
+                @endphp
+                {{--
+                    面包屑先由服务端提供页面级标题，再由 breadcrumb-auto.js 补齐侧栏层级。
+                    data-* 是新增/编辑/详情页的契约；否则前端只能把 /resource/create
+                    当作 /resource 列表页，顶部永远缺少「添加」「编辑」这一层。
+                --}}
+                <div class="page-head" style="visibility:hidden"
+                     data-breadcrumb-current="{{ $breadcrumbCurrentLabel }}"
+                     data-breadcrumb-add="{{ __('common.add') }}"
+                     data-breadcrumb-edit="{{ __('common.edit') }}"
+                     data-breadcrumb-details="{{ __('common.details') }}">
                     <div class="container-fluid">
                         <ul class="page-breadcrumb">
                             <li class="home-icon"><a href="{{ url('home') }}"><i class="icon-home"></i></a></li>
@@ -337,7 +350,7 @@
         });
     </script>
     @yield('js')
-    <script src="{{ asset('js/breadcrumb-auto.js') }}"></script>
+    <script src="{{ asset('js/breadcrumb-auto.js') }}?v={{ filemtime(public_path('js/breadcrumb-auto.js')) }}"></script>
 </body>
 
 

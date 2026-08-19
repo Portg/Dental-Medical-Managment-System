@@ -1,4 +1,5 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
+@section('page_title', __('medical_cases.view_case'))
 @section('content')
 @section('css')
     @include('layouts.page_loader')

@@ -270,6 +270,13 @@ var CaseItems = (function () {
         return $rows.length ? $rows.last() : addRow(section, '', '', false);
     }
 
+    /** 侧栏牙位图高亮跟着走 */
+    function updateAllCharts() {
+        if (typeof updateMiniChartHighlights === 'function') {
+            updateMiniChartHighlights();
+        }
+    }
+
     function getFocusedRow() {
         return (focusedRow && focusedRow.closest('body').length) ? focusedRow : null;
     }
@@ -310,6 +317,56 @@ var CaseItems = (function () {
 
         $(document).on('input', '.case-item-content', function () {
             syncDerived($(this).closest('.case-item-row').data('section'));
+        });
+
+        /**
+         * 复制上一段的牙位。
+         *
+         * 检查写了 45、36，诊断和治疗多半也是这两颗 —— 不用再去牙位图上点一遍。
+         * 只带牙位不带文字：诊断的内容和检查的内容本来就不一样，带过来反而要删。
+         * 已有内容的行不动，只补齐缺的牙位、按需补行。
+         */
+        $(document).on('click', '.js-copy-teeth', function () {
+            var section = $(this).data('section');
+
+            // 往前找**最近一个有牙位的段**，而不是数组里紧挨着的上一段：
+            // 诊断的前一段是「辅助检查」，那一段常常是空的，医生要的是「检查」里那几颗。
+            var teeth = [];
+            for (var i = SECTIONS.indexOf(section) - 1; i >= 0 && !teeth.length; i--) {
+                $('#rows-' + SECTIONS[i]).find('.case-item-tooth-value').each(function () {
+                    var v = ($(this).val() || '').trim();
+                    if (v && teeth.indexOf(v) === -1) teeth.push(v);
+                });
+            }
+            if (!teeth.length) return;
+
+            var $rows = $('#rows-' + section).find('.case-item-row');
+            teeth.forEach(function (tooth, i) {
+                var $row = $rows.eq(i);
+                if ($row.length) {
+                    // 空行才填；已经有牙位的行不覆盖
+                    if (!($row.find('.case-item-tooth-value').val() || '').trim()) {
+                        setRowTooth($row, tooth);
+                    }
+                } else {
+                    addRow(section, tooth, '', false);
+                }
+            });
+            updateAllCharts();
+        });
+
+        // 段落折叠：病历一长，来回滚很费劲
+        $(document).on('click', '.js-toggle-section', function () {
+            var $btn = $(this);
+            var section = $btn.data('section');
+            var $rows = $('#rows-' + section);
+            var collapsed = $rows.is(':visible');
+
+            $rows.toggle(!collapsed);
+            $btn.find('i').toggleClass('fa-chevron-up', !collapsed).toggleClass('fa-chevron-down', collapsed);
+            $btn.find('.toggle-text').text(
+                collapsed ? t('medical_cases.expand', '展开') : t('medical_cases.collapse', '折叠')
+            );
         });
 
         // 行内的牙位按钮：打开牙位选择器，目标是这一行

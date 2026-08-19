@@ -26,14 +26,26 @@
         @endif
     </div>
     <div class="soap-section-body">
-        <div class="case-items-rows" id="rows-{{ $section }}"></div>
-
-        <div class="case-items-actions">
+        {{-- 段落工具条。参考视频里那条「特殊符号 | 复制牙位 | 全部展开 | 全部折叠」：
+             复制牙位是真省事的一个 —— 检查写了 45，诊断、治疗多半也是 45，
+             不用再去牙位图上点三遍。 --}}
+        <div class="case-items-toolbar">
             <button type="button" class="btn btn-xs btn-default js-add-case-item" data-section="{{ $section }}">
                 <i class="fa fa-plus"></i> {{ __('medical_cases.add_item_row') }}
             </button>
+            @if($section !== 'examination')
+                <button type="button" class="btn btn-xs btn-link js-copy-teeth" data-section="{{ $section }}"
+                        title="{{ __('medical_cases.copy_teeth_hint') }}">
+                    <i class="fa fa-clone"></i> {{ __('medical_cases.copy_teeth') }}
+                </button>
+            @endif
+            <button type="button" class="btn btn-xs btn-link js-toggle-section" data-section="{{ $section }}">
+                <i class="fa fa-chevron-up"></i> <span class="toggle-text">{{ __('medical_cases.collapse') }}</span>
+            </button>
             <span class="help-block case-items-hint">{{ __('medical_cases.item_row_hint') }}</span>
         </div>
+
+        <div class="case-items-rows" id="rows-{{ $section }}"></div>
 
         {{-- 由行渲染出来的整段文字。没有 name，不进请求；只给校验代码读。 --}}
         <textarea id="{{ $section }}" class="case-items-derived" readonly
