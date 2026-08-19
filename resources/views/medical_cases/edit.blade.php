@@ -243,6 +243,9 @@ LanguageManager.loadAllFromPHP({
 </script>
 <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
 <script src="{{ asset('include_js/template_picker.js') }}"></script>
+{{-- 分段明细（牙位 + 文字）的分行编辑；必须在 medical_record_edit.js 之前，
+     后者的 $(document).ready 会调 CaseItems.init() --}}
+<script src="{{ asset('include_js/medical_case_items.js') }}?v={{ filemtime(public_path('include_js/medical_case_items.js')) }}"></script>
 <script src="{{ asset('include_js/signature_pad.umd.min.js') }}?v={{ filemtime(public_path('include_js/signature_pad.umd.min.js')) }}"></script>
 <script src="{{ asset('include_js/signature_pad_compat.js') }}?v={{ filemtime(public_path('include_js/signature_pad_compat.js')) }}"></script>
 <script src="{{ asset('include_js/medical_record_edit.js') }}?v={{ filemtime(public_path('include_js/medical_record_edit.js')) }}"></script>

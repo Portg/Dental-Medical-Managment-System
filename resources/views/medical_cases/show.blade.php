@@ -97,7 +97,7 @@
                     <div class="row">
                         <div class="col-md-12">
                             <p><strong>{{ __('medical_cases.examination') }}:</strong><br>
-                                {{ $case->examination ?: '-' }}
+                                <span class="case-text">{{ $case->examination ?: '-' }}</span>
                                 @if($case->examination_teeth && count($case->examination_teeth) > 0)
                                     <br><small class="text-muted">
                                         {{ __('medical_cases.examination_teeth') }}:
@@ -113,7 +113,7 @@
                     <div class="row">
                         <div class="col-md-12">
                             <p><strong>{{ __('medical_cases.auxiliary_examination') }}:</strong><br>
-                                {{ $case->auxiliary_examination }}
+                                <span class="case-text">{{ $case->auxiliary_examination }}</span>
                             </p>
                         </div>
                     </div>
@@ -123,7 +123,7 @@
                     <div class="row">
                         <div class="col-md-12">
                             <p><strong>{{ __('medical_cases.diagnosis') }}:</strong><br>
-                                {{ $case->diagnosis ?: '-' }}
+                                <span class="case-text">{{ $case->diagnosis ?: '-' }}</span>
                                 @if($case->diagnosis_code)
                                     <br><small class="text-muted">ICD-10: {{ $case->diagnosis_code }}</small>
                                 @endif
@@ -142,7 +142,7 @@
                     <div class="row">
                         <div class="col-md-12">
                             <p><strong>{{ __('medical_cases.treatment') }}:</strong><br>
-                                {{ $case->treatment ?: '-' }}
+                                <span class="case-text">{{ $case->treatment ?: '-' }}</span>
                                 @if($case->treatment_services && count($case->treatment_services) > 0)
                                     <br><small class="text-muted">
                                         {{ __('medical_cases.treatment_services') }}:

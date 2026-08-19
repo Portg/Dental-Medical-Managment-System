@@ -40,6 +40,10 @@
             background-color: #fafafa;
             border: 1px solid #eee;
             min-height: 30px;
+            /* 检查/诊断/治疗现在是分行录入的（一行一颗牙），派生出来的文本按换行符分行。
+               不设这条的话 HTML 会把换行折成空格，几行挤成一行，打出来没法看。
+               用 pre-line 而不是 nl2br：后者要走不转义输出，病历正文不该冒那个险。 */
+            white-space: pre-line;
         }
         .status-badge {
             display: inline-block;

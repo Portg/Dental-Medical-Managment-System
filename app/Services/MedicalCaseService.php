@@ -6,6 +6,7 @@ use App\Diagnosis;
 use App\Http\Helper\ActionColumnHelper;
 use App\MedicalCase;
 use App\MedicalCaseAmendment;
+use App\MedicalCaseItem;
 use App\OperationLog;
 use App\Patient;
 use App\PatientFollowup;
@@ -184,6 +185,140 @@ class MedicalCaseService
     }
 
     /**
+     * 把分行录入的明细归一化，并由它派生 medical_cases 上的文本列与牙位列。
+     *
+     * 派生方向是单向的：行是唯一可编辑来源，文本列是行的渲染结果。编辑器只读行、
+     * 不读文本列 —— 否则同一段临床文字有两个来源，改一处漏一处。
+     *
+     * 保留文本列的原因见 2026_08_19_200000 迁移注释：打印、病历详情、API Resource、
+     * OCR 写入、工作日志五处都在消费它，而它们要的就是一段可读文字，不该为此改动。
+     *
+     * @param  array $rawItems  前端提交的 [{section, tooth_no, content}]
+     * @return array{items: array, columns: array}
+     */
+    public function normalizeCaseItems($rawItems): array
+    {
+        $rawItems = is_string($rawItems) ? (json_decode($rawItems, true) ?: []) : (array) ($rawItems ?: []);
+
+        $items   = [];
+        $bySection = [];
+
+        foreach ($rawItems as $row) {
+            $section = (string) ($row['section'] ?? '');
+            if (!in_array($section, MedicalCaseItem::SECTIONS, true)) {
+                continue;
+            }
+
+            $content = trim((string) ($row['content'] ?? ''));
+            $tooth   = trim((string) ($row['tooth_no'] ?? ''));
+
+            // 牙位和文字都空的行是用户点了「添加」又没填，直接丢掉，
+            // 不然每次保存都会攒下一堆空行
+            if ($content === '' && $tooth === '') {
+                continue;
+            }
+
+            $items[] = [
+                'section'    => $section,
+                'tooth_no'   => $tooth === '' ? null : $tooth,
+                'content'    => $content === '' ? null : $content,
+                'sort_order' => count($bySection[$section] ?? []),
+            ];
+            $bySection[$section][] = end($items);
+        }
+
+        return ['items' => $items, 'columns' => $this->deriveColumnsFromItems($bySection)];
+    }
+
+    /**
+     * 由分段明细渲染出文本列与牙位列。
+     *
+     * 文字格式是「牙位 内容」逐行，与录入时看到的一致 —— 打印出来医生一眼能对上。
+     * 没有牙位的行只出内容。
+     */
+    private function deriveColumnsFromItems(array $bySection): array
+    {
+        $columns = [];
+
+        foreach (MedicalCaseItem::SECTIONS as $section) {
+            $rows = $bySection[$section] ?? [];
+
+            $columns[$section] = $rows === [] ? null : implode("\n", array_map(function ($r) {
+                return $r['tooth_no'] !== null && $r['content'] !== null
+                    ? $r['tooth_no'] . ' ' . $r['content']
+                    : ($r['content'] ?? $r['tooth_no']);
+            }, $rows));
+
+            // 牙位列 = 本段所有行牙位的去重集合，顺序按录入
+            if (isset(MedicalCaseItem::TEETH_COLUMNS[$section])) {
+                $teeth = array_values(array_unique(array_filter(array_column($rows, 'tooth_no'))));
+                $columns[MedicalCaseItem::TEETH_COLUMNS[$section]] = $teeth === [] ? null : $teeth;
+            }
+        }
+
+        return $columns;
+    }
+
+    /**
+     * 落库：整段替换某份病历的明细行。
+     *
+     * 整段替换而不是逐行 diff：行没有稳定的业务标识（同一颗牙可以有多行），
+     * diff 需要前端回传 id 并保证不被篡改，成本远高于收益。软删而非硬删，
+     * 病历是有审计要求的。
+     */
+    public function syncCaseItems(MedicalCase $case, array $items): void
+    {
+        DB::transaction(function () use ($case, $items) {
+            MedicalCaseItem::where('medical_case_id', $case->id)->delete();
+
+            foreach ($items as $item) {
+                MedicalCaseItem::create($item + [
+                    'medical_case_id' => $case->id,
+                    '_who_added'      => Auth::id(),
+                ]);
+            }
+        });
+    }
+
+    /**
+     * 给编辑器用的分段明细。
+     *
+     * 老病历没有行：把该段的整段文字合成一行（tooth_no 为 null）返回，
+     * 下次保存时落库。不做破坏性迁移 —— 一段话没法自动拆成按牙位的行，
+     * 硬拆只会把病历弄乱。
+     */
+    public function getCaseItemsForEdit(?MedicalCase $case): array
+    {
+        $out = array_fill_keys(MedicalCaseItem::SECTIONS, []);
+
+        if (!$case) {
+            return $out;
+        }
+
+        $existing = MedicalCaseItem::where('medical_case_id', $case->id)
+            ->orderBy('sort_order')->orderBy('id')
+            ->get(['section', 'tooth_no', 'content']);
+
+        foreach ($existing as $row) {
+            if (isset($out[$row->section])) {
+                $out[$row->section][] = ['tooth_no' => $row->tooth_no, 'content' => $row->content];
+            }
+        }
+
+        foreach (MedicalCaseItem::SECTIONS as $section) {
+            if ($out[$section] !== []) {
+                continue;
+            }
+            $legacy = trim((string) ($case->{$section} ?? ''));
+            if ($legacy !== '') {
+                $out[$section][] = ['tooth_no' => null, 'content' => $legacy];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Build case data array from input.
      */
     public function buildCaseData(array $input, bool $isUpdate = false): array
@@ -215,6 +350,18 @@ class MedicalCaseService
             'doctor_id' => $input['doctor_id'] ?? Auth::user()->id,
         ];
 
+        // 分段明细（牙位 + 文字）提交上来时，检查/其他检查/诊断/治疗四段的文本列
+        // 与牙位列一律由行派生并覆盖上面直接取的值 —— 行是唯一可编辑来源。
+        //
+        // 派生结果要落在 $data 里、走既有的 create/updateCase，锁定病历的修订链路
+        // （createAmendment 只 diff getFillable() 里的键）才能捕获到内容变化。
+        // 若只把行塞在一个非 fillable 的键里传下去，锁定病历的行编辑会被静默丢弃。
+        if (array_key_exists('case_items', $input)) {
+            $normalized = $this->normalizeCaseItems($input['case_items']);
+            $data = array_merge($data, $normalized['columns']);
+            $data['case_items'] = $normalized['items'];
+        }
+
         if (!$isUpdate) {
             $data['case_no'] = MedicalCase::CaseNumber();
             $data['status'] = MedicalCase::STATUS_OPEN;
@@ -239,9 +386,17 @@ class MedicalCaseService
             $appointmentId = $data['appointment_id'] ?? null;
             unset($data['appointment_id']);
 
+            // 分段明细存在自己的表里，不是 medical_cases 的列
+            $caseItems = $data['case_items'] ?? null;
+            unset($data['case_items']);
+
             $data['is_draft'] = $isDraft;
             $data['version_number'] = 1;
             $case = MedicalCase::create($data);
+
+            if ($case && $caseItems !== null) {
+                $this->syncCaseItems($case, $caseItems);
+            }
 
             if ($case && !$isDraft) {
                 $case->lock();
@@ -283,6 +438,12 @@ class MedicalCaseService
             }
 
             // Create amendment request instead of direct update
+            //
+            // 行不在这里落库：修订要等审批，审批通过后生效的是文本列（那是
+            // createAmendment 记录的内容）。此时行会与文本列不一致 —— 下次打开
+            // 病历时 getCaseItemsForEdit() 发现该段没有行、按整段文字合成一行，
+            // 数据不会错，只是丢掉分行粒度。这比让未审批的行直接落库要安全。
+            unset($data['case_items']);
             $amendment = $this->createAmendment($case, $data, $modificationReason);
             return ['status' => true, 'amendment_id' => $amendment->id];
         }
@@ -306,8 +467,16 @@ class MedicalCaseService
             }
         }
 
+        // 分段明细存在自己的表里，不是 medical_cases 的列
+        $caseItems = $data['case_items'] ?? null;
+        unset($data['case_items']);
+
         $case->increment('version_number');
         $status = MedicalCase::where('id', $id)->update($data);
+
+        if ($status !== false && $caseItems !== null) {
+            $this->syncCaseItems($case, $caseItems);
+        }
 
         // If transitioning from draft to submitted, lock the record
         if (!$isDraft && $case->is_draft) {

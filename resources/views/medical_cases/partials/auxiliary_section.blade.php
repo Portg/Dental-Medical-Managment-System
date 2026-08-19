@@ -1,4 +1,7 @@
-{{-- Auxiliary Examination Section --}}
+{{-- 辅助检查：分行录入「牙位 + 文字」，另附影像资料。
+
+     文字部分改成分行明细（见 case_items_section）；影像资料原样保留 ——
+     它是独立的一组数据（related_images），与分行无关。 --}}
 @php
     $existingImages = isset($case) && $case->related_images ? $case->related_images : [];
     if (is_string($existingImages)) {
@@ -6,24 +9,18 @@
     }
 @endphp
 
-<div class="soap-section">
-    <div class="soap-section-header">
-        <div class="soap-section-title">
-            {{ __('medical_cases.auxiliary_section') }}
-        </div>
-        <div class="soap-section-hint">{{ __('medical_cases.auxiliary_hint') }}</div>
-    </div>
-    <div class="soap-section-body">
-        {{-- Auxiliary Examination Textarea --}}
-        <textarea
-            name="auxiliary_examination"
-            id="auxiliary_examination"
-            class="soap-textarea"
-            placeholder="{{ __('medical_cases.auxiliary_placeholder') }}"
-        >{{ $case->auxiliary_examination ?? '' }}</textarea>
+@include('medical_cases.partials.case_items_section', [
+    'section'     => 'auxiliary_examination',
+    'title'       => __('medical_cases.auxiliary_section'),
+    'hint'        => __('medical_cases.auxiliary_hint'),
+    'rows'        => ($caseItems['auxiliary_examination'] ?? []),
+    'required'    => false,
+])
 
+<div class="soap-section">
+    <div class="soap-section-body">
         {{-- Image Upload Area --}}
-        <div class="auxiliary-images" style="margin-top: 12px;">
+        <div class="auxiliary-images">
             <label style="font-size: 13px; color: #666; margin-bottom: 8px; display: block;">
                 {{ __('medical_cases.attach_images') }}
             </label>

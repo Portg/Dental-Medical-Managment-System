@@ -590,3 +590,95 @@
         position: static;
     }
 }
+
+/* ── 分段明细：每行「牙位 + 文字」 ─────────────────────────────
+   见 resources/views/medical_cases/partials/case_items_section.blade.php。
+   原来每段是一个 textarea + 整段共享的牙位标签，现在一行一个牙位。 */
+.case-items-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.case-item-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+/* 牙位按钮：固定宽度，让多行的牙位在视觉上对齐成一列 —— 医生扫一眼就能
+   看出这次动了哪几颗牙 */
+.case-item-tooth {
+    flex: 0 0 76px;
+    border: 1px dashed #c9c9c9;
+    background: #fafafa;
+    border-radius: 3px;
+    color: #999;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.case-item-tooth:hover {
+    border-color: #1890ff;
+    color: #1890ff;
+}
+
+.case-item-tooth.has-tooth {
+    border-style: solid;
+    border-color: #91d5ff;
+    background: #e6f7ff;
+    color: #1890ff;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.case-item-content {
+    flex: 1 1 auto;
+    min-height: 46px;
+    resize: vertical;
+    border: 1px solid #e0e0e0;
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.case-item-content:focus {
+    border-color: #1890ff;
+    outline: none;
+}
+
+.case-item-remove {
+    flex: 0 0 28px;
+    border: none;
+    background: transparent;
+    color: #bbb;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.case-item-remove:hover {
+    color: #f5222d;
+}
+
+.case-items-actions {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.case-items-hint {
+    margin: 0;
+    font-size: 12px;
+    color: #aaa;
+}
+
+@media (max-width: 767px) {
+    /* 窄屏下牙位按钮换行到上方，否则文字框被挤成一条缝 */
+    .case-item-row { flex-wrap: wrap; }
+    .case-item-tooth { flex: 0 0 64px; }
+    .case-item-content { flex: 1 1 100%; }
+}

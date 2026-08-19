@@ -123,10 +123,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     $('#tooth_selector_modal').on('show.bs.modal', function() {
-        // Load teeth from the field that opened the modal
-        var field = currentToothField || 'examination';
-        var inputId = (field === 'related') ? '#related_teeth' : '#examination_teeth';
-        var teeth = JSON.parse($(inputId).val() || '[]');
+        // 分行录入下，牙位属于**某一行**而不是整段：预选当前聚焦行的那一颗。
+        // 旧结构里牙位是整段共享的标签集合，所以这里读的是段落的隐藏 json。
+        var teeth = [];
+        if (typeof CaseItems !== 'undefined' && CaseItems.getFocusedRow()) {
+            var cur = (CaseItems.getFocusedRow().find('.case-item-tooth-value').val() || '').trim();
+            if (cur) teeth = [cur];
+        } else {
+            var field = currentToothField || 'examination';
+            var inputId = (field === 'related') ? '#related_teeth' : '#examination_teeth';
+            teeth = JSON.parse($(inputId).val() || '[]');
+        }
         selectedTeethInModal = teeth.slice();
         teethBeforeModal = teeth.slice(); // snapshot for diff
         updateToothSelectorUI();
@@ -202,6 +209,28 @@ function updateModalTabDots() {
 
 function confirmToothSelection() {
     var field = currentToothField || 'examination';
+
+    // 分行录入：一行一个牙位。选了多颗时第一颗给当前行、其余各新建一行 ——
+    // 医生常要给几颗牙各写一条，这样比强制单选顺手，也不违反「一行一牙」。
+    if (typeof CaseItems !== 'undefined' && $('.case-items-section').length) {
+        var picked = selectedTeethInModal.slice();
+        var $row = CaseItems.getFocusedRow();
+
+        if (!picked.length) {
+            // 全部取消 = 把这一行的牙位清掉（变成无牙位的整体描述）
+            if ($row) CaseItems.setRowTooth($row, '');
+        } else {
+            if ($row) {
+                CaseItems.setRowTooth($row, picked.shift());
+            }
+            picked.forEach(function (tooth) {
+                CaseItems.addRow(field, tooth, '', false);
+            });
+        }
+
+        updateMiniChartHighlights();
+        return;
+    }
 
     // Diff: find added and removed teeth
     var added = selectedTeethInModal.filter(function(t) {

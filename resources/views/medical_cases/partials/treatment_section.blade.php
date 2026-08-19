@@ -1,28 +1,22 @@
-{{-- Treatment Section (P - Plan) --}}
+{{-- 治疗（P - Plan）：分行录入「牙位 + 文字」，另附治疗项目。
+
+     文字部分改成分行明细（见 case_items_section）；治疗项目原样保留 ——
+     它连着收费与库存扣减（treatment_services），与分行无关。 --}}
 @php
     $treatmentServices = isset($case) && $case->treatment_services ? $case->treatment_services : [];
 @endphp
 
-<div class="soap-section">
-    <div class="soap-section-header">
-        <div class="soap-section-title">
-            {{ __('medical_cases.treatment_section') }}
-            <span class="required">*</span>
-        </div>
-        <div class="soap-section-hint">{{ __('medical_cases.treatment_hint') }}</div>
-    </div>
-    <div class="soap-section-body">
-        {{-- Treatment Textarea --}}
-        <textarea
-            name="treatment"
-            id="treatment"
-            class="soap-textarea"
-            placeholder="{{ __('medical_cases.treatment_placeholder') }}"
-            required
-        >{{ $case->treatment ?? '' }}</textarea>
+@include('medical_cases.partials.case_items_section', [
+    'section'     => 'treatment',
+    'title'       => __('medical_cases.treatment_section'),
+    'hint'        => __('medical_cases.treatment_hint'),
+    'rows'        => ($caseItems['treatment'] ?? []),
+    'required'    => true,
+])
 
-        {{-- Treatment Services Selection --}}
-        <div style="margin-top: 12px;">
+<div class="soap-section">
+    <div class="soap-section-body">
+        <div>
             <label style="font-size: 13px; color: #666; margin-bottom: 6px; display: block;">
                 {{ __('medical_cases.treatment_services') }}
             </label>

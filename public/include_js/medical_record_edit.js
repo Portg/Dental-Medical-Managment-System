@@ -22,6 +22,9 @@ $(document).ready(function() {
     initQuickPhrases();
     initToothMiniChart();
     initTemplatePicker();
+    if (typeof CaseItems !== 'undefined') {
+        CaseItems.init();
+    }
     initSignaturePad();
     updateMiniChartHighlights();
 });
@@ -190,6 +193,19 @@ function initToothMiniChart() {
         if (!tooth) return;
         var toothStr = tooth.toString();
 
+        // 分行录入：牙位属于某一行。点一颗牙 = 给当前聚焦行设这颗牙；
+        // 没有聚焦行时在检查段新建一行 —— 让「先点牙再写字」也能用。
+        // 旧结构是往整段的牙位集合里加/减，并把 examination 单向同步到 diagnosis。
+        if (typeof CaseItems !== 'undefined' && $('.case-items-section').length) {
+            var $focused = CaseItems.getFocusedRow();
+            var cur = $focused ? ($focused.find('.case-item-tooth-value').val() || '').trim() : '';
+
+            // 再点一次同一颗 = 清掉这一行的牙位
+            CaseItems.applyTooth(cur === toothStr ? '' : toothStr, 'examination');
+            updateMiniChartHighlights();
+            return;
+        }
+
         // Check if tooth is in examination field
         var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
         var isSelected = examTeeth.indexOf(toothStr) !== -1;
@@ -333,7 +349,10 @@ function removeTooth(field, tooth) {
  * (sidebar mini chart reflects examination state)
  */
 function updateMiniChartHighlights() {
-    var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
+    // 分行录入下，"已选牙位" = 所有行的牙位去重；旧结构读的是整段的隐藏 json
+    var examTeeth = (typeof CaseItems !== 'undefined' && $('.case-items-section').length)
+        ? CaseItems.selectedTeeth()
+        : JSON.parse($('#examination_teeth').val() || '[]');
     var allSelected = examTeeth;
 
     var hasPermanent = false;
@@ -578,6 +597,12 @@ function initSignaturePad() {
 }
 
 function saveMedicalRecord(action) {
+    // 先把行渲染进各段的隐藏 textarea：下面的必填校验与质量检查读的是
+    // $('#examination').val() 这类选择器，不刷新会读到上一次的内容
+    if (typeof CaseItems !== 'undefined') {
+        CaseItems.SECTIONS.forEach(CaseItems.syncDerived);
+    }
+
     // If submitting, run quality check first
     if (action === 'submit') {
         if (!runQualityCheck()) {
@@ -613,6 +638,12 @@ function saveMedicalRecord(action) {
 function doSaveMedicalRecord(action, signatureData) {
     $.LoadingOverlay("show");
     $('#btn-save-draft, #btn-submit-record').attr('disabled', true);
+
+    // 行写进 case_items 隐藏字段；同时把每段的隐藏 textarea 刷新一遍
+    // （客户端必填校验读的是那个）
+    if (typeof CaseItems !== 'undefined') {
+        CaseItems.writeToForm();
+    }
 
     var formData = $('#medical-record-form').serialize();
     formData += '&is_draft=' + (action === 'draft' ? '1' : '0');

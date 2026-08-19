@@ -85,6 +85,18 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
+        // 病历分段明细（牙位 + 文字）——  病历编辑页有三个入口
+        // （edit / create / createForPatient）都渲染 medical_cases.edit，
+        // 在 Controller 里逐个传必定漏一个，漏掉那个入口的分行就全是空的。
+        View::composer('medical_cases.edit', function ($view) {
+            $data = $view->getData();
+            $view->with(
+                'caseItems',
+                app(\App\Services\MedicalCaseService::class)
+                    ->getCaseItemsForEdit($data['case'] ?? null)
+            );
+        });
+
         // 病历页的快捷短语侧栏 —— 从 quick_phrases 表按分类取，而不是写死在 Blade 里。
         //
         // 用 View Composer 而不是在 Controller 里传：病历编辑页有三个入口

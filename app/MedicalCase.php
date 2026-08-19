@@ -120,6 +120,17 @@ class MedicalCase extends Model implements AuditableContract
         return $this->hasMany('App\PatientFollowup', 'medical_case_id');
     }
 
+    /**
+     * 分段明细（牙位 + 文字）。见 MedicalCaseItem 与 2026_08_19_200000 迁移。
+     */
+    public function items()
+    {
+        return $this->hasMany(MedicalCaseItem::class, 'medical_case_id')
+            ->orderBy('section')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
     public function amendments()
     {
         return $this->hasMany('App\MedicalCaseAmendment', 'medical_case_id');

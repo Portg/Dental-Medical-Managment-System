@@ -15,3 +15,10 @@
     border: 1px solid #ddd;
     border-radius: 3px;
 }
+
+/* 检查/诊断/治疗现在是分行录入的（一行一颗牙），派生出来的文本按 \n 分行。
+   不设这条的话 HTML 把换行折成空格，几行挤成一行。
+   只作用在取值那个 span 上，不要整段用 —— 外层 <p> 里还有 Blade 缩进产生的换行。 */
+.case-text {
+    white-space: pre-line;
+}

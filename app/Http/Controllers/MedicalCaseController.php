@@ -75,9 +75,37 @@ class MedicalCaseController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
+    /**
+     * 提交了分段明细时，先由行派生出文本列再校验。
+     *
+     * 「非草稿必须有检查/诊断/治疗」这条业务规则表达在下面的 validator 里，
+     * 而分行录入之后前端只提交 case_items，不再提交 examination/diagnosis/treatment。
+     * 不在这里补上的话，规则会因为字段缺失而误报「必填」，而病历其实填了。
+     *
+     * 派生只做一次、结果同时供校验和 buildCaseData 使用，两边看到的是同一份文字。
+     */
+    private function mergeDerivedCaseText(Request $request): void
+    {
+        if (!$request->has('case_items')) {
+            return;
+        }
+
+        $columns = $this->medicalCaseService->normalizeCaseItems($request->input('case_items'))['columns'];
+
+        // 牙位列是数组，merge 进 request 后 buildCaseData 会当 JSON 字符串再解一次，
+        // 这里只补文本段；牙位列由 buildCaseData 自己从行派生。
+        $request->merge(array_filter(
+            $columns,
+            fn ($v, $k) => is_string($v) && !str_ends_with($k, '_teeth'),
+            ARRAY_FILTER_USE_BOTH
+        ));
+    }
+
     public function store(Request $request)
     {
         $isDraft = $request->input('is_draft', '1') === '1';
+
+        $this->mergeDerivedCaseText($request);
 
         $rules = [
             'patient_id' => 'required|exists:patients,id',
@@ -107,6 +135,9 @@ class MedicalCaseController extends Controller
             'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
             'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
             'visit_type', 'doctor_id', 'appointment_id',
+            // 分段明细（牙位 + 文字）；带上时 examination/auxiliary_examination/
+            // diagnosis/treatment 及其牙位列改由行派生，见 buildCaseData
+            'case_items',
         ]));
         $case = $this->medicalCaseService->createCase($data, $isDraft);
 
@@ -216,6 +247,9 @@ class MedicalCaseController extends Controller
     {
         $isDraft = $request->input('is_draft', '1') === '1';
 
+        // 与 store() 同步：漏这一句的话，编辑已有病历时必填校验会误报
+        $this->mergeDerivedCaseText($request);
+
         $allowedStatuses = implode(',', [\App\MedicalCase::STATUS_OPEN, \App\MedicalCase::STATUS_CLOSED, \App\MedicalCase::STATUS_FOLLOW_UP]);
         $rules = [
             'patient_id' => 'required|exists:patients,id',
@@ -246,6 +280,8 @@ class MedicalCaseController extends Controller
             'diagnosis', 'diagnosis_code', 'related_teeth', 'treatment', 'treatment_services',
             'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup',
             'visit_type', 'doctor_id',
+            // 与 store() 同步：漏这一项的话，新建能分行、编辑一保存就退回整段
+            'case_items',
         ]), isUpdate: true);
         $result = $this->medicalCaseService->updateCase(
             (int) $id,
