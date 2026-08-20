@@ -80,6 +80,12 @@ return [
 
     // Billing
     'billing_method'     => 'Method',
+    'col_flow' => 'Flow',
+    'col_more' => 'More',
+    'prev_day' => 'Previous day',
+    'next_day' => 'Next day',
+    'back_to_today' => 'Back to today',
+    'today' => 'Today',
     'billing_count'      => 'Count',
     'billing_amount'     => 'Amount',
     'billing_total'      => 'Total',

@@ -34,7 +34,11 @@ $(document).ready(function() {
             { data: 'doctor_name', name: 'd.surname', orderable: false },
             { data: 'service', name: 'ms.name', orderable: false },
             { data: 'display_status', orderable: false, searchable: false },
-            { data: 'action', orderable: false, searchable: false }
+            // 操作拆成固定列：流程（主操作）| 病历 | 收费 | 更多
+            { data: 'act_flow',    orderable: false, searchable: false, className: 'tw-col-act' },
+            { data: 'act_case',    orderable: false, searchable: false, className: 'tw-col-act' },
+            { data: 'act_invoice', orderable: false, searchable: false, className: 'tw-col-act' },
+            { data: 'act_more',    orderable: false, searchable: false, className: 'tw-col-act' }
         ],
         order: [[1, 'asc']],
         pageLength: 50,
@@ -361,4 +365,30 @@ function update_record() {
             }
         }
     });
+}
+
+
+/**
+ * 日期前后翻页。delta=0 回到今天。
+ *
+ * 翻前一天/后一天是每天都在做的动作，只给日历要点三下（开面板、翻月、选日）。
+ * 参考视频工作台的「< 2025-10-28 >」。
+ */
+function shiftTodayWorkDate(delta) {
+    var $input = $('#tw-date-filter');
+    var base = delta === 0 ? new Date() : new Date(($input.val() || '').replace(/-/g, '/'));
+    if (isNaN(base.getTime())) base = new Date();
+    if (delta !== 0) base.setDate(base.getDate() + delta);
+
+    var v = base.getFullYear() + '-' +
+            ('0' + (base.getMonth() + 1)).slice(-2) + '-' +
+            ('0' + base.getDate()).slice(-2);
+
+    // bootstrap-datepicker 只认 changeDate，直接 .val() 不会刷新它自己的状态
+    if ($input.data('datepicker')) {
+        $input.datepicker('setDate', v);
+    } else {
+        $input.val(v);
+    }
+    onTodayWorkFilterChanged();
 }

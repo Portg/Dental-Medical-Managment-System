@@ -1,9 +1,9 @@
 @extends(\App\Http\Helper\FunctionsHelper::navigation())
 @section('css')
-    <link href="{{ asset('css/appointment-drawer.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('css/form-modal.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('css/today-work-kanban.css') }}" rel="stylesheet" type="text/css"/>
-    <link href="{{ asset('css/today-work.css') }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('css/appointment-drawer.css') }}?v={{ filemtime(public_path('css/appointment-drawer.css')) }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('css/form-modal.css') }}?v={{ filemtime(public_path('css/form-modal.css')) }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('css/today-work-kanban.css') }}?v={{ filemtime(public_path('css/today-work-kanban.css')) }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('css/today-work.css') }}?v={{ filemtime(public_path('css/today-work.css')) }}" rel="stylesheet" type="text/css"/>
 @endsection
 
 @section('content')
@@ -72,8 +72,18 @@
     {{-- Toolbar --}}
     <div class="tw-toolbar">
         <div class="tw-toolbar-left">
-            <input type="text" class="form-control input-sm tw-date-picker js-date" id="tw-date-filter"
-                   value="{{ date('Y-m-d') }}" onchange="onTodayWorkFilterChanged()" autocomplete="off">
+            {{-- 日期带前后箭头：翻前一天/后一天是每天都在做的动作，
+                 只给日历要点三下（开面板、翻月、选日）。参考视频的 < 2025-10-28 > --}}
+            <div class="tw-date-nav">
+                <button type="button" class="btn btn-sm btn-default" onclick="shiftTodayWorkDate(-1)"
+                        title="{{ __('today_work.prev_day') }}"><i class="fa fa-chevron-left"></i></button>
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="tw-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTodayWorkFilterChanged()" autocomplete="off">
+                <button type="button" class="btn btn-sm btn-default" onclick="shiftTodayWorkDate(1)"
+                        title="{{ __('today_work.next_day') }}"><i class="fa fa-chevron-right"></i></button>
+                <button type="button" class="btn btn-sm btn-default" onclick="shiftTodayWorkDate(0)"
+                        title="{{ __('today_work.back_to_today') }}">{{ __('today_work.today') }}</button>
+            </div>
             <select class="form-control input-sm tw-doctor-filter" id="tw-doctor-filter" onchange="onTodayWorkFilterChanged()">
                 <option value="">{{ __('today_work.filter_all_doctors') }}</option>
                 @foreach($doctors as $doc)
@@ -123,7 +133,13 @@
                             <th>{{ __('common.doctor') }}</th>
                             <th>{{ __('common.service') }}</th>
                             <th>{{ __('common.status') }}</th>
-                            <th>{{ __('common.action') }}</th>
+                            {{-- 参考视频的工作台：操作拆成固定的几列，每列一个动作、列头有名字。
+                                 原来所有按钮挤在一个「操作」列里，按钮随状态增减、位置左右跳，
+                                 每次都要重新找。拆开之后「病历」永远在同一列同一位置。 --}}
+                            <th class="tw-col-act">{{ __('today_work.col_flow') }}</th>
+                            <th class="tw-col-act">{{ __('today_work.medical_case') }}</th>
+                            <th class="tw-col-act">{{ __('today_work.invoice') }}</th>
+                            <th class="tw-col-act">{{ __('today_work.col_more') }}</th>
                         </tr>
                     </thead>
                 </table>
@@ -370,10 +386,10 @@
             utilsScript: '{{ asset("backend/assets/global/scripts/utils.js") }}'
         };
     </script>
-    <script src="{{ asset('include_js/appointment_drawer.js') }}"></script>
-    <script src="{{ asset('include_js/today_work_actions.js') }}"></script>
-    <script src="{{ asset('include_js/today_work_kanban.js') }}"></script>
-    <script src="{{ asset('include_js/today_work_patient_drawer.js') }}"></script>
-    <script src="{{ asset('include_js/today_work_tabs.js') }}"></script>
+    <script src="{{ asset('include_js/appointment_drawer.js') }}?v={{ filemtime(public_path('include_js/appointment_drawer.js')) }}"></script>
+    <script src="{{ asset('include_js/today_work_actions.js') }}?v={{ filemtime(public_path('include_js/today_work_actions.js')) }}"></script>
+    <script src="{{ asset('include_js/today_work_kanban.js') }}?v={{ filemtime(public_path('include_js/today_work_kanban.js')) }}"></script>
+    <script src="{{ asset('include_js/today_work_patient_drawer.js') }}?v={{ filemtime(public_path('include_js/today_work_patient_drawer.js')) }}"></script>
+    <script src="{{ asset('include_js/today_work_tabs.js') }}?v={{ filemtime(public_path('include_js/today_work_tabs.js')) }}"></script>
     <script src="{{ asset('include_js/today_work_index.js') }}?v={{ filemtime(public_path('include_js/today_work_index.js')) }}"></script>
 @endsection

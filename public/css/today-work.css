@@ -535,3 +535,29 @@
     background: #1D4ED8;
     border-color: #1D4ED8;
 }
+
+/* 操作拆成固定列：每列一个动作，列头有名字。
+   原来所有按钮挤在一个「操作」列里，按钮随状态增减、位置左右跳，每次都要重新找。
+   参考视频的工作台（预约|叫号|病历|收费|文书 每列一个动作）。 */
+.tw-col-act {
+    width: 1%;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* 纯图标按钮：不随状态变的动作（病历/收费）用图标，省横向空间 */
+.tw-icon-btn {
+    padding: 2px 7px;
+}
+
+/* 日期前后翻页 */
+.tw-date-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tw-date-nav .tw-date-picker {
+    width: 120px;
+    text-align: center;
+}

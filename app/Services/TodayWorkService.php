@@ -323,14 +323,33 @@ class TodayWorkService
                 $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
                 return $this->renderStatusBadge($status);
             })
-            ->addColumn('action', function ($row) {
-                return $this->renderActions($row);
+            // 操作拆成固定列，每列一个动作。原来所有按钮挤在一个「操作」列里，
+            // 按钮随状态增减、位置左右跳，每次都要重新找 —— 参考视频的工作台，
+            // 「病历」永远在同一列同一位置。
+            ->addColumn('act_flow', function ($row) {
+                return $this->renderFlowAction($row);
+            })
+            ->addColumn('act_case', function ($row) {
+                return '<button class="btn btn-xs btn-default tw-icon-btn" title="' . __('today_work.medical_case') . '"'
+                    . ' onclick="quickMedicalCase(' . $row->patient_id . ',' . $row->appointment_id . ')">'
+                    . '<i class="fa fa-file-text-o"></i></button>';
+            })
+            ->addColumn('act_invoice', function ($row) {
+                if (!Gate::allows('create-invoices')) {
+                    return '';
+                }
+                return '<button class="btn btn-xs btn-default tw-icon-btn" title="' . __('today_work.invoice') . '"'
+                    . ' onclick="quickInvoice(' . $row->appointment_id . ')">'
+                    . '<i class="fa fa-money"></i></button>';
+            })
+            ->addColumn('act_more', function ($row) {
+                return $this->renderMoreActions($row);
             })
             ->editColumn('start_time', function ($row) {
                 if (!$row->start_time) return '-';
                 return date('H:i', strtotime($row->start_time));
             })
-            ->rawColumns(['display_status', 'action'])
+            ->rawColumns(['display_status', 'act_flow', 'act_case', 'act_invoice', 'act_more'])
             ->make(true);
     }
 
@@ -398,69 +417,81 @@ class TodayWorkService
             . ' <span class="label label-danger">' . e($date) . '</span></button> ';
     }
 
-    private function renderActions($row): string
+    /**
+     * 流程列：当前状态下的**主操作**。
+     *
+     * 拆成一列专门放主操作，是因为它是唯一随状态变的东西：签到 → 叫号 →
+     * 开始诊疗 → 完成就诊。病历、收费这些不随状态变的动作各占固定列，
+     * 位置永远不动 —— 参考视频的工作台（预约|叫号|病历|收费|文书 每列一个动作）。
+     */
+    private function renderFlowAction($row): string
     {
         $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
-        $actions = '';
-
-        // 病历 / 收费 常驻，不跟队列状态走。
-        //
-        // 原来这两个只在「诊疗中」出现：前台没走完 签到 → 叫号 → 开始诊疗 这条队列
-        // 流程，医生在工作台上就没有写病历的入口 —— 复诊患者尤其容易卡在这儿，
-        // 「复诊没法增加病例」就是这么来的。而看完牙要补一笔收费同理。
-        //
-        // 同类产品的工作台每一行都是「预约 | 叫号 | 病历 | 收费 | 文书」常驻图标，
-        // 状态只决定**主操作**是什么，不决定你能不能写病历。
-        $always = '<button class="btn btn-xs btn-default tw-action-btn" title="' . __('today_work.medical_case') . '"'
-            . ' onclick="quickMedicalCase(' . $row->patient_id . ',' . $row->appointment_id . ')">'
-            . '<i class="fa fa-file-text-o"></i></button> ';
-
-        if (Gate::allows('create-invoices')) {
-            $always .= '<button class="btn btn-xs btn-default tw-action-btn" title="' . __('today_work.invoice') . '"'
-                . ' onclick="quickInvoice(' . $row->appointment_id . ')">'
-                . '<i class="fa fa-money"></i></button> ';
-        }
 
         switch ($status) {
             case 'not_arrived':
-                $actions .= '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCheckIn(' . $row->appointment_id . ')">'
-                    . '<i class="fa fa-sign-in"></i> ' . __('today_work.check_in') . '</button> ';
-                $actions .= '<button class="btn btn-xs btn-danger tw-action-btn" onclick="quickNoShow(' . $row->appointment_id . ')">'
-                    . '<i class="fa fa-times"></i> ' . __('today_work.mark_no_show') . '</button>';
+                return '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCheckIn(' . $row->appointment_id . ')">'
+                    . '<i class="fa fa-sign-in"></i> ' . __('today_work.check_in') . '</button>';
+
+            case 'waiting':
+                return '<button class="btn btn-xs btn-info tw-action-btn" onclick="quickCall(' . $row->queue_id . ')">'
+                    . '<i class="fa fa-bullhorn"></i> ' . __('today_work.call') . '</button>';
+
+            case 'called':
+                return '<button class="btn btn-xs btn-primary tw-action-btn" onclick="quickStartTreatment(' . $row->queue_id . ')">'
+                    . '<i class="fa fa-play"></i> ' . __('today_work.start_treatment') . '</button>';
+
+            case 'in_treatment':
+                return '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCompleteTreatment(' . $row->queue_id . ')">'
+                    . '<i class="fa fa-check"></i> ' . __('today_work.complete_treatment') . '</button>';
+
+            case 'completed':
+                return '<a class="btn btn-xs btn-default tw-action-btn" href="' . url('medical-treatment/' . $row->appointment_id) . '">'
+                    . '<i class="fa fa-eye"></i> ' . __('common.view') . '</a>';
+        }
+
+        return '';
+    }
+
+    /**
+     * 更多列：次要动作，按状态给。
+     * 放一列里而不是散在主操作旁边，免得主操作的位置被挤来挤去。
+     */
+    private function renderMoreActions($row): string
+    {
+        $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
+        $items  = [];
+
+        switch ($status) {
+            case 'not_arrived':
+                $items[] = ['quickNoShow(' . $row->appointment_id . ')', 'fa-times', __('today_work.mark_no_show')];
                 break;
 
             case 'waiting':
-                $actions .= '<button class="btn btn-xs btn-info tw-action-btn" onclick="quickCall(' . $row->queue_id . ')">'
-                    . '<i class="fa fa-bullhorn"></i> ' . __('today_work.call') . '</button> ';
-                $actions .= '<button class="btn btn-xs btn-danger tw-action-btn" onclick="quickCancelQueue(' . $row->queue_id . ')">'
-                    . '<i class="fa fa-times"></i> ' . __('common.cancel') . '</button>';
+                $items[] = ['quickCancelQueue(' . $row->queue_id . ')', 'fa-times', __('common.cancel')];
                 break;
 
             case 'called':
-                $actions .= '<button class="btn btn-xs btn-primary tw-action-btn" onclick="quickStartTreatment(' . $row->queue_id . ')">'
-                    . '<i class="fa fa-play"></i> ' . __('today_work.start_treatment') . '</button> ';
-                $actions .= '<button class="btn btn-xs btn-info tw-action-btn" onclick="quickCall(' . $row->queue_id . ')">'
-                    . '<i class="fa fa-bullhorn"></i> ' . __('today_work.recall') . '</button>';
+                $items[] = ['quickCall(' . $row->queue_id . ')', 'fa-bullhorn', __('today_work.recall')];
                 break;
 
             case 'in_treatment':
-                $actions .= '<div class="tw-quick-actions">';
-                // 病历与收费已在常驻区，这里不重复
-                $actions .= '<button class="btn btn-xs btn-default tw-action-btn" onclick="quickPrescription(' . $row->appointment_id . ')">'
-                    . '<i class="fa fa-medkit"></i> ' . __('today_work.prescription') . '</button> ';
-                $actions .= $this->renderNextAppointmentButton($row);
-                $actions .= '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCompleteTreatment(' . $row->queue_id . ')">'
-                    . '<i class="fa fa-check"></i> ' . __('today_work.complete_treatment') . '</button>';
-                $actions .= '</div>';
-                break;
-
-            case 'completed':
-                $actions .= '<a class="btn btn-xs btn-default" href="' . url('medical-treatment/' . $row->appointment_id) . '">'
-                    . '<i class="fa fa-eye"></i> ' . __('common.view') . '</a>';
+                $items[] = ['quickPrescription(' . $row->appointment_id . ')', 'fa-medkit', __('today_work.prescription')];
                 break;
         }
 
-        return $always . $actions;
+        $html = '';
+        foreach ($items as [$onclick, $icon, $label]) {
+            $html .= '<button class="btn btn-xs btn-default tw-icon-btn" title="' . $label . '"'
+                . ' onclick="' . $onclick . '"><i class="fa ' . $icon . '"></i></button> ';
+        }
+
+        // 下次预约按钮本来就只在诊疗中出现，跟着「更多」走
+        if ($status === 'in_treatment') {
+            $html .= $this->renderNextAppointmentButton($row);
+        }
+
+        return $html;
     }
 
     /**

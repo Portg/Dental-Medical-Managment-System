@@ -80,6 +80,12 @@ return [
 
     // 今日对账
     'billing_method'     => '支付方式',
+    'col_flow' => '流程',
+    'col_more' => '更多',
+    'prev_day' => '前一天',
+    'next_day' => '后一天',
+    'back_to_today' => '回到今天',
+    'today' => '今天',
     'billing_count'      => '笔数',
     'billing_amount'     => '金额',
     'billing_total'      => '合计',
