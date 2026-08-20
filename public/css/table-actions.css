@@ -37,3 +37,41 @@
     margin: 0;
     z-index: 1060;
 }
+
+
+/* 顶栏常驻的全局搜索与新增患者。
+   参考视频 —— 随时随地找人、随时建档是前台最高频的两个动作，
+   藏在放大镜下拉里等于每天多点几十次。 */
+.tw-topbar-search {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+}
+
+.tw-topbar-search .topbar-search-form {
+    position: relative;
+}
+
+.tw-topbar-search .fa-search {
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.tw-topbar-search input {
+    width: 230px;
+    height: 30px;
+    padding-left: 26px;
+    font-size: 13px;
+    border-radius: 15px;
+}
+
+.tw-topbar-action {
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+}

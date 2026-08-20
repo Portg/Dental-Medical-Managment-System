@@ -81,6 +81,8 @@ return [
     // Billing
     'billing_method'     => 'Method',
     'col_flow' => 'Flow',
+    'badge_member' => 'Member',
+    'badge_outstanding' => 'Outstanding ¥:amount',
     'col_more' => 'More',
     'prev_day' => 'Previous day',
     'next_day' => 'Next day',

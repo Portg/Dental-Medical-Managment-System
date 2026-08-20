@@ -541,6 +541,12 @@
             dataTable.draw(true);
         @endif
 
+        {{-- 顶栏的「新增患者」跳过来时直接开建档弹窗：建档不该要求先到列表再点一次。
+             复用本页的 createRecord()，不重复实现一套建档表单。 --}}
+        @if(request()->filled('new'))
+            createRecord();
+        @endif
+
         // Auto-filter on select change
         $('#filter_source, #filter_tags').on('change', function() {
             dataTable.draw(true);

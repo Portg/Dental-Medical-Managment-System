@@ -17,26 +17,28 @@
         {{-- Top Navigation Menu --}}
         <div class="top-menu">
             <ul class="nav navbar-nav pull-right">
-                {{-- Search --}}
-                <li class="dropdown dropdown-extended dropdown-search">
-                    <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
-                        <i class="icon-magnifier"></i>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-right">
-                        <li class="header-search-form">
-                            <form action="{{ url('patients') }}" method="GET">
-                                <div class="input-group">
-                                    <input type="text" name="search" class="form-control" placeholder="{{ __('menu.search_placeholder') }}" autocomplete="off">
-                                    <span class="input-group-btn">
-                                        <button class="btn btn-primary" type="submit">
-                                            <i class="icon-magnifier"></i>
-                                        </button>
-                                    </span>
-                                </div>
-                            </form>
-                        </li>
-                    </ul>
+                {{-- 全局搜索：常驻，不再藏在放大镜的下拉里。
+                     参考视频 —— 顶栏一个固定的搜索框，提示词直接写明能打什么
+                     （姓名/首拼/手机号/病历号），随时随地找人是前台最高频的动作，
+                     多一次点击就是每天多几十次。 --}}
+                <li class="tw-topbar-search">
+                    <form action="{{ url('patients') }}" method="GET" class="topbar-search-form">
+                        <i class="fa fa-search"></i>
+                        <input type="text" name="search" class="form-control"
+                               placeholder="{{ __('patient.search_patients') }}" autocomplete="off">
+                    </form>
                 </li>
+
+                {{-- 新增患者：也常驻。建档不该要求先跳到患者列表 —— 电话打进来
+                     随时可能要建个档，视频里这个按钮就在搜索框右边。
+                     跳到患者列表并带 new=1，复用那边的建档弹窗，不重复实现。 --}}
+                @can('create-patients')
+                <li class="tw-topbar-action">
+                    <a href="{{ url('patients') }}?new=1" class="btn btn-sm btn-primary">
+                        <i class="fa fa-user-plus"></i> {{ __('today_work.new_patient') }}
+                    </a>
+                </li>
+                @endcan
                 {{-- Notifications --}}
                 @canany(['view-appointments', 'view-invoices'])
                 <li class="dropdown dropdown-extended dropdown-notification">

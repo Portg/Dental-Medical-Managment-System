@@ -149,8 +149,32 @@ function refreshStats() {
         $('#kpi-appointments').text(data.kpi.today_appointments);
         $('#kpi-receivable').html('&yen;' + data.kpi.today_receivable);
         $('#kpi-collected').html('&yen;' + data.kpi.today_collected);
+
+        // 状态分档的计数。stats 接口本来就在算这些数，只是此前没渲染出来 ——
+        // 参考视频的「全部(2) | 未到(1) | 已到(1)」，一眼看出还剩几个没到。
+        var stats = data.stats || {};
+        var total = 0;
+        Object.keys(stats).forEach(function (k) {
+            $('#pill-' + k).text(stats[k] || 0);
+            total += (stats[k] || 0);
+        });
+        $('#pill-all').text(total);
     });
 }
+
+/**
+ * 状态分档页签：点一下按该状态筛。
+ *
+ * 复用既有的 #tw-status-filter（DataTable 已经在读它），这里只是把它从一个
+ * 藏起来的下拉换成一排看得见、带计数的按钮。
+ */
+$(document).on('click', '#tw-status-pills a', function () {
+    var status = $(this).data('status');
+    $('#tw-status-pills li').removeClass('active');
+    $(this).closest('li').addClass('active');
+    $('#tw-status-filter').val(status);
+    onTodayWorkFilterChanged();
+});
 
 function refreshAppointments() {
     refreshCurrentView();

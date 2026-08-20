@@ -232,6 +232,16 @@ class TodayWorkService
                 'p.surname as p_surname',
                 'p.othername as p_othername',
                 'p.phone_no',
+                // 姓名后那排状态徽标要的三样：过敏、会员、欠费。
+                // 参考视频 —— 患者姓名后跟一排小图标，特殊情况一眼可见，
+                // 不用点进详情才知道这人对青霉素过敏、或者还欠着钱。
+                'p.drug_allergies',
+                'p.drug_allergies_other',
+                'p.member_level_id',
+                DB::raw('(SELECT COALESCE(SUM(inv.outstanding_amount), 0) FROM invoices inv
+                          WHERE inv.patient_id = a.patient_id
+                            AND inv.deleted_at IS NULL
+                            AND inv.payment_status IN ("unpaid", "partial")) as outstanding_total'),
                 'd.surname as d_surname',
                 'd.othername as d_othername',
                 'ms.name as service_name',
@@ -304,7 +314,8 @@ class TodayWorkService
     {
         return DataTables::of($query)
             ->addColumn('patient_name', function ($row) {
-                return NameHelper::join($row->p_surname, $row->p_othername);
+                return e(NameHelper::join($row->p_surname, $row->p_othername))
+                    . $this->renderPatientBadges($row);
             })
             ->addColumn('patient_phone', function ($row) {
                 $phone = $row->phone_no ?? '';
@@ -349,7 +360,7 @@ class TodayWorkService
                 if (!$row->start_time) return '-';
                 return date('H:i', strtotime($row->start_time));
             })
-            ->rawColumns(['display_status', 'act_flow', 'act_case', 'act_invoice', 'act_more'])
+            ->rawColumns(['patient_name', 'display_status', 'act_flow', 'act_case', 'act_invoice', 'act_more'])
             ->make(true);
     }
 
@@ -415,6 +426,40 @@ class TodayWorkService
             . 'aria-label="' . e(__('today_work.next_appointment') . ' ' . $date) . '">'
             . '<i class="fa fa-calendar-plus-o"></i> ' . __('today_work.next_appointment')
             . ' <span class="label label-danger">' . e($date) . '</span></button> ';
+    }
+
+    /**
+     * 患者姓名后的状态徽标：过敏 / 会员 / 欠费。
+     *
+     * 参考视频 —— 患者姓名后跟一排小图标，特殊情况一眼可见。原来要点进患者详情
+     * 才知道这人对青霉素过敏、或者还欠着钱，而这两件恰恰是接诊前最该知道的。
+     * 只放这三样：能改变当下动作的才值得占位置，其余（性别、来源）列表里另有列。
+     */
+    private function renderPatientBadges($row): string
+    {
+        $badges = '';
+
+        $allergies  = trim((string) ($row->drug_allergies ?? ''));
+        $hasAllergy = ($allergies !== '' && $allergies !== '[]' && $allergies !== 'null')
+            || !empty($row->drug_allergies_other);
+
+        if ($hasAllergy) {
+            $badges .= '<i class="fa fa-exclamation-triangle tw-badge tw-badge-allergy"'
+                . ' title="' . e(__('patient.allergies')) . '"></i>';
+        }
+
+        if (!empty($row->member_level_id)) {
+            $badges .= '<i class="fa fa-id-card-o tw-badge tw-badge-member"'
+                . ' title="' . e(__('today_work.badge_member')) . '"></i>';
+        }
+
+        $outstanding = (float) ($row->outstanding_total ?? 0);
+        if ($outstanding > 0) {
+            $badges .= '<i class="fa fa-exclamation-circle tw-badge tw-badge-debt"'
+                . ' title="' . e(__('today_work.badge_outstanding', ['amount' => number_format($outstanding, 2)])) . '"></i>';
+        }
+
+        return $badges === '' ? '' : ' <span class="tw-badges">' . $badges . '</span>';
     }
 
     /**

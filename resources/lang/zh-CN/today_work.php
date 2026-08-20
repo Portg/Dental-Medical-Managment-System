@@ -81,6 +81,8 @@ return [
     // 今日对账
     'billing_method'     => '支付方式',
     'col_flow' => '流程',
+    'badge_member' => '会员',
+    'badge_outstanding' => '欠费 ¥:amount',
     'col_more' => '更多',
     'prev_day' => '前一天',
     'next_day' => '后一天',

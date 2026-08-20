@@ -69,6 +69,26 @@
         {{-- Tab: Today Work (main content) --}}
         <div role="tabpanel" class="tab-pane active" id="tab-today-work">
 
+    {{-- 按就诊状态分档的子页签，带计数。参考视频的「全部(2) | 未到(1) | 已到(1)」——
+         一眼看出还剩几个没到、几个在椅位上，不用先筛一遍再数。
+         计数来自 getStats()，那个接口本来就在算这些数，只是此前没渲染出来。 --}}
+    <ul class="nav nav-pills tw-status-pills" id="tw-status-pills">
+        <li class="active"><a href="javascript:;" data-status="all">
+            {{ __('today_work.filter_all_statuses') }} <span class="badge" id="pill-all">0</span></a></li>
+        <li><a href="javascript:;" data-status="not_arrived">
+            {{ __('today_work.not_arrived') }} <span class="badge" id="pill-not_arrived">0</span></a></li>
+        <li><a href="javascript:;" data-status="waiting">
+            {{ __('today_work.waiting') }} <span class="badge" id="pill-waiting">0</span></a></li>
+        <li><a href="javascript:;" data-status="called">
+            {{ __('today_work.called') }} <span class="badge" id="pill-called">0</span></a></li>
+        <li><a href="javascript:;" data-status="in_treatment">
+            {{ __('today_work.in_treatment') }} <span class="badge" id="pill-in_treatment">0</span></a></li>
+        <li><a href="javascript:;" data-status="completed">
+            {{ __('today_work.completed') }} <span class="badge" id="pill-completed">0</span></a></li>
+        <li><a href="javascript:;" data-status="no_show">
+            {{ __('today_work.no_show') }} <span class="badge" id="pill-no_show">0</span></a></li>
+    </ul>
+
     {{-- Toolbar --}}
     <div class="tw-toolbar">
         <div class="tw-toolbar-left">

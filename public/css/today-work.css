@@ -561,3 +561,50 @@
     width: 120px;
     text-align: center;
 }
+
+/* 患者姓名后的状态徽标：过敏 / 会员 / 欠费。
+   只放能改变当下动作的三样 —— 接诊前最该知道的就是「这人过敏吗」「还欠钱吗」。 */
+.tw-badges {
+    margin-left: 5px;
+    white-space: nowrap;
+}
+
+.tw-badge {
+    font-size: 12px;
+    margin-right: 3px;
+    cursor: help;
+}
+
+.tw-badge-allergy { color: #f5222d; }
+.tw-badge-member  { color: #faad14; }
+.tw-badge-debt    { color: #fa8c16; }
+
+/* 状态分档页签（全部/未到/候诊/…），带计数 */
+.tw-status-pills {
+    margin: 0 0 10px 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.tw-status-pills > li > a {
+    padding: 4px 12px;
+    font-size: 13px;
+    color: #666;
+    border-radius: 3px;
+}
+
+.tw-status-pills > li.active > a,
+.tw-status-pills > li.active > a:hover {
+    background: #1890ff;
+    color: #fff;
+}
+
+.tw-status-pills .badge {
+    background: rgba(0, 0, 0, .12);
+    color: inherit;
+    margin-left: 4px;
+}
+
+.tw-status-pills > li.active .badge {
+    background: rgba(255, 255, 255, .3);
+}
