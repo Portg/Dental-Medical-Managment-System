@@ -69,9 +69,3 @@
     font-size: 13px;
     border-radius: 15px;
 }
-
-.tw-topbar-action {
-    display: flex;
-    align-items: center;
-    padding: 0 6px;
-}

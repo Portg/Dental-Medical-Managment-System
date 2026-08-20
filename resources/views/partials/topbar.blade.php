@@ -29,16 +29,6 @@
                     </form>
                 </li>
 
-                {{-- 新增患者：也常驻。建档不该要求先跳到患者列表 —— 电话打进来
-                     随时可能要建个档，视频里这个按钮就在搜索框右边。
-                     跳到患者列表并带 new=1，复用那边的建档弹窗，不重复实现。 --}}
-                @can('create-patients')
-                <li class="tw-topbar-action">
-                    <a href="{{ url('patients') }}?new=1" class="btn btn-sm btn-primary">
-                        <i class="fa fa-user-plus"></i> {{ __('today_work.new_patient') }}
-                    </a>
-                </li>
-                @endcan
                 {{-- Notifications --}}
                 @canany(['view-appointments', 'view-invoices'])
                 <li class="dropdown dropdown-extended dropdown-notification">

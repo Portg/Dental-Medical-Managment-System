@@ -84,11 +84,15 @@ function switchView(mode, skipSave) {
         $('#btn-kanban-view').addClass('active');
         $('#kanban-collapse-btn').show();
         $('#tw-status-filter').hide();
+        // 看板视图下状态分档是多余的 —— 卡片的列本身就是状态，
+        // 再给一排状态按钮等于同一件事说两遍
+        $('#tw-status-pills').hide();
         loadKanbanData();
     } else {
         $('#tw-kanban-view').hide();
         $('#tw-table-view').show();
         $('#btn-kanban-view').removeClass('active');
+        $('#tw-status-pills').show();
         $('#btn-table-view').addClass('active');
         $('#kanban-collapse-btn').hide();
         $('#tw-status-filter').show();
