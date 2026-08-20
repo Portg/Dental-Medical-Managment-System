@@ -30,7 +30,8 @@
              复制牙位是真省事的一个 —— 检查写了 45，诊断、治疗多半也是 45，
              不用再去牙位图上点三遍。 --}}
         <div class="case-items-toolbar">
-            <button type="button" class="btn btn-xs btn-default js-add-case-item" data-section="{{ $section }}">
+            <button type="button" class="btn btn-xs btn-default js-add-case-item" data-section="{{ $section }}"
+                    title="{{ __('medical_cases.item_row_hint') }}">
                 <i class="fa fa-plus"></i> {{ __('medical_cases.add_item_row') }}
             </button>
             @if($section !== 'examination')
@@ -42,7 +43,9 @@
             <button type="button" class="btn btn-xs btn-link js-toggle-section" data-section="{{ $section }}">
                 <i class="fa fa-chevron-up"></i> <span class="toggle-text">{{ __('medical_cases.collapse') }}</span>
             </button>
-            <span class="help-block case-items-hint">{{ __('medical_cases.item_row_hint') }}</span>
+            {{-- 这句提示原来在四个段落各出现一次，占四行还都是同一句话。
+                 挪到「添加一行」的 title 上：需要的人停一下鼠标就有，
+                 不需要的人不用每段读一遍。 --}}
         </div>
 
         <div class="case-items-rows" id="rows-{{ $section }}"></div>

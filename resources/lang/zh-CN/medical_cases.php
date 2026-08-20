@@ -227,6 +227,7 @@ return [
     'expand' => '展开',
     'collapse' => '收起',
     'quick_phrases' => '快捷短语',
+    'narrative_group' => '主诉 / 现病史 / 既往史',
     'copy_teeth' => '复制上段牙位',
     'copy_teeth_hint' => '把上一段用到的牙位按行带过来，省得重新点选',
     'collapse' => '折叠',

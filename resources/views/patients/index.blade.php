@@ -441,11 +441,18 @@
     // Filter Functions
     // ==========================================================================
 
+    /**
+     * 重置筛选 —— 回到「全部」，不是「今天」。
+     *
+     * 原来这个函数把时间周期默认成「今天」，而且页面一进来就调它：打开患者列表
+     * 只看到今天建档的人。可诊所打开患者列表是**要找人**，不是看今天新建了谁；
+     * 老库几千个患者，默认只显示今天的等于列表是空的。
+     * 同类产品的患者列表默认也是「全部(146)」，日期不是默认筛选项。
+     */
     function default_todays_data() {
-        // initially load today's date filtered data
-        $('.start_date').val(todaysDate());
-        $('.end_date').val(todaysDate());
-        $("#period_selector").val('Today');
+        $('.start_date').val('');
+        $('.end_date').val('');
+        $("#period_selector").val('');
     }
 
     // Period selector change handler

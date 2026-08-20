@@ -62,39 +62,56 @@
                     {{-- Visit Information --}}
                     @include('medical_cases.partials.visit_info', ['case' => $case ?? null, 'doctors' => $doctors])
 
-                    {{-- Chief Complaint (S) --}}
-                    @include('medical_cases.partials.soap_section', [
-                        'id' => 'chief_complaint',
-                        'title' => __('medical_cases.chief_complaint_section'),
-                        'hint' => __('medical_cases.chief_complaint_hint'),
-                        'placeholder' => __('medical_cases.subjective_placeholder'),
-                        'value' => $case->chief_complaint ?? '',
-                        'required' => true,
-                        'maxlength' => 500,
-                        'showCounter' => true,
-                        'showTemplates' => true
-                    ])
+                    {{-- 主诉 / 现病史 / 既往史 合成一个分组，标签在左。
 
-                    {{-- History of Present Illness --}}
-                    @include('medical_cases.partials.soap_section', [
-                        'id' => 'history_of_present_illness',
-                        'title' => __('medical_cases.present_illness_section'),
-                        'hint' => __('medical_cases.present_illness_hint'),
-                        'value' => $case->history_of_present_illness ?? '',
-                        'required' => false
-                    ])
+                         原来三段各占一张独立卡片、标签在上、文本框各约 100px 高，
+                         光这三段就吃掉近 400px —— 而它们是同一件事的三个侧面
+                         （患者怎么说的），本来就该放在一起看。
+                         参考视频：这三行是一个可折叠的「主诉/现病史/既往史」分组。 --}}
+                    <div class="soap-section narrative-group">
+                        <div class="soap-section-header">
+                            <div class="soap-section-title">
+                                {{ __('medical_cases.narrative_group') }}
+                                <span class="required">*</span>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-link js-toggle-narrative">
+                                <i class="fa fa-chevron-up"></i>
+                            </button>
+                        </div>
+                        <div class="soap-section-body narrative-rows">
+                            <div class="narrative-row">
+                                <label for="chief_complaint">{{ __('medical_cases.chief_complaint_section') }} <span class="required">*</span></label>
+                                <div class="narrative-field">
+                                    <textarea name="chief_complaint" id="chief_complaint" class="soap-textarea"
+                                              rows="2" maxlength="500" required
+                                              placeholder="{{ __('medical_cases.subjective_placeholder') }}">{{ $case->chief_complaint ?? '' }}</textarea>
+                                    <div class="char-counter">
+                                        <span id="chief_complaint_count">{{ mb_strlen($case->chief_complaint ?? '') }}</span>/500
+                                    </div>
+                                    <div class="template-triggers js-template-quick-buttons"
+                                         data-field="chief_complaint" data-template-type="chief_complaint"></div>
+                                </div>
+                            </div>
 
-                    {{-- 既往史 —— 病历叙述部分的标准三段是 主诉/现病史/既往史。
-                         注意与建档时录的 patients.systemic_diseases / drug_allergies 不同：
-                         那是患者层面的长期信息，这里是本次就诊记录的病史陈述。 --}}
-                    @include('medical_cases.partials.soap_section', [
-                        'id' => 'past_medical_history',
-                        'title' => __('medical_cases.past_history_section'),
-                        'hint' => __('medical_cases.past_history_hint'),
-                        'placeholder' => __('medical_cases.past_history_placeholder'),
-                        'value' => $case->past_medical_history ?? '',
-                        'required' => false
-                    ])
+                            <div class="narrative-row">
+                                <label for="history_of_present_illness">{{ __('medical_cases.present_illness_section') }}</label>
+                                <div class="narrative-field">
+                                    <textarea name="history_of_present_illness" id="history_of_present_illness"
+                                              class="soap-textarea" rows="2"
+                                              placeholder="{{ __('medical_cases.present_illness_hint') }}">{{ $case->history_of_present_illness ?? '' }}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="narrative-row">
+                                <label for="past_medical_history">{{ __('medical_cases.past_history_section') }}</label>
+                                <div class="narrative-field">
+                                    <textarea name="past_medical_history" id="past_medical_history"
+                                              class="soap-textarea" rows="2"
+                                              placeholder="{{ __('medical_cases.past_history_placeholder') }}">{{ $case->past_medical_history ?? '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     {{-- Examination (O) --}}
                     @include('medical_cases.partials.examination_section', ['case' => $case ?? null])

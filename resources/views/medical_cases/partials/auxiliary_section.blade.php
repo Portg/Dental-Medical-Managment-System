@@ -17,9 +17,10 @@
     'required'    => false,
 ])
 
-<div class="soap-section">
+{{-- 影像资料原来单占一张卡片，和「辅助检查」平级 —— 但它本来就是辅助检查的一部分
+     （X光片就是辅助检查结果）。并进同一张卡片，省一个卡片的边框与间距。 --}}
+<div class="soap-section soap-section-attached">
     <div class="soap-section-body">
-        {{-- Image Upload Area --}}
         <div class="auxiliary-images">
             <label style="font-size: 13px; color: #666; margin-bottom: 8px; display: block;">
                 {{ __('medical_cases.attach_images') }}

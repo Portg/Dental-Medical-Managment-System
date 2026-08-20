@@ -738,3 +738,58 @@
 .case-items-toolbar .btn-link:hover {
     color: #1890ff;
 }
+
+/* ── 主诉/现病史/既往史 合成一个分组，标签在左 ─────────────────
+   原来三段各占一张卡片、标签在上、文本框各约 100px 高，光这三段吃掉近 400px。
+   它们是同一件事的三个侧面（患者怎么说的），本来就该放在一起看。
+   参考视频：这三行是一个可折叠分组。 */
+.narrative-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.narrative-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+/* 标签固定宽度，三行的输入框左边缘对齐成一条线 */
+.narrative-row > label {
+    flex: 0 0 72px;
+    margin: 6px 0 0 0;
+    font-weight: normal;
+    font-size: 13px;
+    color: #666;
+    text-align: right;
+}
+
+.narrative-field {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.narrative-field .soap-textarea {
+    width: 100%;
+    min-height: 46px;
+}
+
+.narrative-field .char-counter {
+    text-align: right;
+    font-size: 11px;
+    color: #bbb;
+}
+
+.narrative-group .js-toggle-narrative {
+    color: #aaa;
+    padding: 0 4px;
+}
+
+/* 附属卡片（影像资料 / 治疗项目）：紧贴上一段，去掉重复的上边距与圆角，
+   视觉上表明它属于上面那段，而不是又一个平级段落 */
+.soap-section-attached {
+    margin-top: -10px;
+    border-top: none;
+    padding-top: 0;
+}

@@ -939,6 +939,16 @@ function initTemplatePicker() {
 
     // 常用模板快捷按钮（与 / 选择器同一份数据）
     renderTemplateQuickButtons();
+
+    // 主诉/现病史/既往史 分组折叠 —— 复诊时这三段常常不改，折起来省一屏
+    $(document).on('click', '.js-toggle-narrative', function () {
+        var $body = $(this).closest('.narrative-group').find('.narrative-rows');
+        var collapsed = $body.is(':visible');
+        $body.toggle(!collapsed);
+        $(this).find('i')
+            .toggleClass('fa-chevron-up', !collapsed)
+            .toggleClass('fa-chevron-down', collapsed);
+    });
 }
 
 /**

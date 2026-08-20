@@ -14,7 +14,9 @@
     'required'    => true,
 ])
 
-<div class="soap-section">
+{{-- 治疗项目原来单占一张卡片，和「治疗」平级 —— 它是这次治疗做了哪些收费项目，
+     附属于治疗。并进同一张卡片。 --}}
+<div class="soap-section soap-section-attached">
     <div class="soap-section-body">
         <div>
             <label style="font-size: 13px; color: #666; margin-bottom: 6px; display: block;">
