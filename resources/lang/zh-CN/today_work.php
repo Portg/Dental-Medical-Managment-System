@@ -6,16 +6,16 @@ return [
     'today_doctors'       => '今日出诊',
     'today_revisits'      => '今日回访',
     'today_appointments'  => '今日预约',
-    'today_receivable'    => '今日应收（千元）',
-    'today_collected'     => '今日实收（千元）',
+    'today_receivable'    => '今日应收',
+    'today_collected'     => '今日实收',
 
     // KPI short labels (no "今日" prefix)
     'kpi_patients'        => '就诊',
     'kpi_doctors'         => '出诊',
     'kpi_revisits'        => '回访',
     'kpi_appointments'    => '预约',
-    'kpi_receivable'      => '应收（千元）',
-    'kpi_collected'       => '实收（千元）',
+    'kpi_receivable'      => '应收',
+    'kpi_collected'       => '实收',
 
     'not_arrived'         => '预约未到',
     'waiting'             => '候诊中',

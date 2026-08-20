@@ -95,7 +95,9 @@ function switchView(mode, skipSave) {
         $('#tw-status-pills').show();
         $('#btn-table-view').addClass('active');
         $('#kanban-collapse-btn').hide();
-        $('#tw-status-filter').show();
+        // 状态筛选已经由上面那排带计数的分档按钮承担，这个下拉只留作它的后端载体
+        // （分档按钮点一下写它的值）。不再 show —— 同一件事摆两个控件，
+        // 用户不知道该信哪个，而且它俩还可能显示不一致。
         twTable.ajax.reload(null, false);
     }
 }
@@ -151,8 +153,9 @@ function refreshStats() {
         $('#kpi-doctors').text(data.kpi.today_doctors);
         $('#kpi-revisits').text(data.kpi.today_revisits);
         $('#kpi-appointments').text(data.kpi.today_appointments);
-        $('#kpi-receivable').html('&yen;' + data.kpi.today_receivable);
-        $('#kpi-collected').html('&yen;' + data.kpi.today_collected);
+        // 千位分隔：金额直接给元之后，12800 不加分隔符很容易看成 1280
+        $('#kpi-receivable').html('&yen;' + _twMoney(data.kpi.today_receivable));
+        $('#kpi-collected').html('&yen;' + _twMoney(data.kpi.today_collected));
 
         // 状态分档的计数。stats 接口本来就在算这些数，只是此前没渲染出来 ——
         // 参考视频的「全部(2) | 未到(1) | 已到(1)」，一眼看出还剩几个没到。
@@ -419,4 +422,13 @@ function shiftTodayWorkDate(delta) {
         $input.val(v);
     }
     onTodayWorkFilterChanged();
+}
+
+
+/** 金额千位分隔，两位小数 */
+function _twMoney(v) {
+    return Number(v || 0).toLocaleString('zh-CN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 }

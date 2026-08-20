@@ -60,13 +60,13 @@ class TodayWorkService
             ->whereNull('deleted_at')
             ->count();
 
-        // 今日应收金额（千元）：invoices created today
+        // 今日应收金额：invoices created today
         $todayReceivable = (float) DB::table('invoices')
             ->whereDate('created_at', $today)
             ->whereNull('deleted_at')
             ->sum('total_amount');
 
-        // 今日实收金额（千元）：payments received today
+        // 今日实收金额：payments received today
         $todayCollected = (float) DB::table('invoice_payments')
             ->where('payment_date', $today)
             ->whereNull('deleted_at')
@@ -77,8 +77,10 @@ class TodayWorkService
             'today_doctors'      => $todayDoctors,
             'today_revisits'     => $todayRevisits,
             'today_appointments' => $todayAppointments,
-            'today_receivable'   => round($todayReceivable / 1000, 1),
-            'today_collected'    => round($todayCollected / 1000, 1),
+            // 直接给元，不再折成千元。「应收 ¥0.8（千元）」= 800 元，
+            // 一位小数还会把 850 显示成 0.9 —— 对账时看的是钱，不该先在脑子里乘一千。
+            'today_receivable'   => round($todayReceivable, 2),
+            'today_collected'    => round($todayCollected, 2),
         ];
     }
 
@@ -265,7 +267,10 @@ class TodayWorkService
             );
 
         // Doctor filter
-        if ($doctorId) {
+        // 有搜索词时忽略医生筛选：医生筛选是「看自己台次」的视角过滤，
+        // 而一旦按名字找人，找的是这个人本身。不忽略的话，前台选着某个医生、
+        // 搜另一个医生的患者会一无所获，然后以为「今天没这个人」。
+        if ($doctorId && !$search) {
             $query->where('a.doctor_id', $doctorId);
         }
 
@@ -294,11 +299,20 @@ class TodayWorkService
             }
         }
 
-        // Patient search
+        // 患者检索：姓名 / 首拼 / 手机号 / 病历号，与顶栏搜索框的提示词一致。
+        // 原来漏了病历号 —— 前台手里拿着病历本报号找人是常见动作。
+        //
+        // 关于要不要忽略日期和医生这两个筛选：
+        //   日期**不忽略** —— 这个页面就是「今日工作」，忽略日期等于变成全局患者检索，
+        //     那是顶栏那个搜索框的活（它跳患者列表、不受日期约束）。两个框各司其职。
+        //   医生**忽略** —— 医生筛选是给医生看自己台次用的视角过滤；一旦开始按名字
+        //     找人，找的是这个人本身，不该因为他挂在别的医生名下就搜不到。
+        //     否则前台会以为「今天没这个人」，而其实只是选错了医生。
         if ($search) {
             $query->where(function ($q) use ($search) {
                 NameHelper::addNameSearch($q, $search, 'p');
-                $q->orWhere('p.phone_no', 'like', '%' . $search . '%');
+                $q->orWhere('p.phone_no', 'like', '%' . $search . '%')
+                  ->orWhere('p.patient_no', 'like', '%' . $search . '%');
             });
         }
 
