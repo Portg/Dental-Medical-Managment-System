@@ -94,6 +94,11 @@ class AppServiceProvider extends ServiceProvider
             $view->with('caseItems', $svc->getCaseItemsForEdit($data['case'] ?? null));
             // 诊断段走 diagnoses 表（带 ICD 编码），与 caseItems 分开取
             $view->with('diagnosisRows', $svc->getDiagnosesForEdit($data['case'] ?? null));
+            // 就诊次数：新建时看这个患者已有几份病历，编辑时给这份自己的序号
+            $view->with('visitSequence', $svc->visitSequence(
+                $data['case'] ?? null,
+                $data['patient']->id ?? ($data['patient_id'] ?? null)
+            ));
         });
 
         // 病历页的快捷短语侧栏 —— 从 quick_phrases 表按分类取，而不是写死在 Blade 里。

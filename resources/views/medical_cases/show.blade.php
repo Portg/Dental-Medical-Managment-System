@@ -281,18 +281,24 @@
 
                         <!-- Progress Notes Tab -->
                         <div class="tab-pane" id="progress_notes_tab">
-                            <div class="table-toolbar">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn blue btn-outline sbold" onclick="addProgressNote()">
-                                                {{ __('common.add_new') }}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                            {{-- 「添加」入口已下掉，只保留历史数据的只读展示。
+
+                                 不是因为这张表重复（它挂 appointment_id，粒度确实比
+                                 medical_cases 更细），而是因为**这个产品形态里它没有位置**：
+                                 复诊已经是新建一份病历了（medical_cases.visit_type
+                                 有 initial/revisit），再在病历下挂一套「病程记录」就是
+                                 第二套记录方式，两边都能写，迟早分裂成两份互不相认的记录。
+
+                                 市场上的做法也是「一次就诊一份病历」—— 参考的那套桌面软件
+                                 病历页底部就是「新增【初诊病历】」「新增【复诊病历】」并列，
+                                 顶部用「就诊次数」把同一患者的历次串起来，而不是一份病历
+                                 挂多条病程记录。
+
+                                 表、数据、控制器都留着：已经录过的要看得到，
+                                 将来若改走「一份病历多次记录」也不用重建。 --}}
+                            <div class="note note-info" style="margin-bottom:10px;">
+                                <p style="margin:0;">{{ __('medical_cases.progress_notes_readonly_hint') }}</p>
                             </div>
-                            <br>
                             <table class="table table-striped table-bordered table-hover table-checkable order-column" id="progress_notes_table">
                                 <thead>
                                 <tr>

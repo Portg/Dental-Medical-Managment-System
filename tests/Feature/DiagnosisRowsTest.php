@@ -12,6 +12,7 @@ use App\Services\MedicalCaseService;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -253,6 +254,51 @@ class DiagnosisRowsTest extends TestCase
         $this->assertCount(1, $rows);
         $this->assertNull($rows[0]['tooth_no']);
         $this->assertSame('16 中龋，36 慢性根尖周炎', $rows[0]['content']);
+    }
+
+    /**
+     * 就诊次数：这是该患者的第几次就诊。
+     *
+     * 市场做法是「一次就诊一份病历」，用就诊次数把同一患者的历次串起来
+     * （参考的桌面软件病历页底部是「新增【初诊病历】」「新增【复诊病历】」并列，
+     * 顶部显示「就诊次数 2」）。算出来而不是存字段 —— 存了删一份病历还得回填。
+     */
+    /** @test */
+    public function 就诊次数按病历顺序给出(): void
+    {
+        $first  = $this->createCase([['tooth_no' => '16', 'content' => '中龋']]);
+        $first->update(['case_date' => now()->subDays(7)->format('Y-m-d')]);
+
+        $second = $this->createCase([['tooth_no' => '26', 'content' => '深龋']]);
+
+        $this->assertSame(1, $this->service()->visitSequence($first->fresh()));
+        $this->assertSame(2, $this->service()->visitSequence($second->fresh()));
+
+        // 新建（还没落库）时给「已有份数 + 1」
+        $this->assertSame(3, $this->service()->visitSequence(null, $this->patient->id));
+    }
+
+    /**
+     * visit_type 只能是 initial / revisit。
+     *
+     * 表单此前还有「随访」(follow_up) 和「急诊」(emergency) 两个选项，而 enum 里
+     * 没有这两个值 —— MySQL 非严格模式下会**静默写成空字符串**，选了等于没选，
+     * 打印页按 visit_type_ 拼的翻译也会落空。实测确认过。
+     */
+    /** @test */
+    public function 就诊类型只有初诊与复诊(): void
+    {
+        $type = DB::select("show columns from medical_cases like 'visit_type'")[0]->Type;
+
+        $this->assertStringContainsString("'initial'", $type);
+        $this->assertStringContainsString("'revisit'", $type);
+        $this->assertStringNotContainsString('follow_up', $type);
+        $this->assertStringNotContainsString('emergency', $type);
+
+        // 表单里也不该再出现这两个值
+        $blade = file_get_contents(resource_path('views/medical_cases/partials/visit_info.blade.php'));
+        $this->assertStringNotContainsString('value="follow_up"', $blade);
+        $this->assertStringNotContainsString('value="emergency"', $blade);
     }
 
     /** @test */

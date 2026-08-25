@@ -218,6 +218,8 @@ var MedicalRecordConfig = {
         medicalCases: '{{ url("medical-cases") }}'
     },
     translations: {
+        confirmCopyOverwrite: @json(__('medical_cases.confirm_copy_overwrite')),
+        copiedFromPrevious:   @json(__('medical_cases.copied_from_previous')),
         // Patient selection
         searchAndSelectPatient: '{{ __("medical_cases.search_and_select_patient") }}',
         typeToSearch: '{{ __("common.type_to_search") }}',

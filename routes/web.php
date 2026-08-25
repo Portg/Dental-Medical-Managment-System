@@ -371,6 +371,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('medical-case-history/{patient_id}', 'MedicalCaseController@patientHistory');
     Route::get('medical-case-new/{patient_id}', 'MedicalCaseController@createForPatient');
     Route::get('api/medical-case/{id}', 'MedicalCaseController@getCase');
+    // 复诊「带入本次」：取某份病历的可复用临床内容
+    Route::get('api/medical-case/{id}/reusable', 'MedicalCaseController@reusableContent');
     Route::get('api/icd10-codes', 'MedicalCaseController@searchIcd10');
     Route::get('print-medical-case/{id}', 'MedicalCaseController@printCase');
     Route::get('medical-cases/{id}/amendments', 'MedicalCaseController@amendments');

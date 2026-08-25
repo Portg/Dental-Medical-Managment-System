@@ -241,6 +241,39 @@ class MedicalCaseService
     }
 
     /**
+     * 该患者的第几次就诊。
+     *
+     * 参考视频顶部的「就诊次数 2」—— 一个疗程要来好几次（根管：开髓 → 预备 → 充填），
+     * 医生一眼要知道这是第几次。市场上的做法是「一次就诊一份病历」，用就诊次数把
+     * 同一患者的历次串起来，而不是一份病历挂多条记录。
+     *
+     * 算出来而不是存字段：存了就要维护，删一份病历还得回填后面所有的序号。
+     * 新建时给「已有份数 + 1」，编辑时给这份病历自己的序号（按就诊日期、同日按 id）。
+     */
+    public function visitSequence(?MedicalCase $case, ?int $patientId = null): ?int
+    {
+        $patientId = $case->patient_id ?? $patientId;
+
+        if (!$patientId) {
+            return null;
+        }
+
+        $query = MedicalCase::where('patient_id', $patientId);
+
+        if (!$case || !$case->exists) {
+            return $query->count() + 1;
+        }
+
+        // 排在这份病历之前的份数 + 1 —— 同日多份用 id 兜底，保证序号稳定
+        return $query->where(function ($q) use ($case) {
+            $q->where('case_date', '<', $case->case_date)
+              ->orWhere(function ($q2) use ($case) {
+                  $q2->where('case_date', $case->case_date)->where('id', '<=', $case->id);
+              });
+        })->count();
+    }
+
+    /**
      * 诊断行 —— 落在 diagnoses 表，不在 medical_case_items。
      *
      * diagnoses 本来就是一行一条诊断，还带 ICD 编码、严重程度、转归状态，

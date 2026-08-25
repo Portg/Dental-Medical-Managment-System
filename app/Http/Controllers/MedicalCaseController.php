@@ -207,6 +207,35 @@ class MedicalCaseController extends Controller
     }
 
     /**
+     * 某份病历的可复用内容 —— 复诊「带入本次」用。
+     *
+     * 复诊是新建一份病历（一次就诊一份），而复诊的内容多半是在上次基础上改几个字：
+     * 牙位一样、诊断一样、治疗接着上次做。没有这个接口就得对着侧栏一行行重打。
+     *
+     * 只给临床内容（检查/辅助检查/治疗的分行 + 诊断行 + 既往史 + 医嘱），
+     * **不给主诉与现病史** —— 那是患者这次怎么说的，每次都不同，带过来反而要删。
+     *
+     * 单开一个接口而不是改 getCase：那个返回的是模型本身，已有别的消费方，
+     * 往上加字段会改掉它的契约。
+     */
+    public function reusableContent($id)
+    {
+        $case = \App\MedicalCase::findOrFail((int) $id);
+
+        // 只能带自己有权看的病历 —— 控制器已有 view-medical-cases 中间件，
+        // 这里再确认一次不是别人的患者
+        return response()->json([
+            'status' => true,
+            'data'   => [
+                'case_items'          => $this->medicalCaseService->getCaseItemsForEdit($case),
+                'diagnosis_rows'      => $this->medicalCaseService->getDiagnosesForEdit($case),
+                'past_medical_history' => $case->past_medical_history,
+                'medical_orders'      => $case->medical_orders,
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for creating a new medical case.
      *
      * @return \Illuminate\Http\Response
