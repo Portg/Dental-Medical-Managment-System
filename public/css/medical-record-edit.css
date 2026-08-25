@@ -793,3 +793,24 @@
     border-top: none;
     padding-top: 0;
 }
+
+/* 诊断行：比普通行多一个 ICD 编码选择框。
+   诊断走 diagnoses 表而不是 medical_case_items —— 那张表带 ICD 编码、
+   严重程度、转归状态，是医保与病案质控要的。 */
+.diagnosis-fields {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.diagnosis-fields .case-item-content {
+    width: 100%;
+}
+
+/* ICD 选择框窄一些：它是选填的补充信息，不该和诊断名争视觉重量 */
+.diagnosis-fields .js-icd-select,
+.diagnosis-fields .select2-container {
+    max-width: 340px;
+}

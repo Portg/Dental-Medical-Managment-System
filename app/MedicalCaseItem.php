@@ -35,12 +35,22 @@ class MedicalCaseItem extends Model
     public const SECTION_DIAGNOSIS   = 'diagnosis';
     public const SECTION_TREATMENT   = 'treatment';
 
+    /**
+     * 本表承接的段落。
+     *
+     * **诊断不在其中** —— 诊断走 diagnoses 表：那张表本来就是一行一条诊断，
+     * 还带 ICD 编码、严重程度、转归状态，是本表存不了的东西（ICD 是医保与
+     * 病案质控要的）。同一条诊断不在两张表里各存一份。
+     * 见 2026_08_25_100000 迁移的说明。
+     */
     public const SECTIONS = [
         self::SECTION_EXAMINATION,
         self::SECTION_AUXILIARY,
-        self::SECTION_DIAGNOSIS,
         self::SECTION_TREATMENT,
     ];
+
+    /** 诊断段的 key，值仍是 'diagnosis'，但落在 diagnoses 表 */
+    public const DIAGNOSIS_SECTION = self::SECTION_DIAGNOSIS;
 
     /**
      * 段落 → medical_cases 上对应的牙位列。
@@ -50,7 +60,7 @@ class MedicalCaseItem extends Model
      */
     public const TEETH_COLUMNS = [
         self::SECTION_EXAMINATION => 'examination_teeth',
-        self::SECTION_DIAGNOSIS   => 'related_teeth',
+        // related_teeth 由 diagnoses 表的牙位派生，不在本表的段落里
     ];
 
     public function medicalCase()

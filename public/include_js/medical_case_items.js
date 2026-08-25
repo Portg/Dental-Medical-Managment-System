@@ -229,7 +229,16 @@ var CaseItems = (function () {
                 .appendTo('#medical-record-form');
         }
         $input.val(JSON.stringify(collect()));
+
+        var $dx = $('#diagnosis_rows_input');
+        if (!$dx.length) {
+            $dx = $('<input type="hidden" name="diagnosis_rows" id="diagnosis_rows_input">')
+                .appendTo('#medical-record-form');
+        }
+        $dx.val(JSON.stringify(collectDiagnoses()));
+
         syncAllDerived();
+        syncDiagnosisDerived();
     }
 
     // ─── 牙位 ────────────────────────────────────────────────────
@@ -247,7 +256,12 @@ var CaseItems = (function () {
             $content.val($content.val().split('__').join(value));
         }
 
-        syncDerived($row.data('section'));
+        // 诊断行走自己的派生（格式带 ICD），普通行走 syncDerived
+        if ($row.hasClass('diagnosis-row')) {
+            syncDiagnosisDerived();
+        } else {
+            syncDerived($row.data('section'));
+        }
     }
 
     /**
@@ -397,6 +411,8 @@ var CaseItems = (function () {
 
             if ($target.length) {
                 setRowTooth($target, teeth);
+            } else if (section === 'diagnosis') {
+                addDiagnosisRow(teeth.join(','), '', '', '', false);
             } else {
                 addRow(section, teeth.join(','), '', false);
             }
@@ -426,11 +442,135 @@ var CaseItems = (function () {
         });
     }
 
+    // ─── 诊断行 ──────────────────────────────────────────────────
+    //
+    // 诊断不走 medical_case_items，直接写 diagnoses 表 —— 那张表带 ICD 编码、
+    // 严重程度、转归状态，是另一张表存不了的（ICD 是医保与病案质控要的）。
+    // 所以诊断行比普通行多一个 ICD 选择框，提交时走 diagnosis_rows 而不是 case_items。
+
+    function diagnosisRowHtml(tooth, content, icd, icdText) {
+        return '' +
+            '<div class="case-item-row diagnosis-row">' +
+              '<button type="button" class="case-item-tooth js-pick-tooth' + (tooth ? ' has-tooth' : '') + '"' +
+                      ' title="' + t('medical_cases.pick_tooth', '选牙位') + '">' +
+                toothCrossHtml(tooth) +
+              '</button>' +
+              '<input type="hidden" class="case-item-tooth-value" value="' + escapeHtml(tooth || '') + '">' +
+              '<div class="diagnosis-fields">' +
+                '<textarea class="case-item-content phrase-enabled template-enabled" rows="2"' +
+                         ' data-template-type="diagnosis"' +
+                         ' placeholder="' + t('medical_cases.diagnosis_placeholder', '填写诊断结论…') + '">' +
+                  escapeHtml(content || '') +
+                '</textarea>' +
+                '<select class="form-control input-sm js-icd-select">' +
+                  (icd ? '<option value="' + escapeHtml(icd) + '" selected>' +
+                          escapeHtml(icdText || icd) + '</option>' : '') +
+                '</select>' +
+              '</div>' +
+              '<button type="button" class="case-item-remove js-remove-diagnosis"' +
+                      ' title="' + t('common.delete', '删除') + '">&times;</button>' +
+            '</div>';
+    }
+
+    function addDiagnosisRow(tooth, content, icd, icdText, focus) {
+        var $rows = $('#rows-diagnosis');
+        if (!$rows.length) return null;
+
+        var $row = $(diagnosisRowHtml(tooth, content, icd, icdText));
+        $rows.append($row);
+        initIcdSelect($row.find('.js-icd-select'));
+        syncDiagnosisDerived();
+
+        if (focus) $row.find('.case-item-content').focus();
+        return $row;
+    }
+
+    /** ICD 编码选择器 —— 走既有的 /medical-cases/icd10-search 接口，不另起一套码表 */
+    function initIcdSelect($el) {
+        if (!$el.length || typeof $el.select2 !== 'function') return;
+        $el.select2({
+            placeholder: t('medical_cases.icd_placeholder', 'ICD 编码（选填）'),
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 1,
+            ajax: {
+                url: '/api/icd10-codes',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) { return { q: params.term }; },
+                processResults: function (data) { return { results: data || [] }; },
+                cache: true
+            }
+        });
+    }
+
+    function collectDiagnoses() {
+        var out = [];
+        $('#rows-diagnosis').find('.diagnosis-row').each(function () {
+            var content = ($(this).find('.case-item-content').val() || '').trim();
+            if (!content) return;   // 只选牙位没写诊断名的行没有意义
+            out.push({
+                tooth_no: ($(this).find('.case-item-tooth-value').val() || '').trim(),
+                content:  content,
+                icd_code: $(this).find('.js-icd-select').val() || ''
+            });
+        });
+        return out;
+    }
+
+    /** 与服务端 normalizeDiagnoses 的派生格式保持一致：「牙位 诊断名（ICD）」逐行 */
+    function syncDiagnosisDerived() {
+        var lines = [];
+        $('#rows-diagnosis').find('.diagnosis-row').each(function () {
+            var tooth = ($(this).find('.case-item-tooth-value').val() || '').trim();
+            var content = ($(this).find('.case-item-content').val() || '').trim();
+            if (!content) return;
+            var icd = $(this).find('.js-icd-select').val() || '';
+            var line = tooth ? (tooth + ' ' + content) : content;
+            lines.push(icd ? line + '（' + icd + '）' : line);
+        });
+        $('#diagnosis').val(lines.join('\n'));
+    }
+
+    function renderDiagnosisSeed() {
+        var $seed = $('.js-diagnosis-seed');
+        if (!$seed.length) return;
+
+        var rows;
+        try { rows = JSON.parse($seed.text() || '[]'); } catch (e) { rows = []; }
+        rows.forEach(function (r) {
+            addDiagnosisRow(r.tooth_no, r.content, r.icd_code, r.icd_text, false);
+        });
+        if (!rows.length) addDiagnosisRow('', '', '', '', false);
+    }
+
+    function bindDiagnosis() {
+        $(document).on('click', '.js-add-diagnosis', function () {
+            addDiagnosisRow('', '', '', '', true);
+        });
+
+        $(document).on('click', '.js-remove-diagnosis', function () {
+            var $row = $(this).closest('.diagnosis-row');
+            if (focusedRow && focusedRow.is($row)) focusedRow = null;
+            $row.remove();
+            if (!$('#rows-diagnosis').find('.diagnosis-row').length) {
+                addDiagnosisRow('', '', '', '', false);
+            }
+            syncDiagnosisDerived();
+        });
+
+        $(document).on('input', '#rows-diagnosis .case-item-content', syncDiagnosisDerived);
+        $(document).on('change', '.js-icd-select', syncDiagnosisDerived);
+    }
+
     function init() {
         if (!$('.case-items-section').length) return;
         bind();
+        bindDiagnosis();
         renderSeed();
+        renderDiagnosisSeed();
         syncAllDerived();
+        syncDiagnosisDerived();
     }
 
     return {
@@ -447,6 +587,9 @@ var CaseItems = (function () {
         insertIntoRow: insertIntoRow,
         lastRowOf: lastRowOf,
         syncDerived: syncDerived,
+        addDiagnosisRow: addDiagnosisRow,
+        collectDiagnoses: collectDiagnoses,
+        syncDiagnosisDerived: syncDiagnosisDerived,
         SECTIONS: SECTIONS
     };
 })();

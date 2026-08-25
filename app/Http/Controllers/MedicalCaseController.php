@@ -86,11 +86,21 @@ class MedicalCaseController extends Controller
      */
     private function mergeDerivedCaseText(Request $request): void
     {
-        if (!$request->has('case_items')) {
+        if (!$request->has('case_items') && !$request->has('diagnosis_rows')) {
             return;
         }
 
-        $columns = $this->medicalCaseService->normalizeCaseItems($request->input('case_items'))['columns'];
+        // 两者各自可选：只改诊断不动检查/治疗也要能保存
+        $columns = $request->has('case_items')
+            ? $this->medicalCaseService->normalizeCaseItems($request->input('case_items'))['columns']
+            : [];
+
+        // 诊断段走 diagnoses 表，文本列由它派生 —— 不并进来的话，
+        // 「非草稿必须有诊断」那条规则会因为字段缺失而误报必填。
+        if ($request->has('diagnosis_rows')) {
+            $columns += $this->medicalCaseService
+                ->normalizeDiagnoses($request->input('diagnosis_rows'))['columns'];
+        }
 
         // 牙位列是数组，merge 进 request 后 buildCaseData 会当 JSON 字符串再解一次，
         // 这里只补文本段；牙位列由 buildCaseData 自己从行派生。
@@ -138,6 +148,8 @@ class MedicalCaseController extends Controller
             // 分段明细（牙位 + 文字）；带上时 examination/auxiliary_examination/
             // diagnosis/treatment 及其牙位列改由行派生，见 buildCaseData
             'case_items',
+            // 诊断段走 diagnoses 表（带 ICD 编码），见 buildCaseData
+            'diagnosis_rows',
         ]));
         $case = $this->medicalCaseService->createCase($data, $isDraft);
 
@@ -282,6 +294,8 @@ class MedicalCaseController extends Controller
             'visit_type', 'doctor_id',
             // 与 store() 同步：漏这一项的话，新建能分行、编辑一保存就退回整段
             'case_items',
+            // 诊断段走 diagnoses 表（带 ICD 编码），见 buildCaseData
+            'diagnosis_rows',
         ]), isUpdate: true);
         $result = $this->medicalCaseService->updateCase(
             (int) $id,

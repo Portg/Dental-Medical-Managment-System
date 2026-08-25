@@ -56,13 +56,15 @@ class MedicalCaseItemsTest extends TestCase
         return app(MedicalCaseService::class);
     }
 
+    /**
+     * 注意：诊断**不在** case_items 里 —— 它走 diagnoses 表（带 ICD 编码），
+     * 见 MedicalCaseItem::SECTIONS 的注释与 DiagnosisRowsTest。
+     */
     private function rows(): array
     {
         return [
             ['section' => 'examination', 'tooth_no' => '45', 'content' => '缺失，未修复，牙槽嵴丰满'],
             ['section' => 'examination', 'tooth_no' => '36', 'content' => '龋坏'],
-            ['section' => 'diagnosis',   'tooth_no' => '45', 'content' => '缺失'],
-            ['section' => 'diagnosis',   'tooth_no' => '36', 'content' => '中龋'],
             ['section' => 'treatment',   'tooth_no' => '45', 'content' => '制取上下颌藻酸盐印模'],
         ];
     }
@@ -88,7 +90,7 @@ class MedicalCaseItemsTest extends TestCase
     {
         $case = $this->createCaseWithRows();
 
-        $this->assertSame(5, MedicalCaseItem::where('medical_case_id', $case->id)->count());
+        $this->assertSame(3, MedicalCaseItem::where('medical_case_id', $case->id)->count());
 
         $exam = MedicalCaseItem::where('medical_case_id', $case->id)
             ->section('examination')->orderBy('sort_order')->get();
@@ -108,13 +110,13 @@ class MedicalCaseItemsTest extends TestCase
 
         $forTooth45 = MedicalCaseItem::forTooth('45')->get();
 
-        $this->assertCount(3, $forTooth45, '45 在检查/诊断/治疗三段各有一条');
+        $this->assertCount(2, $forTooth45, '45 在检查/治疗两段各有一条（诊断走 diagnoses 表）');
         $this->assertSame(
-            ['diagnosis', 'examination', 'treatment'],
+            ['examination', 'treatment'],
             $forTooth45->pluck('section')->sort()->values()->all()
         );
 
-        $this->assertCount(2, MedicalCaseItem::forTooth('36')->get());
+        $this->assertCount(1, MedicalCaseItem::forTooth('36')->get());
         $this->assertCount(0, MedicalCaseItem::forTooth('11')->get());
     }
 
@@ -124,7 +126,6 @@ class MedicalCaseItemsTest extends TestCase
         $case = $this->createCaseWithRows()->fresh();
 
         $this->assertSame("45 缺失，未修复，牙槽嵴丰满\n36 龋坏", $case->examination);
-        $this->assertSame("45 缺失\n36 中龋", $case->diagnosis);
         $this->assertSame('45 制取上下颌藻酸盐印模', $case->treatment);
     }
 
@@ -137,7 +138,6 @@ class MedicalCaseItemsTest extends TestCase
         $case = $this->createCaseWithRows()->fresh();
 
         $this->assertSame(['45', '36'], $case->examination_teeth);
-        $this->assertSame(['45', '36'], $case->related_teeth);
     }
 
     /**
@@ -251,6 +251,7 @@ class MedicalCaseItemsTest extends TestCase
     {
         $case = $this->createCaseWithRows([
             ['section' => 'examination',     'tooth_no' => '45', 'content' => '缺失'],
+            ['section' => 'diagnosis',       'tooth_no' => '45', 'content' => '诊断走 diagnoses 表'],
             ['section' => 'chief_complaint', 'tooth_no' => '45', 'content' => '主诉不分行'],
             ['section' => 'nonsense',        'tooth_no' => '45', 'content' => '瞎写的段落'],
         ]);
@@ -262,7 +263,7 @@ class MedicalCaseItemsTest extends TestCase
     public function 再次保存是整段替换而不是追加(): void
     {
         $case = $this->createCaseWithRows(asDraft: true);
-        $this->assertSame(5, MedicalCaseItem::where('medical_case_id', $case->id)->count());
+        $this->assertSame(3, MedicalCaseItem::where('medical_case_id', $case->id)->count());
 
         $data = $this->service()->buildCaseData([
             'patient_id'      => $this->patient->id,
@@ -297,9 +298,9 @@ class MedicalCaseItemsTest extends TestCase
         $this->service()->updateCase($case->id, $data, true);
 
         $this->assertSame(
-            5,
+            3,
             MedicalCaseItem::onlyTrashed()->where('medical_case_id', $case->id)->count(),
-            '原来的 5 行应当留在库里（软删）'
+            '原来的 3 行应当留在库里（软删）'
         );
     }
 
@@ -334,7 +335,7 @@ class MedicalCaseItemsTest extends TestCase
         $this->assertArrayHasKey('amendment_id', $result);
 
         $live = MedicalCaseItem::where('medical_case_id', $case->id)->get();
-        $this->assertCount(5, $live, '原来的 5 行应当原样留着');
+        $this->assertCount(3, $live, '原来的 3 行应当原样留着');
         $this->assertNotContains('11', $live->pluck('tooth_no')->all(), '未审批的行不该进库');
     }
 
@@ -362,7 +363,6 @@ class MedicalCaseItemsTest extends TestCase
         $this->assertCount(1, $items['examination']);
         $this->assertNull($items['examination'][0]['tooth_no']);
         $this->assertSame('45 缺失，36 龋坏', $items['examination'][0]['content']);
-        $this->assertCount(1, $items['diagnosis']);
         $this->assertSame([], $items['treatment'], '空段落不合成行');
     }
 
@@ -376,6 +376,7 @@ class MedicalCaseItemsTest extends TestCase
         $this->assertCount(2, $items['examination']);
         $this->assertSame('45', $items['examination'][0]['tooth_no']);
         $this->assertCount(1, $items['treatment']);
+        $this->assertArrayNotHasKey('diagnosis', $items, '诊断不在 case_items 里');
     }
 
     /** @test */

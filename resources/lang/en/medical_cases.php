@@ -225,6 +225,8 @@ return [
     'expand' => 'Expand',
     'collapse' => 'Collapse',
     'quick_phrases' => 'Quick Phrases',
+    'icd_placeholder' => 'ICD code (optional)',
+    'diagnosis_placeholder' => 'Diagnosis…',
     'narrative_group' => 'Complaint / Present / Past History',
     'copy_teeth' => 'Copy teeth',
     'copy_teeth_hint' => 'Bring the teeth from the previous section as rows',

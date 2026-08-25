@@ -27,10 +27,18 @@ class Diagnosis extends Model implements AuditableContract
     protected $table = 'diagnoses';
 
     protected $fillable = [
-        'diagnosis_name', 'icd_code', 'diagnosis_date', 'status',
+        'diagnosis_name', 'tooth_no', 'sort_order', 'icd_code', 'diagnosis_date', 'status',
         'severity', 'notes', 'resolved_date',
         'medical_case_id', 'patient_id', '_who_added'
     ];
+
+    /**
+     * 「这颗牙历次诊断过什么」—— 与 MedicalCaseItem::forTooth() 同一个用途。
+     */
+    public function scopeForTooth($query, string $toothNo)
+    {
+        return $query->where('tooth_no', $toothNo);
+    }
 
     protected $casts = [
         'diagnosis_date' => 'datetime:Y-m-d H:i',

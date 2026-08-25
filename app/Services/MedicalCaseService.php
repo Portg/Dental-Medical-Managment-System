@@ -241,6 +241,138 @@ class MedicalCaseService
     }
 
     /**
+     * 诊断行 —— 落在 diagnoses 表，不在 medical_case_items。
+     *
+     * diagnoses 本来就是一行一条诊断，还带 ICD 编码、严重程度、转归状态，
+     * 是 medical_case_items 存不了的（ICD 是医保与病案质控要的）。
+     * 同一条诊断不在两张表里各存一份。
+     *
+     * 此前这张表一直是 0 条：它只能从病历详情页的「诊断记录」Tab 单独添加，
+     * 而医生的动作是「新建病历 → 一屏填完 → 提交」，不会填完再拐过去点一次。
+     * 现在编辑页的诊断段直接写它，主流程终于能产生数据。
+     *
+     * @param  array|string $rawRows 前端提交的 [{tooth_no, content, icd_code, severity}]
+     * @return array{rows: array, columns: array}
+     */
+    public function normalizeDiagnoses($rawRows): array
+    {
+        $rawRows = is_string($rawRows) ? (json_decode($rawRows, true) ?: []) : (array) ($rawRows ?: []);
+
+        $rows  = [];
+        $teeth = [];
+
+        foreach ($rawRows as $row) {
+            $name = trim((string) ($row['content'] ?? ''));
+            $toothRaw = trim((string) ($row['tooth_no'] ?? ''));
+
+            // 诊断名是必须的：只选了牙位没写诊断，这一行没有意义
+            if ($name === '') {
+                continue;
+            }
+
+            // 一行可以写多颗牙（「16,17 中龋」）。与 medical_case_items 同样的处理：
+            // 落库一牙一条，forTooth('16') 才查得到；合并只是写法。
+            $list = $toothRaw === ''
+                ? [null]
+                : array_values(array_filter(array_map('trim', preg_split('/[,，\s]+/u', $toothRaw))));
+
+            foreach ($list === [] ? [null] : $list as $one) {
+                $rows[] = [
+                    'diagnosis_name' => $name,
+                    'tooth_no'       => ($one === '' || $one === null) ? null : $one,
+                    'icd_code'       => trim((string) ($row['icd_code'] ?? '')) ?: null,
+                    'severity'       => in_array($row['severity'] ?? null, ['Mild', 'Moderate', 'Severe'], true)
+                        ? $row['severity'] : null,
+                    'sort_order'     => count($rows),
+                ];
+                if ($one !== null && $one !== '') {
+                    $teeth[] = $one;
+                }
+            }
+        }
+
+        // medical_cases 上的 diagnosis 文本列与 related_teeth 仍由这里派生 ——
+        // 打印、病历详情、API、OCR、工作日志都在读它们，不该为此改动。
+        $text = $rows === [] ? null : implode("\n", array_map(function ($r) {
+            $line = $r['tooth_no'] !== null ? $r['tooth_no'] . ' ' . $r['diagnosis_name'] : $r['diagnosis_name'];
+            return $r['icd_code'] ? $line . '（' . $r['icd_code'] . '）' : $line;
+        }, $rows));
+
+        return [
+            'rows'    => $rows,
+            'columns' => [
+                'diagnosis'     => $text,
+                'related_teeth' => $teeth === [] ? null : array_values(array_unique($teeth)),
+            ],
+        ];
+    }
+
+    /**
+     * 落库：整段替换某份病历的诊断。
+     *
+     * 与 syncCaseItems 同样是整段替换 + 软删 —— 诊断没有稳定的业务标识，
+     * diff 需要前端回传 id 且要防篡改，成本远高于收益；病历有审计要求，软删不硬删。
+     */
+    public function syncDiagnoses(MedicalCase $case, array $rows): void
+    {
+        DB::transaction(function () use ($case, $rows) {
+            \App\Diagnosis::where('medical_case_id', $case->id)->delete();
+
+            foreach ($rows as $row) {
+                \App\Diagnosis::create($row + [
+                    'medical_case_id' => $case->id,
+                    'patient_id'      => $case->patient_id,
+                    'diagnosis_date'  => $case->case_date ?? now()->toDateString(),
+                    'status'          => 'Active',
+                    '_who_added'      => Auth::id(),
+                ]);
+            }
+        });
+    }
+
+    /**
+     * 给编辑器用的诊断行。老病历没有 diagnoses 记录时，按 medical_cases.diagnosis
+     * 整段合成一行（与 getCaseItemsForEdit 同样的兜底），不做破坏性迁移。
+     */
+    public function getDiagnosesForEdit(?MedicalCase $case): array
+    {
+        if (!$case) {
+            return [];
+        }
+
+        $existing = \App\Diagnosis::where('medical_case_id', $case->id)
+            ->orderBy('sort_order')->orderBy('id')
+            ->get(['diagnosis_name', 'tooth_no', 'icd_code', 'severity']);
+
+        if ($existing->isEmpty()) {
+            $legacy = trim((string) ($case->diagnosis ?? ''));
+            return $legacy === '' ? [] : [[
+                'tooth_no' => null, 'content' => $legacy, 'icd_code' => null, 'severity' => null,
+            ]];
+        }
+
+        // 与 medical_case_items 一致：同「诊断名 + ICD」的多颗牙合并回一行
+        $merged = [];
+        foreach ($existing as $row) {
+            $key = $row->diagnosis_name . "\0" . (string) $row->icd_code;
+            if (!isset($merged[$key])) {
+                $merged[$key] = [
+                    'tooth_no' => [], 'content' => $row->diagnosis_name,
+                    'icd_code' => $row->icd_code, 'severity' => $row->severity,
+                ];
+            }
+            if ($row->tooth_no) {
+                $merged[$key]['tooth_no'][] = $row->tooth_no;
+            }
+        }
+
+        return array_values(array_map(function ($r) {
+            $r['tooth_no'] = $r['tooth_no'] === [] ? null : implode(',', array_unique($r['tooth_no']));
+            return $r;
+        }, $merged));
+    }
+
+    /**
      * 由分段明细渲染出文本列与牙位列。
      *
      * 文字格式是「牙位 内容」逐行，与录入时看到的一致 —— 打印出来医生一眼能对上。
@@ -397,6 +529,15 @@ class MedicalCaseService
             $data['case_items'] = $normalized['items'];
         }
 
+        // 诊断段单独走 diagnoses 表（带 ICD 编码），派生出的 diagnosis 文本列与
+        // related_teeth 同样合进 $data，走既有的保存/修订链路 —— 与 case_items 同理，
+        // createAmendment 只 diff getFillable() 里的键，锁定病历的诊断改动才捕获得到。
+        if (array_key_exists('diagnosis_rows', $input)) {
+            $dx = $this->normalizeDiagnoses($input['diagnosis_rows']);
+            $data = array_merge($data, $dx['columns']);
+            $data['diagnosis_rows'] = $dx['rows'];
+        }
+
         if (!$isUpdate) {
             $data['case_no'] = MedicalCase::CaseNumber();
             $data['status'] = MedicalCase::STATUS_OPEN;
@@ -425,12 +566,20 @@ class MedicalCaseService
             $caseItems = $data['case_items'] ?? null;
             unset($data['case_items']);
 
+            // 诊断存 diagnoses 表，不是 medical_cases 的列
+            $diagnosisRows = $data['diagnosis_rows'] ?? null;
+            unset($data['diagnosis_rows']);
+
             $data['is_draft'] = $isDraft;
             $data['version_number'] = 1;
             $case = MedicalCase::create($data);
 
             if ($case && $caseItems !== null) {
                 $this->syncCaseItems($case, $caseItems);
+            }
+
+            if ($case && $diagnosisRows !== null) {
+                $this->syncDiagnoses($case, $diagnosisRows);
             }
 
             if ($case && !$isDraft) {
@@ -478,7 +627,7 @@ class MedicalCaseService
             // createAmendment 记录的内容）。此时行会与文本列不一致 —— 下次打开
             // 病历时 getCaseItemsForEdit() 发现该段没有行、按整段文字合成一行，
             // 数据不会错，只是丢掉分行粒度。这比让未审批的行直接落库要安全。
-            unset($data['case_items']);
+            unset($data['case_items'], $data['diagnosis_rows']);
             $amendment = $this->createAmendment($case, $data, $modificationReason);
             return ['status' => true, 'amendment_id' => $amendment->id];
         }
@@ -506,11 +655,18 @@ class MedicalCaseService
         $caseItems = $data['case_items'] ?? null;
         unset($data['case_items']);
 
+        $diagnosisRows = $data['diagnosis_rows'] ?? null;
+        unset($data['diagnosis_rows']);
+
         $case->increment('version_number');
         $status = MedicalCase::where('id', $id)->update($data);
 
         if ($status !== false && $caseItems !== null) {
             $this->syncCaseItems($case, $caseItems);
+        }
+
+        if ($status !== false && $diagnosisRows !== null) {
+            $this->syncDiagnoses($case, $diagnosisRows);
         }
 
         // If transitioning from draft to submitted, lock the record

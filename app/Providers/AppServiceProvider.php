@@ -90,11 +90,10 @@ class AppServiceProvider extends ServiceProvider
         // 在 Controller 里逐个传必定漏一个，漏掉那个入口的分行就全是空的。
         View::composer('medical_cases.edit', function ($view) {
             $data = $view->getData();
-            $view->with(
-                'caseItems',
-                app(\App\Services\MedicalCaseService::class)
-                    ->getCaseItemsForEdit($data['case'] ?? null)
-            );
+            $svc = app(\App\Services\MedicalCaseService::class);
+            $view->with('caseItems', $svc->getCaseItemsForEdit($data['case'] ?? null));
+            // 诊断段走 diagnoses 表（带 ICD 编码），与 caseItems 分开取
+            $view->with('diagnosisRows', $svc->getDiagnosesForEdit($data['case'] ?? null));
         });
 
         // 病历页的快捷短语侧栏 —— 从 quick_phrases 表按分类取，而不是写死在 Blade 里。
