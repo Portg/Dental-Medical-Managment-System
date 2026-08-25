@@ -114,7 +114,7 @@ return [
     'save_treatment_plan' => '保存治疗计划',
 
     // Plan status
-    'plan_status_planned' => '已计划',
+    'plan_status_planned' => '计划中',
     'plan_status_in_progress' => '进行中',
     'plan_status_completed' => '已完成',
     'plan_status_cancelled' => '已取消',
@@ -224,18 +224,14 @@ return [
     'quick_tooth_select' => '快捷视图',
     'click_to_select_tooth' => '点击可选择牙位',
     'history_records' => '历史病历',
-    'expand' => '展开',
-    'collapse' => '收起',
     'quick_phrases' => '快捷短语',
     'create_treatment_plan' => '制定治疗计划',
     'copy_into_current' => '带入本次',
     'confirm_copy_overwrite' => '当前已填写的检查/诊断/治疗会被上次的内容覆盖，继续？',
     'copied_from_previous' => '已带入上次病历的内容',
-    'visit_type_revisit' => '复诊',
     'visit_sequence' => '就诊次数',
-    'progress_notes_readonly_hint' => '复诊请用「新增复诊病历」——一次就诊一份病历。此处仅展示历史记录。',
+    'progress_notes_readonly_hint' => '复诊请新建一份病历、就诊类型选「复诊」——一次就诊一份病历。此处仅展示历史记录。',
     'icd_placeholder' => 'ICD 编码（选填）',
-    'diagnosis_placeholder' => '填写诊断结论…',
     'narrative_group' => '主诉 / 现病史 / 既往史',
     'copy_teeth' => '复制上段牙位',
     'copy_teeth_hint' => '把上一段用到的牙位按行带过来，省得重新点选',
@@ -348,15 +344,6 @@ return [
     'visit_type_initial' => '初诊',
     'visit_type_revisit' => '复诊',
     'visit_type_follow_up' => '随访',
-    'plan_status_planned' => '计划中',
-    'plan_status_in_progress' => '进行中',
-    'plan_status_completed' => '已完成',
-    'plan_status_cancelled' => '已取消',
-
-    // Related appointments
-    'related_appointments' => '相关预约',
-    'appointment_no' => '预约编号',
-    'appointment_date' => '预约日期',
 
     // Teeth management
     'add_teeth' => '添加牙位',

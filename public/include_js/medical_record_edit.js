@@ -940,6 +940,67 @@ function initTemplatePicker() {
     // 常用模板快捷按钮（与 / 选择器同一份数据）
     renderTemplateQuickButtons();
 
+    /**
+     * 复诊「带入本次」：把上次病历的临床内容复制到当前表单。
+     *
+     * 复诊是新建一份病历（一次就诊一份 —— 与市场做法一致），而复诊的内容多半是在
+     * 上次基础上改几个字：牙位一样、诊断一样、治疗接着上次做。没有这个按钮
+     * 就得对着侧栏一行行重打。
+     *
+     * 只带临床内容，不带主诉与现病史 —— 那是患者这次怎么说的，每次都不同。
+     * 覆盖前确认一次：已经写了一半再被覆盖掉会很恼火。
+     */
+    $(document).on('click', '.history-item-copy', function () {
+        var caseId = $(this).data('case-id');
+        if (!caseId) return;
+
+        var hasContent = (typeof CaseItems !== 'undefined') &&
+            (CaseItems.collect().length > 0 || CaseItems.collectDiagnoses().length > 0);
+
+        if (hasContent && !window.confirm(MedicalRecordConfig.translations.confirmCopyOverwrite)) {
+            return;
+        }
+
+        $.getJSON('/api/medical-case/' + caseId + '/reusable', function (resp) {
+            if (!resp || !resp.status || typeof CaseItems === 'undefined') return;
+            var d = resp.data || {};
+
+            // 分行明细：清空后按上次的行重建。
+            // 诊断段跳过 —— 它的行是带 ICD 选择器的 .diagnosis-row，由下面单独重建。
+            CaseItems.SECTIONS.forEach(function (section) {
+                if (section === 'diagnosis') return;
+                $('#rows-' + section).empty();
+                (( d.case_items || {} )[section] || []).forEach(function (r) {
+                    CaseItems.addRow(section, r.tooth_no || '', r.content || '', false);
+                });
+                if (!$('#rows-' + section).find('.case-item-row').length) {
+                    CaseItems.addRow(section, '', '', false);
+                }
+            });
+
+            // 诊断行（带 ICD）
+            $('#rows-diagnosis').empty();
+            (d.diagnosis_rows || []).forEach(function (r) {
+                CaseItems.addDiagnosisRow(r.tooth_no || '', r.content || '', r.icd_code || '', r.icd_code || '', false);
+            });
+            if (!$('#rows-diagnosis').find('.diagnosis-row').length) {
+                CaseItems.addDiagnosisRow('', '', '', '', false);
+            }
+
+            // 既往史与医嘱：这两段复诊时基本不变，一起带
+            if (d.past_medical_history) $('#past_medical_history').val(d.past_medical_history);
+            if (d.medical_orders) $('#medical_orders').val(d.medical_orders);
+
+            CaseItems.SECTIONS.forEach(CaseItems.syncDerived);
+            CaseItems.syncDiagnosisDerived();
+            updateMiniChartHighlights();
+
+            if (typeof toastr !== 'undefined') {
+                toastr.success(MedicalRecordConfig.translations.copiedFromPrevious);
+            }
+        });
+    });
+
     // 主诉/现病史/既往史 分组折叠 —— 复诊时这三段常常不改，折起来省一屏
     $(document).on('click', '.js-toggle-narrative', function () {
         var $body = $(this).closest('.narrative-group').find('.narrative-rows');
