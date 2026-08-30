@@ -98,15 +98,23 @@
     };
 
     // ── Medical Case ─────────────────────────────────────
+    /**
+     * 开病历 —— 直接进病历页，带上这次就诊。
+     *
+     * 原来这里弹的是一个只有「标题 / 日期 / 患者 / 医生 / 主诉 / 现病史」的小弹窗，
+     * 而真正的病历页（分段录入牙位+文字、牙位十字图、ICD 诊断、治疗计划、
+     * 就诊次数、带入本次）在 medical-case-new/{patient}，从工作台根本走不到。
+     * 医生在工作台点「病历」，要的就是那一页 —— 参考视频，点病历直接进病历。
+     *
+     * appointmentId 一并带过去：一次就诊一份病历，不带的话保存出来的病历
+     * 不知道对应今天哪一次看诊。原实现整个参数都没用。
+     */
     window.quickMedicalCase = function(patientId, appointmentId) {
-        // Reset form and prefill
-        var $form = $('#medical_case_form');
-        if ($form.length) {
-            $form[0].reset();
-            $form.find('[name="patient_id"]').val(patientId).trigger('change');
-            $form.find('[name="case_date"]').val(window._serverNow.date);
+        var url = '/medical-case-new/' + patientId;
+        if (appointmentId) {
+            url += '?appointment_id=' + appointmentId;
         }
-        $('#medical_case_modal').modal('show');
+        window.location.href = url;
     };
 
     // ── Prescription ─────────────────────────────────────

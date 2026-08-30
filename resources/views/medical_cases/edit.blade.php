@@ -58,6 +58,13 @@
                     @csrf
                     <input type="hidden" name="id" id="case_id" value="{{ $case->id ?? '' }}">
                     <input type="hidden" name="patient_id" id="patient_id" value="{{ $case->patient_id ?? $patient->id ?? '' }}">
+                    {{-- 这份病历写的是哪一次就诊。工作台点「开病历」会带着 appointment_id 过来，
+                         保存时回填 appointments.medical_case_id —— 一次就诊一份病历，
+                         没有这个字段，病历和就诊各记各的，谁也不知道今天这次看诊写没写病历。
+                         fillFromAppointment（补充病历）也写这个框，此前它写的是一个
+                         页面上根本不存在的 #appointment_id，选了等于没选。 --}}
+                    <input type="hidden" name="appointment_id" id="appointment_id"
+                           value="{{ $appointmentId ?? '' }}">
 
                     {{-- Visit Information --}}
                     @include('medical_cases.partials.visit_info', ['case' => $case ?? null, 'doctors' => $doctors])

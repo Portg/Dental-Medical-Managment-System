@@ -41,7 +41,8 @@ class WalkInRegistrationTest extends TestCase
         $branch = Branch::first() ?: Branch::create(['name' => 'Main Branch', 'is_active' => true]);
 
         $perms = [];
-        foreach (['view-appointments', 'create-appointments'] as $slug) {
+        // 病历权限一并发：挂号的下一步就是开病历，这条链要能一路走到底
+        foreach (['view-appointments', 'create-appointments', 'view-medical-cases', 'manage-medical-cases'] as $slug) {
             $perms[$slug] = Permission::firstOrCreate(
                 ['slug' => $slug],
                 ['name' => $slug, 'module' => '预约管理']
@@ -56,6 +57,7 @@ class WalkInRegistrationTest extends TestCase
         // 只能看、不能建的角色：挂号会真的建出一条预约，必须挡住
         $viewerRole = Role::create(['name' => 'Viewer', 'slug' => 'viewer']);
         RolePermission::create(['role_id' => $viewerRole->id, 'permission_id' => $perms['view-appointments']]);
+        RolePermission::create(['role_id' => $viewerRole->id, 'permission_id' => $perms['view-medical-cases']]);
 
         $this->receptionist = User::factory()->create([
             'role_id' => $frontDeskRole->id, 'branch_id' => $branch->id, 'status' => User::STATUS_ACTIVE,
@@ -158,6 +160,73 @@ class WalkInRegistrationTest extends TestCase
             ->postJson('/waiting-queue/register', ['notes' => '缺人缺医生'])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['patient_id', 'doctor_id']);
+    }
+
+    /**
+     * 挂号的下一步是开病历。工作台的「病历」按钮要落到真正的病历页，
+     * 并且把这次就诊、接诊医生、就诊类型一起带过去 —— 挂号时刚选过医生，
+     * 到病历页再选一遍，选错了病历就挂在别人名下。
+     */
+    /** @test */
+    public function 从工作台开病历会带上这次就诊与挂号医生(): void
+    {
+        $this->actingAs($this->receptionist)
+            ->postJson('/waiting-queue/register', $this->payload(['appointment_type' => 'revisit']))
+            ->assertOk();
+
+        $appointment = Appointment::where('patient_id', $this->patient->id)->firstOrFail();
+
+        $html = $this->actingAs($this->receptionist)
+            ->get('/medical-case-new/' . $this->patient->id . '?appointment_id=' . $appointment->id)
+            ->assertOk()->getContent();
+
+        $this->assertStringContainsString(
+            'id="appointment_id"',
+            $html,
+            '病历表单要有 appointment_id，否则保存出来的病历不知道对应哪次就诊'
+        );
+        $this->assertStringContainsString('value="' . $appointment->id . '"', $html);
+        $this->assertMatchesRegularExpression(
+            '/<option value="' . $this->doctor->id . '"\s*selected/',
+            $html,
+            '接诊医生应当预选成挂号时选的那位'
+        );
+        $this->assertMatchesRegularExpression(
+            '/value="revisit"\s*checked/',
+            $html,
+            '挂号选了复诊，病历的就诊类型就该是复诊'
+        );
+    }
+
+    /**
+     * 别的患者的就诊 id 不能拿来当自己的：这个参数是从 URL 来的。
+     */
+    /** @test */
+    public function 别人的就诊id不会被带进病历(): void
+    {
+        $this->actingAs($this->receptionist)
+            ->postJson('/waiting-queue/register', $this->payload())
+            ->assertOk();
+        $appointment = Appointment::where('patient_id', $this->patient->id)->firstOrFail();
+
+        $other = Patient::create([
+            'patient_no' => 'REG-' . uniqid(),
+            'surname'    => '张',
+            'othername'  => '三',
+            'gender'     => 'Female',
+            'phone_no'   => '13800138002',
+            '_who_added' => $this->receptionist->id,
+        ]);
+
+        $html = $this->actingAs($this->receptionist)
+            ->get('/medical-case-new/' . $other->id . '?appointment_id=' . $appointment->id)
+            ->assertOk()->getContent();
+
+        $this->assertDoesNotMatchRegularExpression(
+            '/<option value="' . $this->doctor->id . '"\s*selected/',
+            $html,
+            '不是这位患者的就诊，不该把那次就诊的医生预选上'
+        );
     }
 
     /**

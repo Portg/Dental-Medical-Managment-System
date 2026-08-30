@@ -365,6 +365,11 @@ class TodayWorkService
                 return $this->renderFlowAction($row);
             })
             ->addColumn('act_case', function ($row) {
+                // 点进去是病历页，而写病历要 manage-medical-cases。
+                // 不判权限的话，前台点了得到一个 403 页面 —— 按钮不该带人撞墙。
+                if (!Gate::allows('manage-medical-cases')) {
+                    return '';
+                }
                 return '<button class="btn btn-xs btn-default tw-icon-btn" title="' . __('today_work.medical_case') . '"'
                     . ' onclick="quickMedicalCase(' . $row->patient_id . ',' . $row->appointment_id . ')">'
                     . '<i class="fa fa-file-text-o"></i></button>';

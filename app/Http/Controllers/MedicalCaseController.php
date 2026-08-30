@@ -270,9 +270,29 @@ class MedicalCaseController extends Controller
         ]);
     }
 
-    public function createForPatient($patient_id)
+    public function createForPatient(Request $request, $patient_id)
     {
         $data = $this->medicalCaseService->getCreateForPatientData((int) $patient_id);
+
+        // 工作台「开病历」带着这次就诊过来（?appointment_id=）。带上它，
+        // 保存时这份病历就挂在今天这次就诊上，而不是一份无主的记录；
+        // 接诊医生与就诊类型也跟着这次挂号走 —— 挂号时刚选过，不该再问一遍。
+        $appointmentId = $request->query('appointment_id');
+        $data['appointmentId'] = $appointmentId;
+
+        if ($appointmentId) {
+            $appointment = \App\Appointment::where('id', (int) $appointmentId)
+                ->where('patient_id', (int) $patient_id)   // 只认这位患者自己的就诊
+                ->first();
+
+            if ($appointment) {
+                $data['prefillDoctorId'] = $appointment->doctor_id;
+                // 预约的 first_visit/revisit 与病历的 initial/revisit 是两套写法
+                $data['prefillVisitType'] = $appointment->appointment_type === 'revisit'
+                    ? 'revisit'
+                    : 'initial';
+            }
+        }
 
         return view('medical_cases.edit', $data);
     }

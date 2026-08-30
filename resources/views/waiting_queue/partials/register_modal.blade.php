@@ -33,19 +33,19 @@
                                 <select id="reg_doctor_id" name="doctor_id" class="form-control" style="width:100%"></select>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="control-label col-md-3 text-primary">{{ __('today_work.register_visit_type') }}</label>
-                            <div class="col-md-9">
-                                <label class="mt-radio" style="margin-right:18px;">
-                                    <input type="radio" name="appointment_type" value="first_visit" checked>
-                                    {{ __('today_work.first_visit') }}
-                                </label>
-                                <label class="mt-radio">
-                                    <input type="radio" name="appointment_type" value="revisit">
-                                    {{ __('today_work.revisit') }}
-                                </label>
-                            </div>
-                        </div>
+                        {{-- 走公共单选组件：自己写 mt-radio 少了那个 <span></span>，
+                             Metronic 会把原生 input 透明化，页面上只剩两个光秃秃的字。 --}}
+                        @include('components.form.radio-field', [
+                            'name'       => 'appointment_type',
+                            'label'      => __('today_work.register_visit_type'),
+                            'options'    => [
+                                ['value' => 'first_visit', 'text' => __('today_work.first_visit')],
+                                ['value' => 'revisit',     'text' => __('today_work.revisit')],
+                            ],
+                            'selected'   => 'first_visit',
+                            'labelWidth' => 3,
+                            'inputWidth' => 9,
+                        ])
                         <div class="form-group">
                             <label class="control-label col-md-3 text-primary">{{ __('today_work.register_service') }}</label>
                             <div class="col-md-9">

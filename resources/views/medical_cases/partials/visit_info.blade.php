@@ -5,13 +5,17 @@
         <input type="text" name="case_date" id="case_date" class="form-control js-date" autocomplete="off"
                value="{{ isset($case) && $case->case_date ? $case->case_date->format('Y-m-d') : date('Y-m-d') }}">
     </div>
+    {{-- 从工作台「开病历」进来时，接诊医生与就诊类型跟着这次挂号走
+         （$prefillDoctorId / $prefillVisitType）。挂号时刚选过一次医生，
+         到病历页再让医生自己选一遍，选错了病历就挂在别人名下。 --}}
     <div class="visit-info-item">
         <label>{{ __('medical_cases.attending_doctor') }}</label>
         <select name="doctor_id" id="doctor_id" class="form-control">
             <option value="">{{ __('medical_cases.select_doctor') }}</option>
             @foreach($doctors as $doctor)
                 <option value="{{ $doctor->id }}"
-                    {{ (isset($case) && $case->doctor_id == $doctor->id) ? 'selected' : '' }}>
+                    {{ (isset($case) && $case->doctor_id == $doctor->id)
+                        || (!isset($case) && ($prefillDoctorId ?? null) == $doctor->id) ? 'selected' : '' }}>
                     {{ $doctor->full_name }}
                 </option>
             @endforeach
@@ -29,14 +33,19 @@
              「新增【初诊病历】」「新增【复诊病历】」并列）。急诊属于就诊性质，
              真要区分该走预约类型，不该塞在病历的就诊类型里。 --}}
         <div class="visit-type-radio-group">
+            @php
+                $currentVisitType = isset($case)
+                    ? $case->visit_type
+                    : ($prefillVisitType ?? 'initial');
+            @endphp
             <label class="visit-type-radio">
                 <input type="radio" name="visit_type" value="initial"
-                    {{ (!isset($case) || $case->visit_type !== 'revisit') ? 'checked' : '' }}>
+                    {{ $currentVisitType !== 'revisit' ? 'checked' : '' }}>
                 {{ __('medical_cases.visit_type_initial') }}
             </label>
             <label class="visit-type-radio">
                 <input type="radio" name="visit_type" value="revisit"
-                    {{ (isset($case) && $case->visit_type === 'revisit') ? 'checked' : '' }}>
+                    {{ $currentVisitType === 'revisit' ? 'checked' : '' }}>
                 {{ __('medical_cases.visit_type_revisit') }}
             </label>
         </div>
