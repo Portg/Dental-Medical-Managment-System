@@ -660,12 +660,27 @@ class PatientService
                 }
             })
             ->addColumn('action', function ($row) {
+                // 挂号放第一条：患者列表最常被打开的时刻，就是有人站在前台说
+                // 「我姓刘，来看牙」。参考视频 —— 搜索结果每行都直接给挂号。
+                // 名字取列表里同一份（脱敏后的）显示值，别在 DOM 里另开一个不脱敏的口子。
+                $displayName = DataMaskingService::displayField(
+                    'full_name',
+                    NameHelper::join($row->surname, $row->othername)
+                );
+                // 先 addslashes 再 e()：名字里的单引号经 HTML 解码后仍是转义状态，
+                // 不会把 onclick 的 JS 字符串截断。
+                $nameForJs = e(addslashes(strip_tags((string) $displayName)));
+
                 return '
                   <div class="btn-group">
                     <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
                             aria-expanded="false"> ' . __('common.action') . '
                     </button>
                     <ul class="dropdown-menu" role="menu">
+                        <li>
+                            <a href="#" onclick="openRegistrationModal({patient_id: ' . $row->id . ', patient_name: \'' . $nameForJs . '\', appointment_type: \'revisit\'}); return false;">'
+                                . __('today_work.register') . '</a>
+                        </li>
                         <li>
                             <a href="' . url('patients/' . $row->id) . '">' . __('patient.patient_details') . '</a>
                         </li>

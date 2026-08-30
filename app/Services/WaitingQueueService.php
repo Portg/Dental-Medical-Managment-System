@@ -12,6 +12,13 @@ use Yajra\DataTables\DataTables;
 
 class WaitingQueueService
 {
+    private AppointmentService $appointmentService;
+
+    public function __construct(AppointmentService $appointmentService)
+    {
+        $this->appointmentService = $appointmentService;
+    }
+
     /**
      * Get chairs for the current branch.
      */
@@ -45,6 +52,58 @@ class WaitingQueueService
     public function checkIn(int $appointmentId, int $branchId, int $userId): WaitingQueue
     {
         return WaitingQueue::checkIn($appointmentId, $branchId, $userId);
+    }
+
+    /**
+     * 挂号 —— 到店患者当场进入今天的就诊队列。
+     *
+     * 参考视频的前台动线：新增患者 → **挂号** → 写病历。挂号只问两件事
+     * （找哪位医生、初诊还是复诊），因为人已经站在台前了 —— 逼前台先去预约页
+     * 选日期、选时间段是在问一个已经没有意义的问题。
+     *
+     * 仍然落成一条 walk_in 预约 + 一条候诊记录：今日工作列表是从 appointments
+     * 出的（见 TodayWorkService::getTodayWorkQuery），不建预约的话，新患者存完
+     * 就从台面上消失了，前台只能再开一次预约抽屉把他补回来。
+     *
+     * 排班只用来解析 shift_id，解析不出来也照挂：人已经在店里，
+     * 「这位医生今天没排班」拦下的不是错误录入，而是一个已经发生的事实。
+     */
+    public function registerWalkIn(array $data, int $branchId, int $userId): array
+    {
+        $doctorId = (int) $data['doctor_id'];
+        $date     = date('Y-m-d');
+        $time     = date('H:i');
+
+        $schedule = $this->appointmentService->validateScheduleForBooking($doctorId, $date, $time);
+
+        $appointment = $this->appointmentService->createAppointment([
+            'patient_id'        => (int) $data['patient_id'],
+            'doctor_id'         => $doctorId,
+            'appointment_date'  => $date,
+            'appointment_time'  => $time,
+            'visit_information' => Appointment::VISIT_WALK_IN,
+            'appointment_type'  => $data['appointment_type'] ?? 'revisit',
+            'service_id'        => $data['service_id'] ?? null,
+            'chair_id'          => $data['chair_id'] ?? null,
+            'notes'             => $data['notes'] ?? null,
+            'shift_id'          => $schedule['shift_id'] ?? null,
+            // 人已经到店，再发一条「预约成功」的短信是噪音
+            'send_sms'          => '0',
+        ]);
+
+        // null 只有一个来源：该班次已满（createAppointment 里的原子容量校验）
+        if (!$appointment) {
+            return ['success' => false, 'message' => __('appointment.shift_max_patients_exceeded')];
+        }
+
+        $queue = $this->checkIn($appointment->id, $branchId, $userId);
+
+        return [
+            'success'        => true,
+            'appointment_id' => $appointment->id,
+            'queue_id'       => $queue->id,
+            'queue_number'   => $queue->queue_number,
+        ];
     }
 
     /**

@@ -16,6 +16,8 @@ class WaitingQueueController extends Controller
         // 候诊/叫号是医生、护士、前台的日常接诊流程，按「查看预约」授权；
         // manage-schedules 是排班配置权限，与此无关（医生、护士都没有）。
         $this->middleware('can:view-appointments');
+        // 挂号会真的建出一条预约，按「新增预约」授权 —— 与预约页开单同一把钥匙
+        $this->middleware('can:create-appointments')->only(['register']);
     }
 
     /**
@@ -72,6 +74,45 @@ class WaitingQueueController extends Controller
                 'message' => $e->getMessage()
             ], 400);
         }
+    }
+
+    /**
+     * 挂号 —— 到店患者当场建今天的就诊并进候诊队列。
+     *
+     * 与 checkIn 的区别：checkIn 是「已有预约的人到了」，挂号是「人来了，
+     * 但还没有今天的就诊」。前台最高频的两条动线（新患者建档后、老患者到店）
+     * 都走这里，见 WaitingQueueService::registerWalkIn 的说明。
+     */
+    public function register(Request $request)
+    {
+        $request->validate([
+            'patient_id'       => 'required|exists:patients,id',
+            'doctor_id'        => 'required|exists:users,id',
+            'appointment_type' => 'nullable|in:first_visit,revisit',
+            'service_id'       => 'nullable|exists:medical_services,id',
+            'chair_id'         => 'nullable|exists:chairs,id',
+            'notes'            => 'nullable|string|max:255',
+        ]);
+
+        try {
+            $result = $this->waitingQueueService->registerWalkIn(
+                $request->only(['patient_id', 'doctor_id', 'appointment_type', 'service_id', 'chair_id', 'notes']),
+                Auth::user()->branch_id,
+                Auth::id()
+            );
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 400);
+        }
+
+        if (!$result['success']) {
+            return response()->json(['status' => 'error', 'message' => $result['message']], 400);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => __('today_work.register_success'),
+            'data'    => $result,
+        ]);
     }
 
     /**

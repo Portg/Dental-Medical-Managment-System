@@ -14,6 +14,11 @@
             <button class="btn btn-sm btn-success" onclick="quickRegisterPatient()">
                 <i class="fa fa-plus"></i> {{ __('today_work.new_patient') }}
             </button>
+            {{-- 挂号：老患者到店，直接搜出来挂上今天的号。参考视频 ——
+                 前台一天里做得最多的两件事就是「建档」和「挂号」，都该在顶上。 --}}
+            <button class="btn btn-sm btn-info" onclick="openRegistrationModal()">
+                <i class="fa fa-sign-in"></i> {{ __('today_work.register') }}
+            </button>
             <button class="btn btn-sm btn-primary" onclick="openAppointmentDrawer()">
                 {{ __('today_work.new_appointment') }}
             </button>
@@ -153,6 +158,7 @@
                             <th>{{ __('common.doctor') }}</th>
                             <th>{{ __('common.service') }}</th>
                             <th>{{ __('common.status') }}</th>
+                            <th>{{ __('today_work.col_visit_type') }}</th>
                             {{-- 参考视频的工作台：操作拆成固定的几列，每列一个动作、列头有名字。
                                  原来所有按钮挤在一个「操作」列里，按钮随状态增减、位置左右跳，
                                  每次都要重新找。拆开之后「病历」永远在同一列同一位置。 --}}
@@ -368,6 +374,7 @@
     </div>
 
     {{-- Embedded Modals / Drawers --}}
+    @include('waiting_queue.partials.register_modal')
     @include('patients.create')
     @include('appointments.create')
     @include('medical_cases.create')
@@ -406,6 +413,7 @@
             utilsScript: '{{ asset("backend/assets/global/scripts/utils.js") }}'
         };
     </script>
+    <script src="{{ asset('include_js/registration_modal.js') }}?v={{ filemtime(public_path('include_js/registration_modal.js')) }}"></script>
     <script src="{{ asset('include_js/appointment_drawer.js') }}?v={{ filemtime(public_path('include_js/appointment_drawer.js')) }}"></script>
     <script src="{{ asset('include_js/today_work_actions.js') }}?v={{ filemtime(public_path('include_js/today_work_actions.js')) }}"></script>
     <script src="{{ asset('include_js/today_work_kanban.js') }}?v={{ filemtime(public_path('include_js/today_work_kanban.js')) }}"></script>

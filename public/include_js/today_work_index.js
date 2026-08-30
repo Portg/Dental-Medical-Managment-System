@@ -34,6 +34,7 @@ $(document).ready(function() {
             { data: 'doctor_name', name: 'd.surname', orderable: false },
             { data: 'service', name: 'ms.name', orderable: false },
             { data: 'display_status', orderable: false, searchable: false },
+            { data: 'visit_type', orderable: false, searchable: false },
             // 操作拆成固定列：流程（主操作）| 病历 | 收费 | 更多
             { data: 'act_flow',    orderable: false, searchable: false, className: 'tw-col-act' },
             { data: 'act_case',    orderable: false, searchable: false, className: 'tw-col-act' },
@@ -346,6 +347,19 @@ function save_new_record(continueAdding) {
                     }
                 } else {
                     $('#patients-modal').modal('hide');
+                    // 建完档紧接着挂号 —— 参考视频，保存患者后直接弹挂号窗口。
+                    // 不接这一步的话新患者存完就从台面上消失了：今日就诊列表是从
+                    // 预约出的，而他还没有今天的任何预约，前台得再开一次预约抽屉
+                    // 把人补回来。新建的一律按初诊。
+                    var created = data.data || {};
+                    if (created.id && typeof openRegistrationModal === 'function') {
+                        openRegistrationModal({
+                            patient_id: created.id,
+                            patient_name: created.name,
+                            appointment_type: 'first_visit',
+                            notes: LanguageManager.trans('today_work.new_patient')
+                        });
+                    }
                 }
                 refreshStats();
             } else {

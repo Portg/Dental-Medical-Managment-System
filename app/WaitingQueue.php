@@ -227,12 +227,18 @@ class WaitingQueue extends Model
             'branch_id' => $branchId,
             'appointment_id' => $appointmentId,
             'patient_id' => $appointment->patient_id,
-            'doctor_id' => $appointment->doctor,
+            // doctor 是 belongsTo 关系，不是列 —— 原来这里把整个 User 对象塞进
+            // doctor_id，落库变成 0。于是「医生队列」永远是空的、「叫下一位」
+            // 永远说没有患者（两处都按 waiting_queues.doctor_id 过滤），
+            // 而签到本身看起来是成功的，所以一直没人发现。
+            'doctor_id' => $appointment->doctor_id,
             'queue_number' => self::generateQueueNumber($branchId),
             'status' => self::STATUS_WAITING,
             'check_in_time' => now(),
             'estimated_wait_minutes' => $estimatedWait,
-            'visit_type' => $appointment->appointment_category ?? null,
+            // appointment_category 这个列不存在，取到的一直是 null。
+            // 要存的是初诊/复诊，那列叫 appointment_type。
+            'visit_type' => $appointment->appointment_type ?? null,
             'created_by' => $createdBy
         ]);
 

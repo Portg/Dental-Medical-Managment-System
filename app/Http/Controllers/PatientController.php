@@ -135,7 +135,16 @@ class PatientController extends Controller
             // Sync kin relations
             $this->patientService->syncKinRelations($patient->id, $request->kin_relations);
 
-            return response()->json(['message' => __('messages.patient_added_successfully'), 'status' => true]);
+            // 带上 id 与姓名：建完档下一步就是挂号（参考视频的前台动线
+            // 「新增患者 → 挂号 → 写病历」），挂号弹窗要拿它们把患者预选上。
+            return response()->json([
+                'message' => __('messages.patient_added_successfully'),
+                'status'  => true,
+                'data'    => [
+                    'id'   => $patient->id,
+                    'name' => \App\Http\Helper\NameHelper::join($patient->surname, $patient->othername),
+                ],
+            ]);
         }
         return response()->json(['message' => __('messages.error_occurred'), 'status' => false]);
     }

@@ -564,6 +564,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('waiting-queue/data', 'WaitingQueueController@getData');
     Route::get('waiting-queue/today-appointments', 'WaitingQueueController@getTodayAppointments');
     Route::post('waiting-queue/check-in', 'WaitingQueueController@checkIn');
+    // 挂号：到店患者当场建今天的就诊（check-in 只处理「已有预约的人到了」）
+    Route::post('waiting-queue/register', 'WaitingQueueController@register');
     Route::post('waiting-queue/{id}/call', 'WaitingQueueController@callPatient');
     Route::post('waiting-queue/{id}/start', 'WaitingQueueController@startTreatment');
     Route::post('waiting-queue/{id}/complete', 'WaitingQueueController@completeTreatment');

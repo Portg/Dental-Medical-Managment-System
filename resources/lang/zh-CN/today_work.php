@@ -27,6 +27,22 @@ return [
     'new_patient'         => '新患者登记',
     'new_appointment'     => '新预约',
     'display_screen'      => '叫号大屏',
+
+    // 挂号 —— 到店患者当场进今天的就诊队列
+    'register'            => '挂号',
+    'register_title'      => '患者挂号',
+    'register_success'    => '挂号成功，患者已进入今日就诊',
+    'register_doctor'     => '挂号医生',
+    'register_note'       => '前台说明',
+    'register_note_hint'  => '例如：新增患者、指定医生、陪同人',
+    'register_submit'     => '挂号',
+    'register_patient'    => '患者',
+    'register_service'    => '就诊内容',
+    'register_visit_type' => '就诊类型',
+    'register_no_doctor'  => '请选择挂号医生',
+    'register_no_patient' => '请选择患者',
+    'col_visit_type'      => '就诊类型',
+
     'check_in'            => '签到',
     'call'                => '叫号',
     'recall'              => '重呼',

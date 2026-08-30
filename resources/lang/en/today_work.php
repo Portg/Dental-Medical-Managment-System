@@ -27,6 +27,22 @@ return [
     'new_patient'         => 'New Patient',
     'new_appointment'     => 'New Appointment',
     'display_screen'      => 'Display Screen',
+
+    // Walk-in registration
+    'register'            => 'Register',
+    'register_title'      => 'Patient Registration',
+    'register_success'    => 'Registered — the patient is now in today\'s list',
+    'register_doctor'     => 'Doctor',
+    'register_note'       => 'Front desk note',
+    'register_note_hint'  => 'e.g. new patient, requested doctor, accompanied by',
+    'register_submit'     => 'Register',
+    'register_patient'    => 'Patient',
+    'register_service'    => 'Visit reason',
+    'register_visit_type' => 'Visit type',
+    'register_no_doctor'  => 'Please choose a doctor',
+    'register_no_patient' => 'Please choose a patient',
+    'col_visit_type'      => 'Visit type',
+
     'check_in'            => 'Check In',
     'call'                => 'Call',
     'recall'              => 'Recall',

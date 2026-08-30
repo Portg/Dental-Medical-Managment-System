@@ -227,6 +227,9 @@
 @section('modals')
     @include('patients.create')
     @include('patients.patient_history')
+    {{-- 挂号：老患者到店，从患者列表直接挂上今天的号（行操作里的「挂号」），
+         新建档保存后也从这里弹出来 —— 参考视频「新增患者 → 挂号 → 写病历」。 --}}
+    @include('waiting_queue.partials.register_modal')
 
     {{-- Batch Tags Modal --}}
     <div class="modal fade" id="batchTagsModal" tabindex="-1" role="dialog">
@@ -365,10 +368,13 @@
      Page-specific JavaScript
      ======================================================================== --}}
 @section('page_js')
+<script src="{{ asset('include_js/registration_modal.js') }}?v={{ filemtime(public_path('include_js/registration_modal.js')) }}"></script>
 <script type="text/javascript">
     // Load page-specific translations
+    // today_work 是挂号弹窗的词条所在（register_* 那一组），弹窗被这个页面复用
     LanguageManager.loadAllFromPHP({
-        'patient': @json(__('patient'))
+        'patient': @json(__('patient')),
+        'today_work': @json(__('today_work'))
     });
 
     // International telephone input
@@ -930,7 +936,20 @@
                         dataTable.draw(false);
                     } else {
                         $('#patients-modal').modal('hide');
-                        alert_dialog(data.message, "success");
+                        dataTable.draw(false);
+                        {{-- 建完档紧接着挂号 —— 参考视频「新增患者 → 挂号 → 写病历」。
+                             不接这一步，新患者建完档就停在列表里，谁也不知道他此刻正站在台前。 --}}
+                        var created = data.data || {};
+                        if (created.id && typeof openRegistrationModal === 'function') {
+                            openRegistrationModal({
+                                patient_id: created.id,
+                                patient_name: created.name,
+                                appointment_type: 'first_visit',
+                                notes: LanguageManager.trans('today_work.new_patient')
+                            });
+                        } else {
+                            alert_dialog(data.message, "success");
+                        }
                     }
                 } else {
                     alert_dialog(data.message, "danger");

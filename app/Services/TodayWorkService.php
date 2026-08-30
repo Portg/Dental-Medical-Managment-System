@@ -348,6 +348,16 @@ class TodayWorkService
                 $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
                 return $this->renderStatusBadge($status);
             })
+            // 初诊/复诊。挂号时就选过，是医生接诊前最先想知道的一件事 ——
+            // 初诊要从头问一遍，复诊接着上次做。参考视频，这一列初诊标红。
+            ->addColumn('visit_type', function ($row) {
+                $label = $this->appointmentTypeLabel($row->appointment_type);
+                if ($label === '') {
+                    return '-';
+                }
+                $class = $row->appointment_type === 'first_visit' ? 'text-danger' : 'text-muted';
+                return '<span class="' . $class . '">' . e($label) . '</span>';
+            })
             // 操作拆成固定列，每列一个动作。原来所有按钮挤在一个「操作」列里，
             // 按钮随状态增减、位置左右跳，每次都要重新找 —— 参考视频的工作台，
             // 「病历」永远在同一列同一位置。
@@ -374,7 +384,7 @@ class TodayWorkService
                 if (!$row->start_time) return '-';
                 return date('H:i', strtotime($row->start_time));
             })
-            ->rawColumns(['patient_name', 'display_status', 'act_flow', 'act_case', 'act_invoice', 'act_more'])
+            ->rawColumns(['patient_name', 'display_status', 'visit_type', 'act_flow', 'act_case', 'act_invoice', 'act_more'])
             ->make(true);
     }
 
