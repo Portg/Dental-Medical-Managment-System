@@ -102,18 +102,30 @@ class NameHelper
         $surnameCol = $table ? "{$table}.surname" : 'surname';
         $othernameCol = $table ? "{$table}.othername" : 'othername';
 
-        $query->where($surnameCol, 'like', '%' . $search . '%')
+        // 整组条件作为一个 OR 分组挂上去，而不是直接往 $query 上铺 where + orWhere。
+        //
+        // 调用点如果在闭包里已经有自己的条件（InvoiceService::searchInvoices 就是
+        // 先放了 invoice_no），裸铺的第一句 where 会被 AND 到那个条件上：
+        //     invoice_no like ? AND surname like ? OR othername like ? OR ...
+        // 发票号是数字串、姓氏是中文，两者不可能同时命中 —— 按发票号搜发票
+        // 一条都搜不出来。分组之后 OR 的语义才是完整的。
+        //
+        // 另外 17 个调用点在空闭包里调，不受影响：查询编译时会丢掉首个条件的
+        // boolean，所以多包一层不会凭空多出一个 AND。
+        $query->orWhere(function ($q) use ($search, $table, $surnameCol, $othernameCol, $pinyinColumn) {
+            $q->where($surnameCol, 'like', '%' . $search . '%')
               ->orWhere($othernameCol, 'like', '%' . $search . '%');
 
-        if (app()->getLocale() === 'zh-CN') {
-            $query->orWhereRaw("CONCAT({$surnameCol}, {$othernameCol}) like ?", ['%' . $search . '%']);
-        }
+            if (app()->getLocale() === 'zh-CN') {
+                $q->orWhereRaw("CONCAT({$surnameCol}, {$othernameCol}) like ?", ['%' . $search . '%']);
+            }
 
-        // 首拼：前缀匹配而不是两头模糊。lwy 应当命中「刘万友」，
-        // 但 wy 不该命中 —— 两头模糊会让任意两三个字母扫出一大片无关患者。
-        if ($pinyinColumn !== null && $search !== '' && preg_match('/^[a-zA-Z]+$/', $search)) {
-            $pyCol = $table ? "{$table}.{$pinyinColumn}" : $pinyinColumn;
-            $query->orWhere($pyCol, 'like', strtolower($search) . '%');
-        }
+            // 首拼：前缀匹配而不是两头模糊。lwy 应当命中「刘万友」，
+            // 但 wy 不该命中 —— 两头模糊会让任意两三个字母扫出一大片无关患者。
+            if ($pinyinColumn !== null && $search !== '' && preg_match('/^[a-zA-Z]+$/', $search)) {
+                $pyCol = $table ? "{$table}.{$pinyinColumn}" : $pinyinColumn;
+                $q->orWhere($pyCol, 'like', strtolower($search) . '%');
+            }
+        });
     }
 }
