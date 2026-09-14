@@ -15,10 +15,13 @@
                 <i class="fa fa-plus"></i> {{ __('today_work.new_patient') }}
             </button>
             {{-- 挂号：老患者到店，直接搜出来挂上今天的号。参考视频 ——
-                 前台一天里做得最多的两件事就是「建档」和「挂号」，都该在顶上。 --}}
+                 前台一天里做得最多的两件事就是「建档」和「挂号」，都该在顶上。
+                 挂号会真的建出一条预约，没有这个权限就别把按钮摆出来带人撞 403。 --}}
+            @can('create-appointments')
             <button class="btn btn-sm btn-info" onclick="openRegistrationModal()">
                 <i class="fa fa-sign-in"></i> {{ __('today_work.register') }}
             </button>
+            @endcan
             <button class="btn btn-sm btn-primary" onclick="openAppointmentDrawer()">
                 {{ __('today_work.new_appointment') }}
             </button>
@@ -159,6 +162,7 @@
                             <th>{{ __('common.service') }}</th>
                             <th>{{ __('common.status') }}</th>
                             <th>{{ __('today_work.col_visit_type') }}</th>
+                            <th>{{ __('today_work.col_notes') }}</th>
                             {{-- 参考视频的工作台：操作拆成固定的几列，每列一个动作、列头有名字。
                                  原来所有按钮挤在一个「操作」列里，按钮随状态增减、位置左右跳，
                                  每次都要重新找。拆开之后「病历」永远在同一列同一位置。 --}}
@@ -374,7 +378,9 @@
     </div>
 
     {{-- Embedded Modals / Drawers --}}
-    @include('waiting_queue.partials.register_modal')
+    @can('create-appointments')
+        @include('waiting_queue.partials.register_modal')
+    @endcan
     @include('patients.create')
     @include('appointments.create')
     @include('medical_cases.create')

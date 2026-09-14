@@ -24,9 +24,19 @@
      * @param {Object} prefill {patient_id, patient_name, doctor_id, doctor_name, appointment_type}
      *        新建患者过来时带 patient_id + patient_name —— 那位患者还没进过任何列表，
      *        select2 搜不出来，得把 option 现造一个塞进去。
+     * @returns {boolean} 有没有真的弹出来。
+     *        调用方要靠这个值决定还要不要自己给一句反馈：这个函数在没有建预约
+     *        权限的页面上是弹不出来的，而本文件总是被加载，光靠 typeof 判断
+     *        不出来（函数在，弹窗不在）。
      */
     window.openRegistrationModal = function (prefill) {
         prefill = prefill || {};
+
+        // 没有建预约权限的页面不会渲染这个弹窗（blade 里 @can 包着）。
+        // 新建患者保存后会自动调这里，所以要挡一下，别报个 undefined 了事。
+        if (!$('#registration-modal').length) {
+            return false;
+        }
 
         $('#registration-form')[0].reset();
         setSelection('#reg_patient_id', prefill.patient_id, prefill.patient_name);
@@ -38,6 +48,7 @@
         $('input[name="appointment_type"][value="' + visitType + '"]').prop('checked', true);
 
         $('#registration-modal').modal('show');
+        return true;
     };
 
     /** 给 select2 塞一个「库里还没被搜到过」的选项并选中；值为空时清空 */

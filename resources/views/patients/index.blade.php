@@ -228,8 +228,11 @@
     @include('patients.create')
     @include('patients.patient_history')
     {{-- 挂号：老患者到店，从患者列表直接挂上今天的号（行操作里的「挂号」），
-         新建档保存后也从这里弹出来 —— 参考视频「新增患者 → 挂号 → 写病历」。 --}}
-    @include('waiting_queue.partials.register_modal')
+         新建档保存后也从这里弹出来 —— 参考视频「新增患者 → 挂号 → 写病历」。
+         没有建预约的权限就不给这个弹窗，行操作里那条也一并不渲染。 --}}
+    @can('create-appointments')
+        @include('waiting_queue.partials.register_modal')
+    @endcan
 
     {{-- Batch Tags Modal --}}
     <div class="modal fade" id="batchTagsModal" tabindex="-1" role="dialog">
@@ -939,15 +942,20 @@
                         dataTable.draw(false);
                         {{-- 建完档紧接着挂号 —— 参考视频「新增患者 → 挂号 → 写病历」。
                              不接这一步，新患者建完档就停在列表里，谁也不知道他此刻正站在台前。 --}}
+                        {{-- 挂号窗弹出来了就不必再说一句「保存成功」——那个窗口本身就是反馈。
+                             弹不出来（没有建预约权限，或者没拿到新患者 id）才补提示：
+                             少了这一句，前台保存完看到的是弹窗一关、什么都没说。 --}}
                         var created = data.data || {};
+                        var registrationOpened = false;
                         if (created.id && typeof openRegistrationModal === 'function') {
-                            openRegistrationModal({
+                            registrationOpened = openRegistrationModal({
                                 patient_id: created.id,
                                 patient_name: created.name,
                                 appointment_type: 'first_visit',
                                 notes: LanguageManager.trans('today_work.new_patient')
                             });
-                        } else {
+                        }
+                        if (!registrationOpened) {
                             alert_dialog(data.message, "success");
                         }
                     }

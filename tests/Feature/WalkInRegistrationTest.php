@@ -163,6 +163,56 @@ class WalkInRegistrationTest extends TestCase
     }
 
     /**
+     * 挂号会真的建出一条预约。没这个权限的人不该看见挂号入口 ——
+     * 摆一个点了必然 403 的按钮，比不摆更糟。
+     */
+    /** @test */
+    public function 没有建预约权限的人在工作台看不到挂号入口(): void
+    {
+        $html = $this->actingAs($this->noPermStaff)->get('/today-work')
+            ->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('openRegistrationModal(', $html, '按钮不该渲染');
+        $this->assertStringNotContainsString('id="registration-modal"', $html, '弹窗也不该渲染');
+    }
+
+    /**
+     * 「开病历」点进去是病历页，写病历要 manage-medical-cases。
+     */
+    /** @test */
+    public function 没有写病历权限的人列表里没有开病历按钮(): void
+    {
+        $this->actingAs($this->receptionist)
+            ->postJson('/waiting-queue/register', $this->payload())
+            ->assertOk();
+
+        $withPerm = $this->actingAs($this->receptionist)
+            ->getJson('/today-work/data?status=all')->assertOk()->json('data.0');
+        $this->assertStringContainsString('quickMedicalCase(', $withPerm['act_case']);
+
+        $withoutPerm = $this->actingAs($this->noPermStaff)
+            ->getJson('/today-work/data?status=all')->assertOk()->json('data.0');
+        $this->assertSame('', $withoutPerm['act_case'], '没有写病历权限就不给这个按钮');
+    }
+
+    /**
+     * 挂号时填的前台说明要在列表里看得见 —— 写了没地方看，等于没写。
+     */
+    /** @test */
+    public function 挂号填的前台说明会出现在列表的备注列(): void
+    {
+        $this->actingAs($this->receptionist)
+            ->postJson('/waiting-queue/register', $this->payload(['notes' => '指定关医生']))
+            ->assertOk();
+
+        $row = $this->actingAs($this->receptionist)
+            ->getJson('/today-work/data?status=all')->assertOk()->json('data.0');
+
+        $this->assertStringContainsString('指定关医生', $row['notes']);
+        $this->assertStringContainsString(__('today_work.first_visit'), $row['visit_type']);
+    }
+
+    /**
      * 挂号的下一步是开病历。工作台的「病历」按钮要落到真正的病历页，
      * 并且把这次就诊、接诊医生、就诊类型一起带过去 —— 挂号时刚选过医生，
      * 到病历页再选一遍，选错了病历就挂在别人名下。

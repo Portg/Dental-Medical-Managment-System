@@ -42,8 +42,10 @@ return [
     'register_no_doctor'  => 'Please choose a doctor',
     'register_no_patient' => 'Please choose a patient',
     'col_visit_type'      => 'Visit type',
+    'col_notes'           => 'Note',
 
-    'check_in'            => 'Check In',
+    // Same action as the header "Register" button — one word for one thing.
+    'check_in'            => 'Register',
     'call'                => 'Call',
     'recall'              => 'Recall',
     'start_treatment'     => 'Start Treatment',

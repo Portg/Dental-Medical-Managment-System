@@ -671,16 +671,22 @@ class PatientService
                 // 不会把 onclick 的 JS 字符串截断。
                 $nameForJs = e(addslashes(strip_tags((string) $displayName)));
 
+                // 挂号会真的建出一条预约 —— 没这个权限就不给这一条，
+                // 否则点了只会撞上 403
+                $registerItem = \Illuminate\Support\Facades\Gate::allows('create-appointments')
+                    ? '<li>
+                            <a href="#" onclick="openRegistrationModal({patient_id: ' . $row->id . ', patient_name: \'' . $nameForJs . '\', appointment_type: \'revisit\'}); return false;">'
+                                . __('today_work.register') . '</a>
+                        </li>'
+                    : '';
+
                 return '
                   <div class="btn-group">
                     <button class="btn blue dropdown-toggle" type="button" data-toggle="dropdown"
                             aria-expanded="false"> ' . __('common.action') . '
                     </button>
                     <ul class="dropdown-menu" role="menu">
-                        <li>
-                            <a href="#" onclick="openRegistrationModal({patient_id: ' . $row->id . ', patient_name: \'' . $nameForJs . '\', appointment_type: \'revisit\'}); return false;">'
-                                . __('today_work.register') . '</a>
-                        </li>
+                        ' . $registerItem . '
                         <li>
                             <a href="' . url('patients/' . $row->id) . '">' . __('patient.patient_details') . '</a>
                         </li>

@@ -35,6 +35,7 @@ $(document).ready(function() {
             { data: 'service', name: 'ms.name', orderable: false },
             { data: 'display_status', orderable: false, searchable: false },
             { data: 'visit_type', orderable: false, searchable: false },
+            { data: 'notes', orderable: false, searchable: false },
             // 操作拆成固定列：流程（主操作）| 病历 | 收费 | 更多
             { data: 'act_flow',    orderable: false, searchable: false, className: 'tw-col-act' },
             { data: 'act_case',    orderable: false, searchable: false, className: 'tw-col-act' },
@@ -317,14 +318,14 @@ function save_data(continueAdding) {
 
 function save_new_record(continueAdding) {
     $.LoadingOverlay("show");
-    $('#btnSave, #btnSaveAndContinue').attr('disabled', true);
+    $('#btnSavePatient, #btnSaveAndContinue').attr('disabled', true);
     $.ajax({
         type: 'POST',
         data: $('#patient-form').serialize(),
         url: "/patients",
         success: function(data) {
             $.LoadingOverlay("hide");
-            $('#btnSave, #btnSaveAndContinue').attr('disabled', false);
+            $('#btnSavePatient, #btnSaveAndContinue').attr('disabled', false);
             if (data.status) {
                 toastr.success(data.message);
                 if (continueAdding) {
@@ -368,7 +369,7 @@ function save_new_record(continueAdding) {
         },
         error: function(request) {
             $.LoadingOverlay("hide");
-            $('#btnSave, #btnSaveAndContinue').attr('disabled', false);
+            $('#btnSavePatient, #btnSaveAndContinue').attr('disabled', false);
             if (request.responseJSON && request.responseJSON.errors) {
                 $.each(request.responseJSON.errors, function(key, value) {
                     toastr.error(value[0] || value);
@@ -382,14 +383,14 @@ function save_new_record(continueAdding) {
 
 function update_record() {
     $.LoadingOverlay("show");
-    $('#btnSave').attr('disabled', true);
+    $('#btnSavePatient').attr('disabled', true);
     $.ajax({
         type: 'PUT',
         data: $('#patient-form').serialize(),
         url: "/patients/" + $('#id').val(),
         success: function(data) {
             $.LoadingOverlay("hide");
-            $('#btnSave').attr('disabled', false);
+            $('#btnSavePatient').attr('disabled', false);
             if (data.status) {
                 toastr.success(data.message);
                 $('#patients-modal').modal('hide');
@@ -400,7 +401,7 @@ function update_record() {
         },
         error: function(request) {
             $.LoadingOverlay("hide");
-            $('#btnSave').attr('disabled', false);
+            $('#btnSavePatient').attr('disabled', false);
             if (request.responseJSON && request.responseJSON.errors) {
                 $.each(request.responseJSON.errors, function(key, value) {
                     toastr.error(value[0] || value);

@@ -42,8 +42,12 @@ return [
     'register_no_doctor'  => '请选择挂号医生',
     'register_no_patient' => '请选择患者',
     'col_visit_type'      => '就诊类型',
+    'col_notes'           => '备注',
 
-    'check_in'            => '签到',
+    // 有预约的人到店，做的也是挂号（参考视频，流程列对未到的预约给的就是「挂号」）。
+    // 原来叫「签到」—— 和顶部那个「挂号」是同一件事的两个名字，
+    // 差别只在有没有预约，前台没必要记两套词。
+    'check_in'            => '挂号',
     'call'                => '叫号',
     'recall'              => '重呼',
     'start_treatment'     => '开始就诊',

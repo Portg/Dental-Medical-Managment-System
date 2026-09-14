@@ -231,6 +231,9 @@ class TodayWorkService
                 'a.patient_id',
                 'a.doctor_id',
                 'a.appointment_type',
+                // 前台说明。挂号时写的「新患者登记」「指定医生」这类信息，
+                // 参考视频列表里就有这一列 —— 写了没地方看，等于没写。
+                'a.notes',
                 'p.surname as p_surname',
                 'p.othername as p_othername',
                 'p.phone_no',
@@ -358,6 +361,16 @@ class TodayWorkService
                 $class = $row->appointment_type === 'first_visit' ? 'text-danger' : 'text-muted';
                 return '<span class="' . $class . '">' . e($label) . '</span>';
             })
+            // 前台说明（挂号时填的）。长了截断，完整内容挂 title ——
+            // 这列是给人扫一眼的，不该把一行撑开。
+            ->addColumn('notes', function ($row) {
+                $notes = trim((string) ($row->notes ?? ''));
+                if ($notes === '') {
+                    return '<span class="text-muted">-</span>';
+                }
+                $short = mb_strlen($notes) > 12 ? mb_substr($notes, 0, 12) . '…' : $notes;
+                return '<span title="' . e($notes) . '">' . e($short) . '</span>';
+            })
             // 操作拆成固定列，每列一个动作。原来所有按钮挤在一个「操作」列里，
             // 按钮随状态增减、位置左右跳，每次都要重新找 —— 参考视频的工作台，
             // 「病历」永远在同一列同一位置。
@@ -389,7 +402,7 @@ class TodayWorkService
                 if (!$row->start_time) return '-';
                 return date('H:i', strtotime($row->start_time));
             })
-            ->rawColumns(['patient_name', 'display_status', 'visit_type', 'act_flow', 'act_case', 'act_invoice', 'act_more'])
+            ->rawColumns(['patient_name', 'display_status', 'visit_type', 'notes', 'act_flow', 'act_case', 'act_invoice', 'act_more'])
             ->make(true);
     }
 
