@@ -5,6 +5,16 @@
     $currentPatient = isset($case) ? $case->patient : ($patient ?? null);
     $isCreateMode = !isset($case);
     $needPatientSelection = $isCreateMode && !$currentPatient;
+
+    // 纸面上的年龄：优先按出生日期算，没有出生日期才用存下来的 age。
+    $paperAge = null;
+    if ($currentPatient) {
+        if ($currentPatient->date_of_birth) {
+            $paperAge = \Carbon\Carbon::parse($currentPatient->date_of_birth)->age;
+        } elseif ($currentPatient->age !== null && $currentPatient->age !== '') {
+            $paperAge = (int) $currentPatient->age;
+        }
+    }
 @endphp
 @section('page_title', $isCreateMode ? __('medical_cases.add_case') : __('medical_cases.edit_case'))
 
@@ -12,36 +22,53 @@
     @include('layouts.page_loader')
     <link rel="stylesheet" href="{{ asset('css/medical-record-edit.css') }}?v={{ filemtime(public_path('css/medical-record-edit.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/tooth-selector.css') }}?v={{ filemtime(public_path('css/tooth-selector.css')) }}">
+    {{-- 病历纸的版式。必须排在 medical-record-edit.css 之后 —— 卡片样式由它覆盖。 --}}
+    <link rel="stylesheet" href="{{ asset('css/medical-record-paper.css') }}?v={{ filemtime(public_path('css/medical-record-paper.css')) }}">
 @endsection
 
 @section('content')
-<div class="row">
-    {{-- Main Form Panel (Left) --}}
-    <div class="col-md-8">
-        <div class="portlet light bordered">
-            <div class="portlet-title">
-                <div class="caption font-dark">
-                    <span class="caption-subject">
-                        <a href="{{ url('medical-cases') }}" class="text-primary">{{ __('medical_cases.page_title') }}</a>
-                        / {{ $isCreateMode ? __('medical_cases.add_case') : __('medical_cases.edit_case') }}
-                        @if(isset($case) && $case->is_draft)
-                            <span class="label label-warning">{{ __('medical_cases.draft_status') }}</span>
-                        @endif
-                    </span>
+{{-- 工具条。不在纸上，也不打印 —— 它是操作，不是病历内容。 --}}
+<div class="mr-toolbar">
+    <div class="mr-toolbar-title">
+        <a href="{{ url('medical-cases') }}" class="text-primary">{{ __('medical_cases.page_title') }}</a>
+        / {{ $isCreateMode ? __('medical_cases.add_case') : __('medical_cases.edit_case') }}
+        @if(isset($case) && $case->is_draft)
+            <span class="label label-warning">{{ __('medical_cases.draft_status') }}</span>
+        @endif
+    </div>
+    <div class="mr-toolbar-actions">
+        <button type="button" class="btn btn-default" id="btn-save-draft"
+                onclick="saveMedicalRecord('draft')" @if($needPatientSelection) disabled @endif>
+            {{ __('medical_cases.save_draft') }}
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-submit-record"
+                onclick="saveMedicalRecord('submit')" @if($needPatientSelection) disabled @endif>
+            {{ __('medical_cases.submit_record') }}
+        </button>
+        {{-- 打印就是打这张纸，不跳转、不另生成一份版式。原来编辑页压根没有打印
+             入口：要先保存、再跳到详情页才找得到，而打出来的还是另一套版式。 --}}
+        <button type="button" class="btn btn-default" id="btn-print-record"
+                onclick="printMedicalRecord()" @if($needPatientSelection) disabled @endif>
+            <i class="fa fa-print"></i> {{ __('common.print') }}
+        </button>
+    </div>
+</div>
+
+<div class="mr-stage">
+    <div class="mr-layout">
+        <div class="mr-paper-col">
+            <div class="mr-paper">
+                {{-- 抬头 --}}
+                <div class="mr-sheet-head">
+                    <div class="mr-clinic">{{ __('company.name') }}</div>
+                    <div class="mr-sheet-title">{{ __('medical_cases.medical_record') }}</div>
+                    <div class="mr-sheet-meta">
+                        {{ __('medical_cases.case_no') }}:
+                        {{ $case->case_no ?? __('medical_cases.case_no_pending') }}
+                    </div>
                 </div>
-                <div class="actions">
-                    <button type="button" class="btn btn-default" id="btn-save-draft"
-                            onclick="saveMedicalRecord('draft')" @if($needPatientSelection) disabled @endif>
-                        {{ __('medical_cases.save_draft') }}
-                    </button>
-                    <button type="button" class="btn btn-primary" id="btn-submit-record"
-                            onclick="saveMedicalRecord('submit')" @if($needPatientSelection) disabled @endif>
-                        {{ __('medical_cases.submit_record') }}
-                    </button>
-                </div>
-            </div>
-            <div class="portlet-body">
-                {{-- Patient Selection Prompt --}}
+                <div class="mr-rule-double"></div>
+
                 @if($needPatientSelection)
                 <div class="alert alert-info" id="patient-select-prompt">
                     <i class="fa fa-info-circle"></i>
@@ -66,8 +93,40 @@
                     <input type="hidden" name="appointment_id" id="appointment_id"
                            value="{{ $appointmentId ?? '' }}">
 
-                    {{-- Visit Information --}}
+                    {{-- 患者身份行。这些 id 是 enableFormWithPatient() 写的目标：
+                         建档模式下先是空的，在侧栏选完患者由 JS 填进来。
+                         刻意只在这里出现一次 —— 侧栏那张卡片不再重复显示姓名，
+                         否则就是两个同 id 的元素（这套代码栽过一次，见 46287dc）。 --}}
+                    <div class="mr-identity">
+                        <div class="mr-cell">
+                            <span class="mr-cell-key">{{ __('common.patient') }}</span>
+                            <span class="mr-cell-val" id="patient-name">{{ $currentPatient->full_name ?? '' }}</span>
+                        </div>
+                        <div class="mr-cell">
+                            <span class="mr-cell-key">{{ __('common.gender') }}/{{ __('common.age') }}</span>
+                            <span class="mr-cell-val" id="patient-meta">@if($currentPatient){{ $currentPatient->gender == 'Male' ? __('patient.male') : __('patient.female') }}@if($paperAge !== null) {{ $paperAge }}{{ __('common.years_old') }}@endif @endif</span>
+                        </div>
+                        <div class="mr-cell">
+                            <span class="mr-cell-key">{{ __('common.phone') }}</span>
+                            <span class="mr-cell-val">{{ $currentPatient->phone_no ?? '' }}</span>
+                        </div>
+                    </div>
+
+                    {{-- 过敏史印在病历上，不只是界面提醒 —— 这是接诊时必须看见的医疗信息。 --}}
+                    <div class="mr-allergy" id="patient-allergy-warning"
+                         @if(!($currentPatient && $currentPatient->drug_allergies_other)) style="display:none" @endif>
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <span>@if($currentPatient && $currentPatient->drug_allergies_other){{ __('medical_cases.patient_allergy') }}：{{ $currentPatient->drug_allergies_other }}@endif</span>
+                    </div>
+                    <div class="mr-allergy" id="patient-chronic-info" style="display:none">
+                        <strong>{{ __('medical_cases.chronic_diseases') }}:</strong>
+                        <span></span>
+                    </div>
+
+                    {{-- 就诊信息（日期 / 接诊医生 / 初诊复诊 / 第几次） --}}
                     @include('medical_cases.partials.visit_info', ['case' => $case ?? null, 'doctors' => $doctors])
+
+                    <div class="mr-rule"></div>
 
                     {{-- 主诉 / 现病史 / 既往史 合成一个分组，标签在左。
 
@@ -141,8 +200,27 @@
                         'required' => false
                     ])
 
+                    <div class="mr-rule"></div>
+
                     {{-- Follow-up Section --}}
                     @include('medical_cases.partials.followup_section', ['case' => $case ?? null])
+
+                    {{-- 落款。签名是提交时在签名板上写的（$case->signature），
+                         已经签过的就把签名图印在线上，没签过留空线 —— 和纸质病历一样。 --}}
+                    <div class="mr-sign">
+                        <div class="mr-sign-item">
+                            <div class="mr-sign-slot">
+                                @if(isset($case) && $case->signature && str_starts_with($case->signature, 'data:image'))
+                                    <img src="{{ $case->signature }}" alt="{{ __('medical_cases.doctor_signature') }}">
+                                @endif
+                            </div>
+                            <div class="mr-sign-line">{{ __('medical_cases.doctor_signature') }}</div>
+                        </div>
+                        <div class="mr-sign-item">
+                            <div class="mr-sign-slot"></div>
+                            <div class="mr-sign-line">{{ __('medical_cases.case_date') }}</div>
+                        </div>
+                    </div>
 
                     {{-- Quality Control Panel --}}
                     <div class="qc-panel" id="qc-panel">
@@ -156,26 +234,23 @@
                 </form>
             </div>
         </div>
-    </div>
 
-    {{-- Sidebar (Right) --}}
-    <div class="col-md-4">
-        <div class="sidebar-sticky-wrapper">
-            {{-- Patient Info Card --}}
-            @include('medical_cases.partials.sidebar_patient', [
-                'needPatientSelection' => $needPatientSelection,
-                'currentPatient' => $currentPatient
-            ])
+        {{-- 工具侧栏。写病历时要用（牙位图、上次病历、快捷短语），但它不是病历
+             本身 —— 不进纸面，也不打印。 --}}
+        <aside class="mr-tools">
+            <div class="sidebar-sticky-wrapper">
+                @include('medical_cases.partials.sidebar_patient', [
+                    'needPatientSelection' => $needPatientSelection,
+                    'currentPatient' => $currentPatient
+                ])
 
-            {{-- Tooth Chart Mini --}}
-            @include('medical_cases.partials.sidebar_tooth_chart')
+                @include('medical_cases.partials.sidebar_tooth_chart')
 
-            {{-- History Records --}}
-            @include('medical_cases.partials.sidebar_history', ['historyRecords' => $historyRecords ?? []])
+                @include('medical_cases.partials.sidebar_history', ['historyRecords' => $historyRecords ?? []])
 
-            {{-- Quick Phrases --}}
-            @include('medical_cases.partials.sidebar_quick_phrases')
-        </div>
+                @include('medical_cases.partials.sidebar_quick_phrases')
+            </div>
+        </aside>
     </div>
 </div>
 
@@ -288,4 +363,7 @@ LanguageManager.loadAllFromPHP({
 <script src="{{ asset('include_js/signature_pad.umd.min.js') }}?v={{ filemtime(public_path('include_js/signature_pad.umd.min.js')) }}"></script>
 <script src="{{ asset('include_js/signature_pad_compat.js') }}?v={{ filemtime(public_path('include_js/signature_pad_compat.js')) }}"></script>
 <script src="{{ asset('include_js/medical_record_edit.js') }}?v={{ filemtime(public_path('include_js/medical_record_edit.js')) }}"></script>
+{{-- 纸面行为：文本域跟着内容长高（不然打印只印出可见的那几行）、打印入口。
+     排在最后 —— 它要量的是前面那些脚本渲染完的行。 --}}
+<script src="{{ asset('include_js/medical_record_paper.js') }}?v={{ filemtime(public_path('include_js/medical_record_paper.js')) }}"></script>
 @endsection

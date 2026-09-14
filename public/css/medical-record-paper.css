@@ -1,0 +1,808 @@
+/**
+ * 病历纸 —— 病历编辑页本身就是一张 A4 病历纸，所见即所得。
+ *
+ * 原来这一页长的是后台表单的样子：一摞带灰色标题条的圆角卡片，右边跟着工具侧栏；
+ * 而打印走的是另一份模板（medical_cases/print.blade.php，DomPDF 的表格版式）。
+ * 医生编辑时看到的和打出来的不是一套东西，中间还得先保存、再跳到详情页才找得到
+ * 打印入口 —— 编辑页顶上根本没有打印按钮。
+ *
+ * 现在中间那一栏就是纸：在纸上写，按「打印」直接打这张纸。
+ *
+ * 版式全部由 CSS 完成，Blade 里的 id / name / class 钩子一个没动 ——
+ * medical_record_edit.js 与 medical_case_items.js 合计 72KB 全绑在那些钩子上
+ * （$('#examination')、.case-item-row、.js-pick-tooth …），换标签等于整片失效。
+ *
+ * 本文件在 medical-record-edit.css 之后加载，卡片样式由这里覆盖；侧栏（患者卡 /
+ * 牙位图 / 历史 / 快捷短语）和牙位十字仍旧用原文件的样式，那些没有变。
+ */
+
+/* ==========================================================================
+   台面与版心
+   ========================================================================== */
+
+/* 布局是白底（body.page-content-white），纸也是白的 —— 不给台面一个灰底，
+   纸就沉在背景里，看不出是一张纸。 */
+.mr-stage {
+    background: #eceef0;
+    margin: -20px -20px 0;
+    padding: 20px;
+    min-height: calc(100vh - 120px);
+}
+
+.mr-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.mr-paper-col {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* 工具侧栏。留着是因为它装的是写病历时真正要用的东西（牙位图、上次病历、
+   快捷短语）—— 只是它不属于病历本身，所以不进纸、也不打印。 */
+.mr-tools {
+    flex: 0 0 300px;
+    width: 300px;
+}
+
+/* ==========================================================================
+   纸
+   ========================================================================== */
+
+.mr-paper {
+    width: 210mm;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 16mm 15mm 18mm;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 8px 24px rgba(0, 0, 0, .08);
+    /* 病历是公文，正文用宋体一类的衬线字更像那么回事；西文与数字（ICD 编码、
+       牙位号）走 Times，中文回落到系统宋体。 */
+    font-family: "Times New Roman", "Songti SC", "SimSun", "STSong", serif;
+    font-size: 10.5pt;
+    line-height: 1.9;
+    color: #1a1a1a;
+    box-sizing: border-box;
+}
+
+/* 未选患者时整张纸压灰（沿用原来的 #record-form-body.disabled 行为） */
+.mr-paper #record-form-body.disabled {
+    opacity: .45;
+}
+
+/* ==========================================================================
+   抬头
+   ========================================================================== */
+
+.mr-sheet-head {
+    text-align: center;
+    padding-bottom: 8px;
+}
+
+.mr-clinic {
+    font-size: 12pt;
+    letter-spacing: 2px;
+    color: #333;
+}
+
+.mr-sheet-title {
+    font-size: 19pt;
+    font-weight: 700;
+    letter-spacing: 8px;
+    margin: 2px 0 6px;
+    color: #111;
+}
+
+/* 病历号这类元信息压在标题下面一行，小字、灰色 —— 它是档案编号，不是标题。 */
+.mr-sheet-meta {
+    font-size: 9pt;
+    color: #666;
+    letter-spacing: 1px;
+}
+
+/* 抬头与正文之间的双线：上粗下细，是病历纸、处方笺上惯用的那条分隔。 */
+.mr-rule-double {
+    border-top: 2px solid #333;
+    border-bottom: 1px solid #333;
+    height: 3px;
+    margin: 6px 0 10px;
+}
+
+.mr-rule {
+    border-top: 1px solid #d0d0d0;
+    margin: 10px 0;
+}
+
+/* ==========================================================================
+   患者与就诊信息行
+   ========================================================================== */
+
+/* 姓名/性别/年龄/电话 一行排开，像表头那样。 */
+.mr-identity {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 22px;
+    padding: 2px 0 6px;
+}
+
+.mr-identity .mr-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.mr-identity .mr-cell-key {
+    color: #555;
+}
+
+.mr-identity .mr-cell-val {
+    min-width: 4em;
+    border-bottom: 1px solid #cfcfcf;
+    padding: 0 6px;
+    font-weight: 600;
+}
+
+/* 过敏史是要人一眼看见的，印在纸上也得留着 —— 这不是界面提示，是医疗信息。 */
+.mr-allergy {
+    margin: 4px 0 0;
+    padding: 3px 8px;
+    border: 1px solid #e0b4b4;
+    background: #fcf4f4;
+    color: #a94442;
+    font-size: 9.5pt;
+    display: inline-block;
+}
+
+/* 就诊信息（日期 / 医生 / 初诊复诊 / 第几次）。原来是 .visit-info-section 的
+   四个块，这里改成和上面同一条基线的一行。 */
+.mr-paper .visit-info-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 22px;
+    align-items: baseline;
+    margin: 0;
+    padding: 0 0 4px;
+    border: 0;
+    background: transparent;
+}
+
+.mr-paper .visit-info-item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.mr-paper .visit-info-item > label {
+    margin: 0;
+    font-weight: 400;
+    color: #555;
+    font-size: 10.5pt;
+    white-space: nowrap;
+}
+
+.mr-paper .visit-info-item .form-control {
+    width: auto;
+    min-width: 7em;
+}
+
+.mr-paper .visit-seq-value {
+    font-weight: 600;
+    border-bottom: 1px solid #cfcfcf;
+    padding: 0 8px;
+}
+
+.mr-paper .visit-type-radio-group {
+    display: flex;
+    gap: 12px;
+}
+
+.mr-paper .visit-type-radio {
+    margin: 0;
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ==========================================================================
+   正文段落：左边标签列，右边内容
+   ========================================================================== */
+
+/* 卡片外壳整个去掉：边框、圆角、灰色标题条、卡片间距 —— 纸上不该有卡片。 */
+.mr-paper .soap-section {
+    display: grid;
+    grid-template-columns: 5.5em 1fr;
+    column-gap: 10px;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    margin: 0 0 2px;
+    background: transparent;
+}
+
+.mr-paper .soap-section-header {
+    display: block;
+    position: relative;
+    background: transparent;
+    border: 0;
+    padding: 5px 0 0;
+}
+
+/* 「主 诉」「现病史」「辅助检查」—— 两头对齐撑到同一宽度，是中文表单里
+   标签列的惯常写法，几行标签的左右边缘才会齐。 */
+.mr-paper .soap-section-title {
+    display: block;
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #222;
+    text-align: justify;
+    text-align-last: justify;
+    line-height: 1.9;
+}
+
+/* 必填星号浮到标签列右缘，不参与上面那行的两头对齐 —— 否则「主 * 诉」
+   会被撑开成怪样子。 */
+.mr-paper .soap-section-title .required {
+    float: right;
+    margin-left: 3px;
+    color: #c0392b;
+    font-weight: 400;
+}
+
+/* 段落提示（「一行一颗牙」这类）是教人怎么填的，不是病历内容，纸上不留。 */
+.mr-paper .soap-section-hint {
+    display: none;
+}
+
+.mr-paper .soap-section-body {
+    padding: 0;
+    min-width: 0;
+}
+
+/* 影像资料、治疗项目这两块挂在上一段下面，标签列留空即可。 */
+.mr-paper .soap-section-attached {
+    grid-template-columns: 5.5em 1fr;
+    margin-bottom: 6px;
+}
+
+.mr-paper .soap-section-attached .soap-section-body {
+    grid-column: 2;
+}
+
+/* ==========================================================================
+   主诉 / 现病史 / 既往史
+   ========================================================================== */
+
+/* 这一组在结构上是一张卡片套三行，每行自带标签。外层的组标题在纸上是多余的
+   （三行各自已经有名字了），去掉，让每一行自己成为「标签 + 内容」。 */
+.mr-paper .narrative-group {
+    display: block;
+}
+
+.mr-paper .narrative-group > .soap-section-header {
+    display: none;
+}
+
+.mr-paper .narrative-rows {
+    display: block;
+}
+
+.mr-paper .narrative-row {
+    display: grid;
+    grid-template-columns: 5.5em 1fr;
+    column-gap: 10px;
+    margin: 0 0 2px;
+    align-items: start;
+}
+
+.mr-paper .narrative-row > label {
+    display: block;
+    margin: 0;
+    padding-top: 5px;
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #222;
+    text-align: justify;
+    text-align-last: justify;
+    line-height: 1.9;
+}
+
+.mr-paper .narrative-row > label .required {
+    float: right;
+    margin-left: 3px;
+    color: #c0392b;
+    font-weight: 400;
+}
+
+.mr-paper .narrative-field {
+    min-width: 0;
+}
+
+/* ==========================================================================
+   纸上的输入控件
+   ========================================================================== */
+
+/* 文本域画成横格纸：每行坐在一条淡淡的格线上。行高必须和格线间距一样
+   （26px），否则字会骑在线上。 */
+.mr-paper textarea,
+.mr-paper .soap-textarea,
+.mr-paper .case-item-content {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: none;
+    outline: 0;
+    margin: 0;
+    padding: 0 4px;
+    font-family: inherit;
+    font-size: 10.5pt;
+    line-height: 26px;
+    color: #1a1a1a;
+    resize: none;
+    overflow: hidden;               /* 高度由 JS 跟着内容长，不要滚动条 */
+    min-height: 26px;
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 25px,
+        #e2e2e2 25px,
+        #e2e2e2 26px);
+    background-attachment: local;
+}
+
+.mr-paper textarea:focus,
+.mr-paper .case-item-content:focus {
+    background-color: #fbfcfe;
+}
+
+.mr-paper textarea::placeholder {
+    color: #b8b8b8;
+    font-style: italic;
+}
+
+/* 单行输入（日期、复诊事项）：一条下划线就够，不用横格。
+ *
+ * 这里的 !important 不是偷懒 —— 主题的 .form-control 本身就是用 !important 写的：
+ *     .form-control { border: 1px solid #E0E0E0 !important; border-radius: 4px !important;
+ *                     height: 36px !important; padding: 6px 12px !important; ... }
+ * !important 之间只比 !important，选择器再具体也压不过。不跟上这一条，纸上的
+ * 就诊日期、复诊日期就会各顶着一个圆角灰框，印出来是网页控件而不是病历。 */
+.mr-paper input[type="text"],
+.mr-paper input.form-control,
+.mr-paper select.form-control {
+    border: 0 !important;
+    border-bottom: 1px solid #cfcfcf !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    background-image: none;
+    box-shadow: none;
+    outline: 0;
+    height: auto !important;
+    padding: 1px 6px !important;
+    font-family: inherit;
+    font-size: 10.5pt !important;
+    line-height: 1.9;
+    color: #1a1a1a;
+}
+
+.mr-paper input[type="text"]:focus,
+.mr-paper input.form-control:focus,
+.mr-paper select.form-control:focus {
+    border-bottom-color: #7a9bc4;
+    background-color: #fbfcfe;
+    box-shadow: none;
+}
+
+/* Select2（接诊医生、ICD 编码）也得脱掉方框，跟别的字段一条基线。
+ *
+ * 选择器刻意不带主题修饰类：这套用的是 select2-container--bootstrap，不是
+ * 文档里最常见的 --default，按 --default 写的规则一条都匹配不上（实测栽过）。
+ * .select2-selection--single 本身与主题无关，认它就够。 */
+.mr-paper .select2-selection--single {
+    border: 0 !important;
+    border-bottom: 1px solid #cfcfcf !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    height: auto !important;
+    box-shadow: none !important;
+}
+
+.mr-paper .select2-selection--single .select2-selection__rendered {
+    line-height: 1.9;
+    padding-left: 6px;
+    font-family: inherit;
+    font-size: 10.5pt;
+    color: #1a1a1a;
+}
+
+.mr-paper .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+}
+
+/* 接诊医生这一栏原来只有 select2 的默认宽度，姓名会被截成「关…」。
+   医生名字是病历上必须看得全的一项。 */
+.mr-paper .visit-info-item .select2-container {
+    min-width: 9em;
+}
+
+/* 字数计数器是录入辅助，不是病历内容。留在屏幕上、不上纸面重心。 */
+.mr-paper .char-counter {
+    font-size: 8.5pt;
+    color: #b0b0b0;
+    text-align: right;
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   分行明细（牙位 + 文字）
+   ========================================================================== */
+
+.mr-paper .case-items-rows {
+    display: block;
+}
+
+/* 一行 = 牙位十字 + 文字。十字保持原来的尺寸与对齐（medical-record-edit.css
+   里定的），这里只把行的外壳去掉。 */
+.mr-paper .case-item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin: 0 0 1px;
+}
+
+.mr-paper .case-item-row .case-item-content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* 牙位按钮在纸上是「格子里的牙位号」，不是一个可点的按钮的样子。
+   边框留最淡的一道，让它在打印时仍能看出这一列是牙位。 */
+.mr-paper .case-item-tooth {
+    background: transparent;
+    border: 1px solid #e4e4e4;
+    border-radius: 2px;
+    padding: 1px 3px;
+}
+
+.mr-paper .case-item-tooth.has-tooth {
+    border-color: #c7c7c7;
+}
+
+/* 删除按钮、段落工具条（添加一行 / 复制牙位 / 折叠）是编辑手段，不是病历内容。
+   屏幕上留着，打印时收掉（见文末 @media print）。 */
+.mr-paper .case-item-remove {
+    border: 0;
+    background: transparent;
+    color: #c9c9c9;
+    line-height: 1;
+    padding: 4px 2px;
+}
+
+.mr-paper .case-item-remove:hover {
+    color: #c0392b;
+}
+
+.mr-paper .case-items-toolbar {
+    padding: 0 0 2px 4px;
+    border: 0;
+    background: transparent;
+}
+
+.mr-paper .diagnosis-fields {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* ==========================================================================
+   复诊 / 医嘱
+   ========================================================================== */
+
+.mr-paper .followup-section {
+    border: 0;
+    background: transparent;
+    padding: 6px 0 0;
+    margin: 0;
+}
+
+.mr-paper .followup-section-title {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 2px;
+}
+
+.mr-paper .followup-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 22px;
+    align-items: baseline;
+}
+
+.mr-paper .followup-item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.mr-paper .followup-item > label {
+    margin: 0;
+    font-weight: 400;
+    color: #555;
+    white-space: nowrap;
+}
+
+.mr-paper .followup-checkbox {
+    margin-top: 2px;
+    font-size: 9.5pt;
+    color: #666;
+}
+
+/* ==========================================================================
+   落款
+   ========================================================================== */
+
+.mr-sign {
+    display: flex;
+    justify-content: flex-end;
+    gap: 40px;
+    margin-top: 18px;
+    padding-top: 6px;
+}
+
+.mr-sign-item {
+    text-align: center;
+    min-width: 150px;
+}
+
+.mr-sign-slot {
+    height: 46px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.mr-sign-slot img {
+    max-height: 44px;
+    max-width: 150px;
+}
+
+.mr-sign-line {
+    border-top: 1px solid #333;
+    padding-top: 3px;
+    font-size: 9.5pt;
+    color: #444;
+}
+
+/* ==========================================================================
+   工具条（不上纸、不打印）
+   ========================================================================== */
+
+.mr-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 14px;
+    margin: 0 -20px;
+    background: #fff;
+    border-bottom: 1px solid #e0e3e6;
+}
+
+.mr-toolbar-title {
+    font-size: 14px;
+    color: #444;
+}
+
+.mr-toolbar-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* 质量检查面板贴在纸下面，是给医生的提醒，不是病历的一部分。 */
+.mr-paper .qc-panel {
+    margin-top: 14px;
+}
+
+/* ==========================================================================
+   打印 —— 所见即所得
+   ========================================================================== */
+
+@media print {
+    /* 纸张由 @page 定，纸本身不再留外边距 */
+    @page {
+        size: A4;
+        margin: 14mm 14mm 16mm;
+    }
+
+    /* 后台骨架全部收掉：顶栏、侧边菜单、面包屑、页脚，以及本页自己的
+       工具条与工具侧栏。剩下的就是那张纸。 */
+    .page-header.navbar,
+    .page-sidebar-wrapper,
+    .page-head,
+    .page-footer,
+    .scroll-to-top,
+    .mr-toolbar,
+    .mr-tools,
+    .modal,
+    .modal-backdrop,
+    .loading,
+    #form-errors,
+    #patient-select-prompt {
+        display: none !important;
+    }
+
+    /* 编辑手段不打印：加行、复制牙位、折叠、删除、字数、模板按钮、质控面板。
+       它们是写的时候用的，印在病历上没有意义。 */
+    .case-items-toolbar,
+    .case-item-remove,
+    .template-triggers,
+    .char-counter,
+    .js-toggle-narrative,
+    .add-teeth-btn,
+    .remove-service,
+    .image-upload-area .btn,
+    .qc-panel {
+        display: none !important;
+    }
+
+    /* 控件的样子不印。纸上要的是内容，不是输入控件：
+       - 「选牙位」是空牙位框里的提示文字，不是牙位
+       - select2 的下拉箭头、ICD 的占位文字同理
+       - 「生成复诊待办」是系统行为开关，不属于病历内容 */
+    .tooth-empty,
+    .followup-checkbox,
+    .select2-selection__arrow,
+    .select2-selection__clear,
+    .select2-selection__placeholder {
+        display: none !important;
+    }
+
+    /* select2 在纸上就是一个已选定的值，不是下拉框。
+       同样不带主题修饰类 —— 这套是 --bootstrap 主题。 */
+    .mr-paper .select2-selection--single {
+        border: 0 !important;
+        background: transparent !important;
+    }
+
+    .mr-paper .select2-selection--single .select2-selection__rendered {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* 没选牙位的格子整个不占位。只把边框改透明是不够的 —— 它 flex 上占着
+       96px，后面的文字会凭空缩进一大块（「整体诊断」这类没有牙位的行最明显）。 */
+    .mr-paper .case-item-tooth:not(.has-tooth) {
+        display: none !important;
+    }
+
+    /* 空行不印 —— 医生只填了检查、其余三段留空时，不该在病历上印出三个空框。
+       「空」要看 textarea 的 value，CSS 判断不了，由 medical_record_paper.js
+       在打印前打上 .mr-print-hide。 */
+    .mr-print-hide {
+        display: none !important;
+    }
+
+    /* 就诊类型只印选中的那个。没选中的「复诊」连同 radio 控件一起收掉 ——
+       纸上写「初诊」就够了，不必把两个选项都印上去再让人看哪个是实心圆点。 */
+    .mr-paper .visit-type-radio input[type="radio"] {
+        display: none !important;
+    }
+
+    /* 横格线不印。
+     *
+     * 格线是写字时的辅助（跟 placeholder、工具条一类），不是病历内容 ——
+     * 正式的病历打印件是白纸黑字，格线本来就预印在空白病历纸上，再印一遍
+     * 反而是噪音。屏幕上保留，打印时去掉。 */
+    .mr-paper textarea,
+    .mr-paper .case-item-content {
+        background-image: none !important;
+    }
+
+    /* 骨架的内外边距全部归零，避免纸被推到第二页 */
+    html, body,
+    .page-container,
+    .page-content-wrapper,
+    .page-content,
+    .page-content-inner,
+    .mt-content-body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        min-height: 0 !important;
+    }
+
+    .mr-stage {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        min-height: 0 !important;
+    }
+
+    .mr-layout {
+        display: block !important;
+    }
+
+    .mr-paper-col {
+        width: 100% !important;
+    }
+
+    /* 纸铺满版心：外边距交给 @page，阴影和固定宽度都不要了 */
+    .mr-paper {
+        width: auto !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* 抬头那条双线是纸的一部分，要印出来。浏览器默认不印背景色，显式放行。 */
+    .mr-paper {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* 输入框在纸上就是普通文字，去掉聚焦态与占位符 */
+    .mr-paper textarea,
+    .mr-paper input,
+    .mr-paper select {
+        background-color: transparent !important;
+    }
+
+    .mr-paper textarea::placeholder,
+    .mr-paper input::placeholder {
+        color: transparent !important;
+    }
+
+    /* 段落不要被拦腰截到下一页 */
+    .mr-paper .soap-section,
+    .mr-paper .narrative-row,
+    .mr-paper .case-item-row,
+    .mr-sign {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+
+/* ==========================================================================
+   窄屏
+   ========================================================================== */
+
+@media (max-width: 1200px) {
+    .mr-layout {
+        display: block;
+    }
+
+    .mr-tools {
+        width: 100%;
+        margin-top: 20px;
+    }
+}
+
+@media (max-width: 767px) {
+    .mr-stage {
+        margin: -10px -10px 0;
+        padding: 10px;
+    }
+
+    .mr-paper {
+        padding: 10mm 8mm;
+    }
+
+    .mr-paper .soap-section,
+    .mr-paper .narrative-row {
+        grid-template-columns: 4.5em 1fr;
+    }
+}

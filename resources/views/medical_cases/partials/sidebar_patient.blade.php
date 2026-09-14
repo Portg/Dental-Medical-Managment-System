@@ -1,4 +1,14 @@
-{{-- Patient Info Card --}}
+{{-- 患者选择卡。
+
+     姓名 / 性别年龄 / 电话 / 过敏史现在都印在病历纸上（edit.blade.php 的
+     .mr-identity），这里不再重复显示 —— 那几个 id 是 enableFormWithPatient()
+     写入的目标，同一个 id 在页面上出现两次，jQuery 只认得到第一个，
+     另一处就永远是空的（这套代码栽过一次，见 46287dc）。
+
+     所以这张卡只剩它真正的职责：还没选患者时把患者选出来，选完了给一个
+     换人的入口。患者已经确定的情况（编辑既有病历、从工作台带患者进来）
+     整张卡都不渲染 —— 纸上写着是谁，侧栏再说一遍是多余的。 --}}
+@if($needPatientSelection)
 <div class="portlet light bordered">
     <div class="portlet-title">
         <div class="caption font-dark">
@@ -6,77 +16,26 @@
         </div>
     </div>
     <div class="portlet-body">
-        @if($needPatientSelection)
-            {{-- Patient Selector (for create mode without patient) --}}
-            <div id="patient-selector-section">
-                <select name="patient_selector" id="patient_selector" class="form-control select2" style="width: 100%;">
-                    <option value=""></option>
-                </select>
-            </div>
+        {{-- Patient Selector (for create mode without patient) --}}
+        <div id="patient-selector-section">
+            <select name="patient_selector" id="patient_selector" class="form-control select2" style="width: 100%;">
+                <option value=""></option>
+            </select>
+        </div>
 
-            {{-- Selected Patient Info (hidden initially) --}}
-            <div id="selected-patient-info" style="display: none;">
-                <div class="row">
-                    <div class="col-xs-3">
-                        <div class="patient-avatar-large" id="patient-avatar">-</div>
-                    </div>
-                    <div class="col-xs-7">
-                        <div class="name" id="patient-name" style="font-weight: 600;">-</div>
-                        <div class="meta text-muted" id="patient-meta">-</div>
-                    </div>
-                    <div class="col-xs-2">
-                        <button type="button" class="btn btn-xs btn-default" onclick="changePatient()">
-                            {{ __('common.change') }}
-                        </button>
-                    </div>
-                </div>
-                <div class="alert alert-warning" id="patient-allergy-warning" style="display: none; margin-top: 10px; padding: 8px;">
-                    <i class="fa fa-exclamation-triangle"></i>
-                    <span></span>
-                </div>
-                <div class="text-muted" id="patient-chronic-info" style="display: none; margin-top: 8px; font-size: 12px;">
-                    <strong>{{ __('medical_cases.chronic_diseases') }}:</strong>
-                    <span></span>
-                </div>
-            </div>
-        @else
-            {{-- Display existing patient info --}}
+        {{-- 选中之后换成「头像 + 更换」。姓名与性别年龄看纸面。 --}}
+        <div id="selected-patient-info" style="display: none;">
             <div class="row">
                 <div class="col-xs-3">
-                    <div class="patient-avatar-large">
-                        {{ $currentPatient ? mb_substr($currentPatient->surname, 0, 1) : '-' }}
-                    </div>
+                    <div class="patient-avatar-large" id="patient-avatar">-</div>
                 </div>
-                <div class="col-xs-9">
-                    <div style="font-weight: 600;">
-                        {{ $currentPatient ? $currentPatient->full_name : '-' }}
-                    </div>
-                    <div class="text-muted" style="font-size: 12px;">
-                        @if($currentPatient)
-                            {{ $currentPatient->gender == 'Male' ? __('patient.male') : __('patient.female') }}
-                            @if($currentPatient->date_of_birth)
-                                {{ \Carbon\Carbon::parse($currentPatient->date_of_birth)->age }}{{ __('common.years_old') }}
-                            @elseif($currentPatient->age !== null && $currentPatient->age !== '')
-                                {{ (int) $currentPatient->age }}{{ __('common.years_old') }}
-                            @endif
-                        @endif
-                    </div>
+                <div class="col-xs-9 text-right">
+                    <button type="button" class="btn btn-xs btn-default" onclick="changePatient()">
+                        {{ __('common.change') }}
+                    </button>
                 </div>
             </div>
-
-            @if($currentPatient && $currentPatient->drug_allergies_other)
-                <div class="alert alert-warning" style="margin-top: 10px; padding: 8px;">
-                    <i class="fa fa-exclamation-triangle"></i>
-                    <span>{{ __('medical_cases.patient_allergy') }}: {{ $currentPatient->drug_allergies_other }}</span>
-                </div>
-            @endif
-
-            @if($currentPatient && $currentPatient->chronic_diseases)
-                <div class="text-muted" style="margin-top: 8px; font-size: 12px;">
-                    <strong>{{ __('medical_cases.chronic_diseases') }}:</strong>
-                    {{ $currentPatient->chronic_diseases }}
-                </div>
-            @endif
-        @endif
+        </div>
     </div>
 </div>
+@endif

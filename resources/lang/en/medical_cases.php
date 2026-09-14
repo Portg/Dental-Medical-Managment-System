@@ -14,6 +14,8 @@ return [
 
     // Case fields
     'case_no' => 'Case No.',
+    // Numbered on save; show a placeholder rather than a blank, which reads as a missing number.
+    'case_no_pending' => '(assigned on save)',
     'title' => 'Title',
     'patient' => 'Patient',
     'doctor' => 'Doctor',
