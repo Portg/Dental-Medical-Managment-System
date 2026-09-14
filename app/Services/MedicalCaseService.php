@@ -845,7 +845,13 @@ class MedicalCaseService
         // Include audit trail for compliance PDF
         $auditTrail = $case->audits()->with('user')->latest()->take(10)->get();
 
-        return compact('case', 'diagnoses', 'treatmentPlans', 'latestVitalSign', 'auditTrail');
+        // 分行明细（牙位 + 文字）。病历纸要按行印出来，一行一颗牙 ——
+        // 只印 medical_cases 上那几列派生文本的话，「45 缺失」和「36 龋坏」又会
+        // 揉成一段话，牙位和文字对不上号，正是分行改造要解决的问题。
+        // 与编辑页同一个读取口径（同段落同内容的牙位合并回一行）。
+        $caseItems = $this->getCaseItemsForEdit($case);
+
+        return compact('case', 'diagnoses', 'treatmentPlans', 'latestVitalSign', 'auditTrail', 'caseItems');
     }
 
     /**

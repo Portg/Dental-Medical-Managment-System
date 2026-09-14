@@ -410,12 +410,19 @@ class MedicalCaseController extends Controller
      * @param int $id
      * @return \Illuminate\Http\Response
      */
+    /**
+     * 病历纸（浏览器查看 / 打印）。
+     *
+     * 走 medical_cases.sheet 而不是 medical_cases.print：后者是 DomPDF 的模板
+     * （表格版式、内联 style），归档 PDF 仍旧用它，见 exportPdf()。浏览器这条路
+     * 用 sheet，屏幕上看到的就是打印出来的。
+     */
     public function printCase($id)
     {
         AccessLog::log('MedicalCase', 'print', $id);
         $data = $this->medicalCaseService->getPrintData((int) $id);
 
-        return view('medical_cases.print', $data);
+        return view('medical_cases.sheet', $data);
     }
 
     /**

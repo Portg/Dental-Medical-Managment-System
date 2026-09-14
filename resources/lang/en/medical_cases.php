@@ -14,8 +14,8 @@ return [
 
     // Case fields
     'case_no' => 'Case No.',
-    // Numbered on save; show a placeholder rather than a blank, which reads as a missing number.
-    'case_no_pending' => '(assigned on save)',
+    // The sheet renders a saved record, so printing is disabled until the record exists.
+    'print_after_save' => 'Save before printing',
     'title' => 'Title',
     'patient' => 'Patient',
     'doctor' => 'Doctor',
