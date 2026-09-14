@@ -130,15 +130,20 @@
     };
 
     // ── Invoice ──────────────────────────────────────────
+    /**
+     * 收费 = 到诊疗页的划价面板去开单。
+     *
+     * 原来这里开的是 appointments.invoices.create 那个老弹窗，而那条路已经是死的：
+     * 92f20f8「划价+收款搬到诊疗页，两套开单 UI 合成一套」把 save_invoice /
+     * #addInvoiceItem / #service 的 select2 一起删了（见 invoicing.js 顶部注释），
+     * 预约页留了自己的内联副本所以还活着，工作台这边却还指着那具尸体 ——
+     * 弹窗能弹出来，但项目选不了、「添加更多」没反应、「生成账单」点了什么都不发生。
+     * 实测确认：save_invoice 是 undefined。
+     *
+     * 顺带解决两个重复 id：那个弹窗自带 #btnSave 和 #doctor_id，与页面上别处撞号。
+     */
     window.quickInvoice = function(appointmentId) {
-        var $form = $('#New-invoice-form');
-        if ($form.length) {
-            $form[0].reset();
-            $('#invoicing_appointment_id').val(appointmentId);
-            // Clear dynamic rows except the first template
-            $form.find('.invoice-item-row:not(:first)').remove();
-        }
-        $('#New-invoice-modal').modal('show');
+        window.location.href = '/medical-treatment/' + appointmentId + '#dental_billing_tab';
     };
 
     // ── Next Appointment ─────────────────────────────────

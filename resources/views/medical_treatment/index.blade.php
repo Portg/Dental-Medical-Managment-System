@@ -388,6 +388,15 @@
                         }
                     });
                 });
+
+                {{-- 带 #dental_billing_tab 进来就直接落在划价 Tab 上。
+                     工作台的「收费」跳的就是这个地址 —— 到了页面还要人自己再找一次
+                     「划价」在哪，等于没跳。 --}}
+                $(function () {
+                    if (window.location.hash === '#dental_billing_tab') {
+                        $('#dental_billing_tab_link a').tab('show');
+                    }
+                });
             </script>
         @endif
     @endcan

@@ -385,7 +385,10 @@
     @include('appointments.create')
     @include('medical_cases.create')
     @include('medical_treatment.prescriptions.create')
-    @include('appointments.invoices.create')
+    {{-- 开单弹窗（appointments.invoices.create）不再引进来：它的 JS 已经随
+         92f20f8「两套开单 UI 合成一套」删掉了，在这一页是弹得出来但什么都点不动的
+         空壳，还自带 #btnSave / #doctor_id 两个与本页重复的 id。
+         「收费」现在直接去诊疗页的划价面板，见 today_work_actions.js 的 quickInvoice。 --}}
 @endsection
 
 @section('js')
