@@ -1,0 +1,130 @@
+/**
+ * 牙位网格（resources/views/medical_cases/partials/tooth_grid.blade.php）。
+ *
+ * 恒牙与乳牙同屏，靠颜色区分而不是 tab 切换 —— 替牙期一张嘴里两种牙并存，
+ * 分 tab 会让「55 乳牙滞留，15 阻生」这种记录写不出来。
+ *
+ * 乳牙琥珀、恒牙墨色。两种牙的格子宽度一致，四个象限的中线才能对齐成一条。
+ */
+
+.tg {
+    display: inline-grid;
+    gap: 2px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1;
+    user-select: none;
+}
+
+.tg-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    justify-content: center;
+}
+
+.tg-quad {
+    display: flex;
+    gap: 2px;
+}
+
+/* 乳牙一侧只有 5 颗、恒牙 8 颗，靠 min-width 把两行撑到同宽，
+   中线才是一条直的 —— 不然上下两行的中线会错开。 */
+.tg-row-milk .tg-quad {
+    min-width: calc(8 * 23px + 7 * 2px);
+    justify-content: center;
+}
+
+.tg-t {
+    width: 23px;
+    height: 21px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dde2e6;
+    background: #fff;
+    color: #5a6570;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: none;              /* Win7 老机器上过渡只会拖慢点击反馈 */
+}
+
+.tg-t:hover {
+    border-color: #0e7c86;
+    background: #e6f2f3;
+    color: #0e7c86;
+}
+
+.tg-t.selected {
+    background: #0e7c86;
+    border-color: #0e7c86;
+    color: #fff;
+    font-weight: 700;
+}
+
+/* 乳牙：琥珀。选中态也换成琥珀，让「这次动的是乳牙」一眼可见。 */
+.tg-milk {
+    color: #8a6d2f;
+    background: #fbf3e2;
+    border-color: #efe2c6;
+}
+
+.tg-milk:hover {
+    border-color: #b07a1a;
+    background: #f7e9cd;
+    color: #6d551f;
+}
+
+.tg-milk.selected {
+    background: #b07a1a;
+    border-color: #b07a1a;
+    color: #fff;
+}
+
+/* 整象限一键选。整区记录（某区牙周治疗、半口洁治）原来要点 8 下。 */
+.tg-all {
+    width: 26px;
+    height: 21px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #9ccdd2;
+    border-radius: 2px;
+    color: #0e7c86;
+    background: #fff;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.tg-all:hover { background: #e6f2f3; }
+
+/* 恒牙那一行不放「全」，但要占住位置，否则两行左右缘错开 */
+.tg-all-hidden { visibility: hidden; cursor: default; }
+
+/* 上下颌之间的中线 + 左右标 */
+.tg-midline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 3px 0;
+    color: #8b959e;
+    font-size: 10px;
+}
+
+.tg-midline-rule {
+    flex: 1;
+    height: 1px;
+    background: #dde2e6;
+}
+
+/* 侧栏的紧凑尺寸 */
+.tg-compact { font-size: 10px; }
+.tg-compact .tg-t { width: 19px; height: 18px; }
+.tg-compact .tg-all { width: 22px; height: 18px; font-size: 9px; }
+.tg-compact .tg-row-milk .tg-quad { min-width: calc(8 * 19px + 7 * 2px); }
+
+@media (max-width: 767px) {
+    .tg { font-size: 10px; }
+    .tg-t { width: 19px; height: 19px; }
+    .tg-row-milk .tg-quad { min-width: calc(8 * 19px + 7 * 2px); }
+}

@@ -160,6 +160,20 @@ class WaitingQueueService
     }
 
     /**
+     * Roll back one step in the visit flow (挂号后的「回退」).
+     */
+    public function rollbackStatus(int $queueId): array
+    {
+        $queue = WaitingQueue::with('appointment')->findOrFail($queueId);
+
+        if (!$queue->rollbackStatus()) {
+            return ['success' => false, 'message' => __('waiting_queue.invalid_status_for_rollback')];
+        }
+
+        return ['success' => true];
+    }
+
+    /**
      * Cancel a queue entry.
      */
     public function cancelQueue(int $queueId, ?string $reason = null): array

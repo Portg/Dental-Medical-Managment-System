@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="{{ asset('css/tooth-selector.css') }}?v={{ filemtime(public_path('css/tooth-selector.css')) }}">
     {{-- 锚定短语面板 --}}
     <link rel="stylesheet" href="{{ asset('css/phrase-panel.css') }}?v={{ filemtime(public_path('css/phrase-panel.css')) }}">
+    {{-- 牙位网格（恒牙乳牙同屏）：侧栏与选牙位弹窗共用 --}}
+    <link rel="stylesheet" href="{{ asset('css/tooth-grid.css') }}?v={{ filemtime(public_path('css/tooth-grid.css')) }}">
 @endsection
 
 @section('content')

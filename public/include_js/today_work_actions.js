@@ -83,6 +83,14 @@
         ajaxPost('/waiting-queue/' + queueId + '/complete', {});
     };
 
+    // ── Rollback（视频「回退」）────────────────────────────
+    window.quickRollback = function(queueId) {
+        if (confirm(LanguageManager.trans('today_work.confirm_rollback'))) {
+            ajaxPost('/waiting-queue/' + queueId + '/rollback', {},
+                LanguageManager.trans('today_work.rollback_success'));
+        }
+    };
+
     // ── Cancel Queue ─────────────────────────────────────
     window.quickCancelQueue = function(queueId) {
         if (confirm(LanguageManager.trans('today_work.confirm_cancel'))) {

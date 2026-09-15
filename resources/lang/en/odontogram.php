@@ -86,6 +86,9 @@ return [
     'upper_left_abbr' => 'UL',
     'lower_right_abbr' => 'LR',
     'lower_left_abbr' => 'LL',
+    'right_abbr' => 'R',
+    'left_abbr' => 'L',
+    'all_abbr' => 'All',
 
     // ICD-10 Diagnosis Codes
     'anodontia' => 'Anodontia',

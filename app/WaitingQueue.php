@@ -264,7 +264,7 @@ class WaitingQueue extends Model
     }
 
     /**
-     * 开始就诊
+     * 开始治疗
      */
     public function startTreatment()
     {
@@ -282,7 +282,7 @@ class WaitingQueue extends Model
     }
 
     /**
-     * 完成就诊
+     * 完成治疗（状态展示为「已离开」，对齐轻松牙医）
      */
     public function completeTreatment()
     {
@@ -297,6 +297,59 @@ class WaitingQueue extends Model
         }
 
         return $this;
+    }
+
+    /**
+     * 回退到上一步（视频挂号后的「回退」）。
+     *
+     * waiting → 取消排队，预约回到未到（可再次挂号）
+     * called → waiting
+     * in_treatment → called
+     * completed → in_treatment
+     */
+    public function rollbackStatus(): bool
+    {
+        switch ($this->status) {
+            case self::STATUS_COMPLETED:
+                $this->update([
+                    'status' => self::STATUS_IN_TREATMENT,
+                    'treatment_end_time' => null,
+                ]);
+                if ($this->appointment) {
+                    $this->appointment->update(['status' => Appointment::STATUS_IN_PROGRESS]);
+                }
+                return true;
+
+            case self::STATUS_IN_TREATMENT:
+                $this->update([
+                    'status' => self::STATUS_CALLED,
+                    'treatment_start_time' => null,
+                ]);
+                if ($this->appointment) {
+                    $this->appointment->update(['status' => Appointment::STATUS_CHECKED_IN]);
+                }
+                return true;
+
+            case self::STATUS_CALLED:
+                $this->update([
+                    'status' => self::STATUS_WAITING,
+                    'called_time' => null,
+                    'called_by' => null,
+                    'chair_id' => null,
+                ]);
+                return true;
+
+            case self::STATUS_WAITING:
+                // 回退挂号：出队，预约回到未到，流程列重新出现「挂号」
+                $this->update(['status' => self::STATUS_CANCELLED]);
+                if ($this->appointment) {
+                    $this->appointment->update(['status' => Appointment::STATUS_SCHEDULED]);
+                }
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     /**

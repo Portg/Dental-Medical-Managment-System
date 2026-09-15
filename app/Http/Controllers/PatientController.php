@@ -83,6 +83,11 @@ class PatientController extends Controller
             return \Response::json([]);
         }
 
+        // card=1：顶栏信息卡 DTO；full=1：完整 Patient（预约/病历 Select2 等）
+        if ($request->boolean('card')) {
+            return \Response::json($this->patientService->searchPatientsAsCards($keyword));
+        }
+
         $result = $this->patientService->searchPatients($keyword, $request->has('full'));
 
         return \Response::json($result);

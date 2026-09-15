@@ -86,6 +86,10 @@ return [
     'upper_left_abbr' => '左上',
     'lower_right_abbr' => '右下',
     'lower_left_abbr' => '左下',
+    // 牙位网格用：中线两侧的左右标，以及每象限的「全」（整象限一键选）
+    'right_abbr' => '右',
+    'left_abbr' => '左',
+    'all_abbr' => '全',
 
     // ICD-10 诊断编码
     'anodontia' => '无牙畸形',

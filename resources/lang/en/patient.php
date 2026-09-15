@@ -183,6 +183,21 @@ return [
 
     // Search and filter
     'search_patients' => 'Name / initials / phone / record no.',
+    'topbar_no_match' => 'No matching patients',
+    'topbar_create_named' => 'Create patient',
+    'topbar_search_failed' => 'Search failed, please retry',
+    'topbar_patient_no' => 'Record No.',
+    'topbar_phone' => 'Mobile',
+    'topbar_age_unit' => 'y',
+    'topbar_last_visit' => 'Last visit',
+    'topbar_no_visit' => 'No visit history',
+    'topbar_balance_due' => 'Balance due',
+    'topbar_member_balance' => 'Stored value',
+    'topbar_action_register' => 'Check-in',
+    'topbar_action_appointment' => 'Appoint',
+    'topbar_action_medical_case' => 'Chart',
+    'topbar_action_invoice' => 'Bill',
+    'topbar_action_detail' => 'Details',
     'delete_patient_warning' => 'You will not be able to recover this patient record!',
 
     // Empty state

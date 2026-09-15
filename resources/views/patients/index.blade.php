@@ -557,6 +557,26 @@
             dataTable.draw(true);
         @endif
 
+        {{-- 顶栏「新增患者」或空结果建档：/patients?new=1&name=xxx --}}
+        @if(request()->boolean('new') && auth()->user()->can('create-patients'))
+            createRecord();
+            @if(request()->filled('name'))
+                (function () {
+                    var name = @json(request('name'));
+                    var $full = $('#patients-modal').find('[name="full_name"], #full_name').first();
+                    if ($full.length) {
+                        $full.val(name).trigger('change');
+                    } else {
+                        var $sur = $('#patients-modal').find('[name="surname"], #surname').first();
+                        if ($sur.length) $sur.val(name).trigger('change');
+                    }
+                })();
+            @endif
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        @endif
+
 
         // Auto-filter on select change
         $('#filter_source, #filter_tags').on('change', function() {

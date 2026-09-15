@@ -168,18 +168,34 @@ function initQuickPhrases() {
 }
 
 /**
- * Initialize tooth chart tab switching (permanent / deciduous)
+ * 侧栏牙位图的「全」：整象限一键选 / 再点取消。
+ *
+ * 整区记录（某区牙周治疗、半口洁治）原来要一颗一颗点 8 下。
  */
-function initToothChartTabs() {
-    $(document).on('click', '.tooth-chart-tab', function(e) {
+function initToothGridAll() {
+    $(document).on('click', '#sidebar-tooth-grid .tg-all', function (e) {
         e.preventDefault();
-        var target = $(this).data('target');
-        // Switch active tab
-        $(this).siblings('.tooth-chart-tab').removeClass('active');
-        $(this).addClass('active');
-        // Switch panel
-        $(this).closest('.portlet-body').find('.tooth-chart-panel').hide();
-        $('#tooth-panel-' + target).show();
+        e.stopPropagation();
+
+        if ($(this).closest('.sidebar-tool-panel').hasClass('disabled')) return;
+        if (typeof CaseItems === 'undefined' || !$('.case-items-section').length) return;
+
+        var teeth = String($(this).data('teeth')).split(',');
+        var $row  = CaseItems.getFocusedRow();
+        var cur   = $row ? CaseItems.splitTeeth($row.find('.case-item-tooth-value').val()) : [];
+        var allOn = teeth.every(function (t) { return cur.indexOf(t) !== -1; });
+
+        // 一次算完再写回去，避免逐颗 toggle 触发 8 次重渲染
+        var next = allOn
+            ? cur.filter(function (t) { return teeth.indexOf(t) === -1; })
+            : cur.concat(teeth.filter(function (t) { return cur.indexOf(t) === -1; }));
+
+        if ($row) {
+            CaseItems.setRowTooth($row, next);
+        } else if (next.length) {
+            CaseItems.addRow('examination', next.join(','), '', false);
+        }
+        updateMiniChartHighlights();
     });
 }
 
@@ -188,9 +204,9 @@ function initToothChartTabs() {
  * Sidebar mini chart operates on examination teeth, with downstream sync to diagnosis
  */
 function initToothMiniChart() {
-    initToothChartTabs();
+    initToothGridAll();
 
-    $(document).on('click', '.tooth-mini', function(e) {
+    $(document).on('click', '#sidebar-tooth-grid .tg-t', function(e) {
         e.preventDefault();
         e.stopPropagation();
 
@@ -363,34 +379,11 @@ function updateMiniChartHighlights() {
         : JSON.parse($('#examination_teeth').val() || '[]');
     var allSelected = examTeeth;
 
-    var hasPermanent = false;
-    var hasDeciduous = false;
-
-    $('.tooth-mini').each(function() {
+    // 恒牙与乳牙同屏之后没有 tab 可标了，原来那段「未激活 tab 上挂圆点」
+    // 的提示随之作废 —— 选中的牙就在眼前，不需要再提示「另一面也有选中」。
+    $('.tg-t').each(function() {
         var tooth = $(this).data('tooth').toString();
-        if (allSelected.indexOf(tooth) !== -1) {
-            $(this).addClass('selected');
-            if ($(this).hasClass('deciduous')) {
-                hasDeciduous = true;
-            } else {
-                hasPermanent = true;
-            }
-        } else {
-            $(this).removeClass('selected');
-        }
-    });
-
-    // Show dot badge on inactive tab if that panel has selections
-    $('.tooth-chart-tab').each(function() {
-        var target = $(this).data('target');
-        var hasSelection = (target === 'permanent') ? hasPermanent : hasDeciduous;
-        if (hasSelection && !$(this).hasClass('active')) {
-            if (!$(this).find('.tab-dot').length) {
-                $(this).append('<span class="tab-dot"></span>');
-            }
-        } else {
-            $(this).find('.tab-dot').remove();
-        }
+        $(this).toggleClass('selected', allSelected.indexOf(tooth) !== -1);
     });
 }
 

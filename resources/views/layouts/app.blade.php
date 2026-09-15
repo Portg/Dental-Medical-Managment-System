@@ -182,7 +182,8 @@
         // Load common translations used across all pages
         LanguageManager.loadAllFromPHP({
             'common': @json(__('common')),
-            'validation': @json(__('validation'))
+            'validation': @json(__('validation')),
+            'patient': @json(__('patient'))
         });
 
         // Inject clinic settings for JS consumption
@@ -349,6 +350,7 @@
             @endcan
         });
     </script>
+    <script src="{{ asset('include_js/topbar_patient_search.js') }}?v={{ filemtime(public_path('include_js/topbar_patient_search.js')) }}"></script>
     @yield('js')
     <script src="{{ asset('js/breadcrumb-auto.js') }}?v={{ filemtime(public_path('js/breadcrumb-auto.js')) }}"></script>
 </body>

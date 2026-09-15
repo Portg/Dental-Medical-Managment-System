@@ -12,6 +12,7 @@ use App\OperationLog;
 use App\Patient;
 use App\PatientFollowup;
 use App\PatientImage;
+use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -253,6 +254,248 @@ class PatientService
         return $patients->map(function ($tag) {
             return ['id' => $tag->id, 'text' => $tag->full_name];
         })->values()->toArray();
+    }
+
+    /**
+     * 顶栏患者搜索：信息卡 DTO（识别信息 + 就诊/欠费上下文）。
+     *
+     * 对齐轻松牙医视频：下拉是速览选人，不带挂号/收费等办事按钮。
+     * 与 searchPatients(full=true) 分开：预约/病历等 Select2 仍要完整 Patient 字段。
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function searchPatientsAsCards(string $keyword): array
+    {
+        $patients = Patient::with(['patientTags' => function ($q) {
+                $q->select('patient_tags.id', 'patient_tags.name');
+            }])
+            ->where(function ($query) use ($keyword) {
+                NameHelper::addNameSearch($query, $keyword);
+                $query->orWhere('phone_no', 'LIKE', "%$keyword%")
+                    ->orWhere('email', 'LIKE', "%$keyword%")
+                    ->orWhere('patient_no', 'LIKE', "%$keyword%");
+            })
+            ->whereNull('deleted_at')
+            ->limit(20)
+            ->get([
+                'id', 'surname', 'othername', 'gender', 'date_of_birth', 'age',
+                'patient_no', 'phone_no', 'member_balance', 'nin',
+            ]);
+
+        if ($patients->isEmpty()) {
+            return [];
+        }
+
+        $ids = $patients->pluck('id')->all();
+        $lastVisits = $this->batchLastVisits($ids);
+        $balancesDue = $this->batchBalancesDue($ids);
+
+        return $patients->map(function (Patient $patient) use ($lastVisits, $balancesDue) {
+            $visit = $lastVisits[$patient->id] ?? null;
+            $balanceDue = (float) ($balancesDue[$patient->id] ?? 0);
+            $memberBalance = (float) ($patient->member_balance ?? 0);
+
+            return [
+                'id' => $patient->id,
+                'full_name' => $patient->full_name,
+                'surname' => $patient->surname,
+                'othername' => $patient->othername,
+                'gender' => $this->formatGenderLabel($patient->gender),
+                'age' => $this->resolvePatientAge($patient),
+                'patient_no' => $patient->patient_no,
+                'phone_masked' => $this->maskPhone($patient->phone_no),
+                'tags' => $patient->patientTags->take(3)->pluck('name')->values()->all(),
+                'last_visit' => $visit,
+                'last_appointment_id' => $visit['appointment_id'] ?? null,
+                'balance_due' => $balanceDue,
+                'member_balance' => $memberBalance > 0 ? $memberBalance : null,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * @param  list<int>  $patientIds
+     * @return array<int, array{appointment_id:int, date:?string, doctor:?string, service:?string}>
+     */
+    private function batchLastVisits(array $patientIds): array
+    {
+        if ($patientIds === []) {
+            return [];
+        }
+
+        $rows = DB::table('appointments as a')
+            ->leftJoin('users as u', 'u.id', '=', 'a.doctor_id')
+            ->leftJoin('medical_services as s', 's.id', '=', 'a.service_id')
+            ->whereIn('a.patient_id', $patientIds)
+            ->whereNull('a.deleted_at')
+            ->whereNotIn('a.status', [
+                Appointment::STATUS_CANCELLED,
+                Appointment::STATUS_NO_SHOW,
+                Appointment::STATUS_REJECTED,
+            ])
+            ->orderByDesc('a.start_date')
+            ->orderByDesc('a.start_time')
+            ->orderByDesc('a.id')
+            ->select([
+                'a.id as appointment_id',
+                'a.patient_id',
+                'a.start_date',
+                'a.appointment_type',
+                'a.notes',
+                's.name as service_name',
+                'u.surname as doctor_surname',
+                'u.othername as doctor_othername',
+            ])
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $pid = (int) $row->patient_id;
+            if (isset($result[$pid])) {
+                continue;
+            }
+            $doctor = trim(($row->doctor_surname ?? '') . ($row->doctor_othername ?? ''));
+            if (app()->getLocale() !== 'zh-CN' && $row->doctor_surname) {
+                $doctor = trim(($row->doctor_surname ?? '') . ' ' . ($row->doctor_othername ?? ''));
+            }
+            $date = $row->start_date
+                ? Carbon::parse($row->start_date)->format('Y-m-d')
+                : null;
+
+            $result[$pid] = [
+                'appointment_id' => (int) $row->appointment_id,
+                'date' => $date,
+                'doctor' => $doctor !== '' ? $doctor : null,
+                // 挂号常不带 service_id：用就诊类型 / 备注兜底，避免「上次」只剩日期+医生。
+                'service' => $this->resolveLastVisitService(
+                    $row->service_name,
+                    $row->appointment_type,
+                    $row->notes
+                ),
+            ];
+        }
+
+        return $result;
+    }
+
+    private function resolveLastVisitService(?string $serviceName, ?string $appointmentType, ?string $notes): ?string
+    {
+        $serviceName = trim((string) $serviceName);
+        if ($serviceName !== '') {
+            return $serviceName;
+        }
+
+        $type = trim((string) $appointmentType);
+        if ($type !== '') {
+            $key = 'appointment.' . $type;
+            $label = __($key);
+            if ($label !== $key) {
+                return $label;
+            }
+            $twKey = 'today_work.' . $type;
+            $twLabel = __($twKey);
+            if ($twLabel !== $twKey) {
+                return $twLabel;
+            }
+        }
+
+        $notes = trim((string) $notes);
+        if ($notes === '') {
+            return null;
+        }
+
+        return mb_strlen($notes) > 12 ? mb_substr($notes, 0, 12) . '…' : $notes;
+    }
+
+    /**
+     * @param  list<int>  $patientIds
+     * @return array<int, float>
+     */
+    private function batchBalancesDue(array $patientIds): array
+    {
+        if ($patientIds === []) {
+            return [];
+        }
+
+        // 与 getBillingSummary 一致：按发票患者或关联预约患者归属，只汇总未结清。
+        $rows = DB::table('invoices')
+            ->leftJoin('appointments', 'appointments.id', '=', 'invoices.appointment_id')
+            ->whereNull('invoices.deleted_at')
+            ->whereIn('invoices.payment_status', ['unpaid', 'partial', 'overdue'])
+            ->where(function ($q) use ($patientIds) {
+                $q->whereIn('invoices.patient_id', $patientIds)
+                    ->orWhereIn('appointments.patient_id', $patientIds);
+            })
+            ->selectRaw('COALESCE(invoices.patient_id, appointments.patient_id) as patient_id')
+            ->selectRaw('SUM(invoices.outstanding_amount) as balance_due')
+            ->groupBy(DB::raw('COALESCE(invoices.patient_id, appointments.patient_id)'))
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            if ($row->patient_id === null) {
+                continue;
+            }
+            $result[(int) $row->patient_id] = (float) $row->balance_due;
+        }
+
+        return $result;
+    }
+
+    private function formatGenderLabel(?string $gender): string
+    {
+        $raw = trim((string) $gender);
+        $key = strtolower($raw);
+
+        return match ($key) {
+            'male', 'm', '男' => __('patient.male'),
+            'female', 'f', '女' => __('patient.female'),
+            default => $raw,
+        };
+    }
+
+    private function resolvePatientAge(Patient $patient): ?int
+    {
+        if ($patient->age !== null && $patient->age !== '') {
+            return (int) $patient->age;
+        }
+
+        try {
+            if ($patient->date_of_birth) {
+                return $patient->date_of_birth->age;
+            }
+        } catch (\Throwable $e) {
+            // 脏出生日期不挡后面身份证推算
+        }
+
+        return $this->ageFromNin($patient->nin ?? null);
+    }
+
+    /**
+     * 18 位身份证第 7–14 位是出生年月日，建档常只填证号不填生日。
+     */
+    private function ageFromNin(?string $nin): ?int
+    {
+        $nin = preg_replace('/\s+/', '', (string) $nin);
+        if ($nin === null || $nin === '' || !preg_match('/^\d{17}[\dXx]$/', $nin)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Ymd', substr($nin, 6, 8))->age;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function maskPhone(?string $phone): string
+    {
+        if ($phone === null || $phone === '') {
+            return '';
+        }
+        $s = (string) $phone;
+
+        return strlen($s) > 4 ? '***' . substr($s, -4) : $s;
     }
 
     /**

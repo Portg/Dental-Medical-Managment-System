@@ -42,30 +42,353 @@
 /* 顶栏常驻的全局搜索与新增患者。
    参考视频 —— 随时随地找人、随时建档是前台最高频的两个动作，
    藏在放大镜下拉里等于每天多点几十次。 */
-.tw-topbar-search {
+/* 顶栏右侧工具区：检索 / 消息 / 语言 / 用户 —— 强制同一行、垂直居中 */
+.page-header.navbar .top-menu {
+    display: block;
+    height: 75px;
+    margin: 0;
+    padding: 0;
+}
+
+.page-header.navbar .top-menu > .nav.navbar-nav {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    float: right !important;
+    height: 75px;
+    margin: 0 12px 0 0 !important;
+    padding: 0;
+}
+
+.page-header.navbar .top-menu .nav > li {
+    float: none !important;
+    flex-shrink: 0;
+    height: 75px;
     display: flex;
     align-items: center;
-    padding: 0 8px;
+}
+
+/* 主题给 dropdown-toggle 塞了很大上下 padding；改成 flex 居中后要清掉，否则和检索框对不齐 */
+.page-header.navbar .top-menu .nav > li.dropdown > a.dropdown-toggle {
+    display: flex !important;
+    align-items: center;
+    height: 75px;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.page-header.navbar .top-menu .nav > li.tw-topbar-search {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px 0 4px;
+    height: 75px;
+    /* 空间不够时优先压缩搜索，而不是把消息/语言/用户挤到下一行 */
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .tw-topbar-search .topbar-search-form {
+    margin: 0;
+    padding: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tw-topbar-search-field {
     position: relative;
+    width: clamp(140px, 18vw, 240px);
+    max-width: 100%;
 }
 
-.tw-topbar-search .fa-search {
+.tw-topbar-search-field > .fa-search {
     position: absolute;
-    left: 9px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
-    font-size: 12px;
+    left: 11px;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    height: 30px;
+    line-height: 30px;
+    margin: 0;
+    color: #94a3b8 !important;
+    font-size: 13px;
+    text-align: center;
     pointer-events: none;
+    z-index: 2;
 }
 
-.tw-topbar-search input {
-    width: 230px;
+.page-header.navbar .top-menu .nav > li.tw-topbar-search .tw-topbar-search-input.form-control {
+    width: 100%;
     height: 30px;
-    padding-left: 26px;
+    margin: 0;
+    padding: 4px 12px 4px 32px !important;
     font-size: 13px;
-    border-radius: 15px;
+    line-height: 20px;
+    color: #1f2937;
+    background: #fff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 15px !important;
+    box-shadow: none !important;
+}
+
+.page-header.navbar .top-menu .nav > li.tw-topbar-search .tw-topbar-search-input.form-control::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+.page-header.navbar .top-menu .nav > li.tw-topbar-search .tw-topbar-search-input.form-control:focus {
+    border-color: #67e8f9 !important;
+    box-shadow: 0 0 0 2px rgba(0, 131, 143, 0.18) !important;
+}
+
+/* 顶栏 li > a 会被主题刷成半透明白字；建档按钮必须显式压过 */
+.page-header.navbar .top-menu .nav > li.tw-topbar-search > a.tw-topbar-new-patient,
+.page-header.navbar .top-menu .nav > li.tw-topbar-search > a.tw-topbar-new-patient:hover,
+.page-header.navbar .top-menu .nav > li.tw-topbar-search > a.tw-topbar-new-patient:focus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 30px;
+    margin: 0;
+    padding: 0 12px !important;
+    border-radius: 15px !important;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff !important;
+    background: #0e7490 !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+}
+
+.page-header.navbar .top-menu .nav > li.tw-topbar-search > a.tw-topbar-new-patient:hover,
+.page-header.navbar .top-menu .nav > li.tw-topbar-search > a.tw-topbar-new-patient:focus {
+    background: #155e75 !important;
+    color: #fff !important;
+}
+
+.page-header.navbar .top-menu .nav > li.tw-topbar-search > a.tw-topbar-new-patient > i {
+    color: #fff !important;
+    margin: 0 !important;
+    font-size: 12px;
+}
+
+.tw-topbar-search-dropdown {
+    position: absolute;
+    left: 0;
+    right: auto;
+    top: calc(100% + 6px);
+    /* 宽度随视口收，避免小屏把卡片撑出屏幕；具体左右对齐由 JS clamp */
+    width: 400px;
+    max-width: min(400px, calc(100vw - 16px));
+    max-height: min(440px, calc(100vh - 72px));
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: #fff !important;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    z-index: 10050;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+}
+
+.tw-topbar-card {
+    display: block;
+    padding: 10px 12px;
+    color: #1f2937 !important;
+    border-bottom: 1px solid #f3f4f6;
+    background: #fff;
+}
+
+.tw-topbar-card:last-of-type {
+    border-bottom: none;
+}
+
+.tw-topbar-card:hover,
+.tw-topbar-card:focus-within,
+.tw-topbar-card.is-active {
+    background: #f0f9ff !important;
+}
+
+.tw-topbar-create.is-active {
+    background: #ecfeff !important;
+    color: #155e75 !important;
+}
+
+.tw-topbar-card-body {
+    cursor: pointer;
+}
+
+.tw-topbar-card-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.tw-topbar-card-identity {
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+    align-items: baseline;
+}
+
+.tw-topbar-card-who {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.tw-topbar-card-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.3;
+    margin-right: 6px;
+}
+
+.tw-topbar-card-who-meta {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.tw-topbar-card-no {
+    flex: 0 1 auto;
+    max-width: 100%;
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tw-topbar-card-contact {
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.tw-topbar-card-muted {
+    font-size: 12px;
+    color: #64748b !important;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.tw-topbar-card-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-left: 6px;
+}
+
+.tw-topbar-card-tag {
+    display: inline-block;
+    padding: 0 6px;
+    font-size: 11px;
+    line-height: 18px;
+    color: #0e7490;
+    background: #ecfeff;
+    border-radius: 999px;
+    border: 1px solid #a5f3fc;
+}
+
+.tw-topbar-card-context {
+    margin-top: 2px;
+}
+
+.tw-topbar-card-due {
+    font-size: 12px;
+    color: #b45309;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 2px;
+}
+
+.tw-topbar-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.tw-topbar-card-btn {
+    margin: 0 !important;
+    padding: 2px 8px !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+}
+
+.tw-topbar-empty {
+    padding: 12px;
+    font-size: 12px;
+    color: #64748b;
+    background: #fff;
+}
+
+.tw-topbar-create {
+    display: block;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #0e7490 !important;
+    border-top: 1px solid #e5e7eb;
+    text-decoration: none !important;
+    background: #f8fafc !important;
+}
+
+.tw-topbar-create:hover {
+    background: #ecfeff !important;
+    color: #155e75 !important;
+    text-decoration: none !important;
+}
+
+.tw-topbar-create > i {
+    color: inherit !important;
+    margin-right: 4px;
+}
+
+/* 中等宽度：顶栏空间紧，先藏「添加新患者」文字，只留 + */
+@media (max-width: 1366px) {
+    .tw-topbar-new-label {
+        display: none;
+    }
+    .page-header.navbar .top-menu .nav > li.tw-topbar-search > a.tw-topbar-new-patient {
+        width: 30px;
+        padding: 0 !important;
+    }
+    .page-header.navbar .top-menu .nav > li.tw-topbar-search {
+        padding: 0 6px 0 2px;
+        gap: 6px;
+    }
+}
+
+/* 再窄：语言/用户只留图标，保证检索+消息+语言+我的仍在一行 */
+@media (max-width: 1200px) {
+    .page-header.navbar .top-menu .nav > li.dropdown-language .username,
+    .page-header.navbar .top-menu .nav > li.dropdown-user .username {
+        display: none !important;
+    }
+}
+
+@media (max-width: 991px) {
+    .tw-topbar-search-field {
+        width: min(160px, 42vw);
+    }
+
+    .page-header.navbar .top-menu {
+        height: auto;
+        min-height: 75px;
+    }
+
+    .page-header.navbar .top-menu > .nav.navbar-nav {
+        height: auto;
+        min-height: 75px;
+        flex-wrap: nowrap !important;
+    }
 }

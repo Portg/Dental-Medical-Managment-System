@@ -284,6 +284,14 @@ class TodayWorkService
                     $query->whereNull('wq.id')
                         ->where('a.status', '!=', Appointment::STATUS_NO_SHOW);
                     break;
+                case 'arrived':
+                    // 视频工作台「已到」：候诊 + 已叫号 + 治疗中（不含已完成）
+                    $query->whereIn('wq.status', [
+                        WaitingQueue::STATUS_WAITING,
+                        WaitingQueue::STATUS_CALLED,
+                        WaitingQueue::STATUS_IN_TREATMENT,
+                    ]);
+                    break;
                 case 'waiting':
                     $query->where('wq.status', WaitingQueue::STATUS_WAITING);
                     break;
@@ -505,11 +513,11 @@ class TodayWorkService
     }
 
     /**
-     * 流程列：当前状态下的**主操作**。
+     * 流程列：当前状态下的**主操作**（视频「就诊流程」列只有这一列）。
      *
-     * 拆成一列专门放主操作，是因为它是唯一随状态变的东西：签到 → 叫号 →
-     * 开始诊疗 → 完成就诊。病历、收费这些不随状态变的动作各占固定列，
-     * 位置永远不动 —— 参考视频的工作台（预约|叫号|病历|收费|文书 每列一个动作）。
+     * 视频里是下拉显示「当前下一步」：未到→挂号，候诊→叫号，其后开始/完成治疗等。
+     * 病历、收费是行内另挂的固定图标入口，不是和流程并列造出来的多列「流程」。
+     * 我们拆成 流程 | 病历 | 收费 | 更多，是为了固定位置好点，语义仍应对齐视频。
      */
     private function renderFlowAction($row): string
     {
@@ -533,8 +541,8 @@ class TodayWorkService
                     . '<i class="fa fa-check"></i> ' . __('today_work.complete_treatment') . '</button>';
 
             case 'completed':
-                return '<a class="btn btn-xs btn-default tw-action-btn" href="' . url('medical-treatment/' . $row->appointment_id) . '">'
-                    . '<i class="fa fa-eye"></i> ' . __('common.view') . '</a>';
+                // 已离开：流程列不再给「查看」这种非流程动作，回退走「更多」
+                return '<span class="text-muted">' . e(__('today_work.completed')) . '</span>';
         }
 
         return '';
@@ -555,15 +563,22 @@ class TodayWorkService
                 break;
 
             case 'waiting':
+                $items[] = ['quickRollback(' . $row->queue_id . ')', 'fa-undo', __('today_work.rollback')];
                 $items[] = ['quickCancelQueue(' . $row->queue_id . ')', 'fa-times', __('common.cancel')];
                 break;
 
             case 'called':
+                $items[] = ['quickRollback(' . $row->queue_id . ')', 'fa-undo', __('today_work.rollback')];
                 $items[] = ['quickCall(' . $row->queue_id . ')', 'fa-bullhorn', __('today_work.recall')];
                 break;
 
             case 'in_treatment':
+                $items[] = ['quickRollback(' . $row->queue_id . ')', 'fa-undo', __('today_work.rollback')];
                 $items[] = ['quickPrescription(' . $row->appointment_id . ')', 'fa-medkit', __('today_work.prescription')];
+                break;
+
+            case 'completed':
+                $items[] = ['quickRollback(' . $row->queue_id . ')', 'fa-undo', __('today_work.rollback')];
                 break;
         }
 

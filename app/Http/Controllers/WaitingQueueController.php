@@ -161,7 +161,7 @@ class WaitingQueueController extends Controller
     }
 
     /**
-     * 完成就诊
+     * 完成治疗（状态变为已离开）
      */
     public function completeTreatment($id)
     {
@@ -177,6 +177,26 @@ class WaitingQueueController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => __('waiting_queue.treatment_completed')
+        ]);
+    }
+
+    /**
+     * 回退上一步就诊流程
+     */
+    public function rollback($id)
+    {
+        $result = $this->waitingQueueService->rollbackStatus($id);
+
+        if (!$result['success']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $result['message']
+            ], 400);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => __('waiting_queue.rollback_success')
         ]);
     }
 

@@ -21,13 +21,24 @@
                      参考视频 —— 顶栏一个固定的搜索框，提示词直接写明能打什么
                      （姓名/首拼/手机号/病历号），随时随地找人是前台最高频的动作，
                      多一次点击就是每天多几十次。 --}}
-                <li class="tw-topbar-search">
-                    <form action="{{ url('patients') }}" method="GET" class="topbar-search-form">
-                        <i class="fa fa-search"></i>
-                        <input type="text" name="search" class="form-control"
-                               placeholder="{{ __('patient.search_patients') }}" autocomplete="off">
+                @can('view-patients')
+                <li class="tw-topbar-search" data-can-create="{{ auth()->user()->can('create-patients') ? 1 : 0 }}">
+                    <form action="{{ url('patients') }}" method="GET" class="topbar-search-form" autocomplete="off">
+                        {{-- 放大镜只相对输入框定位；下拉挂在 field 上，避免 form 变高后图标漂移压住文字 --}}
+                        <div class="tw-topbar-search-field">
+                            <i class="fa fa-search" aria-hidden="true"></i>
+                            <input type="text" name="search" class="form-control tw-topbar-search-input"
+                                   placeholder="{{ __('patient.search_patients') }}" autocomplete="off">
+                            <div class="tw-topbar-search-dropdown" style="display:none;"></div>
+                        </div>
                     </form>
+                    @can('create-patients')
+                    <a href="javascript:;" class="tw-topbar-new-patient" title="{{ __('patient.add_new_patient') }}">
+                        <i class="fa fa-plus"></i> <span class="tw-topbar-new-label">{{ __('patient.add_new_patient') }}</span>
+                    </a>
+                    @endcan
                 </li>
+                @endcan
 
                 {{-- Notifications --}}
                 @canany(['view-appointments', 'view-invoices'])

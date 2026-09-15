@@ -169,5 +169,22 @@
                 processResults: function (data) { return { results: data }; }
             }
         });
+
+        // 顶栏搜索「挂号」在无弹窗页会跳到 ?register_patient_id=；
+        // 凡加载了本弹窗的页面（工作台/患者列表）到站后自动打开。
+        var qs = new URLSearchParams(window.location.search);
+        var registerPid = qs.get('register_patient_id');
+        if (registerPid) {
+            window.openRegistrationModal({
+                patient_id: registerPid,
+                patient_name: qs.get('register_patient_name') || registerPid
+            });
+            if (window.history && window.history.replaceState) {
+                var url = new URL(window.location.href);
+                url.searchParams.delete('register_patient_id');
+                url.searchParams.delete('register_patient_name');
+                window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+            }
+        }
     });
 })();

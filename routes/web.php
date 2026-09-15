@@ -569,6 +569,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('waiting-queue/{id}/call', 'WaitingQueueController@callPatient');
     Route::post('waiting-queue/{id}/start', 'WaitingQueueController@startTreatment');
     Route::post('waiting-queue/{id}/complete', 'WaitingQueueController@completeTreatment');
+    Route::post('waiting-queue/{id}/rollback', 'WaitingQueueController@rollback');
     Route::post('waiting-queue/{id}/cancel', 'WaitingQueueController@cancel');
 
     // Display screen (public display for waiting room)

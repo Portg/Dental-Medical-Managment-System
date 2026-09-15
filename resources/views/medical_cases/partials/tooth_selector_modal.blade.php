@@ -25,65 +25,17 @@
             <div class="modal-body">
                 {{-- CSS: public/css/tooth-selector.css (loaded by parent page) --}}
 
-                {{-- Tab Switcher --}}
-                <div class="modal-tooth-tabs">
-                    <button type="button" class="modal-tooth-tab {{ $modalDefaultTab === 'permanent' ? 'active' : '' }}" data-target="modal-permanent">
-                        {{ __('odontogram.permanent') }}
-                    </button>
-                    <button type="button" class="modal-tooth-tab {{ $modalDefaultTab === 'deciduous' ? 'active' : '' }}" data-target="modal-deciduous">
-                        {{ __('odontogram.decidua') }}
-                    </button>
-                </div>
+                {{-- 恒牙与乳牙同屏，不再分 tab。
 
-                {{-- Permanent Teeth Panel --}}
-                <div class="tooth-selector-container modal-tooth-panel" id="modal-permanent" @if($modalDefaultTab === 'deciduous') style="display: none;" @endif>
-                    <div class="quadrant-label">{{ __('odontogram.upper_right') }} | {{ __('odontogram.upper_left') }}</div>
-                    <div class="tooth-row">
-                        @for($i = 18; $i >= 11; $i--)
-                            <div class="tooth-cell" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                        @endfor
-                        <div class="teeth-separator-vertical"></div>
-                        @for($i = 21; $i <= 28; $i++)
-                            <div class="tooth-cell" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                        @endfor
-                    </div>
-                    <div class="teeth-separator"></div>
-                    <div class="tooth-row">
-                        @for($i = 48; $i >= 41; $i--)
-                            <div class="tooth-cell" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                        @endfor
-                        <div class="teeth-separator-vertical"></div>
-                        @for($i = 31; $i <= 38; $i++)
-                            <div class="tooth-cell" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                        @endfor
-                    </div>
-                    <div class="quadrant-label">{{ __('odontogram.lower_right') }} | {{ __('odontogram.lower_left') }}</div>
-                </div>
-
-                {{-- Deciduous Teeth Panel --}}
-                <div class="tooth-selector-container modal-tooth-panel" id="modal-deciduous" @if($modalDefaultTab === 'permanent') style="display: none;" @endif>
-                    <div class="quadrant-label">{{ __('odontogram.upper_right') }} | {{ __('odontogram.upper_left') }}</div>
-                    <div class="tooth-row">
-                        @for($i = 55; $i >= 51; $i--)
-                            <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                        @endfor
-                        <div class="teeth-separator-vertical"></div>
-                        @for($i = 61; $i <= 65; $i++)
-                            <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                        @endfor
-                    </div>
-                    <div class="teeth-separator" style="width: 60%; margin-left: auto; margin-right: auto;"></div>
-                    <div class="tooth-row">
-                        @for($i = 85; $i >= 81; $i--)
-                            <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                        @endfor
-                        <div class="teeth-separator-vertical"></div>
-                        @for($i = 71; $i <= 75; $i++)
-                            <div class="tooth-cell deciduous" data-tooth="{{ $i }}" onclick="toggleTooth({{ $i }})">{{ $i }}</div>
-                        @endfor
-                    </div>
-                    <div class="quadrant-label">{{ __('odontogram.lower_right') }} | {{ __('odontogram.lower_left') }}</div>
-                </div>
+                     分 tab 不是慢一点的问题，是写不出来：6-12 岁替牙期一张嘴里
+                     两种牙并存，「55 乳牙滞留，15 阻生」这条最常见的替牙期记录
+                     必须中途切 tab；而原先「按年龄自动选 tab（≤12 岁默认乳牙）」
+                     的贴心设计，恰好在替牙期把人送到错误的那一面。 --}}
+                @include('medical_cases.partials.tooth_grid', [
+                    'idPrefix' => 'modal-tooth-grid',
+                    'compact'  => false,
+                    'onclick'  => 'toggleTooth',
+                ])
 
                 {{-- Selected Teeth Display --}}
                 <div style="margin-top: 20px; padding: 15px; background: #f5f7fa; border-radius: 4px;">
@@ -110,16 +62,18 @@ var selectedTeethInModal = [];
 var teethBeforeModal = [];
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Modal tab switching
-    $(document).on('click', '.modal-tooth-tab', function(e) {
-        e.preventDefault();
-        var target = $(this).data('target');
-        $(this).siblings('.modal-tooth-tab').removeClass('active');
-        $(this).addClass('active');
-        $('.modal-tooth-panel').hide();
-        $('#' + target).show();
-        // Update tab dot badges
-        updateModalTabDots();
+    // 「全」：整象限一键选 / 再点取消。整区记录（某区牙周治疗、半口洁治）
+    // 原来要一颗一颗点 8 下。
+    $(document).on('click', '#modal-tooth-grid .tg-all', function () {
+        var teeth = String($(this).data('teeth')).split(',');
+        var allOn = teeth.every(function (t) { return selectedTeethInModal.indexOf(t) !== -1; });
+
+        teeth.forEach(function (t) {
+            var i = selectedTeethInModal.indexOf(t);
+            if (allOn) { if (i !== -1) selectedTeethInModal.splice(i, 1); }
+            else if (i === -1) { selectedTeethInModal.push(t); }
+        });
+        updateToothSelectorUI();
     });
 
     $('#tooth_selector_modal').on('show.bs.modal', function() {
@@ -153,7 +107,7 @@ function toggleTooth(tooth) {
 
 function updateToothSelectorUI() {
     // Update cell styles
-    $('#tooth_selector_modal .tooth-cell').each(function() {
+    $('#tooth_selector_modal .tg-t').each(function() {
         var tooth = $(this).data('tooth').toString();
         if (selectedTeethInModal.indexOf(tooth) !== -1) {
             $(this).addClass('selected');
@@ -177,35 +131,11 @@ function updateToothSelectorUI() {
         $display.html('<span class="text-muted">{{ __("common.none_selected") }}</span>');
     }
 
-    updateModalTabDots();
 }
 
 /**
  * Show dot badge on inactive modal tab if that panel has selections
  */
-function updateModalTabDots() {
-    var hasPermanent = false;
-    var hasDeciduous = false;
-    selectedTeethInModal.forEach(function(t) {
-        if (parseInt(t) >= 51) {
-            hasDeciduous = true;
-        } else {
-            hasPermanent = true;
-        }
-    });
-
-    $('.modal-tooth-tab').each(function() {
-        var target = $(this).data('target');
-        var hasSelection = (target === 'modal-permanent') ? hasPermanent : hasDeciduous;
-        if (hasSelection && !$(this).hasClass('active')) {
-            if (!$(this).find('.tab-dot').length) {
-                $(this).append('<span class="tab-dot"></span>');
-            }
-        } else {
-            $(this).find('.tab-dot').remove();
-        }
-    });
-}
 
 function confirmToothSelection() {
     var field = currentToothField || 'examination';

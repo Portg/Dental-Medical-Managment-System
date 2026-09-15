@@ -85,6 +85,8 @@
             {{ __('today_work.filter_all_statuses') }} <span class="badge" id="pill-all">0</span></a></li>
         <li><a href="javascript:;" data-status="not_arrived">
             {{ __('today_work.not_arrived') }} <span class="badge" id="pill-not_arrived">0</span></a></li>
+        <li><a href="javascript:;" data-status="arrived">
+            {{ __('today_work.arrived') }} <span class="badge" id="pill-arrived">0</span></a></li>
         <li><a href="javascript:;" data-status="waiting">
             {{ __('today_work.waiting') }} <span class="badge" id="pill-waiting">0</span></a></li>
         <li><a href="javascript:;" data-status="called">
@@ -134,6 +136,7 @@
             <select class="form-control input-sm tw-status-filter" id="tw-status-filter" onchange="onTodayWorkFilterChanged()" style="display:none;">
                 <option value="all">{{ __('today_work.filter_all_statuses') }}</option>
                 <option value="not_arrived">{{ __('today_work.not_arrived') }}</option>
+                <option value="arrived">{{ __('today_work.arrived') }}</option>
                 <option value="waiting">{{ __('today_work.waiting') }}</option>
                 <option value="called">{{ __('today_work.called') }}</option>
                 <option value="in_treatment">{{ __('today_work.in_treatment') }}</option>
@@ -163,9 +166,8 @@
                             <th>{{ __('common.status') }}</th>
                             <th>{{ __('today_work.col_visit_type') }}</th>
                             <th>{{ __('today_work.col_notes') }}</th>
-                            {{-- 参考视频的工作台：操作拆成固定的几列，每列一个动作、列头有名字。
-                                 原来所有按钮挤在一个「操作」列里，按钮随状态增减、位置左右跳，
-                                 每次都要重新找。拆开之后「病历」永远在同一列同一位置。 --}}
+                            {{-- 视频工作台：「就诊流程」只有 1 列（下拉显示当前下一步：挂号/叫号/…）。
+                                 病历、收费是行内另挂图标。我们拆成固定列是为了位置不跳，不是视频里有 4～5 个「流程」按钮。 --}}
                             <th class="tw-col-act">{{ __('today_work.col_flow') }}</th>
                             <th class="tw-col-act">{{ __('today_work.medical_case') }}</th>
                             <th class="tw-col-act">{{ __('today_work.invoice') }}</th>
@@ -412,7 +414,8 @@
             'lab-cases':    '{{ url("today-work/lab-cases") }}',
             'week-missed':  '{{ url("today-work/week-missed") }}',
             'birthdays':    '{{ url("today-work/birthdays") }}',
-            'doctor-table': '{{ url("today-work/doctor-table") }}'
+            'doctor-table': '{{ url("today-work/doctor-table") }}',
+            'tab-counts':   '{{ url("today-work/tab-counts") }}'
         };
 
         window.TodayWorkIndexConfig = {

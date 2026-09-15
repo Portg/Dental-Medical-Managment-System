@@ -56,8 +56,9 @@ $(document).ready(function() {
     // Initialize info tabs (from today_work_tabs.js)
     initInfoTabs();
 
-    // Load tab count badges
+    // Load tab count badges + status pill counts (含「已到」聚合)
     loadTabCounts();
+    refreshStats();
 
     // Auto-refresh every 30 seconds
     setInterval(function() {
@@ -168,6 +169,9 @@ function refreshStats() {
             total += (stats[k] || 0);
         });
         $('#pill-all').text(total);
+        // 「已到」= 候诊 + 已叫号 + 治疗中（与视频工作台一致）
+        var arrived = (stats.waiting || 0) + (stats.called || 0) + (stats.in_treatment || 0);
+        $('#pill-arrived').text(arrived);
     });
 }
 

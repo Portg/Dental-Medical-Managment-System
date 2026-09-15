@@ -111,20 +111,23 @@
                 break;
             case 'waiting':
                 btns += '<button class="btn btn-xs btn-info" onclick="quickCall(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-bullhorn"></i> ' + LanguageManager.trans('today_work.call') + '</button>';
+                btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.rollback') + '"><i class="fa fa-undo"></i></button>';
                 btns += '<button class="btn btn-xs btn-danger" onclick="quickCancelQueue(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-times"></i> ' + LanguageManager.trans('common.cancel') + '</button>';
                 break;
             case 'called':
                 btns += '<button class="btn btn-xs btn-primary" onclick="quickStartTreatment(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-play"></i> ' + LanguageManager.trans('today_work.start_treatment') + '</button>';
+                btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.rollback') + '"><i class="fa fa-undo"></i></button>';
                 btns += '<button class="btn btn-xs btn-info" onclick="quickCall(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-bullhorn"></i> ' + LanguageManager.trans('today_work.recall') + '</button>';
                 break;
             case 'in_treatment':
                 btns += '<button class="btn btn-xs btn-default" onclick="quickMedicalCase(' + item.patient_id + ',' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-file-text-o"></i></button>';
                 btns += '<button class="btn btn-xs btn-default" onclick="quickPrescription(' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-medkit"></i></button>';
                 btns += '<button class="btn btn-xs btn-default" onclick="quickInvoice(' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-money"></i></button>';
-                btns += '<button class="btn btn-xs btn-success" onclick="quickCompleteTreatment(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-check"></i></button>';
+                btns += '<button class="btn btn-xs btn-success" onclick="quickCompleteTreatment(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.complete_treatment') + '"><i class="fa fa-check"></i></button>';
+                btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.rollback') + '"><i class="fa fa-undo"></i></button>';
                 break;
             case 'completed':
-                btns += '<a class="btn btn-xs btn-default" href="/medical-treatment/' + item.appointment_id + '"><i class="fa fa-eye"></i></a>';
+                btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-undo"></i> ' + LanguageManager.trans('today_work.rollback') + '</button>';
                 break;
         }
         return btns;
