@@ -9,6 +9,16 @@ use Yajra\DataTables\DataTables;
 
 class QuickPhraseController extends Controller
 {
+    /**
+     * 短语能挂到病历的哪些字段。与 QuickPhrase::panelForUser 取数用的 category 对齐 ——
+     * 对不上的值进不了锚定面板。
+     */
+    public const CATEGORIES = [
+        'chief_complaint', 'present_illness', 'past_history',
+        'examination', 'auxiliary_examination', 'diagnosis',
+        'treatment_plan', 'treatment', 'medical_orders',
+    ];
+
     private QuickPhraseService $service;
 
     public function __construct(QuickPhraseService $service)
@@ -37,13 +47,16 @@ class QuickPhraseController extends Controller
             return Datatables::of($data)
                 ->addIndexColumn()
                 ->addColumn('category_label', function ($row) {
-                    $labels = [
-                        'examination' => __('templates.examination'),
-                        'diagnosis' => __('templates.diagnosis'),
-                        'treatment' => __('templates.treatment'),
-                        'other' => __('templates.other'),
-                    ];
-                    return $labels[$row->category] ?? $row->category;
+                    // 走 medical_cases.phrase_category_* —— 与病历页侧栏、锚定面板
+                    // 同一套标签。原来这里写死四个（examination/diagnosis/treatment/
+                    // other），新增的六个字段会直接把英文 slug 显示出来。
+                    $key = 'medical_cases.phrase_category_' . $row->category;
+                    $label = __($key);
+                    return $label === $key ? $row->category : $label;
+                })
+                ->addColumn('slot_label', function ($row) {
+                    // 没归槽位的（诊所早先加的那些）在面板里会落到「其他」组
+                    return $row->slot ?: '<span class="text-muted">' . __('common.other') . '</span>';
                 })
                 ->addColumn('scope_label', function ($row) {
                     if ($row->scope === 'system') {
@@ -74,7 +87,7 @@ class QuickPhraseController extends Controller
                     </div>';
                     return $btn;
                 })
-                ->rawColumns(['scope_label', 'status', 'action'])
+                ->rawColumns(['slot_label', 'scope_label', 'status', 'action'])
                 ->make(true);
         }
 
@@ -87,18 +100,40 @@ class QuickPhraseController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
+    /**
+     * 短语的校验规则。
+     *
+     * shortcut 改成选填：它是 ; 选择器认的简写，而临床短语多为中文、量又大
+     * （现病史一栏就 56 条），逐条编简写既没人记得住也容易撞。库里 439 条系统
+     * 短语的 shortcut 全是空的 —— 必填的话医生一改就被拦下。
+     *
+     * category 收紧到病历的九个字段：锚定短语面板按 category 取这一段的短语
+     * （见 QuickPhrase::panelForUser），值对不上就进不了面板，医生会以为短语丢了。
+     */
+    private function rules(): array
+    {
+        return [
+            'shortcut' => 'nullable|string|max:20',
+            'phrase'   => 'required|string|max:255',
+            'category' => 'required|in:' . implode(',', self::CATEGORIES),
+            // 槽位是自由文本：打一个已有的名字就并进那一组，打新的就开一组。
+            // 不做成固定枚举 —— 诊所按自己的写法分组，比我们预设的更贴。
+            'slot'     => 'nullable|string|max:40',
+            'sort_order' => 'nullable|integer|min:0|max:9999',
+            'scope'    => 'required|in:system,personal',
+        ];
+    }
+
     public function store(Request $request)
     {
-        Validator::make($request->all(), [
-            'shortcut' => 'required|string|max:20',
-            'phrase' => 'required|string|max:255',
-            'scope' => 'required|in:system,personal',
-        ])->validate();
+        Validator::make($request->all(), $this->rules())->validate();
 
         $phrase = $this->service->createPhrase([
-            'shortcut' => $request->shortcut,
+            'shortcut' => (string) $request->shortcut,
             'phrase' => $request->phrase,
             'category' => $request->category,
+            'slot' => $request->filled('slot') ? trim($request->slot) : null,
+            'sort_order' => (int) $request->input('sort_order', 0),
             'scope' => $request->scope,
             'is_active' => $request->has('is_active') ? $request->is_active : true,
         ]);
@@ -141,16 +176,14 @@ class QuickPhraseController extends Controller
      */
     public function update(Request $request, $id)
     {
-        Validator::make($request->all(), [
-            'shortcut' => 'required|string|max:20',
-            'phrase' => 'required|string|max:255',
-            'scope' => 'required|in:system,personal',
-        ])->validate();
+        Validator::make($request->all(), $this->rules())->validate();
 
         $status = $this->service->updatePhrase((int) $id, [
-            'shortcut' => $request->shortcut,
+            'shortcut' => (string) $request->shortcut,
             'phrase' => $request->phrase,
             'category' => $request->category,
+            'slot' => $request->filled('slot') ? trim($request->slot) : null,
+            'sort_order' => (int) $request->input('sort_order', 0),
             'scope' => $request->scope,
             'is_active' => $request->has('is_active') ? $request->is_active : true,
         ]);

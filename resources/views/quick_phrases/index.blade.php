@@ -31,6 +31,7 @@
     <th>{{ __('templates.shortcut') }}</th>
     <th>{{ __('templates.phrase') }}</th>
     <th>{{ __('templates.category') }}</th>
+    <th>{{ __('medical_cases.phrase_slot') }}</th>
     <th>{{ __('templates.scope') }}</th>
     <th>{{ __('common.status') }}</th>
     <th>{{ __('common.action') }}</th>

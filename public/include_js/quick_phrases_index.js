@@ -16,6 +16,8 @@ $(function () {
             {data: 'shortcut', name: 'shortcut'},
             {data: 'phrase', name: 'phrase'},
             {data: 'category_label', name: 'category_label'},
+            // 语义槽位：短语在锚定面板里归到哪一组
+            {data: 'slot_label', name: 'slot_label', orderable: false},
             {data: 'scope_label', name: 'scope_label'},
             {data: 'status', name: 'status'},
             {data: 'action', name: 'action', orderable: false, searchable: false}
@@ -95,6 +97,10 @@ function editPhrase(id) {
                 $('[name="shortcut"]').val(data.shortcut);
                 $('[name="phrase"]').val(data.phrase);
                 $('[name="category"]').val(data.category);
+                // 槽位与组内排序：不回填的话，医生改一条已有短语会把它的槽位清空，
+                // 那条短语就从锚定面板里掉到「其他」组去了
+                $('[name="slot"]').val(data.slot || '');
+                $('[name="sort_order"]').val(data.sort_order || 0);
                 $('[name="scope"]').val(data.scope);
                 $('[name="is_active"]').prop('checked', data.is_active);
             }

@@ -113,6 +113,12 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
+        // 快捷短语管理页的槽位下拉：列出库里已有的槽位，省得医生手打错字
+        // 开出一个只有一条的新组。它是自由文本，不是枚举 —— 打新名字照样能开新组。
+        View::composer('quick_phrases.create', function ($view) {
+            $view->with('existingSlots', \App\QuickPhrase::distinctSlots());
+        });
+
         // 锚定短语面板的数据：[病历字段 => [语义槽位 => [短语, ...]]]。
         //
         // 整份一次性注进页面，而不是每次聚焦发一次 ajax —— 全库 400 多条压成 JSON

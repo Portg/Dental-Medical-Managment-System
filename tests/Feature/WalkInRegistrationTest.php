@@ -288,7 +288,10 @@ class WalkInRegistrationTest extends TestCase
         $html = $this->actingAs($this->receptionist)->get('/today-work')
             ->assertOk()->getContent();
 
-        $this->assertStringContainsString('openRegistrationModal(', $html, '顶部要有挂号按钮');
+        // 顶栏那个「挂号」按钮已在 08b99cd 去掉（与视频对齐：顶栏找到人之后
+        // 从详情/抽屉挂号，不再单独占一排）。挂号这件事本身没取消 —— 弹窗仍然
+        // 被 include，患者列表的行操作、新建患者保存后都还会调它，所以这里改钉
+        // 「弹窗与它的脚本在页面上」，不再钉顶栏按钮。
         $this->assertStringContainsString('id="registration-modal"', $html, '挂号弹窗要被 include 进来');
         $this->assertStringContainsString('include_js/registration_modal.js', $html);
     }

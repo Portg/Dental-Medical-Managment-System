@@ -161,6 +161,22 @@ class QuickPhrase extends Model
     }
 
     /**
+     * 库里已有的槽位名，给管理页的下拉用。
+     *
+     * 槽位是自由文本不是枚举 —— 诊所按自己的写法分组比我们预设的更贴。
+     * 列出已有的只是省得手打错字，开出一个只有一条的新组。
+     */
+    public static function distinctSlots(): array
+    {
+        return self::whereNotNull('slot')
+            ->where('slot', '<>', '')
+            ->distinct()
+            ->orderBy('slot')
+            ->pluck('slot')
+            ->all();
+    }
+
+    /**
      * 这条短语要不要把光标停在中间（「PD={}mm，」这类半成品）。
      */
     public function getHasCaretAttribute(): bool

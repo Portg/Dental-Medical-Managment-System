@@ -204,6 +204,10 @@ return [
     // 治疗计划 = 打算做什么（跨次不变）；治疗 = 这次实际做了什么。
     // 与 treatment_plans 表（报价单+签名）不是一回事。
     // 全局工具条：一键展开 / 折叠所有分段（复诊翻旧病历时用）
+    // 快捷短语管理页：语义槽位与槽位内排序
+    'phrase_slot' => '语义槽位',
+    'phrase_slot_hint' => '如「时间」「部位」「龋坏」；打已有的名字并进该组，打新的开一组',
+    'phrase_sort_order' => '组内排序',
     'expand_all' => '全部展开',
     'collapse_all' => '全部折叠',
     'treatment_plan_section' => '治疗计划',
