@@ -557,7 +557,7 @@ class PatientService
      * 汇总栏原地不动，前台必须强制刷新整页才看得到新的总金额和未付金额。
      * 详情页首次渲染与收款后的局部刷新共用这一段，两边不会各算各的。
      *
-     * @return array{total_spending: string, total_outstanding: string, member_balance: string}
+     * @return array{total_spending: string, total_outstanding: string, member_balance: string, full_name?: string|null, patient_no?: string|null, member_level?: string|null, open_invoices: array<int, array{id: int, invoice_no: string|null, date: string|null, total_amount: string, outstanding_amount: string, payment_status: string}>}
      */
     public function getBillingSummary(int $id): array
     {
@@ -574,10 +574,43 @@ class PatientService
             ->whereIn('invoices.payment_status', ['unpaid', 'partial', 'overdue'])
             ->sum('invoices.outstanding_amount');
 
+        $patient = Patient::with('memberLevel')->find($id);
+
+        // 未结清账单明细：划价时勾选并入本次收款
+        $openInvoices = $ownedByPatient(DB::table('invoices'))
+            ->whereIn('invoices.payment_status', ['unpaid', 'partial', 'overdue'])
+            ->where('invoices.outstanding_amount', '>', 0)
+            ->orderByDesc('invoices.created_at')
+            ->get([
+                'invoices.id',
+                'invoices.invoice_no',
+                'invoices.created_at',
+                'invoices.total_amount',
+                'invoices.outstanding_amount',
+                'invoices.payment_status',
+            ])
+            ->map(fn ($row) => [
+                'id'                 => (int) $row->id,
+                'invoice_no'         => $row->invoice_no,
+                'date'               => $row->created_at
+                    ? \Carbon\Carbon::parse($row->created_at)->timezone(config('app.timezone'))->format('Y-m-d')
+                    : null,
+                'total_amount'       => (string) $row->total_amount,
+                'outstanding_amount' => (string) $row->outstanding_amount,
+                'payment_status'     => $row->payment_status,
+            ])
+            ->values()
+            ->all();
+
         return [
             'total_spending'    => (string) $totalSpending,
             'total_outstanding' => (string) $totalOutstanding,
-            'member_balance'    => (string) (Patient::where('id', $id)->value('member_balance') ?? 0),
+            'member_balance'    => (string) ($patient->member_balance ?? 0),
+            // 划价面板顶栏患者上下文（对齐轻松牙医收费窗始终显示患者）
+            'full_name'         => $patient?->full_name,
+            'patient_no'        => $patient?->patient_no,
+            'member_level'      => $patient?->memberLevel?->name,
+            'open_invoices'     => $openInvoices,
         ];
     }
 

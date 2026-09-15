@@ -370,6 +370,7 @@ class InvoiceController extends Controller
             'items.*.price'            => 'required|numeric|min:0',
             'billing_mode'             => 'in:direct,front_desk',
             'appointment_id'           => 'nullable|integer|exists:appointments,id',
+            'round_off'                => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -415,7 +416,8 @@ class InvoiceController extends Controller
             (float) ($request->order_discount_rate ?? 100),
             $request->payment_date,
             $request->billing_mode ?? 'direct',
-            $appointmentId
+            $appointmentId,
+            (float) ($request->round_off ?? 0)
         );
 
         return response()->json($result);

@@ -462,13 +462,26 @@ class PatientBillingTabTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('status', true)
-            ->assertJsonStructure(['data' => ['total_spending', 'total_outstanding', 'member_balance']]);
+            ->assertJsonStructure(['data' => [
+                'total_spending',
+                'total_outstanding',
+                'member_balance',
+                'full_name',
+                'patient_no',
+                'member_level',
+                'open_invoices',
+            ]]);
 
         // 与页面首次渲染同源：两张账单 500（已付清）+ 逾期那张
         $expected = app(\App\Services\PatientService::class)->getBillingSummary($this->patient->id);
 
         $this->assertEquals($expected['total_spending'], $response->json('data.total_spending'));
         $this->assertEquals($expected['total_outstanding'], $response->json('data.total_outstanding'));
+
+        // 未结清的那张应出现在 open_invoices，供划价勾选并入收款
+        $openIds = collect($response->json('data.open_invoices'))->pluck('id')->all();
+        $this->assertContains($this->overdueInvoice->id, $openIds);
+        $this->assertNotContains($this->invoice->id, $openIds);
     }
 
     /** @test */

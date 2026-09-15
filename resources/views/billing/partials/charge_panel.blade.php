@@ -7,6 +7,30 @@
      依赖 BillingModule（public/include_js/patient_billing.js）与 css/patient-billing.css，
      由宿主页面负责引入并调用 BillingModule.init()。面板内的 id 是全局唯一的，
      同一个页面不要 include 两次。 --}}
+
+{{-- 患者上下文条：对齐轻松牙医收费窗始终显示当前患者与账户概况 --}}
+<div class="billing-patient-context" id="billingPatientContext">
+    <div class="billing-ctx-main">
+        <span class="billing-ctx-name" id="billingCtxName">—</span>
+        <span class="billing-ctx-no" id="billingCtxNo"></span>
+        <span class="billing-ctx-level" id="billingCtxLevel"></span>
+    </div>
+    <div class="billing-ctx-stats">
+        <span class="billing-ctx-stat">
+            <em>{{ __('invoices.ctx_outstanding') }}</em>
+            <strong class="text-danger" id="billingCtxOutstanding">¥0.00</strong>
+        </span>
+        <span class="billing-ctx-stat">
+            <em>{{ __('invoices.ctx_member_balance') }}</em>
+            <strong id="billingCtxBalance">¥0.00</strong>
+        </span>
+        <span class="billing-ctx-stat">
+            <em>{{ __('invoices.ctx_total_spending') }}</em>
+            <strong id="billingCtxSpending">¥0.00</strong>
+        </span>
+    </div>
+</div>
+
 <div class="row">
     {{-- Left: Category tree --}}
     <div class="col-md-3">
@@ -80,12 +104,41 @@
                                value="100" min="0" max="100" step="1">
                         <span>%</span>
                     </div>
+                    <div class="summary-item round-off-item">
+                        <span class="summary-label">{{ __('invoices.round_off') }}:</span>
+                        <input type="number" id="billingRoundOff" class="form-control input-sm"
+                               value="0" min="0" step="0.01">
+                        <button type="button" class="btn btn-xs btn-default" id="btnQuickRoundOff"
+                                title="{{ __('invoices.round_off_to_yuan') }}">
+                            {{ __('invoices.round_off_to_yuan') }}
+                        </button>
+                    </div>
                 </div>
                 <div class="discount-approval-warning" id="discountApprovalWarning" style="display:none">
                     <i class="fa fa-exclamation-triangle"></i>
                     <span>{{ __('invoices.discount_approval_required') }}</span>
                 </div>
             </div>
+
+            {{-- 历史欠费：可勾选并入本次收款（收费成功后再按勾选项补收） --}}
+            @can('collect-payments')
+                <div class="billing-outstanding" id="billingOutstandingSection" style="display:none">
+                    <div class="billing-outstanding-header">
+                        <label class="billing-outstanding-select-all">
+                            <input type="checkbox" id="billingOutstandingSelectAll">
+                            <span>{{ __('invoices.include_outstanding') }}</span>
+                        </label>
+                        <span class="billing-outstanding-sum">
+                            <em>{{ __('invoices.selected_outstanding') }}</em>
+                            <strong id="billingOutstandingSelectedSum">¥0.00</strong>
+                        </span>
+                    </div>
+                    <ul class="billing-outstanding-list" id="billingOutstandingList"></ul>
+                    <div class="billing-outstanding-hint text-muted">
+                        <i class="fa fa-info-circle"></i> {{ __('invoices.include_outstanding_hint') }}
+                    </div>
+                </div>
+            @endcan
 
             {{-- Payment —— 只给有收款权限的人。
                  医生（只有 create-invoices）看到的是一个没有收款输入的划价面板，

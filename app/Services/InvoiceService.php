@@ -586,7 +586,8 @@ class InvoiceService
         float $orderDiscountRate = 100,
         ?string $paymentDate = null,
         string $billingMode = 'direct',
-        ?int $appointmentId = null
+        ?int $appointmentId = null,
+        float $roundOff = 0
     ): array {
         if (empty($items)) {
             return ['status' => false, 'message' => __('invoices.no_billing_items')];
@@ -614,6 +615,16 @@ class InvoiceService
                 $rate                = bcdiv((string) $orderDiscountRate, '100', 10);
                 $orderDiscountAmount = bcsub($totalDiscounted, bcmul($totalDiscounted, $rate, 2), 2);
                 $totalDiscounted     = bcmul($totalDiscounted, $rate, 2);
+            }
+
+            // 抹零：从折后应收里减去，计入整单优惠额（不另开字段）
+            $roundOff = max(0, round($roundOff, 2));
+            if ($roundOff > 0) {
+                if (bccomp((string) $roundOff, $totalDiscounted, 2) > 0) {
+                    $roundOff = (float) $totalDiscounted;
+                }
+                $totalDiscounted = bcsub($totalDiscounted, (string) $roundOff, 2);
+                $orderDiscountAmount = bcadd($orderDiscountAmount, (string) $roundOff, 2);
             }
 
             $discountAmount = bcsub($subtotal, $totalDiscounted, 2);

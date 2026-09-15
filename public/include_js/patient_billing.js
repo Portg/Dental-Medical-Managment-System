@@ -47,8 +47,130 @@ var BillingModule = (function() {
         initialized = true;
 
         loadServiceCategories();
+        loadPatientContext();
         bindEvents();
         bindPanelEvents();
+    }
+
+    // ─── 面板顶栏患者上下文 ────────────────────────────────────────
+    function moneyFmt(v) {
+        return '¥' + (parseFloat(v) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function loadPatientContext() {
+        if (!patientId) return;
+        $.getJSON('/patients/' + patientId + '/billing-summary', function (res) {
+            if (!res || !res.status || !res.data) return;
+            applyPatientContext(res.data);
+        });
+    }
+
+    function applyPatientContext(data) {
+        $('#billingCtxName').text(data.full_name || '—');
+        $('#billingCtxNo').text(data.patient_no ? ('#' + data.patient_no) : '');
+        $('#billingCtxLevel').text(data.member_level || '');
+        $('#billingCtxOutstanding').text(moneyFmt(data.total_outstanding));
+        $('#billingCtxBalance').text(moneyFmt(data.member_balance));
+        $('#billingCtxSpending').text(moneyFmt(data.total_spending));
+        renderOutstandingList(data.open_invoices || []);
+    }
+
+    // ─── 历史欠费勾选（并入本次收款） ──────────────────────────────
+    function renderOutstandingList(invoices) {
+        var $section = $('#billingOutstandingSection');
+        var $list = $('#billingOutstandingList');
+        if (!$section.length || !$list.length) {
+            return;
+        }
+
+        // 保留用户已勾选的 id，刷新列表后尽量还原
+        var previouslyChecked = {};
+        $list.find('.outstanding-check:checked').each(function () {
+            previouslyChecked[String($(this).val())] = true;
+        });
+
+        $list.empty();
+        if (!invoices || invoices.length === 0) {
+            $section.hide();
+            $('#billingOutstandingSelectAll').prop('checked', false);
+            updateOutstandingSelectedSum();
+            return;
+        }
+
+        invoices.forEach(function (inv) {
+            var id = String(inv.id);
+            var checked = previouslyChecked[id] ? ' checked' : '';
+            var amt = parseFloat(inv.outstanding_amount) || 0;
+            $list.append(
+                '<li>' +
+                '<label>' +
+                '<input type="checkbox" class="outstanding-check" value="' + id + '"' +
+                ' data-amount="' + amt.toFixed(2) + '"' + checked + '>' +
+                '<span class="inv-no">' + escapeHtml(inv.invoice_no || ('#' + id)) + '</span>' +
+                '<span class="inv-date">' + escapeHtml(inv.date || '') + '</span>' +
+                '<span class="inv-amt">' + moneyFmt(amt) + '</span>' +
+                '</label>' +
+                '</li>'
+            );
+        });
+
+        $section.show();
+        syncOutstandingSelectAll();
+        updateOutstandingSelectedSum();
+    }
+
+    function getSelectedOutstanding() {
+        var selected = [];
+        $('#billingOutstandingList .outstanding-check:checked').each(function () {
+            selected.push({
+                id: parseInt($(this).val(), 10),
+                amount: parseFloat($(this).data('amount')) || 0
+            });
+        });
+        return selected;
+    }
+
+    function getSelectedOutstandingSum() {
+        return getSelectedOutstanding().reduce(function (sum, row) {
+            return sum + row.amount;
+        }, 0);
+    }
+
+    function updateOutstandingSelectedSum() {
+        var sum = getSelectedOutstandingSum();
+        $('#billingOutstandingSelectedSum').text(moneyFmt(sum));
+        // 勾选变化时，若首行付款未手改，重新带入「本次实收 + 勾选欠费」
+        recalculateTotals();
+    }
+
+    function syncOutstandingSelectAll() {
+        var $checks = $('#billingOutstandingList .outstanding-check');
+        var $all = $('#billingOutstandingSelectAll');
+        if (!$checks.length) {
+            $all.prop('checked', false);
+            return;
+        }
+        $all.prop('checked', $checks.length === $checks.filter(':checked').length);
+    }
+
+    /** 从混合支付里按顺序切出不超过 target 的部分，供本次新单收款 */
+    function allocatePayments(payments, target) {
+        var remaining = Math.round((target || 0) * 100) / 100;
+        var allocated = [];
+        if (remaining <= 0) {
+            return allocated;
+        }
+        payments.forEach(function (p) {
+            if (remaining <= 0) return;
+            var amt = Math.round((parseFloat(p.amount) || 0) * 100) / 100;
+            if (amt <= 0) return;
+            var take = Math.min(amt, remaining);
+            var copy = $.extend({}, p);
+            copy.amount = take;
+            allocated.push(copy);
+            remaining = Math.round((remaining - take) * 100) / 100;
+        });
+        return allocated;
     }
 
     // ─── Load service categories ───────────────────────────────────
@@ -77,8 +199,19 @@ var BillingModule = (function() {
     function renderCategoryTree(data) {
         var html = '';
         var categories = Object.keys(data);
+        var favorites = [];
+        var seenFav = {};
 
-        if (categories.length === 0) {
+        categories.forEach(function(cat) {
+            (data[cat] || []).forEach(function(svc) {
+                if (svc.is_favorite && !seenFav[svc.id]) {
+                    seenFav[svc.id] = true;
+                    favorites.push(svc);
+                }
+            });
+        });
+
+        if (categories.length === 0 && favorites.length === 0) {
             html = '<div class="billing-empty-state">' +
                    '<i class="fa fa-inbox"></i> ' +
                    LanguageManager.trans('invoices.no_services_found') +
@@ -87,22 +220,39 @@ var BillingModule = (function() {
             return;
         }
 
-        categories.forEach(function(cat) {
-            var services = data[cat];
-            html += '<div class="billing-cat-group">';
-            html += '<div class="billing-cat-header" data-cat="' + escapeHtml(cat) + '">';
-            html += '<span>' + escapeHtml(cat) + ' (' + services.length + ')</span>';
-            html += '<i class="fa fa-chevron-down cat-toggle"></i>';
-            html += '</div>';
-            html += '<ul class="billing-cat-items">';
+        function renderGroup(catLabel, services, extraClass) {
+            var block = '<div class="billing-cat-group' + (extraClass ? ' ' + extraClass : '') + '">';
+            block += '<div class="billing-cat-header" data-cat="' + escapeHtml(catLabel) + '">';
+            if (extraClass === 'is-favorites') {
+                block += '<span><i class="fa fa-star"></i> ' + escapeHtml(catLabel) + ' (' + services.length + ')</span>';
+            } else {
+                block += '<span>' + escapeHtml(catLabel) + ' (' + services.length + ')</span>';
+            }
+            block += '<i class="fa fa-chevron-down cat-toggle"></i>';
+            block += '</div>';
+            block += '<ul class="billing-cat-items">';
             services.forEach(function(svc) {
-                html += '<li data-svc-id="' + svc.id + '" data-name="' + escapeHtml(svc.name) + '" ' +
+                block += '<li data-svc-id="' + svc.id + '" data-name="' + escapeHtml(svc.name) + '" ' +
                         'data-price="' + svc.price + '" data-unit="' + escapeHtml(svc.unit) + '">';
-                html += '<span class="svc-name">' + escapeHtml(svc.name) + '</span>';
-                html += '<span class="svc-price">&yen;' + parseFloat(svc.price).toFixed(2) + '</span>';
-                html += '</li>';
+                block += '<span class="svc-name">' + escapeHtml(svc.name) + '</span>';
+                block += '<span class="svc-price">&yen;' + parseFloat(svc.price).toFixed(2) + '</span>';
+                block += '</li>';
             });
-            html += '</ul></div>';
+            block += '</ul></div>';
+            return block;
+        }
+
+        // 常用置顶（对齐轻松牙医左侧常用）
+        if (favorites.length > 0) {
+            html += renderGroup(
+                LanguageManager.trans('invoices.favorite_services', '常用项目'),
+                favorites,
+                'is-favorites'
+            );
+        }
+
+        categories.forEach(function(cat) {
+            html += renderGroup(cat, data[cat], '');
         });
 
         $('#billingCategoryTree').html(html);
@@ -261,6 +411,20 @@ var BillingModule = (function() {
             if (totalArrears < 0) totalArrears = 0;
         }
 
+        // 抹零：从折后/实收合计里扣减
+        var roundOff = parseFloat($('#billingRoundOff').val());
+        if (isNaN(roundOff) || roundOff < 0) roundOff = 0;
+        if (roundOff > totalDiscounted) {
+            roundOff = totalDiscounted;
+            $('#billingRoundOff').val(roundOff.toFixed(2));
+        }
+        if (roundOff > 0) {
+            totalDiscounted = Math.max(0, totalDiscounted - roundOff);
+            totalActual = Math.max(0, totalActual - roundOff);
+            totalArrears = totalDiscounted - totalActual;
+            if (totalArrears < 0) totalArrears = 0;
+        }
+
         $('#summaryOriginal').text(totalOriginal.toFixed(2));
         $('#summaryDiscounted').text(totalDiscounted.toFixed(2));
         $('#summaryActual').text(totalActual.toFixed(2));
@@ -279,11 +443,29 @@ var BillingModule = (function() {
             $('#btnChargeAndPrint').prop('disabled', false).removeClass('disabled');
         }
 
-        // Auto-fill first payment amount
+        // Auto-fill first payment amount = 本次实收 + 勾选历史欠费
+        var dueNow = totalActual + getSelectedOutstandingSum();
         var $firstPayAmount = $('#paymentRows .payment-row:first .payment-amount-input');
         if ($firstPayAmount.length && !$firstPayAmount.data('manual')) {
-            $firstPayAmount.val(totalActual.toFixed(2));
+            $firstPayAmount.val(dueNow.toFixed(2));
         }
+    }
+
+    /** 抹角分：把当前折后合计向下取整到元，差额写入抹零 */
+    function applyQuickRoundOff() {
+        var totalDiscounted = 0;
+        billingItems.forEach(function(item) {
+            totalDiscounted += item.discounted_price;
+        });
+        var orderRate = parseFloat($('#orderDiscountRate').val());
+        if (isNaN(orderRate)) orderRate = 100;
+        if (orderRate < 100) {
+            totalDiscounted = totalDiscounted * (orderRate / 100);
+        }
+        var floored = Math.floor(totalDiscounted);
+        var diff = Math.round((totalDiscounted - floored) * 100) / 100;
+        $('#billingRoundOff').val(diff > 0 ? diff.toFixed(2) : '0');
+        recalculateTotals();
     }
 
     // ─── Payment rows ──────────────────────────────────────────────
@@ -445,7 +627,11 @@ var BillingModule = (function() {
             return;
         }
 
-        var payments = (mode === 'direct') ? collectPayments() : [];
+        var chargeActual = parseFloat($('#summaryActual').text()) || 0;
+        var selectedOutstanding = (mode === 'direct') ? getSelectedOutstanding() : [];
+        var allPayments = (mode === 'direct') ? collectPayments() : [];
+        // 新单只吃「本次实收」对应的支付份额；多出来的留给勾选欠费补收
+        var payments = (mode === 'direct') ? allocatePayments(allPayments, chargeActual) : [];
         var paymentDate = null;
         if ($('#backEntryCheck').is(':checked')) {
             paymentDate = $('#backEntryDate').val();
@@ -457,6 +643,7 @@ var BillingModule = (function() {
             items: items,
             payments: payments,
             order_discount_rate: parseFloat($('#orderDiscountRate').val()) || 100,
+            round_off: parseFloat($('#billingRoundOff').val()) || 0,
             payment_date: paymentDate,
             billing_mode: mode,
             appointment_id: appointmentId
@@ -473,33 +660,47 @@ var BillingModule = (function() {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(resp) {
-                $('.loading').hide();
                 if (resp.status) {
-                    swal({
-                        title: LanguageManager.trans('messages.success'),
-                        text: resp.message,
-                        type: 'success'
-                    });
+                    var afterSettle = function (failures) {
+                        $('.loading').hide();
 
-                    // Clear billing form
-                    resetBillingForm();
+                        var okText = resp.message;
+                        if (failures && failures.length) {
+                            okText = LanguageManager.trans(
+                                'invoices.outstanding_settle_partial',
+                                '本次划价已收费；部分历史欠费补收失败：:detail'
+                            ).replace(':detail', failures.join('；'));
+                        }
 
-                    // 走统一入口：它同时刷新账单表和顶部汇总栏。
-                    // 原先这里直接操作 DataTable，绕过了 reloadInvoicesTable()，
-                    // 于是划价收费之后顶部的消费总额/未付余额一直停在旧值 ——
-                    // 前台刚收完 3200 元，抬头一看还是 ¥0.00。
-                    reloadInvoicesTable();
-                    reloadReceiptsTable();
+                        swal({
+                            title: LanguageManager.trans('messages.success'),
+                            text: okText,
+                            type: (failures && failures.length) ? 'warning' : 'success'
+                        });
 
-                    // 宿主页面的额外刷新（诊疗页用它刷「本次已划价」表）。
-                    // 上面两个 reload 只认患者页的表，诊疗页没有那两张表时是空转。
-                    if (onSaved) { onSaved(resp); }
+                        resetBillingForm();
+                        reloadInvoicesTable();
+                        reloadReceiptsTable();
+                        if (onSaved) { onSaved(resp); }
 
-                    // Print if requested
-                    if (printAfter && resp.invoice_id) {
-                        window.open('/print-receipt/' + resp.invoice_id, '_blank');
+                        if (printAfter && resp.invoice_id) {
+                            window.open('/print-receipt/' + resp.invoice_id, '_blank');
+                        }
+                    };
+
+                    if (mode === 'direct' && selectedOutstanding.length) {
+                        settleSelectedOutstanding(
+                            selectedOutstanding,
+                            allPayments,
+                            chargeActual,
+                            paymentDate,
+                            afterSettle
+                        );
+                    } else {
+                        afterSettle([]);
                     }
                 } else {
+                    $('.loading').hide();
                     swal({
                         title: LanguageManager.trans('messages.error'),
                         text: resp.message,
@@ -522,6 +723,65 @@ var BillingModule = (function() {
         });
     }
 
+    /**
+     * 划价收款成功后，用支付总额里多出「本次实收」的部分，按勾选顺序补收历史欠费。
+     * 支付方式沿用第一笔收款的渠道（与前台「一笔钱收多张单」操作一致）。
+     */
+    function settleSelectedOutstanding(selected, allPayments, chargeActual, paymentDate, done) {
+        var paidTotal = allPayments.reduce(function (sum, p) {
+            return sum + (parseFloat(p.amount) || 0);
+        }, 0);
+        var remaining = Math.round((paidTotal - chargeActual) * 100) / 100;
+        var template = allPayments[0] || { payment_method: 'Cash' };
+        var failures = [];
+        var chain = $.Deferred().resolve();
+
+        selected.forEach(function (inv) {
+            chain = chain.then(function () {
+                if (remaining <= 0.001) {
+                    return;
+                }
+                var amt = Math.min(remaining, inv.amount);
+                amt = Math.round(amt * 100) / 100;
+                if (amt <= 0) {
+                    return;
+                }
+
+                var payload = {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    amount: amt,
+                    payment_method: template.payment_method || 'Cash',
+                    payment_date: paymentDate || null
+                };
+                if (template.cheque_no) payload.cheque_no = template.cheque_no;
+                if (template.bank_name) payload.bank_name = template.bank_name;
+                if (template.insurance_company_id) payload.insurance_company_id = template.insurance_company_id;
+                if (template.self_account_id) payload.self_account_id = template.self_account_id;
+
+                return $.ajax({
+                    url: '/invoices/' + inv.id + '/add-overdue-payment',
+                    type: 'POST',
+                    data: payload
+                }).then(function (res) {
+                    if (res && (res.status === 1 || res.status === true)) {
+                        remaining = Math.round((remaining - amt) * 100) / 100;
+                    } else {
+                        failures.push((inv.id ? ('#' + inv.id) : '') + ' ' + (res && res.message ? res.message : ''));
+                    }
+                }, function (xhr) {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : LanguageManager.trans('messages.error_occurred');
+                    failures.push('#' + inv.id + ' ' + msg);
+                });
+            });
+        });
+
+        chain.always(function () {
+            done(failures);
+        });
+    }
+
     // ─── Reset form ────────────────────────────────────────────────
     function resetBillingForm() {
         billingItems = [];
@@ -530,6 +790,7 @@ var BillingModule = (function() {
         toggleEmptyState();
         recalculateTotals();
         $('#orderDiscountRate').val(100);
+        $('#billingRoundOff').val(0);
         $('#backEntryCheck').prop('checked', false);
         $('#backEntryDate').hide();
 
@@ -736,6 +997,14 @@ var BillingModule = (function() {
             recalculateTotals();
         });
 
+        $('#billingRoundOff').on('change input', function() {
+            recalculateTotals();
+        });
+
+        $('#btnQuickRoundOff').on('click', function() {
+            applyQuickRoundOff();
+        });
+
         // Add payment row
         $('#btnAddPayment').on('click', function() {
             addPaymentRow();
@@ -788,6 +1057,27 @@ var BillingModule = (function() {
             } else if (target === '#billing_sub_receipts') {
                 initReceiptsTable();
             }
+        });
+
+        // 历史区折叠展开时：默认激活「账单」页签不会再触发 shown.bs.tab，这里补一次
+        $('#billingHistoryCollapse').on('shown.bs.collapse', function () {
+            var activeHref = $('#billingSubTabs li.active a').attr('href');
+            if (activeHref === '#billing_sub_bills') {
+                initInvoicesTable();
+            } else if (activeHref === '#billing_sub_receipts') {
+                initReceiptsTable();
+            }
+        });
+
+        // 勾选历史欠费 → 重算本次应收合计
+        $(document).on('change', '#billingOutstandingList .outstanding-check', function () {
+            syncOutstandingSelectAll();
+            updateOutstandingSelectedSum();
+        });
+        $('#billingOutstandingSelectAll').on('change', function () {
+            var checked = $(this).is(':checked');
+            $('#billingOutstandingList .outstanding-check').prop('checked', checked);
+            updateOutstandingSelectedSum();
         });
     }
 
@@ -1153,6 +1443,9 @@ var BillingModule = (function() {
             $('#summaryTotalOutstanding').text(money(res.data.total_outstanding));
             // 非会员患者页面上没有这一项，选择器落空是正常的
             $('#summaryMemberBalance').text(money(res.data.member_balance));
+
+            // 划价面板顶栏与患者页汇总栏同源刷新
+            applyPatientContext(res.data);
         });
     }
 

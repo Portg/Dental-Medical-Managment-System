@@ -715,14 +715,23 @@
         <script src="{{ asset('include_js/dental_chart_editor.js') }}?v={{ filemtime(public_path('include_js/dental_chart_editor.js')) }}"></script>
     @endif
     <script>
+        // 工作台「收费」会带 ?appointment_id= 过来，账单要挂到这次就诊上
+        var billingAppointmentId = (function () {
+            var match = /(?:\?|&)appointment_id=(\d+)/.exec(window.location.search);
+            return match ? parseInt(match[1], 10) : null;
+        })();
+
         // Initialize billing module on billing tab click
         $('a[href="#billing_tab"]').on('shown.bs.tab', function () {
             if (typeof BillingModule !== 'undefined') {
-                BillingModule.init({{ $patient->id }}, {!! json_encode($doctors ?? []) !!});
+                BillingModule.init({{ $patient->id }}, {!! json_encode($doctors ?? []) !!}, {
+                    appointmentId: billingAppointmentId
+                });
             }
         });
 
-        // 支持 #dental_chart_tab 等 hash 直达对应 Tab（如「开始记录」后回跳）
+        // 支持 #billing_tab / #dental_chart_tab 等 hash 直达对应 Tab
+        // （工作台「收费」→ #billing_tab；「开始记录」后回跳牙位图等）
         $(function () {
             var hash = window.location.hash;
             if (hash && $('a[href="' + hash + '"][data-toggle="tab"]').length) {
