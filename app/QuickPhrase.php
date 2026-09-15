@@ -123,6 +123,44 @@ class QuickPhrase extends Model
     }
 
     /**
+     * 锚定短语面板用的整份数据：[字段 => [槽位 => [短语, ...]]]。
+     *
+     * 一次性交给页面，不做按字段的 ajax —— 医生写病历时光标在字段之间来回跳，
+     * 每跳一次等一次网络是最不该有的等待。全库压成这个形状约 10KB。
+     *
+     * 只出短语文本，不出 id：面板是「点一下插一段文字」，不需要回指哪条记录。
+     */
+    public static function panelForUser(int $userId): array
+    {
+        $other = __('common.other');
+
+        return self::active()
+            ->forUser($userId)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['phrase', 'category', 'slot'])
+            ->groupBy('category')
+            ->map(function ($rows) use ($other) {
+                $slots = $rows
+                    ->groupBy(fn ($p) => $p->slot ?: $other)
+                    ->map(fn ($g) => $g->pluck('phrase')->values()->all())
+                    ->all();
+
+                // 没归槽位的（诊所自己早先加的那些）归到「其他」并排到最后。
+                // 它们 sort_order 是 0，不挪的话会顶在「时间」「龋坏」这些正经
+                // 槽位前面 —— 面板第一眼看到的应该是句子的起手，不是杂项。
+                if (isset($slots[$other])) {
+                    $tail = $slots[$other];
+                    unset($slots[$other]);
+                    $slots[$other] = $tail;
+                }
+
+                return $slots;
+            })
+            ->all();
+    }
+
+    /**
      * 这条短语要不要把光标停在中间（「PD={}mm，」这类半成品）。
      */
     public function getHasCaretAttribute(): bool

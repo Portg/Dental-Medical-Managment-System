@@ -24,9 +24,12 @@
         @endif
     </div>
     <div class="soap-section-body">
+        {{-- data-phrase-field：锚定短语面板靠它取这一段的语义槽位。
+             默认用 $id（医嘱段的 id 就是 medical_orders，与短语库的 category 对齐）。 --}}
         <textarea
             name="{{ $id }}"
             id="{{ $id }}"
+            data-phrase-field="{{ $phraseField ?? $id }}"
             class="soap-textarea"
             placeholder="{{ $placeholder ?? '' }}"
             @if(isset($maxlength)) maxlength="{{ $maxlength }}" @endif

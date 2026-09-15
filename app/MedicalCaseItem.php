@@ -30,10 +30,20 @@ class MedicalCaseItem extends Model
      * 主诉 / 现病史 / 医嘱不在其中：那些是就诊层面的叙述，本来就不按牙位分行
      * （同类产品也是把它们留作整段文本）。
      */
-    public const SECTION_EXAMINATION = 'examination';
-    public const SECTION_AUXILIARY   = 'auxiliary_examination';
-    public const SECTION_DIAGNOSIS   = 'diagnosis';
-    public const SECTION_TREATMENT   = 'treatment';
+    public const SECTION_EXAMINATION    = 'examination';
+    public const SECTION_AUXILIARY      = 'auxiliary_examination';
+    public const SECTION_DIAGNOSIS      = 'diagnosis';
+    /**
+     * 治疗计划：打算做什么，跨次不变。
+     *
+     * 与 SECTION_TREATMENT（这次实际做了什么）分开 —— 活动义齿要来好几次，
+     * 计划一直是「活动义齿修复」，而处置这次是「制取印模」下次是「试戴」。
+     * 参考产品的病历也是这么拆的。
+     *
+     * 与 treatment_plans 表无关：那张表是报价单 + 风险告知 + 电子签名。
+     */
+    public const SECTION_TREATMENT_PLAN = 'treatment_plan';
+    public const SECTION_TREATMENT      = 'treatment';
 
     /**
      * 本表承接的段落。
@@ -46,6 +56,7 @@ class MedicalCaseItem extends Model
     public const SECTIONS = [
         self::SECTION_EXAMINATION,
         self::SECTION_AUXILIARY,
+        self::SECTION_TREATMENT_PLAN,
         self::SECTION_TREATMENT,
     ];
 

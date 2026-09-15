@@ -180,7 +180,25 @@
             </div>
         </div>
 
-        {{-- 治疗 --}}
+        {{-- 治疗计划：打算做什么（跨次不变）。没写就不占一行 ——
+             一次做完的治疗（补牙、拔牙）本来就没有跨次计划。 --}}
+        @if(!empty($caseItems['treatment_plan'] ?? []))
+            <div class="mr-row">
+                <div class="mr-label">{{ __('medical_cases.treatment_plan_section') }}</div>
+                <div class="mr-value mr-value-items">
+                    @foreach($caseItems['treatment_plan'] as $row)
+                        <div class="mr-item">
+                            @if(!empty($row['tooth_no']))
+                                <span class="mr-tooth">{{ $row['tooth_no'] }}</span>
+                            @endif
+                            <span class="mr-item-text">{{ $row['content'] }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        {{-- 治疗：这次实际做了什么 --}}
         <div class="mr-row">
             <div class="mr-label">{{ __('medical_cases.treatment_section') }}</div>
             <div class="mr-value mr-value-items">

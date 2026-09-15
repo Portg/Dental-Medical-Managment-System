@@ -201,8 +201,12 @@ return [
     'diagnosis_hint' => '诊断结论',
     'icd10_code' => 'ICD-10编码',
     'search_icd10' => '搜索ICD-10诊断编码',
+    // 治疗计划 = 打算做什么（跨次不变）；治疗 = 这次实际做了什么。
+    // 与 treatment_plans 表（报价单+签名）不是一回事。
+    'treatment_plan_section' => '治疗计划',
+    'treatment_plan_hint' => '打算做什么（跨次不变）',
     'treatment_section' => '治疗',
-    'treatment_hint' => '治疗操作记录',
+    'treatment_hint' => '这次实际做了什么',
     'treatment_services' => '治疗项目',
     'add_service' => '添加项目',
     'medical_orders_section' => '医嘱',

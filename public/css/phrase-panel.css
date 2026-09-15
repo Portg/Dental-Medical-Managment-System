@@ -1,0 +1,118 @@
+/**
+ * 锚定短语面板（public/include_js/phrase_panel.js）。
+ *
+ * 贴在正在编辑的字段下方弹出，按语义槽位分组。要同时满足两件相反的事：
+ * 一屏放得下几十条（密），以及点得准不误触（每条有足够的点击区）。
+ */
+
+.phrase-panel {
+    position: absolute;
+    z-index: 1060;              /* 高于 Bootstrap modal-backdrop(1040) 与 modal(1050) */
+    width: 620px;
+    max-width: calc(100vw - 24px);
+    max-height: 46vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #c9d2da;
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(20, 30, 40, .08), 0 10px 28px rgba(20, 30, 40, .14);
+    font-size: 13px;
+}
+
+.phrase-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-bottom: 1px solid #e6eaee;
+    background: #f6f8f9;
+    flex: 0 0 auto;
+}
+
+.phrase-panel-title {
+    font-weight: 600;
+    color: #33424f;
+    font-size: 12.5px;
+}
+
+.phrase-panel-close {
+    cursor: pointer;
+    color: #9aa5ae;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.phrase-panel-close:hover { color: #5a6570; }
+
+.phrase-panel-body {
+    padding: 8px 10px 10px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+/* 槽位名固定一列，短语在右边流式排开 —— 几十条也能一眼找到组 */
+.phrase-slot {
+    display: grid;
+    grid-template-columns: 4.5em 1fr;
+    gap: 8px;
+    align-items: baseline;
+    padding: 3px 0;
+}
+
+.phrase-slot + .phrase-slot {
+    border-top: 1px dotted #eef1f4;
+}
+
+.phrase-slot-name {
+    font-size: 12px;
+    color: #0e7c86;
+    font-weight: 600;
+    /* 「时间」「部位」「治疗情况」两头对齐撑到同一宽度，左右边缘才齐 */
+    text-align: justify;
+    text-align-last: justify;
+    line-height: 1.9;
+}
+
+.phrase-slot-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 4px;
+    min-width: 0;
+}
+
+.phrase-panel-item {
+    cursor: pointer;
+    padding: 1px 7px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: #2c5f8a;
+    line-height: 1.85;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.phrase-panel-item:hover {
+    background: #e6f2f3;
+    border-color: #9ccdd2;
+    color: #0e7c86;
+}
+
+/* 半成品短语（PD={}mm，）—— 虚线下划提示「插进去还要补个数」 */
+.phrase-panel-item.has-caret {
+    border-bottom: 1px dashed #b8a06a;
+    color: #8a6d2f;
+}
+
+.phrase-panel-item.has-caret:hover {
+    background: #fbf3e2;
+    border-color: #b8a06a;
+    color: #6d551f;
+}
+
+@media (max-width: 767px) {
+    .phrase-panel { width: calc(100vw - 24px); max-height: 52vh; }
+    .phrase-slot { grid-template-columns: 1fr; gap: 2px; }
+    .phrase-slot-name { text-align: left; text-align-last: left; }
+}

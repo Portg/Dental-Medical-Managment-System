@@ -28,7 +28,9 @@ class MedicalCase extends Model implements AuditableContract
         'case_no', 'title', 'chief_complaint', 'history_of_present_illness', 'past_medical_history',
         'examination', 'examination_teeth', // SOAP: O - Objective
         'related_teeth', 'related_images', 'diagnosis_code',
-        'auxiliary_examination', 'diagnosis', 'treatment', 'treatment_services', // SOAP: A & P
+        // SOAP 的 P 拆成两段：treatment_plan 是打算做什么（跨次不变），
+        // treatment 是这次实际做了什么。两列都由 medical_case_items 的行派生。
+        'auxiliary_examination', 'diagnosis', 'treatment_plan', 'treatment', 'treatment_services',
         'medical_orders', 'next_visit_date', 'next_visit_note', 'auto_create_followup', 'visit_type',
         'signature', 'signed_at', 'locked_at', 'modified_at', 'modified_by', 'modification_reason', 'version_number',
         'status', 'is_draft', 'case_date', 'closed_date', 'closing_notes',

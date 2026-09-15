@@ -112,6 +112,18 @@ class AppServiceProvider extends ServiceProvider
                 Auth::check() ? \App\QuickPhrase::groupedForUser(Auth::id()) : collect()
             );
         });
+
+        // 锚定短语面板的数据：[病历字段 => [语义槽位 => [短语, ...]]]。
+        //
+        // 整份一次性注进页面，而不是每次聚焦发一次 ajax —— 全库 400 多条压成 JSON
+        // 约 10KB，一次拿完；医生写病历时光标在字段之间来回跳，每跳一次等一次网络
+        // 是最不该有的等待。
+        View::composer('medical_cases.edit', function ($view) {
+            $view->with(
+                'phrasePanel',
+                Auth::check() ? \App\QuickPhrase::panelForUser(Auth::id()) : []
+            );
+        });
     }
 
 }

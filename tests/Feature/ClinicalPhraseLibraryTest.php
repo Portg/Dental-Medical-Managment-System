@@ -148,6 +148,41 @@ class ClinicalPhraseLibraryTest extends TestCase
     }
 
     /**
+     * 锚定面板要的整份数据：[字段 => [槽位 => [短语]]]，一次性下发不做按字段 ajax。
+     */
+    public function test_面板数据九个字段都在且带槽位(): void
+    {
+        $panel = QuickPhrase::panelForUser($this->doctor->id);
+
+        $this->assertCount(9, $panel);
+        $this->assertSame(
+            ['时间', '部位', '症状', '治疗情况', '症状变化', '口腔习惯'],
+            array_keys($panel['present_illness'])
+        );
+        $this->assertContains('本院治疗，', $panel['present_illness']['治疗情况']);
+    }
+
+    /**
+     * 诊所自己早先加的短语没有槽位，归到「其他」并排最后 ——
+     * 它们 sort_order 是 0，不挪就会顶在「时间」「龋坏」这些正经槽位前面，
+     * 而面板第一眼该看到的是句子的起手。
+     */
+    public function test_没归槽位的老短语排到最后(): void
+    {
+        QuickPhrase::create([
+            'shortcut' => '', 'phrase' => '诊所自己加的', 'category' => 'examination',
+            'slot' => null, 'sort_order' => 0, 'scope' => 'system',
+            'is_active' => true, '_who_added' => $this->doctor->id,
+        ]);
+
+        $slots = array_keys(QuickPhrase::panelForUser($this->doctor->id)['examination']);
+
+        $this->assertSame(__('common.other'), end($slots), '「其他」应当排在最后');
+        $this->assertSame('牙髓测试', $slots[0], '第一组应当是句子的起手');
+    }
+
+
+    /**
      * 治疗计划与治疗是两段，短语库也得分开 ——
      * 「活动义齿修复」是计划，「制取硅橡胶印模，」是本次处置。
      */

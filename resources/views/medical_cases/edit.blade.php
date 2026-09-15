@@ -12,6 +12,8 @@
     @include('layouts.page_loader')
     <link rel="stylesheet" href="{{ asset('css/medical-record-edit.css') }}?v={{ filemtime(public_path('css/medical-record-edit.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/tooth-selector.css') }}?v={{ filemtime(public_path('css/tooth-selector.css')) }}">
+    {{-- 锚定短语面板 --}}
+    <link rel="stylesheet" href="{{ asset('css/phrase-panel.css') }}?v={{ filemtime(public_path('css/phrase-panel.css')) }}">
 @endsection
 
 @section('content')
@@ -107,6 +109,7 @@
                                 <label for="chief_complaint">{{ __('medical_cases.chief_complaint_section') }} <span class="required">*</span></label>
                                 <div class="narrative-field">
                                     <textarea name="chief_complaint" id="chief_complaint" class="soap-textarea"
+                                              data-phrase-field="chief_complaint"
                                               rows="2" maxlength="500" required
                                               placeholder="{{ __('medical_cases.subjective_placeholder') }}">{{ $case->chief_complaint ?? '' }}</textarea>
                                     <div class="char-counter">
@@ -121,7 +124,7 @@
                                 <label for="history_of_present_illness">{{ __('medical_cases.present_illness_section') }}</label>
                                 <div class="narrative-field">
                                     <textarea name="history_of_present_illness" id="history_of_present_illness"
-                                              class="soap-textarea" rows="2"
+                                              class="soap-textarea" rows="2" data-phrase-field="present_illness"
                                               placeholder="{{ __('medical_cases.present_illness_hint') }}">{{ $case->history_of_present_illness ?? '' }}</textarea>
                                 </div>
                             </div>
@@ -130,7 +133,7 @@
                                 <label for="past_medical_history">{{ __('medical_cases.past_history_section') }}</label>
                                 <div class="narrative-field">
                                     <textarea name="past_medical_history" id="past_medical_history"
-                                              class="soap-textarea" rows="2"
+                                              class="soap-textarea" rows="2" data-phrase-field="past_history"
                                               placeholder="{{ __('medical_cases.past_history_placeholder') }}">{{ $case->past_medical_history ?? '' }}</textarea>
                                 </div>
                             </div>
@@ -147,6 +150,11 @@
                     @include('medical_cases.partials.diagnosis_section', ['case' => $case ?? null])
 
                     {{-- Treatment (P) --}}
+                    {{-- 治疗计划（打算做什么）在前，治疗（这次做了什么）在后 ——
+                         与参考产品的段落顺序一致，也符合医生的思考顺序：
+                         先定方案，再记这次做到哪一步。 --}}
+                    @include('medical_cases.partials.treatment_plan_section', ['case' => $case ?? null])
+
                     @include('medical_cases.partials.treatment_section', ['case' => $case ?? null])
 
                     {{-- Medical Orders --}}
@@ -237,6 +245,14 @@
 <script>
 var needPatientSelection = {{ $needPatientSelection ? 'true' : 'false' }};
 var MedicalRecordConfig = {
+    // 锚定短语面板的整份数据：[病历字段 => [语义槽位 => [短语, ...]]]。
+    // 一次性注进来而不是每次聚焦发 ajax —— 光标在字段之间来回跳，
+    // 每跳一次等一次网络是最不该有的等待。约 10KB。
+    phrasePanel: @json($phrasePanel ?? []),
+    // 段落名从服务端下发：这一页只往 LanguageManager 灌了 templates 一组，
+    // medical_cases.* 在前端拿不到，面板标题会印出键名而不是「现病史」。
+    phraseLabels: @json(collect(array_keys($phrasePanel ?? []))
+        ->mapWithKeys(fn ($f) => [$f => __('medical_cases.phrase_category_' . $f)])),
     urls: {
         searchPatient: '{{ url("search-patient") }}',
         medicalCases: '{{ url("medical-cases") }}'
@@ -305,4 +321,7 @@ LanguageManager.loadAllFromPHP({
 <script src="{{ asset('include_js/signature_pad.umd.min.js') }}?v={{ filemtime(public_path('include_js/signature_pad.umd.min.js')) }}"></script>
 <script src="{{ asset('include_js/signature_pad_compat.js') }}?v={{ filemtime(public_path('include_js/signature_pad_compat.js')) }}"></script>
 <script src="{{ asset('include_js/medical_record_edit.js') }}?v={{ filemtime(public_path('include_js/medical_record_edit.js')) }}"></script>
+{{-- 锚定短语面板：点进字段就在下方弹出对应槽位。排在最后 —— 它只挂事件，
+     不依赖前面的初始化顺序。 --}}
+<script src="{{ asset('include_js/phrase_panel.js') }}?v={{ filemtime(public_path('include_js/phrase_panel.js')) }}"></script>
 @endsection
