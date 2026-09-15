@@ -28,6 +28,8 @@ class QuickPhraseAdminTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+    private User $doctor;
+    private User $otherDoctor;
 
     protected function setUp(): void
     {
@@ -36,14 +38,32 @@ class QuickPhraseAdminTest extends TestCase
         $branch = Branch::create(['name' => 'Main Branch', 'is_active' => true]);
         $role   = Role::create(['name' => 'Administrator', 'slug' => 'admin']);
 
-        // 写入口由 manage-settings 把关（见 QuickPhraseController 构造函数）
-        foreach (['manage-settings'] as $slug) {
-            $p = Permission::firstOrCreate(['slug' => $slug], ['name' => $slug, 'module' => '系统设置']);
-            RolePermission::create(['role_id' => $role->id, 'permission_id' => $p->id]);
+        // 写入口按 scope 分权（见 QuickPhraseController::authorizeWrite）：
+        //   system   → manage-settings（管理员）
+        //   personal → edit-patients（医生，且只能动自己的）
+        $perms = [];
+        foreach (['manage-settings', 'edit-patients'] as $slug) {
+            $perms[$slug] = Permission::firstOrCreate(
+                ['slug' => $slug], ['name' => $slug, 'module' => '系统设置']
+            )->id;
         }
+
+        RolePermission::create(['role_id' => $role->id, 'permission_id' => $perms['manage-settings']]);
+        RolePermission::create(['role_id' => $role->id, 'permission_id' => $perms['edit-patients']]);
+
+        $doctorRole = Role::create(['name' => 'Doctor', 'slug' => 'doctor']);
+        RolePermission::create(['role_id' => $doctorRole->id, 'permission_id' => $perms['edit-patients']]);
 
         $this->admin = User::factory()->create([
             'role_id' => $role->id, 'branch_id' => $branch->id, 'status' => User::STATUS_ACTIVE,
+        ]);
+        $this->doctor = User::factory()->create([
+            'role_id' => $doctorRole->id, 'branch_id' => $branch->id,
+            'status' => User::STATUS_ACTIVE, 'is_doctor' => true,
+        ]);
+        $this->otherDoctor = User::factory()->create([
+            'role_id' => $doctorRole->id, 'branch_id' => $branch->id,
+            'status' => User::STATUS_ACTIVE, 'is_doctor' => true,
         ]);
     }
 
@@ -177,5 +197,107 @@ class QuickPhraseAdminTest extends TestCase
         $this->assertContains('龋坏', $slots);
         $this->assertNotContains(null, $slots, '空槽位不该出现在下拉里');
         $this->assertNotContains('', $slots);
+    }
+
+    // ─── 按 scope 分权 ──────────────────────────────────────────
+
+    /**
+     * 医生能管自己那套私人短语 —— 临床短语是医生的工具，
+     * 原来整个写入口挂 manage-settings，等于医生一条都改不了。
+     */
+    public function test_医生能新增自己的私人短语(): void
+    {
+        $this->actingAs($this->doctor)
+            ->postJson('/quick-phrases', $this->payload([
+                'phrase' => '我自己的短语，', 'scope' => 'personal',
+            ]))
+            ->assertOk();
+
+        $this->assertDatabaseHas('quick_phrases', [
+            'phrase' => '我自己的短语，', 'scope' => 'personal', 'user_id' => $this->doctor->id,
+        ]);
+    }
+
+    /**
+     * 全院共用的 system 短语，医生动不了 —— 改一条所有医生都受影响。
+     */
+    public function test_医生不能新增全院共用短语(): void
+    {
+        $this->actingAs($this->doctor)
+            ->postJson('/quick-phrases', $this->payload(['scope' => 'system']))
+            ->assertStatus(403);
+    }
+
+    public function test_医生不能改全院共用短语(): void
+    {
+        $sys = QuickPhrase::create([
+            'shortcut' => '', 'phrase' => '全院的', 'category' => 'examination', 'slot' => '牙周',
+            'scope' => 'system', 'is_active' => true, '_who_added' => $this->admin->id,
+        ]);
+
+        $this->actingAs($this->doctor)
+            ->putJson('/quick-phrases/' . $sys->id, $this->payload(['phrase' => '被改了', 'scope' => 'system']))
+            ->assertStatus(403);
+
+        $this->assertDatabaseHas('quick_phrases', ['id' => $sys->id, 'phrase' => '全院的']);
+    }
+
+    /**
+     * 不能把 system 短语「改成」personal 来绕开 manage-settings ——
+     * authorizeWrite 同时检查目标 scope 与已有记录的 scope。
+     */
+    public function test_医生不能把全院短语降级成私人绕开权限(): void
+    {
+        $sys = QuickPhrase::create([
+            'shortcut' => '', 'phrase' => '全院的', 'category' => 'examination', 'slot' => '牙周',
+            'scope' => 'system', 'is_active' => true, '_who_added' => $this->admin->id,
+        ]);
+
+        $this->actingAs($this->doctor)
+            ->putJson('/quick-phrases/' . $sys->id, $this->payload(['scope' => 'personal']))
+            ->assertStatus(403);
+    }
+
+    /**
+     * 私人短语只能动自己的 —— 否则医生可以改同事的那套。
+     */
+    public function test_医生不能改别人的私人短语(): void
+    {
+        $others = QuickPhrase::create([
+            'shortcut' => '', 'phrase' => '同事的', 'category' => 'examination', 'slot' => '牙周',
+            'scope' => 'personal', 'user_id' => $this->otherDoctor->id,
+            'is_active' => true, '_who_added' => $this->otherDoctor->id,
+        ]);
+
+        $this->actingAs($this->doctor)
+            ->putJson('/quick-phrases/' . $others->id, $this->payload(['phrase' => '被改了', 'scope' => 'personal']))
+            ->assertStatus(403);
+
+        $this->actingAs($this->doctor)
+            ->deleteJson('/quick-phrases/' . $others->id)
+            ->assertStatus(403);
+    }
+
+    public function test_医生能删自己的私人短语(): void
+    {
+        $mine = QuickPhrase::create([
+            'shortcut' => '', 'phrase' => '我的', 'category' => 'examination', 'slot' => '牙周',
+            'scope' => 'personal', 'user_id' => $this->doctor->id,
+            'is_active' => true, '_who_added' => $this->doctor->id,
+        ]);
+
+        $this->actingAs($this->doctor)
+            ->deleteJson('/quick-phrases/' . $mine->id)
+            ->assertOk();
+
+        $this->assertSoftDeleted('quick_phrases', ['id' => $mine->id]);
+    }
+
+    /** 管理员两种都能管 */
+    public function test_管理员能管全院共用短语(): void
+    {
+        $this->actingAs($this->admin)
+            ->postJson('/quick-phrases', $this->payload(['scope' => 'system']))
+            ->assertOk();
     }
 }
