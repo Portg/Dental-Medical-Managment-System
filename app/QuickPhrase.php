@@ -12,8 +12,12 @@ class QuickPhrase extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'shortcut', 'phrase', 'category', 'scope', 'is_active', 'user_id', '_who_added'
+        'shortcut', 'phrase', 'category', 'slot', 'sort_order',
+        'scope', 'is_active', 'user_id', '_who_added'
     ];
+
+    /** 插入后光标要落在哪儿的标记。见 ClinicalPhraseLibrarySeeder 的说明。 */
+    public const CARET = '{}';
 
     protected $casts = [
         'is_active' => 'boolean',
@@ -93,6 +97,37 @@ class QuickPhrase extends Model
             ->orderBy('id')
             ->get(['id', 'shortcut', 'phrase', 'category'])
             ->groupBy('category');
+    }
+
+    /**
+     * 某个病历字段的短语，按语义槽位分组。
+     *
+     * 短语面板锚定在正在编辑的字段上，所以取的是「这个字段的」短语，而不是全部。
+     * 槽位顺序按库里第一条的 sort_order 走 —— 现病史必须是「时间 → 部位 → 症状 →
+     * 治疗情况 → 症状变化」这个顺序，那是一句现病史的句子结构，乱了就不成句。
+     *
+     * @param string $field chief_complaint / present_illness / past_history /
+     *                      examination / auxiliary_examination / diagnosis /
+     *                      treatment_plan / treatment / medical_orders
+     * @return \Illuminate\Support\Collection [槽位名 => Collection<QuickPhrase>]
+     */
+    public static function slotsForField(string $field, int $userId): \Illuminate\Support\Collection
+    {
+        return self::active()
+            ->forUser($userId)
+            ->where('category', $field)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['id', 'shortcut', 'phrase', 'category', 'slot', 'sort_order'])
+            ->groupBy(fn ($p) => $p->slot ?: '');
+    }
+
+    /**
+     * 这条短语要不要把光标停在中间（「PD={}mm，」这类半成品）。
+     */
+    public function getHasCaretAttribute(): bool
+    {
+        return str_contains((string) $this->phrase, self::CARET);
     }
 
     /**

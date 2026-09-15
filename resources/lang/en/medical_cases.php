@@ -249,6 +249,10 @@ return [
     'phrase_category_treatment' => 'Treatment',
     'phrase_category_medical_orders' => 'Medical Orders',
     'phrase_category_chief_complaint' => 'Chief Complaint',
+    'phrase_category_present_illness' => 'Present Illness',
+    'phrase_category_past_history' => 'Past History',
+    'phrase_category_auxiliary_examination' => 'Auxiliary Exam',
+    'phrase_category_treatment_plan' => 'Treatment Plan',
     'no_quick_phrases' => 'No quick phrases yet',
 
     // Template

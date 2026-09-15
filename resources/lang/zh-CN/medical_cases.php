@@ -251,6 +251,10 @@ return [
     'phrase_category_treatment' => '治疗',
     'phrase_category_medical_orders' => '医嘱',
     'phrase_category_chief_complaint' => '主诉',
+    'phrase_category_present_illness' => '现病史',
+    'phrase_category_past_history' => '既往史',
+    'phrase_category_auxiliary_examination' => '辅助检查',
+    'phrase_category_treatment_plan' => '治疗计划',
     'no_quick_phrases' => '暂无快捷短语，可在「快捷短语」页添加',
 
     // Template
