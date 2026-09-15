@@ -17,7 +17,24 @@
 var CaseItems = (function () {
     'use strict';
 
-    var SECTIONS = ['examination', 'auxiliary_examination', 'diagnosis', 'treatment'];
+    // 页面上真实存在的分行段落，按出现顺序。
+    //
+    // **不要在这里写死**：这份清单服务端也有一份（MedicalCaseItem::SECTIONS），
+    // 两处各写一遍必然漂移 —— 加「治疗计划」段时只改了服务端，这里没跟上，
+    // 结果行渲染得出来、提交时却收集不到，整段静默丢失（端到端实测撞到）。
+    var ALL_SECTIONS = (function () {
+        var found = [];
+        $('.case-items-section[data-section]').each(function () {
+            var s = $(this).data('section');
+            if (s && found.indexOf(s) === -1) found.push(s);
+        });
+        return found.length ? found
+            : ['examination', 'auxiliary_examination', 'diagnosis', 'treatment_plan', 'treatment'];
+    })();
+
+    // 提交时要收集的段。诊断不在其中 —— 它走 diagnoses 表（带 ICD 编码），
+    // 由 collectDiagnoses() 单独收集。
+    var SECTIONS = ALL_SECTIONS.filter(function (s) { return s !== 'diagnosis'; });
 
     // 段落 → 病历模板类型。与分行之前挂在整段 textarea 上的映射保持一致，
     // 否则同一个段落按 / 弹出来的模板会换一批。
@@ -395,8 +412,10 @@ var CaseItems = (function () {
             // 往前找**最近一个有牙位的段**，而不是数组里紧挨着的上一段：
             // 诊断的前一段是「辅助检查」，那一段常常是空的，医生要的是「检查」里那几颗。
             var teeth = [];
-            for (var i = SECTIONS.indexOf(section) - 1; i >= 0 && !teeth.length; i--) {
-                $('#rows-' + SECTIONS[i]).find('.case-item-tooth-value').each(function () {
+            // 走 ALL_SECTIONS 而不是 SECTIONS：诊断同样是有牙位的一段，
+            // 「治疗计划」往前找时不该把它跳过去。
+            for (var i = ALL_SECTIONS.indexOf(section) - 1; i >= 0 && !teeth.length; i--) {
+                $('#rows-' + ALL_SECTIONS[i]).find('.case-item-tooth-value').each(function () {
                     var v = ($(this).val() || '').trim();
                     if (v && teeth.indexOf(v) === -1) teeth.push(v);
                 });
