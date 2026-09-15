@@ -195,13 +195,24 @@
     min-width: 0;
 }
 
-/* ICD 编码跟在诊断名后面，小一号、灰一点 —— 它是给医保和病案质控看的编码，
-   不是诊断本身。 */
-.mr-icd {
-    flex: 0 0 auto;
+/* ICD 编码单独一行，排在正文之后、落款之前 —— 它是给医保结算与病案统计用的
+   编码，不是临床叙述，不该混进诊断行。小一号、灰一点，别跟正文抢注意力。 */
+.mr-coding {
+    margin-top: 14px;
+    padding-top: 6px;
+    border-top: 1px dotted #dcdcdc;
     font-size: 9pt;
     color: #666;
+}
+
+.mr-coding-key {
+    margin-right: 8px;
+}
+
+.mr-coding-item {
+    margin-right: 14px;
     letter-spacing: .5px;
+    white-space: nowrap;
 }
 
 /* 没写内容的段落留一条空栏，跟纸质病历一样 —— 不写的段落是空白，

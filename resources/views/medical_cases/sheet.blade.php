@@ -169,9 +169,6 @@
                             <span class="mr-tooth">{{ $diagnosis->tooth_no }}</span>
                         @endif
                         <span class="mr-item-text">{{ $diagnosis->diagnosis_name }}</span>
-                        @if($diagnosis->icd_code)
-                            <span class="mr-icd">{{ $diagnosis->icd_code }}</span>
-                        @endif
                     </div>
                 @empty
                     @if($legacyDiagnosis !== '')
@@ -216,6 +213,24 @@
                         &nbsp;&nbsp;{{ $case->next_visit_note }}
                     @endif
                 </div>
+            </div>
+        @endif
+
+        {{-- ICD 编码单独成一行，不混进诊断正文。
+
+             ICD 是给医保结算与病案统计用的编码，不是给人读的临床叙述 ——
+             印给患者的病历上，「急性牙髓炎」是内容，「K04.0」是元数据。缀在诊断
+             后面既没帮到懂的人（他要的是能导出结算的结构化数据，不是纸上一行字），
+             又干扰了不懂的人。参考的那套桌面软件也是把 ICD 放在独立字段里。
+
+             编码与名称都印：只印编码看不懂，只印名称对不上医保。 --}}
+        @php($coded = $diagnoses->filter(fn ($d) => filled($d->icd_code)))
+        @if($coded->isNotEmpty())
+            <div class="mr-coding">
+                <span class="mr-coding-key">{{ __('medical_cases.icd_code') }}</span>
+                @foreach($coded as $d)
+                    <span class="mr-coding-item">{{ $d->icd_code }}@if($d->icd_name) {{ $d->icd_name }}@endif</span>
+                @endforeach
             </div>
         @endif
 

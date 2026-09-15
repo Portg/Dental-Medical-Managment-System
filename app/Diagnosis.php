@@ -27,7 +27,7 @@ class Diagnosis extends Model implements AuditableContract
     protected $table = 'diagnoses';
 
     protected $fillable = [
-        'diagnosis_name', 'tooth_no', 'sort_order', 'icd_code', 'diagnosis_date', 'status',
+        'diagnosis_name', 'tooth_no', 'sort_order', 'icd_code', 'icd_name', 'diagnosis_date', 'status',
         'severity', 'notes', 'resolved_date',
         'medical_case_id', 'patient_id', '_who_added'
     ];

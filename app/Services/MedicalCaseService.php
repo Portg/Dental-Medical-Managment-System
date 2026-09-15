@@ -309,11 +309,18 @@ class MedicalCaseService
                 ? [null]
                 : array_values(array_filter(array_map('trim', preg_split('/[,，\s]+/u', $toothRaw))));
 
+            // ICD 名称在服务端按编码解析，不收前端提交的那一份：label 是派生数据，
+            // 既不该信任，也没必要走一趟请求。在这里解析等于「落库那一刻的名称」，
+            // 正是病历要的语义。
+            $icdCode = trim((string) ($row['icd_code'] ?? '')) ?: null;
+            $icdName = $this->icd10Name($icdCode);
+
             foreach ($list === [] ? [null] : $list as $one) {
                 $rows[] = [
                     'diagnosis_name' => $name,
                     'tooth_no'       => ($one === '' || $one === null) ? null : $one,
-                    'icd_code'       => trim((string) ($row['icd_code'] ?? '')) ?: null,
+                    'icd_code'       => $icdCode,
+                    'icd_name'       => $icdName,
                     'severity'       => in_array($row['severity'] ?? null, ['Mild', 'Moderate', 'Severe'], true)
                         ? $row['severity'] : null,
                     'sort_order'     => count($rows),
@@ -375,12 +382,13 @@ class MedicalCaseService
 
         $existing = \App\Diagnosis::where('medical_case_id', $case->id)
             ->orderBy('sort_order')->orderBy('id')
-            ->get(['diagnosis_name', 'tooth_no', 'icd_code', 'severity']);
+            ->get(['diagnosis_name', 'tooth_no', 'icd_code', 'icd_name', 'severity']);
 
         if ($existing->isEmpty()) {
             $legacy = trim((string) ($case->diagnosis ?? ''));
             return $legacy === '' ? [] : [[
-                'tooth_no' => null, 'content' => $legacy, 'icd_code' => null, 'severity' => null,
+                'tooth_no' => null, 'content' => $legacy,
+                'icd_code' => null, 'icd_text' => null, 'severity' => null,
             ]];
         }
 
@@ -389,9 +397,19 @@ class MedicalCaseService
         foreach ($existing as $row) {
             $key = $row->diagnosis_name . "\0" . (string) $row->icd_code;
             if (!isset($merged[$key])) {
+                // icd_text 是 select2 回填时显示的那行字。不给的话（此前就是不给）
+                // 编辑器里 escapeHtml(icdText || icd) 会退回成裸编码 K04.0，
+                // 医生没法确认自己当初选的是哪一条。
+                // 落库的名称优先；老记录没存名称时按码表补一次。
+                $icdName = $row->icd_name ?: $this->icd10Name($row->icd_code);
+
                 $merged[$key] = [
                     'tooth_no' => [], 'content' => $row->diagnosis_name,
-                    'icd_code' => $row->icd_code, 'severity' => $row->severity,
+                    'icd_code' => $row->icd_code,
+                    'icd_text' => $row->icd_code
+                        ? trim($row->icd_code . ($icdName ? ' - ' . $icdName : ''))
+                        : null,
+                    'severity' => $row->severity,
                 ];
             }
             if ($row->tooth_no) {
@@ -857,39 +875,66 @@ class MedicalCaseService
     /**
      * Search ICD-10 codes.
      */
+    /**
+     * 口腔科常用 ICD-10 编码 → 名称翻译键。
+     *
+     * 抽成一处的原因：编码的**名称**要在保存时随病历落库（diagnoses.icd_name），
+     * 不能等到渲染时再查 —— 病历是医疗文书，写下时是什么就该永远是什么。
+     * 这张表以后增删条目、或者 odontogram 的翻译改了字，历史病历的诊断含义
+     * 都不该跟着变。搜索与落库两处共用这一份，避免两边漂移。
+     */
+    private const ICD10_CODES = [
+            'K00.0' => 'odontogram.anodontia',
+            'K00.1' => 'odontogram.supernumerary_teeth',
+            'K01.0' => 'odontogram.embedded_teeth',
+            'K01.1' => 'odontogram.impacted_teeth',
+            'K02.0' => 'odontogram.caries_enamel',
+            'K02.1' => 'odontogram.caries_dentin',
+            'K02.2' => 'odontogram.caries_cementum',
+            'K02.3' => 'odontogram.arrested_caries',
+            'K03.0' => 'odontogram.attrition',
+            'K03.1' => 'odontogram.abrasion',
+            'K03.2' => 'odontogram.erosion',
+            'K04.0' => 'odontogram.pulpitis',
+            'K04.1' => 'odontogram.pulp_necrosis',
+            'K04.4' => 'odontogram.acute_apical_periodontitis',
+            'K04.5' => 'odontogram.chronic_apical_periodontitis',
+            'K04.6' => 'odontogram.periapical_abscess',
+            'K04.7' => 'odontogram.periapical_abscess_sinus',
+            'K05.0' => 'odontogram.acute_gingivitis',
+            'K05.1' => 'odontogram.chronic_gingivitis',
+            'K05.2' => 'odontogram.acute_periodontitis',
+            'K05.3' => 'odontogram.chronic_periodontitis',
+            'K05.4' => 'odontogram.periodontosis',
+            'K06.0' => 'odontogram.gingival_recession',
+            'K06.1' => 'odontogram.gingival_enlargement',
+            'K07.3' => 'odontogram.tooth_position_anomaly',
+            'K08.0' => 'odontogram.exfoliation_systemic',
+            'K08.1' => 'odontogram.loss_due_accident',
+            'K08.2' => 'odontogram.loss_due_periodontal',
+            'K08.3' => 'odontogram.retained_root',
+    ];
+
+    /**
+     * 按编码取名称。取不到返回 null —— 宁可只留编码，也不要编一个名字出来。
+     */
+    public function icd10Name(?string $code): ?string
+    {
+        $code = trim((string) $code);
+
+        if ($code === '' || !isset(self::ICD10_CODES[$code])) {
+            return null;
+        }
+
+        return __(self::ICD10_CODES[$code]);
+    }
+
     public function searchIcd10(string $query = ''): array
     {
-        $icd10Codes = [
-            ['id' => 'K00.0', 'text' => 'K00.0 - ' . __('odontogram.anodontia')],
-            ['id' => 'K00.1', 'text' => 'K00.1 - ' . __('odontogram.supernumerary_teeth')],
-            ['id' => 'K01.0', 'text' => 'K01.0 - ' . __('odontogram.embedded_teeth')],
-            ['id' => 'K01.1', 'text' => 'K01.1 - ' . __('odontogram.impacted_teeth')],
-            ['id' => 'K02.0', 'text' => 'K02.0 - ' . __('odontogram.caries_enamel')],
-            ['id' => 'K02.1', 'text' => 'K02.1 - ' . __('odontogram.caries_dentin')],
-            ['id' => 'K02.2', 'text' => 'K02.2 - ' . __('odontogram.caries_cementum')],
-            ['id' => 'K02.3', 'text' => 'K02.3 - ' . __('odontogram.arrested_caries')],
-            ['id' => 'K03.0', 'text' => 'K03.0 - ' . __('odontogram.attrition')],
-            ['id' => 'K03.1', 'text' => 'K03.1 - ' . __('odontogram.abrasion')],
-            ['id' => 'K03.2', 'text' => 'K03.2 - ' . __('odontogram.erosion')],
-            ['id' => 'K04.0', 'text' => 'K04.0 - ' . __('odontogram.pulpitis')],
-            ['id' => 'K04.1', 'text' => 'K04.1 - ' . __('odontogram.pulp_necrosis')],
-            ['id' => 'K04.4', 'text' => 'K04.4 - ' . __('odontogram.acute_apical_periodontitis')],
-            ['id' => 'K04.5', 'text' => 'K04.5 - ' . __('odontogram.chronic_apical_periodontitis')],
-            ['id' => 'K04.6', 'text' => 'K04.6 - ' . __('odontogram.periapical_abscess')],
-            ['id' => 'K04.7', 'text' => 'K04.7 - ' . __('odontogram.periapical_abscess_sinus')],
-            ['id' => 'K05.0', 'text' => 'K05.0 - ' . __('odontogram.acute_gingivitis')],
-            ['id' => 'K05.1', 'text' => 'K05.1 - ' . __('odontogram.chronic_gingivitis')],
-            ['id' => 'K05.2', 'text' => 'K05.2 - ' . __('odontogram.acute_periodontitis')],
-            ['id' => 'K05.3', 'text' => 'K05.3 - ' . __('odontogram.chronic_periodontitis')],
-            ['id' => 'K05.4', 'text' => 'K05.4 - ' . __('odontogram.periodontosis')],
-            ['id' => 'K06.0', 'text' => 'K06.0 - ' . __('odontogram.gingival_recession')],
-            ['id' => 'K06.1', 'text' => 'K06.1 - ' . __('odontogram.gingival_enlargement')],
-            ['id' => 'K07.3', 'text' => 'K07.3 - ' . __('odontogram.tooth_position_anomaly')],
-            ['id' => 'K08.0', 'text' => 'K08.0 - ' . __('odontogram.exfoliation_systemic')],
-            ['id' => 'K08.1', 'text' => 'K08.1 - ' . __('odontogram.loss_due_accident')],
-            ['id' => 'K08.2', 'text' => 'K08.2 - ' . __('odontogram.loss_due_periodontal')],
-            ['id' => 'K08.3', 'text' => 'K08.3 - ' . __('odontogram.retained_root')],
-        ];
+        $icd10Codes = [];
+        foreach (self::ICD10_CODES as $code => $key) {
+            $icd10Codes[] = ['id' => $code, 'text' => $code . ' - ' . __($key)];
+        }
 
         if ($query) {
             $icd10Codes = array_filter($icd10Codes, function ($code) use ($query) {
