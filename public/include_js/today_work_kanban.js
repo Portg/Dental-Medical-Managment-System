@@ -34,8 +34,10 @@
         var params = {};
         var $date = $('#tw-date-filter');
         var $doctor = $('#tw-doctor-filter');
+        var $search = $('#tw-search');
         if ($date.length && $date.val()) params.date = $date.val();
         if ($doctor.length && $doctor.val()) params.doctor_id = $doctor.val();
+        if ($search.length && $search.val()) params.search_patient = $.trim($search.val());
 
         $.getJSON('/today-work/kanban-data', params, function (data) {
             kanbanData = data;
@@ -47,6 +49,39 @@
      * Render all kanban columns.
      */
     function renderKanban(data) {
+        var total = 0;
+        STATUS_ORDER.forEach(function (status) {
+            total += (data[status] || []).length;
+        });
+
+        var $view = $('#tw-kanban-view');
+        var $row = $view.find('.kanban-row');
+        var $boardEmpty = $view.find('.tw-kanban-board-empty');
+
+        if (!$boardEmpty.length) {
+            $boardEmpty = $('<div class="tw-kanban-board-empty"></div>').prependTo($view);
+        }
+
+        if (total === 0) {
+            $view.addClass('is-board-empty');
+            $boardEmpty.html(twEmptyState({
+                icon: 'fa-th-large',
+                title: LanguageManager.trans('today_work.kanban_board_empty_title', '今日暂无就诊卡片'),
+                actionsHtml: twEmptyDayActions(),
+                panel: true
+            })).show();
+            $row.hide();
+            // 角标仍清零，避免残留上次数字
+            STATUS_ORDER.forEach(function (status) {
+                $('#kanban-col-' + status).find('.kanban-col-header .badge').text('0');
+            });
+            return;
+        }
+
+        $view.removeClass('is-board-empty');
+        $boardEmpty.hide().empty();
+        $row.show();
+
         STATUS_ORDER.forEach(function (status) {
             var items = data[status] || [];
             var $col = $('#kanban-col-' + status);
@@ -57,7 +92,13 @@
             $body.empty();
 
             if (items.length === 0) {
-                $body.html('<div class="kanban-col-empty">' + LanguageManager.trans('today_work.kanban_empty') + '</div>');
+                $body.html(
+                    '<div class="kanban-col-empty">' +
+                    '<span class="kanban-col-empty-line"></span>' +
+                    '<span class="kanban-col-empty-text">' +
+                    LanguageManager.trans('today_work.kanban_empty', '暂无') +
+                    '</span></div>'
+                );
                 return;
             }
 
@@ -122,7 +163,7 @@
             case 'in_treatment':
                 btns += '<button class="btn btn-xs btn-default" onclick="quickMedicalCase(' + item.patient_id + ',' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-file-text-o"></i></button>';
                 btns += '<button class="btn btn-xs btn-default" onclick="quickPrescription(' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-medkit"></i></button>';
-                btns += '<button class="btn btn-xs btn-default" onclick="quickInvoice(' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-money"></i></button>';
+                btns += '<button class="btn btn-xs btn-default" onclick="quickInvoice(' + item.patient_id + ',' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-money"></i></button>';
                 btns += '<button class="btn btn-xs btn-success" onclick="quickCompleteTreatment(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.complete_treatment') + '"><i class="fa fa-check"></i></button>';
                 btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.rollback') + '"><i class="fa fa-undo"></i></button>';
                 break;

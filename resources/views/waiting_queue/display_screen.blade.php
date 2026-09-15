@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ __('waiting_queue.display_screen_title') }} - {{ $branch->name ?? config('app.name') }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,7 +11,8 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'Noto Sans SC', sans-serif;
+            /* 与后台一致：Open Sans + 系统中文字体，不拉外网 Google Fonts */
+            font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
             background: linear-gradient(135deg, #1A237E 0%, #0D1452 100%);
             min-height: 100vh;
             color: #fff;

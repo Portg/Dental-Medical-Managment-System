@@ -17,6 +17,8 @@ function invalidateTabCache() {
 function initInfoTabs() {
     $('#tw-info-tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
         var tab = $(e.target).data('tab');
+        $('#tw-info-tabs .tw-rail-item').removeClass('active');
+        $(e.target).addClass('active');
         if (tab !== 'today-work') {
             if (!tabLoaded[tab]) {
                 loadTabData(tab);
@@ -79,7 +81,22 @@ function loadTabData(tab) {
         tabLoaded[tab] = true;
     }).fail(function() {
         $loading.hide();
-        $content.html('<div class="tw-tab-empty">' + LanguageManager.trans('common.error_message') + '</div>').show();
+        $content.html(twEmptyState({
+            icon: 'fa-exclamation-circle',
+            title: LanguageManager.trans('common.error_message', '加载失败'),
+            panel: true,
+            compact: true
+        })).show();
+    });
+}
+
+function twTabEmpty(messageKey, fallback, extra) {
+    extra = extra || {};
+    return twEmptyState({
+        icon: extra.icon || 'fa-inbox',
+        title: LanguageManager.trans(messageKey, fallback || ''),
+        panel: true,
+        compact: true
     });
 }
 
@@ -87,7 +104,7 @@ function loadTabData(tab) {
 
 function renderBillingTab(data) {
     if (!data.by_method || data.by_method.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.billing_no_data') + '</div>';
+        return twTabEmpty('today_work.billing_no_data', '今日暂无收款记录', { icon: 'fa-pie-chart' });
     }
     var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table">';
     html += '<thead><tr><th>' + LanguageManager.trans('today_work.billing_method') + '</th>';
@@ -164,7 +181,7 @@ function renderStaffCollectionTable(detail) {
 
 function renderFollowupsTab(data) {
     if (!data || data.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.followup_no_data') + '</div>';
+        return twTabEmpty('today_work.followup_no_data', '今日无回访安排', { icon: 'fa-phone' });
     }
     var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table">';
     html += '<thead><tr><th>' + LanguageManager.trans('common.patient') + '</th>';
@@ -198,7 +215,7 @@ function renderFollowupsTab(data) {
 
 function renderTomorrowTab(data) {
     if (!data || data.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.tomorrow_no_data') + '</div>';
+        return twTabEmpty('today_work.tomorrow_no_data', '明日暂无预约', { icon: 'fa-calendar' });
     }
     var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table">';
     html += '<thead><tr><th>' + LanguageManager.trans('common.time') + '</th>';
@@ -221,7 +238,7 @@ function renderTomorrowTab(data) {
 
 function renderWeekMissedTab(data) {
     if (!data || data.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.missed_no_data') + '</div>';
+        return twTabEmpty('today_work.missed_no_data', '近7日无失约记录', { icon: 'fa-user-times' });
     }
     var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table">';
     html += '<thead><tr><th>' + LanguageManager.trans('today_work.missed_date') + '</th>';
@@ -246,7 +263,7 @@ function renderWeekMissedTab(data) {
 
 function renderBirthdaysTab(data) {
     if (!data || data.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.birthday_no_data') + '</div>';
+        return twTabEmpty('today_work.birthday_no_data', '今日无生日患者', { icon: 'fa-birthday-cake' });
     }
     var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table">';
     html += '<thead><tr><th>' + LanguageManager.trans('common.patient') + '</th>';
@@ -266,7 +283,7 @@ function renderBirthdaysTab(data) {
 
 function renderDoctorTableTab(data) {
     if (!data || data.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.doctor_no_data') + '</div>';
+        return twTabEmpty('today_work.doctor_no_data', '今日无医生排班', { icon: 'fa-user-md' });
     }
     var html = '';
     data.forEach(function(doctor) {
@@ -310,7 +327,7 @@ function renderDoctorTableTab(data) {
 
 function renderPaidTab(data) {
     if (!data.items || data.items.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.paid_no_data') + '</div>';
+        return twTabEmpty('today_work.paid_no_data', '今日暂无收款', { icon: 'fa-check-circle' });
     }
     var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table">';
     html += '<thead><tr>';
@@ -338,7 +355,7 @@ function renderPaidTab(data) {
 
 function renderUnpaidTab(data) {
     if (!data.items || data.items.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.unpaid_no_data') + '</div>';
+        return twTabEmpty('today_work.unpaid_no_data', '今日暂无待收款', { icon: 'fa-clock-o' });
     }
     var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table">';
     html += '<thead><tr>';
@@ -369,7 +386,7 @@ function renderUnpaidTab(data) {
 
 function renderLabCasesTab(data) {
     if (!data || data.length === 0) {
-        return '<div class="tw-tab-empty">' + LanguageManager.trans('today_work.lab_cases_no_data') + '</div>';
+        return twTabEmpty('today_work.lab_cases_no_data', '今日无外加工件到达', { icon: 'fa-cube' });
     }
     var statusColors = {
         'pending': 'label-default', 'sent': 'label-info', 'in_production': 'label-primary',
@@ -420,12 +437,21 @@ function loadTabCounts() {
     var dateVal = $('#tw-date-filter').val();
     if (dateVal) params.date = dateVal;
     $.getJSON(url, params, function(data) {
-        if (data.followups) $('#badge-followups').text(data.followups);
-        if (data.tomorrow) $('#badge-tomorrow').text(data.tomorrow);
-        if (data.week_missed) $('#badge-week-missed').text(data.week_missed);
-        if (data.birthdays) $('#badge-birthdays').text(data.birthdays);
-        if (data.paid) $('#badge-paid').text(data.paid);
-        if (data.unpaid) $('#badge-unpaid').text(data.unpaid);
-        if (data.lab_cases) $('#badge-lab-cases').text(data.lab_cases);
+        var setBadge = function (id, val) {
+            var $el = $(id);
+            if (!$el.length) return;
+            if (val === undefined || val === null || val === 0 || val === '0') {
+                $el.text('');
+            } else {
+                $el.text(val);
+            }
+        };
+        setBadge('#badge-followups', data.followups);
+        setBadge('#badge-tomorrow', data.tomorrow);
+        setBadge('#badge-week-missed', data.week_missed);
+        setBadge('#badge-birthdays', data.birthdays);
+        setBadge('#badge-paid', data.paid);
+        setBadge('#badge-unpaid', data.unpaid);
+        setBadge('#badge-lab-cases', data.lab_cases);
     });
 }

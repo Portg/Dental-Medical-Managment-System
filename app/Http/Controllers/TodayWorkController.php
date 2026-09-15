@@ -69,8 +69,9 @@ class TodayWorkController extends Controller
         $branchId = Auth::user()->branch_id;
         $date = $request->input('date');
         $doctorId = $request->input('doctor_id') ? (int) $request->input('doctor_id') : null;
+        $search = $request->input('search_patient');
 
-        return response()->json($this->service->getKanbanData($branchId, $date, $doctorId));
+        return response()->json($this->service->getKanbanData($branchId, $date, $doctorId, $search));
     }
 
     /**

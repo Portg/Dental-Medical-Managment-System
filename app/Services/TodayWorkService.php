@@ -17,70 +17,77 @@ use Yajra\DataTables\DataTables;
 class TodayWorkService
 {
     /**
-     * Get KPI data for the today-work page.
-     * Financial amounts are returned in thousands (divided by 1000).
+     * 工作台六格 KPI（日报扫一眼，非待办入口）。
+     *
+     * 对齐轻松牙医骨架：新增患者 / 新增预约 / 实收 / （我们用欠费替短信）/ 回访 / 今日就诊。
+     * 金额单位：元。
      */
     public function getKpi(int $branchId, ?string $date = null): array
     {
         $today = $date ?? date('Y-m-d');
 
-        // 今日就诊人数：in_treatment or completed in waiting_queues today
-        $todayPatients = DB::table('waiting_queues')
-            ->whereDate('check_in_time', $today)
-            ->whereIn('status', [WaitingQueue::STATUS_IN_TREATMENT, WaitingQueue::STATUS_COMPLETED])
-            ->whereNull('deleted_at')
-            ->distinct('patient_id')
-            ->count('patient_id');
-
-        // 今日出诊人数：distinct doctors with appointments today
-        $todayDoctors = DB::table('appointments')
-            ->where('start_date', $today)
-            ->whereNull('deleted_at')
-            ->whereNotIn('status', [Appointment::STATUS_CANCELLED, Appointment::STATUS_NO_SHOW])
-            ->distinct('doctor_id')
-            ->count('doctor_id');
-
-        // 今日回访人数：revisit appointments that have checked in today
-        $todayRevisits = DB::table('appointments as a')
-            ->join('waiting_queues as wq', function ($join) use ($today) {
-                $join->on('wq.appointment_id', '=', 'a.id')
-                    ->whereDate('wq.check_in_time', $today)
-                    ->whereNotIn('wq.status', [WaitingQueue::STATUS_CANCELLED, WaitingQueue::STATUS_NO_SHOW])
-                    ->whereNull('wq.deleted_at');
-            })
-            ->where('a.appointment_type', 'revisit')
-            ->where('a.start_date', $today)
-            ->whereNull('a.deleted_at')
-            ->distinct('a.patient_id')
-            ->count('a.patient_id');
-
-        // 今日预约人数
-        $todayAppointments = DB::table('appointments')
-            ->where('start_date', $today)
+        $newPatients = (int) DB::table('patients')
+            ->whereDate('created_at', $today)
             ->whereNull('deleted_at')
             ->count();
 
-        // 今日应收金额：invoices created today
-        $todayReceivable = (float) DB::table('invoices')
-            ->whereDate('created_at', $today)
+        $newAppointments = (int) DB::table('appointments')
+            ->where('start_date', $today)
             ->whereNull('deleted_at')
-            ->sum('total_amount');
+            ->where('status', '!=', Appointment::STATUS_CANCELLED)
+            ->count();
 
-        // 今日实收金额：payments received today
         $todayCollected = (float) DB::table('invoice_payments')
             ->where('payment_date', $today)
             ->whereNull('deleted_at')
             ->sum('amount');
 
+        // 欠费：今日待收账单的未收合计 + 人数（与「待收费」Tab 同源，扫一眼）
+        $outstandingAmount = (float) DB::table('invoices')
+            ->whereDate('invoice_date', $today)
+            ->whereIn('payment_status', ['unpaid', 'partial'])
+            ->whereNull('deleted_at')
+            ->sum('outstanding_amount');
+        $outstandingPatients = (int) DB::table('invoices')
+            ->whereDate('invoice_date', $today)
+            ->whereIn('payment_status', ['unpaid', 'partial'])
+            ->whereNull('deleted_at')
+            ->distinct()
+            ->count('patient_id');
+
+        $todayFollowups = (int) DB::table('patient_followups')
+            ->whereDate('scheduled_date', $today)
+            ->whereNull('deleted_at')
+            ->count();
+
+        $todayVisits = (int) DB::table('appointments')
+            ->where('start_date', $today)
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', [Appointment::STATUS_CANCELLED, Appointment::STATUS_NO_SHOW])
+            ->count();
+
+        $firstVisits = (int) DB::table('appointments')
+            ->where('start_date', $today)
+            ->where('appointment_type', 'first_visit')
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', [Appointment::STATUS_CANCELLED, Appointment::STATUS_NO_SHOW])
+            ->count();
+
         return [
-            'today_patients'     => $todayPatients,
-            'today_doctors'      => $todayDoctors,
-            'today_revisits'     => $todayRevisits,
-            'today_appointments' => $todayAppointments,
-            // 直接给元，不再折成千元。「应收 ¥0.8（千元）」= 800 元，
-            // 一位小数还会把 850 显示成 0.9 —— 对账时看的是钱，不该先在脑子里乘一千。
-            'today_receivable'   => round($todayReceivable, 2),
-            'today_collected'    => round($todayCollected, 2),
+            'new_patients'           => $newPatients,
+            'new_appointments'       => $newAppointments,
+            'today_collected'        => round($todayCollected, 2),
+            'outstanding_amount'     => round($outstandingAmount, 2),
+            'outstanding_patients'   => $outstandingPatients,
+            'today_followups'        => $todayFollowups,
+            'today_visits'           => $todayVisits,
+            'first_visits'           => $firstVisits,
+            // 兼容旧字段（若别处仍读）
+            'today_patients'         => $todayVisits,
+            'today_appointments'     => $newAppointments,
+            'today_revisits'         => $todayFollowups,
+            'today_doctors'          => 0,
+            'today_receivable'       => round($outstandingAmount, 2),
         ];
     }
 
@@ -131,9 +138,10 @@ class TodayWorkService
     /**
      * Get kanban board data — all today's patients grouped by display status.
      */
-    public function getKanbanData(int $branchId, ?string $date = null, ?int $doctorId = null): array
+    public function getKanbanData(int $branchId, ?string $date = null, ?int $doctorId = null, ?string $search = null): array
     {
         $today = $date ?? date('Y-m-d');
+        $search = $search !== null ? trim($search) : '';
 
         $query = DB::table('appointments as a')
             ->leftJoin('waiting_queues as wq', function ($join) use ($today) {
@@ -148,8 +156,13 @@ class TodayWorkService
             ->where('a.start_date', $today)
             ->whereNull('a.deleted_at');
 
-        if ($doctorId) {
+        // 与列表一致：有搜索词时忽略医生筛选（找人优先）
+        if ($doctorId && $search === '') {
             $query->where('a.doctor_id', $doctorId);
+        }
+
+        if ($search !== '') {
+            $this->applyPatientKeywordFilter($query, $search, 'p');
         }
 
         $rows = $query->select(
@@ -203,6 +216,26 @@ class TodayWorkService
         }
 
         return $columns;
+    }
+
+    /**
+     * 患者关键词：与顶栏 searchPatientsAsCards 同一套字段。
+     * 姓名/首拼（NameHelper）+ 手机 + 邮箱 + 病历号。
+     * 作用域仍是「当日就诊列表/看板」，不跨日（跨日找人用顶栏）。
+     */
+    private function applyPatientKeywordFilter($query, string $search, string $alias = 'p'): void
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return;
+        }
+
+        $query->where(function ($q) use ($search, $alias) {
+            NameHelper::addNameSearch($q, $search, $alias);
+            $q->orWhere("{$alias}.phone_no", 'like', '%' . $search . '%')
+              ->orWhere("{$alias}.email", 'like', '%' . $search . '%')
+              ->orWhere("{$alias}.patient_no", 'like', '%' . $search . '%');
+        });
     }
 
     /**
@@ -310,21 +343,11 @@ class TodayWorkService
             }
         }
 
-        // 患者检索：姓名 / 首拼 / 手机号 / 病历号，与顶栏搜索框的提示词一致。
-        // 原来漏了病历号 —— 前台手里拿着病历本报号找人是常见动作。
-        //
-        // 关于要不要忽略日期和医生这两个筛选：
-        //   日期**不忽略** —— 这个页面就是「今日工作」，忽略日期等于变成全局患者检索，
-        //     那是顶栏那个搜索框的活（它跳患者列表、不受日期约束）。两个框各司其职。
-        //   医生**忽略** —— 医生筛选是给医生看自己台次用的视角过滤；一旦开始按名字
-        //     找人，找的是这个人本身，不该因为他挂在别的医生名下就搜不到。
-        //     否则前台会以为「今天没这个人」，而其实只是选错了医生。
+        // 患者检索：字段与顶栏一致（姓名/首拼/手机/邮箱/病历号）。
+        // 日期不忽略——本页是「今日工作」；跨日找人用顶栏。
+        // 医生在有搜索词时忽略——见上方 doctor 筛选注释。
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                NameHelper::addNameSearch($q, $search, 'p');
-                $q->orWhere('p.phone_no', 'like', '%' . $search . '%')
-                  ->orWhere('p.patient_no', 'like', '%' . $search . '%');
-            });
+            $this->applyPatientKeywordFilter($query, $search, 'p');
         }
 
         $query->orderBy('a.sort_by');
@@ -400,7 +423,7 @@ class TodayWorkService
                     return '';
                 }
                 return '<button class="btn btn-xs btn-default tw-icon-btn" title="' . __('today_work.invoice') . '"'
-                    . ' onclick="quickInvoice(' . $row->appointment_id . ')">'
+                    . ' onclick="quickInvoice(' . $row->patient_id . ',' . $row->appointment_id . ')">'
                     . '<i class="fa fa-money"></i></button>';
             })
             ->addColumn('act_more', function ($row) {
@@ -513,83 +536,75 @@ class TodayWorkService
     }
 
     /**
-     * 流程列：当前状态下的**主操作**（视频「就诊流程」列只有这一列）。
+     * 「下一步」列：单列下拉，首项为当前主操作，其余为同状态次要流程动作。
+     * 病历 / 收费仍是旁挂固定列，不进此下拉。
      *
-     * 视频里是下拉显示「当前下一步」：未到→挂号，候诊→叫号，其后开始/完成治疗等。
-     * 病历、收费是行内另挂的固定图标入口，不是和流程并列造出来的多列「流程」。
-     * 我们拆成 流程 | 病历 | 收费 | 更多，是为了固定位置好点，语义仍应对齐视频。
+     * @return list<array{0:string,1:string,2:int|string}> [fnName, label, arg]
      */
-    private function renderFlowAction($row): string
+    private function nextStepOptions($row): array
     {
         $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
+        $aptId  = (int) $row->appointment_id;
+        $qid    = (int) ($row->queue_id ?? 0);
 
-        switch ($status) {
-            case 'not_arrived':
-                return '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCheckIn(' . $row->appointment_id . ')">'
-                    . '<i class="fa fa-sign-in"></i> ' . __('today_work.check_in') . '</button>';
+        return match ($status) {
+            'not_arrived' => [
+                ['quickCheckIn', __('today_work.check_in'), $aptId],
+                ['quickNoShow', __('today_work.mark_no_show'), $aptId],
+            ],
+            'waiting' => [
+                ['quickCall', __('today_work.call'), $qid],
+                ['quickRollback', __('today_work.rollback'), $qid],
+                ['quickCancelQueue', __('common.cancel'), $qid],
+            ],
+            'called' => [
+                ['quickStartTreatment', __('today_work.start_treatment'), $qid],
+                ['quickCall', __('today_work.recall'), $qid],
+                ['quickRollback', __('today_work.rollback'), $qid],
+            ],
+            'in_treatment' => [
+                ['quickCompleteTreatment', __('today_work.complete_treatment'), $qid],
+                ['quickRollback', __('today_work.rollback'), $qid],
+            ],
+            'completed' => [
+                ['quickRollback', __('today_work.rollback'), $qid],
+            ],
+            default => [],
+        };
+    }
 
-            case 'waiting':
-                return '<button class="btn btn-xs btn-info tw-action-btn" onclick="quickCall(' . $row->queue_id . ')">'
-                    . '<i class="fa fa-bullhorn"></i> ' . __('today_work.call') . '</button>';
-
-            case 'called':
-                return '<button class="btn btn-xs btn-primary tw-action-btn" onclick="quickStartTreatment(' . $row->queue_id . ')">'
-                    . '<i class="fa fa-play"></i> ' . __('today_work.start_treatment') . '</button>';
-
-            case 'in_treatment':
-                return '<button class="btn btn-xs btn-success tw-action-btn" onclick="quickCompleteTreatment(' . $row->queue_id . ')">'
-                    . '<i class="fa fa-check"></i> ' . __('today_work.complete_treatment') . '</button>';
-
-            case 'completed':
-                // 已离开：流程列不再给「查看」这种非流程动作，回退走「更多」
-                return '<span class="text-muted">' . e(__('today_work.completed')) . '</span>';
+    private function renderFlowAction($row): string
+    {
+        $options = $this->nextStepOptions($row);
+        if ($options === []) {
+            return '';
         }
 
-        return '';
+        $primaryLabel = $options[0][1];
+        $html = '<select class="tw-next-dd" aria-label="' . e(__('today_work.col_flow')) . '"'
+            . ' onchange="twOnNextStepChange(this)">'
+            . '<option value="" selected disabled hidden>' . e($primaryLabel) . '</option>';
+        foreach ($options as [$fn, $label, $arg]) {
+            $html .= '<option value="' . e($fn) . '" data-arg="' . e((string) $arg) . '">'
+                . e($label) . '</option>';
+        }
+        $html .= '</select>';
+
+        return $html;
     }
 
     /**
-     * 更多列：次要动作，按状态给。
-     * 放一列里而不是散在主操作旁边，免得主操作的位置被挤来挤去。
+     * 更多列：处方 / 约下次等非流程动作（流程次要项已收进「下一步」下拉）。
      */
     private function renderMoreActions($row): string
     {
         $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
-        $items  = [];
+        $html   = '';
 
-        switch ($status) {
-            case 'not_arrived':
-                $items[] = ['quickNoShow(' . $row->appointment_id . ')', 'fa-times', __('today_work.mark_no_show')];
-                break;
-
-            case 'waiting':
-                $items[] = ['quickRollback(' . $row->queue_id . ')', 'fa-undo', __('today_work.rollback')];
-                $items[] = ['quickCancelQueue(' . $row->queue_id . ')', 'fa-times', __('common.cancel')];
-                break;
-
-            case 'called':
-                $items[] = ['quickRollback(' . $row->queue_id . ')', 'fa-undo', __('today_work.rollback')];
-                $items[] = ['quickCall(' . $row->queue_id . ')', 'fa-bullhorn', __('today_work.recall')];
-                break;
-
-            case 'in_treatment':
-                $items[] = ['quickRollback(' . $row->queue_id . ')', 'fa-undo', __('today_work.rollback')];
-                $items[] = ['quickPrescription(' . $row->appointment_id . ')', 'fa-medkit', __('today_work.prescription')];
-                break;
-
-            case 'completed':
-                $items[] = ['quickRollback(' . $row->queue_id . ')', 'fa-undo', __('today_work.rollback')];
-                break;
-        }
-
-        $html = '';
-        foreach ($items as [$onclick, $icon, $label]) {
-            $html .= '<button class="btn btn-xs btn-default tw-icon-btn" title="' . $label . '"'
-                . ' onclick="' . $onclick . '"><i class="fa ' . $icon . '"></i></button> ';
-        }
-
-        // 下次预约按钮本来就只在诊疗中出现，跟着「更多」走
         if ($status === 'in_treatment') {
+            $html .= '<button class="btn btn-xs btn-default tw-icon-btn" title="' . e(__('today_work.prescription')) . '"'
+                . ' onclick="quickPrescription(' . (int) $row->appointment_id . ')">'
+                . '<i class="fa fa-medkit"></i></button> ';
             $html .= $this->renderNextAppointmentButton($row);
         }
 

@@ -1,8 +1,13 @@
 /**
  * Today Work - Kanban View Styles
- * ================================
- * Horizontal kanban board with status columns and patient cards.
+ * 字号沿用 today-work.css 的 --tw-fs-*（14 正文 / 12 辅助）
  */
+#tw-kanban-view {
+    --tw-fs-body: 14px;
+    --tw-fs-aux: 12px;
+    --tw-fs-module: 16px;
+    font-size: var(--tw-fs-body);
+}
 
 /* ── Kanban Container ──────────────────────────────── */
 .kanban-row {
@@ -25,7 +30,7 @@
 
 .kanban-col-header {
     padding: 10px 12px;
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
     font-weight: 600;
     color: #555;
     border-bottom: 2px solid #e0e0e0;
@@ -36,7 +41,7 @@
 }
 
 .kanban-col-header .badge {
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
     min-width: 22px;
     padding: 3px 7px;
 }
@@ -56,10 +61,40 @@
 }
 
 .kanban-col-empty {
-    text-align: center;
-    color: #bbb;
-    font-size: 13px;
-    padding: 30px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 88px;
+    padding: 24px 10px;
+    color: #9CA3AF;
+    font-size: var(--tw-fs-aux);
+}
+.kanban-col-empty-line {
+    display: block;
+    width: 36px;
+    height: 2px;
+    border-radius: 1px;
+    background: #E5E7EB;
+}
+.kanban-col-empty-text {
+    letter-spacing: 0.02em;
+}
+
+/* 整板无数据：收起六列，只留一块空态，避免六次「暂无患者」 */
+#tw-kanban-view {
+    position: relative;
+    min-height: 280px;
+}
+#tw-kanban-view.is-board-empty .kanban-row {
+    display: none;
+}
+.tw-kanban-board-empty {
+    display: none;
+}
+#tw-kanban-view.is-board-empty .tw-kanban-board-empty {
+    display: block;
 }
 
 /* ── Kanban Card ───────────────────────────────────── */
@@ -90,7 +125,7 @@
 
 .kanban-card-header .patient-name {
     font-weight: 600;
-    font-size: 14px;
+    font-size: var(--tw-fs-body);
     color: #333;
     cursor: pointer;
 }
@@ -101,7 +136,7 @@
 }
 
 .kanban-card-header .appointment-time {
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
     color: #999;
     white-space: nowrap;
 }
@@ -111,7 +146,7 @@
 }
 
 .kanban-card-body .card-info {
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
     color: #666;
     line-height: 1.5;
 }
@@ -120,7 +155,7 @@
     display: inline-block;
     padding: 1px 6px;
     border-radius: 3px;
-    font-size: 11px;
+    font-size: var(--tw-fs-aux);
     margin-right: 4px;
 }
 
@@ -135,7 +170,7 @@
 }
 
 .kanban-card-body .card-duration {
-    font-size: 11px;
+    font-size: var(--tw-fs-aux);
     color: #4CAF50;
     margin-top: 4px;
 }
@@ -148,7 +183,7 @@
 
 .kanban-card-actions .btn {
     padding: 2px 8px;
-    font-size: 11px;
+    font-size: var(--tw-fs-aux);
 }
 
 /* Collapsed card: hide body details but keep action buttons (check-in / no-show) */
@@ -160,7 +195,7 @@
 .kanban-col-toggle {
     cursor: pointer;
     color: #999;
-    font-size: 11px;
+    font-size: var(--tw-fs-aux);
     margin-left: 6px;
 }
 

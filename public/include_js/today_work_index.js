@@ -44,7 +44,20 @@ $(document).ready(function() {
         ],
         order: [[1, 'asc']],
         pageLength: 50,
-        language: LanguageManager.getDataTableLang(),
+        language: $.extend(true, {}, LanguageManager.getDataTableLang(), {
+            emptyTable: twEmptyState({
+                icon: 'fa-calendar-check-o',
+                title: LanguageManager.trans('today_work.list_empty_title', '今日暂无就诊'),
+                actionsHtml: twEmptyDayActions(),
+                panel: true
+            }),
+            zeroRecords: twEmptyState({
+                icon: 'fa-filter',
+                title: LanguageManager.trans('today_work.list_filtered_empty_title', '当前筛选下没有患者'),
+                panel: true,
+                compact: true
+            })
+        }),
         dom: 'rtip'
     });
 
@@ -59,6 +72,41 @@ $(document).ready(function() {
     // Load tab count badges + status pill counts (含「已到」聚合)
     loadTabCounts();
     refreshStats();
+
+    // 主区患者搜索：中文输入法下 keyup 常不触发（组字结束无 keyup）。
+    // 用 input + compositionend；组字过程中不打请求，避免用半成品拼音去筛。
+    (function bindTwPatientSearch() {
+        var $input = $('#tw-search');
+        if (!$input.length) {
+            return;
+        }
+        var composing = false;
+        var run = function () {
+            // compositionend 在部分浏览器里值尚未写入，推迟到下一拍
+            setTimeout(function () { debounceSearch(); }, 0);
+        };
+        $input.on('compositionstart', function () { composing = true; });
+        $input.on('compositionend', function () {
+            composing = false;
+            run();
+        });
+        $input.on('input', function () {
+            if (composing) return;
+            debounceSearch();
+        });
+        // 兜底：回车立即搜；非输入法键盘仍可用
+        $input.on('keydown', function (e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                clearTimeout(twSearchTimer);
+                if (twCurrentView === 'kanban' && typeof loadKanbanData === 'function') {
+                    loadKanbanData();
+                } else if (twTable) {
+                    twTable.ajax.reload(null, false);
+                }
+            }
+        });
+    })();
 
     // Auto-refresh every 30 seconds
     setInterval(function() {
@@ -132,10 +180,16 @@ function onTabFilterChanged(tab) {
 function debounceSearch() {
     clearTimeout(twSearchTimer);
     twSearchTimer = setTimeout(function() {
-        if (twCurrentView === 'table') {
-            twTable.ajax.reload();
+        if (twCurrentView === 'kanban') {
+            if (typeof loadKanbanData === 'function') {
+                loadKanbanData();
+            }
+            return;
         }
-    }, 400);
+        if (twTable) {
+            twTable.ajax.reload(null, false);
+        }
+    }, 300);
 }
 
 var tabSearchTimers = {};
@@ -152,16 +206,20 @@ function refreshStats() {
         doctor_id: $('#tw-doctor-filter').val()
     };
     $.getJSON(twConfig.statsUrl, params, function(data) {
-        $('#kpi-patients').text(data.kpi.today_patients);
-        $('#kpi-doctors').text(data.kpi.today_doctors);
-        $('#kpi-revisits').text(data.kpi.today_revisits);
-        $('#kpi-appointments').text(data.kpi.today_appointments);
-        // 千位分隔：金额直接给元之后，12800 不加分隔符很容易看成 1280
-        $('#kpi-receivable').html('&yen;' + _twMoney(data.kpi.today_receivable));
-        $('#kpi-collected').html('&yen;' + _twMoney(data.kpi.today_collected));
+        var kpi = data.kpi || {};
+        $('#kpi-new-patients').text(kpi.new_patients != null ? kpi.new_patients : 0);
+        $('#kpi-new-appointments').text(kpi.new_appointments != null ? kpi.new_appointments : 0);
+        $('#kpi-collected').html('&yen;' + _twMoney(kpi.today_collected));
+        $('#kpi-outstanding').html('&yen;' + _twMoney(kpi.outstanding_amount));
+        $('#kpi-outstanding-patients').text(
+            LanguageManager.trans('today_work.kpi_outstanding_people', { count: kpi.outstanding_patients || 0 })
+        );
+        $('#kpi-followups').text(kpi.today_followups != null ? kpi.today_followups : 0);
+        $('#kpi-visits').text(kpi.today_visits != null ? kpi.today_visits : 0);
+        $('#kpi-first-visits').text(
+            LanguageManager.trans('today_work.kpi_first_visits', { count: kpi.first_visits || 0 })
+        );
 
-        // 状态分档的计数。stats 接口本来就在算这些数，只是此前没渲染出来 ——
-        // 参考视频的「全部(2) | 未到(1) | 已到(1)」，一眼看出还剩几个没到。
         var stats = data.stats || {};
         var total = 0;
         Object.keys(stats).forEach(function (k) {
@@ -169,10 +227,27 @@ function refreshStats() {
             total += (stats[k] || 0);
         });
         $('#pill-all').text(total);
-        // 「已到」= 候诊 + 已叫号 + 治疗中（与视频工作台一致）
         var arrived = (stats.waiting || 0) + (stats.called || 0) + (stats.in_treatment || 0);
         $('#pill-arrived').text(arrived);
+        $('#badge-today-work').text(total > 0 ? total : '');
     });
+}
+
+/** 「下一步」下拉：执行所选流程动作后复位到展示态 */
+function twOnNextStepChange(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    var fn = opt && opt.value;
+    var arg = opt ? opt.getAttribute('data-arg') : null;
+    sel.selectedIndex = 0;
+    if (!fn || typeof window[fn] !== 'function') {
+        return;
+    }
+    var n = arg === null || arg === '' ? undefined : Number(arg);
+    if (n !== undefined && !isNaN(n)) {
+        window[fn](n);
+    } else {
+        window[fn](arg);
+    }
 }
 
 /**

@@ -9,13 +9,20 @@ return [
     'today_receivable'    => '今日应收',
     'today_collected'     => '今日实收',
 
-    // KPI short labels (no "今日" prefix)
-    'kpi_patients'        => '就诊',
-    'kpi_doctors'         => '出诊',
-    'kpi_revisits'        => '回访',
-    'kpi_appointments'    => '预约',
-    'kpi_receivable'      => '应收',
-    'kpi_collected'       => '实收',
+    // KPI short labels
+    'kpi_patients'           => '就诊',
+    'kpi_doctors'            => '出诊',
+    'kpi_revisits'           => '回访',
+    'kpi_appointments'       => '预约',
+    'kpi_receivable'         => '应收',
+    'kpi_collected'          => '实收金额',
+    'kpi_new_patients'       => '新增患者',
+    'kpi_new_appointments'   => '新增预约',
+    'kpi_outstanding'        => '欠费',
+    'kpi_outstanding_people' => ':count 人',
+    'kpi_followups'          => '今日回访',
+    'kpi_visits'             => '今日就诊',
+    'kpi_first_visits'       => '初诊 :count',
 
     'not_arrived'         => '未到',
     'arrived'             => '已到',
@@ -75,7 +82,24 @@ return [
     'table_view'          => '表格视图',
     'kanban_view'         => '看板视图',
     'toggle_collapse'     => '折叠/展开卡片',
-    'kanban_empty'        => '暂无患者',
+    'kanban_empty'        => '暂无',
+    'kanban_board_empty_title' => '今日暂无就诊卡片',
+    'kanban_board_empty_desc'  => '挂号或新建预约后，患者会出现在对应状态列',
+    'list_empty_title'    => '今日暂无就诊',
+    'list_empty_desc'     => '换个日期试试，或先挂号 / 新建预约',
+    'list_filtered_empty_title' => '当前筛选下没有患者',
+    'list_filtered_empty_desc'  => '试试「全部」状态，或清除搜索条件',
+    'tab_load_failed_desc'=> '请稍后重试',
+    'tab_empty_hint'      => '换个日期看看，或先完成相关业务后再回来',
+    'billing_empty_desc'  => '收款产生后，支付方式汇总会出现在这里',
+    'followup_empty_desc' => '有待回访任务时会列在这里',
+    'tomorrow_empty_desc' => '明天有预约时会显示在此，便于提前安排',
+    'missed_empty_desc'   => '近期没有失约，很好',
+    'birthday_empty_desc' => '有寿星时方便前台主动关怀',
+    'doctor_empty_desc'   => '排班维护后，今日在岗医生会出现在这里',
+    'paid_empty_desc'     => '完成收款后，流水会汇总到本页',
+    'unpaid_empty_desc'   => '有欠费账单时会出现在这里，便于催收',
+    'lab_empty_desc'      => '技加工件到件后会列在这里',
     'revisit'             => '复诊',
     'first_visit'         => '初诊',
     'minutes'             => '分钟',
@@ -95,12 +119,19 @@ return [
 
     // 信息维度 Tab
     'tab_today_work'     => '工作台',
-    'tab_billing'        => '对账',
-    'tab_followups'      => '回访',
+    'tab_today_visits'   => '今日就诊',
+    'tab_billing'        => '今日对账',
+    'tab_followups'      => '今日回访',
     'tab_tomorrow'       => '明日预约',
     'tab_week_missed'    => '失约',
     'tab_birthdays'      => '生日',
     'tab_doctor_table'   => '医生',
+    'tab_paid'              => '今日已收款',
+    'tab_unpaid'            => '今日待收款',
+    'tab_paid_short'        => '已收费',
+    'tab_unpaid_short'      => '待收费',
+    'tab_lab_cases'         => '外加工查询',
+    'tab_lab_cases_short'   => '外加工',
 
     // 今日对账
     'billing_method'     => '支付方式',
@@ -148,14 +179,9 @@ return [
     'doctor_no_data'     => '今日无医生排班',
 
     // 工具栏筛选
-    'filter_all_statuses' => '全部状态',
+    'filter_all_statuses' => '全部',
     'filter_all_doctors'  => '所有医生',
     'filter_date'         => '日期',
-
-    // 新增 Tab
-    'tab_paid'              => '今日已收款',
-    'tab_unpaid'            => '今日待收款',
-    'tab_lab_cases'         => '外加工查询',
 
     // 今日已收款
     'paid_no_data'          => '今日暂无收款',

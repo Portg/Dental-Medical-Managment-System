@@ -7,79 +7,101 @@
 @endsection
 
 @section('content')
-    {{-- Page Header — actions only, title expressed through tabs --}}
+    {{-- 布局对齐原型 v2：左侧待办轨（办事入口）+ 主区（六格日报 KPI + 列表）。
+         KPI 只读扫一眼；角标在侧轨，不把 KPI 做成可点行动数。 --}}
+    <div class="tw-workspace">
+        <nav class="tw-rail" id="tw-info-tabs" aria-label="{{ __('today_work.title') }}">
+            <div class="tw-rail-title">{{ __('today_work.title') }}</div>
+            <a href="#tab-today-work" class="tw-rail-item active" data-toggle="tab" data-tab="today-work" role="tab">
+                <span>{{ __('today_work.tab_today_visits') }}</span>
+                <span class="tw-rail-n" id="badge-today-work">{{ $kpi['today_visits'] ?? $kpi['today_patients'] ?? 0 }}</span>
+            </a>
+            <a href="#tab-billing" class="tw-rail-item" data-toggle="tab" data-tab="billing" role="tab">
+                <span>{{ __('today_work.tab_billing') }}</span>
+            </a>
+            <a href="#tab-unpaid" class="tw-rail-item tw-rail-warn" data-toggle="tab" data-tab="unpaid" role="tab">
+                <span>{{ __('today_work.tab_unpaid_short') }}</span>
+                <span class="tw-rail-n" id="badge-unpaid"></span>
+            </a>
+            <a href="#tab-paid" class="tw-rail-item" data-toggle="tab" data-tab="paid" role="tab">
+                <span>{{ __('today_work.tab_paid_short') }}</span>
+                <span class="tw-rail-n" id="badge-paid"></span>
+            </a>
+            <a href="#tab-followups" class="tw-rail-item" data-toggle="tab" data-tab="followups" role="tab">
+                <span>{{ __('today_work.tab_followups') }}</span>
+                <span class="tw-rail-n" id="badge-followups"></span>
+            </a>
+            <a href="#tab-tomorrow" class="tw-rail-item" data-toggle="tab" data-tab="tomorrow" role="tab">
+                <span>{{ __('today_work.tab_tomorrow') }}</span>
+                <span class="tw-rail-n" id="badge-tomorrow"></span>
+            </a>
+            <a href="#tab-lab-cases" class="tw-rail-item" data-toggle="tab" data-tab="lab-cases" role="tab">
+                <span>{{ __('today_work.tab_lab_cases_short') }}</span>
+                <span class="tw-rail-n" id="badge-lab-cases"></span>
+            </a>
+            <a href="#tab-birthdays" class="tw-rail-item" data-toggle="tab" data-tab="birthdays" role="tab">
+                <span>{{ __('today_work.tab_birthdays') }}</span>
+                <span class="tw-rail-n" id="badge-birthdays"></span>
+            </a>
+            <a href="#tab-week-missed" class="tw-rail-item" data-toggle="tab" data-tab="week-missed" role="tab">
+                <span>{{ __('today_work.tab_week_missed') }}</span>
+                <span class="tw-rail-n" id="badge-week-missed"></span>
+            </a>
+            <a href="#tab-doctor-table" class="tw-rail-item" data-toggle="tab" data-tab="doctor-table" role="tab">
+                <span>{{ __('today_work.tab_doctor_table') }}</span>
+            </a>
+        </nav>
+
+        <div class="tw-workspace-main">
+    {{-- 页头动作只留「本页特色」：新预约、叫号大屏。 --}}
     <div class="tw-header">
-        <div></div>
         <div class="tw-header-actions">
-            <button class="btn btn-sm btn-success" onclick="quickRegisterPatient()">
-                <i class="fa fa-plus"></i> {{ __('today_work.new_patient') }}
-            </button>
-            {{-- 挂号：老患者到店，直接搜出来挂上今天的号。参考视频 ——
-                 前台一天里做得最多的两件事就是「建档」和「挂号」，都该在顶上。
-                 挂号会真的建出一条预约，没有这个权限就别把按钮摆出来带人撞 403。 --}}
             @can('create-appointments')
-            <button class="btn btn-sm btn-info" onclick="openRegistrationModal()">
-                <i class="fa fa-sign-in"></i> {{ __('today_work.register') }}
+            <button type="button" class="btn btn-sm btn-primary" onclick="openAppointmentDrawer()">
+                <i class="fa fa-calendar-plus-o"></i> {{ __('today_work.new_appointment') }}
             </button>
             @endcan
-            <button class="btn btn-sm btn-primary" onclick="openAppointmentDrawer()">
-                {{ __('today_work.new_appointment') }}
-            </button>
             <a class="btn btn-sm btn-default" href="{{ url('waiting-queue/display') }}" target="_blank">
-                {{ __('today_work.display_screen') }}
+                <i class="fa fa-desktop"></i> {{ __('today_work.display_screen') }}
             </a>
         </div>
     </div>
 
-    {{-- KPI Row — flat, dense, no redundant "今日" prefix --}}
+    {{-- 六格日报 KPI：新增患者 / 新增预约 / 实收 / 欠费 / 回访 / 今日就诊 --}}
     <div class="tw-kpi-row" id="tw-kpi-row">
-        <div class="tw-kpi-card patients">
-            <div class="kpi-value" id="kpi-patients">{{ $kpi['today_patients'] }}</div>
-            <div class="kpi-label">{{ __('today_work.kpi_patients') }}</div>
+        <div class="tw-kpi-card">
+            <div class="kpi-value" id="kpi-new-patients">{{ $kpi['new_patients'] ?? 0 }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_new_patients') }}</div>
         </div>
-        <div class="tw-kpi-card doctors">
-            <div class="kpi-value" id="kpi-doctors">{{ $kpi['today_doctors'] }}</div>
-            <div class="kpi-label">{{ __('today_work.kpi_doctors') }}</div>
+        <div class="tw-kpi-card">
+            <div class="kpi-value" id="kpi-new-appointments">{{ $kpi['new_appointments'] ?? 0 }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_new_appointments') }}</div>
         </div>
-        <div class="tw-kpi-card revisits">
-            <div class="kpi-value" id="kpi-revisits">{{ $kpi['today_revisits'] }}</div>
-            <div class="kpi-label">{{ __('today_work.kpi_revisits') }}</div>
-        </div>
-        <div class="tw-kpi-card appointments">
-            <div class="kpi-value" id="kpi-appointments">{{ $kpi['today_appointments'] }}</div>
-            <div class="kpi-label">{{ __('today_work.kpi_appointments') }}</div>
-        </div>
-        <div class="tw-kpi-card receivable">
-            <div class="kpi-value money" id="kpi-receivable">&yen;{{ $kpi['today_receivable'] }}</div>
-            <div class="kpi-label">{{ __('today_work.kpi_receivable') }}</div>
-        </div>
-        <div class="tw-kpi-card collected">
-            <div class="kpi-value money" id="kpi-collected">&yen;{{ $kpi['today_collected'] }}</div>
+        <div class="tw-kpi-card">
+            <div class="kpi-value money" id="kpi-collected">&yen;{{ number_format($kpi['today_collected'] ?? 0, 2) }}</div>
             <div class="kpi-label">{{ __('today_work.kpi_collected') }}</div>
         </div>
+        <div class="tw-kpi-card">
+            <div class="kpi-value money" id="kpi-outstanding">&yen;{{ number_format($kpi['outstanding_amount'] ?? 0, 2) }}</div>
+            <div class="kpi-sub" id="kpi-outstanding-patients">{{ __('today_work.kpi_outstanding_people', ['count' => $kpi['outstanding_patients'] ?? 0]) }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_outstanding') }}</div>
+        </div>
+        <div class="tw-kpi-card">
+            <div class="kpi-value" id="kpi-followups">{{ $kpi['today_followups'] ?? 0 }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_followups') }}</div>
+        </div>
+        <div class="tw-kpi-card">
+            <div class="kpi-value" id="kpi-visits">{{ $kpi['today_visits'] ?? 0 }}</div>
+            <div class="kpi-sub" id="kpi-first-visits">{{ __('today_work.kpi_first_visits', ['count' => $kpi['first_visits'] ?? 0]) }}</div>
+            <div class="kpi-label">{{ __('today_work.kpi_visits') }}</div>
+        </div>
     </div>
-
-    {{-- Information Tabs --}}
-    <ul class="nav nav-tabs tw-info-tabs" id="tw-info-tabs" role="tablist">
-        <li role="presentation" class="active"><a href="#tab-today-work" data-toggle="tab" data-tab="today-work">{{ __('today_work.tab_today_work') }}</a></li>
-        <li role="presentation"><a href="#tab-billing" data-toggle="tab" data-tab="billing">{{ __('today_work.tab_billing') }}</a></li>
-        <li role="presentation"><a href="#tab-paid" data-toggle="tab" data-tab="paid">{{ __('today_work.tab_paid') }} <span class="badge tw-tab-badge" id="badge-paid"></span></a></li>
-        <li role="presentation"><a href="#tab-unpaid" data-toggle="tab" data-tab="unpaid">{{ __('today_work.tab_unpaid') }} <span class="badge tw-tab-badge" id="badge-unpaid"></span></a></li>
-        <li role="presentation"><a href="#tab-followups" data-toggle="tab" data-tab="followups">{{ __('today_work.tab_followups') }} <span class="badge tw-tab-badge" id="badge-followups"></span></a></li>
-        <li role="presentation"><a href="#tab-tomorrow" data-toggle="tab" data-tab="tomorrow">{{ __('today_work.tab_tomorrow') }} <span class="badge tw-tab-badge" id="badge-tomorrow"></span></a></li>
-        <li role="presentation"><a href="#tab-lab-cases" data-toggle="tab" data-tab="lab-cases">{{ __('today_work.tab_lab_cases') }} <span class="badge tw-tab-badge" id="badge-lab-cases"></span></a></li>
-        <li role="presentation"><a href="#tab-birthdays" data-toggle="tab" data-tab="birthdays">{{ __('today_work.tab_birthdays') }} <span class="badge tw-tab-badge" id="badge-birthdays"></span></a></li>
-        <li role="presentation"><a href="#tab-week-missed" data-toggle="tab" data-tab="week-missed">{{ __('today_work.tab_week_missed') }} <span class="badge tw-tab-badge" id="badge-week-missed"></span></a></li>
-        <li role="presentation"><a href="#tab-doctor-table" data-toggle="tab" data-tab="doctor-table">{{ __('today_work.tab_doctor_table') }}</a></li>
-    </ul>
 
     <div class="tab-content tw-tab-content">
         {{-- Tab: Today Work (main content) --}}
         <div role="tabpanel" class="tab-pane active" id="tab-today-work">
 
-    {{-- 按就诊状态分档的子页签，带计数。参考视频的「全部(2) | 未到(1) | 已到(1)」——
-         一眼看出还剩几个没到、几个在椅位上，不用先筛一遍再数。
-         计数来自 getStats()，那个接口本来就在算这些数，只是此前没渲染出来。 --}}
+    {{-- 状态分档对齐视频：全部 | 未到 | 已到（细状态由看板列承担） --}}
     <ul class="nav nav-pills tw-status-pills" id="tw-status-pills">
         <li class="active"><a href="javascript:;" data-status="all">
             {{ __('today_work.filter_all_statuses') }} <span class="badge" id="pill-all">0</span></a></li>
@@ -87,17 +109,13 @@
             {{ __('today_work.not_arrived') }} <span class="badge" id="pill-not_arrived">0</span></a></li>
         <li><a href="javascript:;" data-status="arrived">
             {{ __('today_work.arrived') }} <span class="badge" id="pill-arrived">0</span></a></li>
-        <li><a href="javascript:;" data-status="waiting">
-            {{ __('today_work.waiting') }} <span class="badge" id="pill-waiting">0</span></a></li>
-        <li><a href="javascript:;" data-status="called">
-            {{ __('today_work.called') }} <span class="badge" id="pill-called">0</span></a></li>
-        <li><a href="javascript:;" data-status="in_treatment">
-            {{ __('today_work.in_treatment') }} <span class="badge" id="pill-in_treatment">0</span></a></li>
-        <li><a href="javascript:;" data-status="completed">
-            {{ __('today_work.completed') }} <span class="badge" id="pill-completed">0</span></a></li>
-        <li><a href="javascript:;" data-status="no_show">
-            {{ __('today_work.no_show') }} <span class="badge" id="pill-no_show">0</span></a></li>
     </ul>
+    {{-- 细状态计数仍由 refreshStats 写入隐藏节点，供侧栏/调试；不占首屏 --}}
+    <span id="pill-waiting" class="hidden" hidden>0</span>
+    <span id="pill-called" class="hidden" hidden>0</span>
+    <span id="pill-in_treatment" class="hidden" hidden>0</span>
+    <span id="pill-completed" class="hidden" hidden>0</span>
+    <span id="pill-no_show" class="hidden" hidden>0</span>
 
     {{-- Toolbar --}}
     <div class="tw-toolbar">
@@ -146,8 +164,8 @@
         </div>
         <div class="search-box">
             <input type="text" class="form-control input-sm" id="tw-search"
-                   placeholder="{{ __('today_work.search_patient') }}"
-                   onkeyup="debounceSearch()">
+                   placeholder="{{ __('patient.search_patients') }}"
+                   autocomplete="off">
             <i class="fa fa-search"></i>
         </div>
     </div>
@@ -166,8 +184,7 @@
                             <th>{{ __('common.status') }}</th>
                             <th>{{ __('today_work.col_visit_type') }}</th>
                             <th>{{ __('today_work.col_notes') }}</th>
-                            {{-- 视频工作台：「就诊流程」只有 1 列（下拉显示当前下一步：挂号/叫号/…）。
-                                 病历、收费是行内另挂图标。我们拆成固定列是为了位置不跳，不是视频里有 4～5 个「流程」按钮。 --}}
+                            {{-- 「下一步」单列下拉；病历/收费旁挂；更多仅处方/约下次等 --}}
                             <th class="tw-col-act">{{ __('today_work.col_flow') }}</th>
                             <th class="tw-col-act">{{ __('today_work.medical_case') }}</th>
                             <th class="tw-col-act">{{ __('today_work.invoice') }}</th>
@@ -215,7 +232,7 @@
                 <input type="text" class="form-control input-sm tw-date-picker js-date" id="billing-date-filter"
                        value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('billing')" autocomplete="off">
             </div>
-            <div class="tw-tab-loading" id="billing-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="billing-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="billing-content" style="display:none;"></div>
         </div>
 
@@ -225,7 +242,7 @@
                 <input type="text" class="form-control input-sm tw-date-picker js-date" id="paid-date-filter"
                        value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('paid')" autocomplete="off">
             </div>
-            <div class="tw-tab-loading" id="paid-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="paid-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="paid-content" style="display:none;"></div>
         </div>
 
@@ -235,7 +252,7 @@
                 <input type="text" class="form-control input-sm tw-date-picker js-date" id="unpaid-date-filter"
                        value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('unpaid')" autocomplete="off">
             </div>
-            <div class="tw-tab-loading" id="unpaid-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="unpaid-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="unpaid-content" style="display:none;"></div>
         </div>
 
@@ -269,7 +286,7 @@
                     <option value="No Response">{{ __('today_work.followup_no_response') }}</option>
                 </select>
             </div>
-            <div class="tw-tab-loading" id="followups-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="followups-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="followups-content" style="display:none;"></div>
         </div>
 
@@ -288,7 +305,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="tw-tab-loading" id="tomorrow-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="tomorrow-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="tomorrow-content" style="display:none;"></div>
         </div>
 
@@ -302,7 +319,7 @@
                 <input type="text" class="form-control input-sm tw-date-picker js-date" id="week-missed-end-date"
                        value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('week-missed')" autocomplete="off">
             </div>
-            <div class="tw-tab-loading" id="week-missed-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="week-missed-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="week-missed-content" style="display:none;"></div>
         </div>
 
@@ -312,7 +329,7 @@
                 <input type="text" class="form-control input-sm tw-date-picker js-date" id="lab-cases-date-filter"
                        value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('lab-cases')" autocomplete="off">
             </div>
-            <div class="tw-tab-loading" id="lab-cases-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="lab-cases-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="lab-cases-content" style="display:none;"></div>
         </div>
 
@@ -322,7 +339,7 @@
                 <input type="text" class="form-control input-sm tw-date-picker js-date" id="birthdays-date-filter"
                        value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('birthdays')" autocomplete="off">
             </div>
-            <div class="tw-tab-loading" id="birthdays-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="birthdays-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="birthdays-content" style="display:none;"></div>
         </div>
 
@@ -338,10 +355,12 @@
                     @endforeach
                 </select>
             </div>
-            <div class="tw-tab-loading" id="doctor-table-loading"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+            <div class="tw-tab-loading" id="doctor-table-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="doctor-table-content" style="display:none;"></div>
         </div>
-    </div>
+    </div>{{-- /.tw-tab-content --}}
+        </div>{{-- /.tw-workspace-main --}}
+    </div>{{-- /.tw-workspace --}}
 
     {{-- Patient Detail Drawer (page-level, used by all tabs) --}}
     <div class="patient-drawer-overlay" id="patient-drawer-overlay"></div>
@@ -390,7 +409,7 @@
     {{-- 开单弹窗（appointments.invoices.create）不再引进来：它的 JS 已经随
          92f20f8「两套开单 UI 合成一套」删掉了，在这一页是弹得出来但什么都点不动的
          空壳，还自带 #btnSave / #doctor_id 两个与本页重复的 id。
-         「收费」现在直接去诊疗页的划价面板，见 today_work_actions.js 的 quickInvoice。 --}}
+         「收费」进患者页划价 Tab（带 appointment_id），见 today_work_actions.js 的 quickInvoice。 --}}
 @endsection
 
 @section('js')

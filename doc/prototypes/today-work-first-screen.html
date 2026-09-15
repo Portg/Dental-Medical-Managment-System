@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>工作台首屏原型 v2 · 保留六格 KPI</title>
+  <style>
+    :root {
+      --font: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --fs-page: 20px;
+      --fs-module: 16px;
+      --fs-body: 14px;
+      --fs-aux: 12px;
+      --blue: #2563EB;
+      --text: #111827;
+      --muted: #6B7280;
+      --line: #E5E7EB;
+      --card: #fff;
+      --rail: #F8FAFC;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: var(--fs-body);
+      color: var(--text);
+      background: #E5E7EB;
+      line-height: 1.45;
+    }
+    .page { max-width: 1180px; margin: 20px auto 48px; padding: 0 16px; }
+    .intro {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+    .intro h1 { margin: 0 0 6px; font-size: var(--fs-module); }
+    .intro p { margin: 0; color: var(--muted); font-size: var(--fs-aux); }
+    .intro ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: var(--fs-aux); }
+    .switch { display: flex; gap: 8px; margin-top: 12px; }
+    .switch button {
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: var(--fs-aux);
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .switch button.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+    .panel { display: none; }
+    .panel.show { display: block; }
+    .chrome {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .fake-topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #1F2937;
+      color: #fff;
+      font-size: var(--fs-aux);
+    }
+    .fake-topbar .search {
+      flex: 1;
+      max-width: 340px;
+      background: #374151;
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: #D1D5DB;
+    }
+    .fake-topbar .add {
+      background: var(--blue);
+      border: 0;
+      color: #fff;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: var(--fs-aux);
+    }
+    .workspace { display: flex; min-height: 520px; background: #F9FAFB; }
+    .rail {
+      width: 168px;
+      flex-shrink: 0;
+      background: var(--rail);
+      border-right: 1px solid var(--line);
+      padding: 10px 0;
+    }
+    .rail .title {
+      padding: 4px 14px 8px;
+      font-size: 11px;
+      color: #9CA3AF;
+      letter-spacing: .04em;
+    }
+    .rail a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: var(--fs-aux);
+    }
+    .rail a:hover { background: #EFF6FF; }
+    .rail a.on { background: #EFF6FF; color: var(--blue); font-weight: 600; }
+    .rail .n {
+      min-width: 18px;
+      text-align: center;
+      background: #E5E7EB;
+      border-radius: 4px;
+      padding: 0 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #4B5563;
+    }
+    .rail a.on .n { background: #DBEAFE; color: var(--blue); }
+    .rail a.warn .n { background: #FEE2E2; color: #B91C1C; }
+    .main { flex: 1; padding: 12px 16px 18px; min-width: 0; }
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .tag-now { background: #FEE2E2; color: #991B1B; }
+    .tag-new { background: #DCFCE7; color: #166534; }
+    .actions { display: flex; gap: 6px; margin-bottom: 10px; }
+    .btn {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 6px;
+      border: 1px solid #D1D5DB;
+      background: #fff;
+      font-size: var(--fs-body);
+      display: inline-flex;
+      align-items: center;
+    }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+    /* KPI — 六格保留，只读扫一眼 */
+    .kpi-row {
+      display: flex;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .kpi {
+      flex: 1;
+      padding: 10px 8px;
+      text-align: center;
+      border-right: 1px solid #F3F4F6;
+    }
+    .kpi:last-child { border-right: 0; }
+    .kpi .v { font-size: var(--fs-page); font-weight: 600; }
+    .kpi .sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .kpi .l { font-size: var(--fs-aux); color: var(--muted); margin-top: 2px; }
+    .kpi.glance { cursor: default; } /* 明示：非行动入口 */
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .tabs a {
+      padding: 8px 12px;
+      font-size: var(--fs-body);
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      white-space: nowrap;
+    }
+    .tabs a.on {
+      color: var(--blue);
+      border-bottom-color: var(--blue);
+      font-weight: 500;
+    }
+    .badge {
+      display: inline-flex;
+      min-width: 18px;
+      height: 16px;
+      padding: 0 5px;
+      align-items: center;
+      justify-content: center;
+      background: #F3F4F6;
+      color: #6B7280;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 2px;
+    }
+    .tabs a.on .badge { background: #EFF6FF; color: var(--blue); }
+
+    .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: var(--fs-aux);
+      color: var(--muted);
+    }
+    .pill.on {
+      background: #EFF6FF;
+      border-color: #BFDBFE;
+      color: var(--blue);
+      font-weight: 500;
+    }
+    .toolbar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: var(--fs-aux);
+      color: var(--muted);
+    }
+    .chip {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 5px 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      font-size: var(--fs-body);
+    }
+    th {
+      text-align: left;
+      padding: 10px 8px;
+      font-weight: 500;
+      color: var(--muted);
+      background: #FAFAFA;
+      border-bottom: 1px solid var(--line);
+      font-size: var(--fs-aux);
+    }
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #F3F4F6;
+      vertical-align: middle;
+    }
+    .name { font-weight: 600; color: var(--blue); }
+    .ops button {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: var(--fs-aux);
+      margin-right: 4px;
+    }
+    .ops .next {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+      padding: 4px 12px;
+    }
+    .ops select.next-dd {
+      appearance: none;
+      background: var(--blue);
+      border: 1px solid var(--blue);
+      color: #fff;
+      border-radius: 4px;
+      padding: 4px 28px 4px 10px;
+      font-size: var(--fs-aux);
+      background-image: linear-gradient(45deg, transparent 50%, #fff 50%), linear-gradient(135deg, #fff 50%, transparent 50%);
+      background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+    }
+    .note {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 6px;
+      font-size: var(--fs-aux);
+      color: #92400E;
+    }
+    .note.ok {
+      background: #ECFDF5;
+      border-color: #A7F3D0;
+      color: #065F46;
+    }
+    .no-rail .workspace { display: block; }
+    .no-rail .main { padding: 12px 16px 18px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="intro">
+      <h1>工作台首屏原型 v2（已纠正）</h1>
+      <p>六格 KPI 保留为「日报扫一眼」，不做「未到/诊中/待收款」替代。干活入口在待办导航 + 状态 Tab + 行内下一步。</p>
+      <ul>
+        <li><b>现状</b>：现有系统布局（六格指标语义偏运营；顶 Tab 过多；状态 pill 过细；行内多列按钮）</li>
+                <li><b>建议</b>：KPI 对齐视频骨架且只读；第 4 格用「欠费」替「短信」（更贴前台日报）；待办左侧轨；状态 全部/未到/已到；行内下一步单列</li>
+      </ul>
+      <div class="switch">
+        <button type="button" class="active" data-panel="now">现状</button>
+        <button type="button" data-panel="next">建议方案</button>
+      </div>
+    </div>
+
+    <!-- 现状：贴近当前实现 -->
+    <div class="panel show no-rail" id="panel-now">
+      <div class="chrome">
+        <div class="fake-topbar">
+          <strong>诊所系统</strong>
+          <div class="search">姓名 / 首拼 / 手机 / 病历号</div>
+          <button class="add" type="button">+ 新增患者</button>
+          <span style="margin-left:auto;opacity:.7">田江峰 ▾</span>
+        </div>
+        <div class="workspace">
+          <div class="main">
+            <span class="tag tag-now">现状 · KPI 可保留形态，但语义/导航层与视频不一致</span>
+            <div class="actions">
+              <button class="btn primary" type="button">新预约</button>
+              <button class="btn" type="button">叫号大屏</button>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi"><div class="v">12</div><div class="l">就诊</div></div>
+              <div class="kpi"><div class="v">4</div><div class="l">出诊</div></div>
+              <div class="kpi"><div class="v">3</div><div class="l">回访</div></div>
+              <div class="kpi"><div class="v">15</div><div class="l">预约</div></div>
+              <div class="kpi"><div class="v">¥8,200</div><div class="l">应收</div></div>
+              <div class="kpi"><div class="v">¥5,600</div><div class="l">实收</div></div>
+            </div>
+            <div class="tabs">
+              <a class="on" href="#">工作台</a>
+              <a href="#">对账</a>
+              <a href="#">今日已收款 <span class="badge">6</span></a>
+              <a href="#">今日待收款 <span class="badge">3</span></a>
+              <a href="#">回访 <span class="badge">2</span></a>
+              <a href="#">明日预约 <span class="badge">5</span></a>
+              <a href="#">外加工</a>
+              <a href="#">生日</a>
+              <a href="#">失约</a>
+              <a href="#">医生</a>
+            </div>
+            <div class="pills">
+              <span class="pill on">全部 15</span>
+              <span class="pill">未到 4</span>
+              <span class="pill">已到 6</span>
+              <span class="pill">候诊中 3</span>
+              <span class="pill">已叫号 1</span>
+              <span class="pill">就诊中 2</span>
+              <span class="pill">已离开 4</span>
+              <span class="pill">未到诊 1</span>
+            </div>
+            <div class="toolbar">
+              <span class="chip">‹ 2025-10-28 › 今天</span>
+              <span class="chip">全部医生 ▾</span>
+              <span class="chip">列表 | 看板</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>时间</th><th>患者</th><th>医生</th><th>状态</th>
+                  <th>流程</th><th>病历</th><th>收费</th><th>更多</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>09:00</td>
+                  <td><span class="name">刘万友</span></td>
+                  <td>田江峰</td>
+                  <td>候诊中</td>
+                  <td class="ops"><button type="button">叫号</button></td>
+                  <td class="ops"><button type="button">病历</button></td>
+                  <td class="ops"><button type="button">收费</button></td>
+                  <td class="ops"><button type="button">⋯</button></td>
+                </tr>
+                <tr>
+                  <td>09:30</td>
+                  <td><span class="name">张志伟</span></td>
+                  <td>田江峰</td>
+                  <td>未到</td>
+                  <td class="ops"><button type="button">挂号</button></td>
+                  <td class="ops"><button type="button">病历</button></td>
+                  <td class="ops"><button type="button">收费</button></td>
+                  <td class="ops"><button type="button">⋯</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="note">
+              问题不在「有六格」，而在：① KPI 语义与视频不完全对齐；② 待办塞进顶 Tab 过挤；
+              ③ 状态 pill 比视频细太多；④ 行内多列按钮，不是单列「下一步」。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 建议：六格保留 + 侧轨待办 + 状态三档 + 下一步下拉 -->
+    <div class="panel" id="panel-next">
+      <div class="chrome">
+        <div class="fake-topbar">
+          <strong>诊所系统</strong>
+          <div class="search">姓名 / 首拼 / 手机 / 病历号</div>
+          <button class="add" type="button">+ 新增患者</button>
+          <span style="margin-left:auto;opacity:.7">田江峰 ▾</span>
+        </div>
+        <div class="workspace">
+          <nav class="rail" aria-label="工作台待办">
+            <div class="title">工作台</div>
+            <a class="on" href="#"><span>今日就诊</span><span class="n">15</span></a>
+            <a href="#"><span>今日对账</span><span class="n">—</span></a>
+            <a class="warn" href="#"><span>待收费</span><span class="n">3</span></a>
+            <a href="#"><span>已收费</span><span class="n">6</span></a>
+            <a href="#"><span>今日回访</span><span class="n">2</span></a>
+            <a href="#"><span>明日预约</span><span class="n">5</span></a>
+            <a href="#"><span>外加工</span><span class="n">1</span></a>
+            <a href="#"><span>生日</span><span class="n">0</span></a>
+            <a href="#"><span>失约</span><span class="n">2</span></a>
+          </nav>
+          <div class="main">
+            <span class="tag tag-new">建议 · KPI 只读扫一眼；点角标办事在左侧轨</span>
+            <div class="actions">
+              <button class="btn primary" type="button">新预约</button>
+              <button class="btn" type="button">叫号大屏</button>
+            </div>
+
+            <!-- 对齐视频六格语义；不强调点击 -->
+            <div class="kpi-row" title="日报指标，非待办入口">
+              <div class="kpi glance">
+                <div class="v">2</div>
+                <div class="l">新增患者</div>
+              </div>
+              <div class="kpi glance">
+                <div class="v">15</div>
+                <div class="l">新增预约</div>
+              </div>
+              <div class="kpi glance">
+                <div class="v">¥5,600</div>
+                <div class="l">实收金额</div>
+              </div>
+              <div class="kpi glance">
+                <div class="v">¥2,600</div>
+                <div class="sub">3 人</div>
+                <div class="l">欠费</div>
+              </div>
+              <div class="kpi glance">
+                <div class="v">3</div>
+                <div class="l">今日回访</div>
+              </div>
+              <div class="kpi glance">
+                <div class="v">12</div>
+                <div class="sub">初诊 4</div>
+                <div class="l">今日就诊</div>
+              </div>
+            </div>
+
+            <div class="pills">
+              <span class="pill on">全部 15</span>
+              <span class="pill">未到 4</span>
+              <span class="pill">已到 6</span>
+            </div>
+
+            <div class="toolbar">
+              <span class="chip">‹ 2025-10-28 › 今天</span>
+              <span class="chip">全部医生 ▾</span>
+              <span class="chip">就诊类型 ▾</span>
+              <span class="chip">列表 | 看板</span>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>患者</th><th>预约时间</th><th>医生</th><th>项目</th><th>状态</th><th>下一步</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="name">张志伟</span><div style="font-size:12px;color:#6B7280">25031121</div></td>
+                  <td>14:00–15:00</td>
+                  <td>田江峰</td>
+                  <td>根管治疗</td>
+                  <td>未履约</td>
+                  <td class="ops">
+                    <select class="next-dd" aria-label="下一步">
+                      <option>挂号</option>
+                      <option>标记未到</option>
+                    </select>
+                  </td>
+                  <td class="ops">
+                    <button type="button">病历</button>
+                    <button type="button">收费</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="name">刘万友</span><div style="font-size:12px;color:#6B7280">25031008</div></td>
+                  <td>09:00–09:30</td>
+                  <td>田江峰</td>
+                  <td>洁牙</td>
+                  <td>候诊中</td>
+                  <td class="ops">
+                    <select class="next-dd" aria-label="下一步">
+                      <option>叫号</option>
+                      <option>回退</option>
+                    </select>
+                  </td>
+                  <td class="ops">
+                    <button type="button">病历</button>
+                    <button type="button">收费</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="note ok">
+              相对 v1 纠偏：① 六格保留；②「短信」→「欠费」（金额+人数，扫一眼）；短信失败去短信模块看，不占首屏；
+              ③ 待办在左侧轨；④ 状态三档；⑤ 下一步单列下拉。
+              欠费格仍只读——点「待收费」侧栏才办事，避免和 KPI 抢入口。
+              侧轨太大时可退成顶 Tab 高频几项 +「更多」。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll('.switch button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.switch button').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('show'); });
+        document.getElementById('panel-' + btn.dataset.panel).classList.add('show');
+      });
+    });
+  </script>
+</body>
+</html>

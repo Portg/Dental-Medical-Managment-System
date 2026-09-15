@@ -1,39 +1,61 @@
 /* today-work.css
- * Dentrix-inspired: flat, borderless, information-dense
- * Accent: single blue (#2563EB)
- * Palette: white / #F9FAFB (gray-50) / #F3F4F6 (gray-100) / #E5E7EB (gray-200)
+ * Accent: #2563EB
+ * Palette: white / #F9FAFB / #F3F4F6 / #E5E7EB
+ *
+ * 字号对齐 doc/prototype_design.md「字体规范」：
+ *   页面标题 20 / 模块标题 16 / 正文 14 / 辅助·小字 12
+ * 本页不再使用 10、11、13、15、22 等游离字号。
  */
 
-/* ── Page Header — compact, no redundant title ──── */
+#tab-today-work,
+.tw-tab-content,
+.tw-header,
+.tw-kpi-row,
+.tw-workspace,
+.tw-rail,
+#patient-drawer {
+    --tw-font: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --tw-fs-page: 20px;
+    --tw-fs-module: 16px;
+    --tw-fs-body: 14px;
+    --tw-fs-aux: 12px;
+    font-family: var(--tw-font);
+    font-size: var(--tw-fs-body);
+}
+
+/* ── Page Header — compact actions, left-aligned (勿顶到右缘) ──── */
 .tw-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 10px;
     min-height: 32px;
 }
 .tw-header h3 {
     margin: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 16px;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    font-size: var(--tw-fs-module);
     font-weight: 600;
     color: #111827;
     letter-spacing: -0.01em;
 }
 .tw-header-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
+    align-items: center;
 }
 .tw-header-actions .btn {
     height: 32px;
     padding: 0 12px;
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
     font-weight: 500;
     border-radius: 6px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    white-space: nowrap;
 }
 /* Secondary buttons — outlined, readable */
 .tw-header-actions .btn-primary,
@@ -48,6 +70,16 @@
     background: #F9FAFB;
     border-color: #9CA3AF;
     color: #111827;
+}
+.tw-header-actions .btn-primary {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: #fff;
+}
+.tw-header-actions .btn-primary:hover {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
+    color: #fff;
 }
 
 /* ── KPI Row — flat, no borders, no shadows ──────── */
@@ -73,8 +105,8 @@
     border-right: none;
 }
 .tw-kpi-card .kpi-value {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 22px;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    font-size: var(--tw-fs-page);
     font-weight: 700;
     color: #111827;
     line-height: 1.2;
@@ -84,13 +116,138 @@
     color: #111827;
 }
 .tw-kpi-card .kpi-label {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 11px;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    font-size: var(--tw-fs-aux);
     color: #9CA3AF;
     margin-top: 2px;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.03em;
     font-weight: 500;
+}
+.tw-kpi-card .kpi-sub {
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    font-size: 11px;
+    color: #9CA3AF;
+    margin-top: 1px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Workspace：左侧待办轨 + 主区（轨与主区同高同框） ─ */
+.tw-workspace {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-height: calc(100vh - 140px);
+    background: #fff;
+    margin: 0;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.tw-rail {
+    width: 220px;
+    flex-shrink: 0;
+    background: #F8FAFC;
+    border-right: 1px solid #E5E7EB;
+    padding: 14px 0 24px;
+}
+.tw-rail-title {
+    padding: 2px 16px 12px;
+    font-size: var(--tw-fs-aux);
+    color: #9CA3AF;
+    letter-spacing: 0.04em;
+}
+.tw-rail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    color: #374151;
+    text-decoration: none !important;
+    font-size: var(--tw-fs-body);
+    line-height: 1.3;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    border-left: 3px solid transparent;
+}
+.tw-rail-item:hover {
+    background: #EFF6FF;
+    color: #2563EB;
+}
+.tw-rail-item.active {
+    background: #EFF6FF;
+    color: #2563EB;
+    font-weight: 600;
+    border-left-color: #2563EB;
+}
+.tw-rail-n {
+    min-width: 22px;
+    text-align: center;
+    background: #E5E7EB;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: var(--tw-fs-aux);
+    font-weight: 600;
+    color: #4B5563;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+.tw-rail-n:empty { display: none; }
+.tw-rail-item.active .tw-rail-n {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+.tw-rail-item.tw-rail-warn .tw-rail-n {
+    background: #FEE2E2;
+    color: #B91C1C;
+}
+.tw-workspace-main {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 18px 24px;
+    background: #fff;
+}
+
+select.tw-next-dd {
+    appearance: none;
+    -webkit-appearance: none;
+    max-width: 132px;
+    height: 28px;
+    padding: 0 22px 0 8px;
+    border: 1px solid #2563EB;
+    border-radius: 4px;
+    background-color: #2563EB;
+    color: #fff;
+    font-size: var(--tw-fs-aux);
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    background-image: linear-gradient(45deg, transparent 50%, #fff 50%), linear-gradient(135deg, #fff 50%, transparent 50%);
+    background-position: calc(100% - 12px) 50%, calc(100% - 7px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+select.tw-next-dd option {
+    color: #111827;
+    background: #fff;
+}
+
+@media (max-width: 900px) {
+    .tw-workspace { flex-direction: column; border-radius: 0; }
+    .tw-rail {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        border-right: 0;
+        border-bottom: 1px solid #E5E7EB;
+        padding: 8px;
+    }
+    .tw-rail-title { display: none; }
+    .tw-rail-item {
+        border-left: 0;
+        border-radius: 6px;
+        padding: 8px 12px;
+    }
 }
 /* Remove all rainbow color borders */
 .tw-kpi-card.patients,
@@ -108,8 +265,8 @@
     border-bottom: 1px solid #E5E7EB;
 }
 .tw-info-tabs > li > a {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 13px;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    font-size: var(--tw-fs-body);
     font-weight: 500;
     padding: 8px 14px;
     color: #6B7280;
@@ -140,7 +297,7 @@
     padding: 0 5px;
     background: #F3F4F6;
     color: #6B7280;
-    font-size: 10px;
+    font-size: var(--tw-fs-aux);
     font-weight: 600;
     border-radius: 4px;
     vertical-align: middle;
@@ -155,19 +312,102 @@
     display: none;
 }
 .tw-tab-content {
-    min-height: 200px;
+    min-height: 0;
+    padding-top: 4px;
 }
 .tw-tab-loading {
     text-align: center;
     padding: 40px;
     color: #9CA3AF;
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
 }
 .tw-tab-empty {
     text-align: center;
     padding: 40px;
     color: #9CA3AF;
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
+}
+
+/* ── Unified empty state (list / kanban / side tabs) ── */
+.tw-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 48px 24px;
+    min-height: 220px;
+}
+.tw-empty-state.is-compact {
+    min-height: 0;
+    padding: 40px 24px;
+}
+/* 白底卡片：侧栏 Tab 空态必须用，否则漂在灰底上像一大片空白 */
+.tw-empty-state.is-panel {
+    background: #fff;
+    border: 1px dashed #D1D5DB;
+    border-radius: 8px;
+    margin: 8px 0 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.tw-empty-state-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #EFF6FF;
+    color: #3B82F6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+.tw-empty-state-icon > i {
+    font-size: var(--tw-fs-page);
+    line-height: 1;
+}
+.tw-empty-state-title {
+    font-size: var(--tw-fs-module);
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+.tw-empty-state-desc {
+    font-size: var(--tw-fs-body);
+    color: #6B7280;
+    line-height: 1.55;
+    max-width: 360px;
+    margin: 0 auto;
+}
+.tw-empty-state-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 16px;
+}
+.tw-empty-state-actions .btn {
+    border-radius: 6px;
+}
+
+/* DataTables 空行：去掉默认灰底挤成一条的观感 */
+#tw-table_wrapper table.dataTable td.dataTables_empty {
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+#tw-table_wrapper table.dataTable td.dataTables_empty .tw-empty-state {
+    border: 1px dashed #D1D5DB;
+    border-radius: 8px;
+    background: #fff;
+    margin: 8px 0 12px;
+}
+
+/* 看板整板空态同样用白卡片 */
+#tw-kanban-view.is-board-empty .tw-kanban-board-empty .tw-empty-state {
+    background: #fff;
+    border: 1px dashed #D1D5DB;
+    border-radius: 8px;
+    margin: 8px 0 16px;
 }
 
 /* ── Toolbar — unified 32px toolbelt ─────────────── */
@@ -197,8 +437,8 @@
     padding-right: 28px;
     border: 1px solid #D1D5DB;
     border-radius: 6px;
-    font-size: 13px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: var(--tw-fs-body);
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
     color: #374151;
 }
 .tw-toolbar .search-box input:focus {
@@ -212,7 +452,8 @@
     top: 50%;
     transform: translateY(-50%);
     color: #9CA3AF;
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
+    pointer-events: none;
 }
 
 /* All toolbar inputs: 32px height */
@@ -221,8 +462,8 @@
     height: 32px !important;
     border: 1px solid #D1D5DB !important;
     border-radius: 6px !important;
-    font-size: 13px !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    font-size: var(--tw-fs-body) !important;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif) !important;
     color: #374151 !important;
 }
 .tw-date-picker:focus {
@@ -235,8 +476,8 @@
     height: 32px !important;
     border: 1px solid #D1D5DB !important;
     border-radius: 6px !important;
-    font-size: 13px !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    font-size: var(--tw-fs-body) !important;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif) !important;
     color: #374151 !important;
 }
 .tw-status-filter {
@@ -244,8 +485,8 @@
     height: 32px !important;
     border: 1px solid #D1D5DB !important;
     border-radius: 6px !important;
-    font-size: 13px !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    font-size: var(--tw-fs-body) !important;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif) !important;
     color: #374151 !important;
 }
 
@@ -263,8 +504,8 @@
     height: 32px;
     border: 1px solid #D1D5DB;
     border-radius: 6px;
-    font-size: 13px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: var(--tw-fs-body);
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
     color: #374151;
 }
 .tw-tab-toolbar .form-control:focus {
@@ -273,7 +514,7 @@
     outline: none;
 }
 .tw-tab-toolbar label {
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
     color: #9CA3AF;
     font-weight: 500;
     margin: 0;
@@ -284,7 +525,7 @@
     height: 32px;
     padding: 0 10px;
     border-radius: 0;
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
     border: 1px solid #D1D5DB;
     background: #fff;
     color: #6B7280;
@@ -330,8 +571,8 @@
 }
 .tw-info-table th {
     background: #F9FAFB;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 11px;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    font-size: var(--tw-fs-aux);
     font-weight: 600;
     color: #9CA3AF;
     padding: 8px 12px;
@@ -340,7 +581,7 @@
     letter-spacing: 0.03em;
 }
 .tw-info-table td {
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
     padding: 8px 12px;
     border-bottom: 1px solid #F3F4F6;
     color: #374151;
@@ -378,13 +619,13 @@
     cursor: pointer;
 }
 .doctor-group-header .doctor-name {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
     font-weight: 600;
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
     color: #111827;
 }
 .doctor-group-header .doctor-stats {
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
     color: #9CA3AF;
     font-variant-numeric: tabular-nums;
 }
@@ -422,13 +663,13 @@
 }
 .pd-header-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .pd-name {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 16px;
+    font-family: var(--tw-font, "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    font-size: var(--tw-fs-module);
     font-weight: 600;
     color: #111827;
 }
-.pd-meta { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
-.pd-phone { font-size: 12px; color: #9CA3AF; margin-top: 1px; }
+.pd-meta { font-size: var(--tw-fs-aux); color: #9CA3AF; margin-top: 2px; }
+.pd-phone { font-size: var(--tw-fs-aux); color: #9CA3AF; margin-top: 1px; }
 .pd-allergy {
     margin-top: 8px;
     padding: 4px 8px;
@@ -436,21 +677,39 @@
     border: 1px solid #FDE68A;
     border-radius: 4px;
     color: #92400E;
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
     display: none;
 }
-.pd-close { background: none; border: none; font-size: 20px; color: #9CA3AF; cursor: pointer; padding: 0; }
+.pd-close { background: none; border: none; font-size: var(--tw-fs-page); color: #9CA3AF; cursor: pointer; padding: 0; }
 .pd-close:hover { color: #374151; }
 .pd-body { flex: 1; overflow-y: auto; }
 .pd-body .nav-tabs { padding: 0 20px; background: #F9FAFB; margin: 0; border-bottom: 1px solid #E5E7EB; }
-.pd-body .nav-tabs > li > a { font-size: 12px; padding: 8px 12px; color: #6B7280; }
+.pd-body .nav-tabs > li > a { font-size: var(--tw-fs-aux); padding: 8px 12px; color: #6B7280; }
 .pd-body .nav-tabs > li.active > a { color: #2563EB; border-bottom-color: #2563EB; }
 .pd-body .tab-content { padding: 14px 20px; }
 .pd-record-item { padding: 8px 0; border-bottom: 1px solid #F3F4F6; }
 .pd-record-item:last-child { border-bottom: none; }
-.pd-record-date { font-size: 11px; color: #9CA3AF; }
-.pd-record-detail { font-size: 13px; color: #374151; margin-top: 1px; }
-.pd-empty { text-align: center; color: #9CA3AF; padding: 30px 10px; font-size: 13px; }
+.pd-record-date { font-size: var(--tw-fs-aux); color: #9CA3AF; }
+.pd-record-detail { font-size: var(--tw-fs-body); color: #374151; margin-top: 1px; }
+.pd-empty {
+    text-align: center;
+    color: #9CA3AF;
+    padding: 36px 16px;
+    font-size: var(--tw-fs-body);
+}
+.pd-empty::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background: #F3F4F6;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239CA3AF'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 20px;
+}
 
 /* Visit cards — clinical-first layout */
 .pd-visit-item { padding: 10px 0; }
@@ -469,7 +728,7 @@
     margin-bottom: 4px;
 }
 .pd-visit-date {
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
     font-weight: 600;
     color: #374151;
 }
@@ -481,7 +740,7 @@
 }
 .pd-badge {
     display: inline-block;
-    font-size: 10px;
+    font-size: var(--tw-fs-aux);
     line-height: 1.4;
     padding: 1px 6px;
     border-radius: 3px;
@@ -501,20 +760,20 @@
 .pd-badge-status.status-checked_in,
 .pd-badge-status.status-waiting { background: #EEF2FF; color: #4F46E5; }
 .pd-visit-summary {
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
     color: #111827;
     line-height: 1.4;
     margin-top: 2px;
 }
 .pd-visit-meta {
-    font-size: 11px;
+    font-size: var(--tw-fs-aux);
     color: #9CA3AF;
     margin-top: 3px;
 }
 .pd-visit-case-link {
     display: inline-block;
     margin-top: 4px;
-    font-size: 11px;
+    font-size: var(--tw-fs-aux);
     color: #2563EB;
 }
 .pd-footer {
@@ -527,7 +786,7 @@
 .pd-footer .btn {
     height: 32px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
     background: #2563EB;
     border-color: #2563EB;
 }
@@ -570,7 +829,7 @@
 }
 
 .tw-badge {
-    font-size: 12px;
+    font-size: var(--tw-fs-aux);
     margin-right: 3px;
     cursor: help;
 }
@@ -588,7 +847,7 @@
 
 .tw-status-pills > li > a {
     padding: 4px 12px;
-    font-size: 13px;
+    font-size: var(--tw-fs-body);
     color: #666;
     border-radius: 3px;
 }

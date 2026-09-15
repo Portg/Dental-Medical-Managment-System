@@ -13,6 +13,50 @@
 (function(window) {
     'use strict';
 
+    /**
+     * 工作台统一空态：列表 / 看板整板 / 侧栏 Tab 共用。
+     * opts: { icon, title, desc, actionsHtml, compact, panel }
+     * panel=true：白底虚线卡片，避免漂在页面灰底上像一大块空白。
+     */
+    window.twEmptyState = function (opts) {
+        opts = opts || {};
+        var icon = opts.icon || 'fa-inbox';
+        var cls = 'tw-empty-state';
+        if (opts.compact) cls += ' is-compact';
+        if (opts.panel) cls += ' is-panel';
+        var html = '<div class="' + cls + '">';
+        html += '<div class="tw-empty-state-icon"><i class="fa ' + icon + '"></i></div>';
+        if (opts.title) {
+            html += '<div class="tw-empty-state-title">' + opts.title + '</div>';
+        }
+        if (opts.desc) {
+            html += '<div class="tw-empty-state-desc">' + opts.desc + '</div>';
+        }
+        if (opts.actionsHtml) {
+            html += '<div class="tw-empty-state-actions">' + opts.actionsHtml + '</div>';
+        }
+        html += '</div>';
+        return html;
+    };
+
+    /** 今日无就诊时的行动：优先新预约；挂号仍保留给到店临挂 */
+    window.twEmptyDayActions = function () {
+        var html = '';
+        if (typeof openAppointmentDrawer === 'function') {
+            html += '<button type="button" class="btn btn-sm btn-primary" onclick="openAppointmentDrawer()">'
+                + '<i class="fa fa-calendar-plus-o"></i> '
+                + LanguageManager.trans('today_work.new_appointment', '新建预约')
+                + '</button>';
+        }
+        if (typeof openRegistrationModal === 'function') {
+            html += '<button type="button" class="btn btn-sm btn-default" onclick="openRegistrationModal()">'
+                + '<i class="fa fa-sign-in"></i> '
+                + LanguageManager.trans('today_work.register', '挂号')
+                + '</button>';
+        }
+        return html;
+    };
+
     function afterAction() {
         if (typeof twTable !== 'undefined') {
             twTable.ajax.reload(null, false);
@@ -139,19 +183,24 @@
 
     // ── Invoice ──────────────────────────────────────────
     /**
-     * 收费 = 到诊疗页的划价面板去开单。
+     * 收费 = 进患者页「收费」Tab 的划价面板（billing.partials.charge_panel）。
      *
-     * 原来这里开的是 appointments.invoices.create 那个老弹窗，而那条路已经是死的：
-     * 92f20f8「划价+收款搬到诊疗页，两套开单 UI 合成一套」把 save_invoice /
-     * #addInvoiceItem / #service 的 select2 一起删了（见 invoicing.js 顶部注释），
-     * 预约页留了自己的内联副本所以还活着，工作台这边却还指着那具尸体 ——
-     * 弹窗能弹出来，但项目选不了、「添加更多」没反应、「生成账单」点了什么都不发生。
-     * 实测确认：save_invoice 是 undefined。
+     * 不要跳 /medical-treatment/…：那是诊疗/预约页，前台只想划价收款却整页诊疗
+     * 壳子，体验像进错门。划价 UI 早就在患者页做好了（与诊疗页共用同一 partial），
+     * 缺的是入口对齐，不是再造一页。
      *
-     * 顺带解决两个重复 id：那个弹窗自带 #btnSave 和 #doctor_id，与页面上别处撞号。
+     * appointmentId 仍要带上：账单挂到这次就诊，诊疗页「本次已划价」和按就诊
+     * 统计才对得上。患者页 BillingModule.init 会读 ?appointment_id=。
      */
-    window.quickInvoice = function(appointmentId) {
-        window.location.href = '/medical-treatment/' + appointmentId + '#dental_billing_tab';
+    window.quickInvoice = function(patientId, appointmentId) {
+        if (!patientId) {
+            return;
+        }
+        var url = '/patients/' + patientId + '#billing_tab';
+        if (appointmentId) {
+            url = '/patients/' + patientId + '?appointment_id=' + appointmentId + '#billing_tab';
+        }
+        window.location.href = url;
     };
 
     // ── Next Appointment ─────────────────────────────────
