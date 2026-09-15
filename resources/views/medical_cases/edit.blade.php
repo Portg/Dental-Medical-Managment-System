@@ -142,6 +142,24 @@
                         </div>
                     </div>
 
+                    {{-- 全局工具条。参考产品在所有分段之上就有这么一条。
+
+                         「复制牙位」原来在每个段落里各放一份 —— 同一个动作重复四遍。
+                         「全部展开 / 折叠」是原来没有的：复诊翻旧病历时，一屏里
+                         四段十几行，一键折叠才看得过来。
+
+                         没做「特殊符号」：参考用它插 ± ° Ⅰ Ⅱ Ⅲ、（+）（−），
+                         而我们的短语库里已经有「松动Ⅰ度，」「探诊（+），」这类成品，
+                         再来一个符号面板是重复。等短语库用一阵子再看缺不缺。 --}}
+                    <div class="case-sections-toolbar">
+                        <button type="button" class="btn btn-xs btn-link js-toggle-all-sections" data-collapse="false">
+                            <i class="fa fa-plus-square-o"></i> {{ __('medical_cases.expand_all') }}
+                        </button>
+                        <button type="button" class="btn btn-xs btn-link js-toggle-all-sections" data-collapse="true">
+                            <i class="fa fa-minus-square-o"></i> {{ __('medical_cases.collapse_all') }}
+                        </button>
+                    </div>
+
                     {{-- Examination (O) --}}
                     @include('medical_cases.partials.examination_section', ['case' => $case ?? null])
 

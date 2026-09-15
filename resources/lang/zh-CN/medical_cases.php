@@ -203,6 +203,9 @@ return [
     'search_icd10' => '搜索ICD-10诊断编码',
     // 治疗计划 = 打算做什么（跨次不变）；治疗 = 这次实际做了什么。
     // 与 treatment_plans 表（报价单+签名）不是一回事。
+    // 全局工具条：一键展开 / 折叠所有分段（复诊翻旧病历时用）
+    'expand_all' => '全部展开',
+    'collapse_all' => '全部折叠',
     'treatment_plan_section' => '治疗计划',
     'treatment_plan_hint' => '打算做什么（跨次不变）',
     'treatment_section' => '治疗',

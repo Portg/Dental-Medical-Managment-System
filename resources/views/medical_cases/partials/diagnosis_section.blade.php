@@ -9,28 +9,26 @@
      而医生的动作是「新建病历 → 一屏填完 → 提交」，不会填完再拐过去点一次。
      这个段落就是把它接进主流程。 --}}
 <div class="soap-section case-items-section diagnosis-section" data-section="diagnosis">
+    {{-- 段落头一行放完，与其他段落一致（见 case_items_section 的说明） --}}
     <div class="soap-section-header">
+        <button type="button" class="section-toggle js-toggle-section" data-section="diagnosis"
+                title="{{ __('medical_cases.collapse') }}">
+            <i class="fa fa-chevron-down"></i>
+        </button>
         <div class="soap-section-title">
             {{ __('medical_cases.diagnosis_section') }}
             <span class="required">*</span>
         </div>
-        <div class="soap-section-hint">{{ __('medical_cases.diagnosis_hint') }}</div>
+        <button type="button" class="btn btn-xs btn-link js-add-diagnosis"
+                title="{{ __('medical_cases.item_row_hint') }}">
+            <i class="fa fa-plus"></i> {{ __('medical_cases.add_item_row') }}
+        </button>
+        <button type="button" class="btn btn-xs btn-link js-copy-teeth" data-section="diagnosis"
+                title="{{ __('medical_cases.copy_teeth_hint') }}">
+            <i class="fa fa-clone"></i> {{ __('medical_cases.copy_teeth') }}
+        </button>
     </div>
     <div class="soap-section-body">
-        <div class="case-items-toolbar">
-            <button type="button" class="btn btn-xs btn-default js-add-diagnosis"
-                    title="{{ __('medical_cases.item_row_hint') }}">
-                <i class="fa fa-plus"></i> {{ __('medical_cases.add_item_row') }}
-            </button>
-            <button type="button" class="btn btn-xs btn-link js-copy-teeth" data-section="diagnosis"
-                    title="{{ __('medical_cases.copy_teeth_hint') }}">
-                <i class="fa fa-clone"></i> {{ __('medical_cases.copy_teeth') }}
-            </button>
-            <button type="button" class="btn btn-xs btn-link js-toggle-section" data-section="diagnosis">
-                <i class="fa fa-chevron-up"></i> <span class="toggle-text">{{ __('medical_cases.collapse') }}</span>
-            </button>
-        </div>
-
         <div class="case-items-rows" id="rows-diagnosis"></div>
 
         {{-- 由诊断行渲染出来的整段文字。没有 name，不进请求；只给既有的客户端

@@ -814,3 +814,72 @@
 .diagnosis-fields .select2-container {
     max-width: 340px;
 }
+
+/* ==========================================================================
+   段落头并成一行 + 全局工具条
+   ==========================================================================
+   原来每段是两行：标题行（右边挂一句 hint）+ 单独一行工具条，四段白吃四行。
+   参考产品的段落头就是一行：⊟ 检查 [添加]。 */
+
+.soap-section-header {
+    /* 覆盖上面的 justify-content: space-between —— 现在是「折叠 + 标题 + 按钮」
+       依次排开，不再是两端对齐的两个块 */
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 6px 12px;
+}
+
+/* 折叠三角：段落头最左，折叠态转成向右 */
+.section-toggle {
+    border: 0;
+    background: transparent;
+    color: #9aa5ae;
+    padding: 0 2px;
+    line-height: 1;
+    font-size: 12px;
+}
+
+.section-toggle:hover { color: #1890ff; }
+
+/* 标题后面的按钮不要再撑满，靠着标题排 */
+.soap-section-header .btn-xs {
+    padding: 1px 6px;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.soap-section-header .btn-link {
+    color: #8b959e;
+    text-decoration: none;
+}
+
+.soap-section-header .btn-link:hover { color: #1890ff; }
+
+/* 折叠态：段落头留着（医生一眼看得出这段有没有写），只收内容 */
+.soap-section.is-collapsed .soap-section-body {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* 段落上方的全局工具条 */
+.case-sections-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 2px 0 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #f0f2f4;
+}
+
+.case-sections-toolbar .btn-link {
+    color: #8b959e;
+    text-decoration: none;
+    padding: 1px 4px;
+    font-size: 12px;
+}
+
+.case-sections-toolbar .btn-link:hover { color: #1890ff; }
+
+/* hint 已从段落头去掉（医生知道「检查」该写什么，它只占位置）。
+   保留规则挡住其他 partial 里可能残留的 hint。 */
+.soap-section-header .soap-section-hint { display: none; }

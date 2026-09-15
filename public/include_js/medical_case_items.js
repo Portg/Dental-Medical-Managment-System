@@ -420,17 +420,40 @@ var CaseItems = (function () {
         });
 
         // 段落折叠：病历一长，来回滚很费劲
-        $(document).on('click', '.js-toggle-section', function () {
-            var $btn = $(this);
-            var section = $btn.data('section');
-            var $rows = $('#rows-' + section);
-            var collapsed = $rows.is(':visible');
+        // 折叠：段落头上的三角。原来是工具条里一个带「折叠/展开」文字的按钮，
+        // 现在并进了段落头（见 case_items_section.blade.php），只剩图标。
+    /**
+     * 折叠 / 展开一个段落。
+     *
+     * 折叠态把内容藏起来但保留段落头 —— 医生一眼还能看到「这一段有没有写」，
+     * 而不是整段消失。图标同时翻向，作为折叠状态的唯一指示（文字标签已去掉）。
+     */
+    function setCollapsed(section, collapse) {
+        if (!section) return;
 
-            $rows.toggle(!collapsed);
-            $btn.find('i').toggleClass('fa-chevron-up', !collapsed).toggleClass('fa-chevron-down', collapsed);
-            $btn.find('.toggle-text').text(
-                collapsed ? t('medical_cases.expand', '展开') : t('medical_cases.collapse', '折叠')
-            );
+        var $rows = $('#rows-' + section);
+        var $sec  = $('.case-items-section[data-section="' + section + '"]');
+
+        $rows.toggle(!collapse);
+        // 影像资料、治疗项目这些挂在段落下面的附属块跟着一起收
+        $sec.nextUntil('.soap-section:not(.soap-section-attached)', '.soap-section-attached').toggle(!collapse);
+        $sec.toggleClass('is-collapsed', collapse);
+        $sec.find('.js-toggle-section i')
+            .toggleClass('fa-chevron-down', !collapse)
+            .toggleClass('fa-chevron-right', collapse);
+    }
+
+        $(document).on('click', '.js-toggle-section', function () {
+            setCollapsed($(this).data('section'), $('#rows-' + $(this).data('section')).is(':visible'));
+        });
+
+        // 全部展开 / 全部折叠。参考产品的全局工具条上就有这两个 ——
+        // 复诊翻旧病历时，一键折叠才看得过来。
+        $(document).on('click', '.js-toggle-all-sections', function () {
+            var collapse = $(this).data('collapse') === true || $(this).data('collapse') === 'true';
+            $('.case-items-section').each(function () {
+                setCollapsed($(this).data('section'), collapse);
+            });
         });
 
         // 行内的牙位按钮：打开牙位选择器，目标是这一行

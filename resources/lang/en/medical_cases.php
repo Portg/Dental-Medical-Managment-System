@@ -201,6 +201,8 @@ return [
     'diagnosis_hint' => 'Diagnostic conclusion',
     'icd10_code' => 'ICD-10 Code',
     'search_icd10' => 'Search ICD-10 diagnosis code',
+    'expand_all' => 'Expand All',
+    'collapse_all' => 'Collapse All',
     'treatment_plan_section' => 'Treatment Plan',
     'treatment_plan_hint' => 'What is planned (carries across visits)',
     'treatment_section' => 'Treatment',
