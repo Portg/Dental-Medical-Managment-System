@@ -99,6 +99,9 @@ class DatabaseSeeder extends Seeder
         // 快捷短语分类
         $this->call(QuickPhraseCategoriesSeeder::class);
 
+        // 临床短语库（按语义槽位，主诉/现病史等九段）—— 分类之后再灌内容
+        $this->call(ClinicalPhraseLibrarySeeder::class);
+
         $this->command->info('');
         $this->command->info('===========================================');
         $this->command->info('  初始化完成！');

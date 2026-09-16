@@ -925,14 +925,18 @@ var PhrasePicker = (function () {
         // Remove ";searchtext" and insert the phrase text
         var before = val.substring(0, semicolonPos);
         var after = val.substring(cursorPos);
-        var newVal = before + phrase.phrase + after;
+        var raw = phrase.phrase || '';
+        // {} 是光标位（与锚定面板约定一致）；插完停在该处补数值
+        var caretAt = raw.indexOf('{}');
+        var text = caretAt >= 0 ? raw.replace('{}', '') : raw;
+        var newVal = before + text + after;
 
         $input.val(newVal);
 
-        // Set cursor position after inserted phrase
-        var newCursorPos = before.length + phrase.phrase.length;
+        var newCursorPos = before.length + (caretAt >= 0 ? caretAt : text.length);
         $input[0].setSelectionRange(newCursorPos, newCursorPos);
         $input.focus();
+        $input.trigger('input').trigger('change');
     }
 
     return {

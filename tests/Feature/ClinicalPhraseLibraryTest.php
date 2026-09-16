@@ -148,6 +148,30 @@ class ClinicalPhraseLibraryTest extends TestCase
     }
 
     /**
+     * 新库 migrate --seed 必须带上临床短语库，否则只有空分类、面板没得点。
+     */
+    public function test_DatabaseSeeder_挂了临床短语库(): void
+    {
+        $src = file_get_contents(database_path('seeders/DatabaseSeeder.php'));
+
+        $this->assertNotFalse($src);
+        $this->assertStringContainsString(
+            'ClinicalPhraseLibrarySeeder',
+            $src,
+            '新装机若不挂这个 seeder，病历锚定面板九段都是空的'
+        );
+        $catPos = strpos($src, 'QuickPhraseCategoriesSeeder');
+        $libPos = strpos($src, 'ClinicalPhraseLibrarySeeder');
+        $this->assertNotFalse($catPos);
+        $this->assertNotFalse($libPos);
+        $this->assertGreaterThan(
+            $catPos,
+            $libPos,
+            '必须先有分类再灌短语内容'
+        );
+    }
+
+    /**
      * 锚定面板要的整份数据：[字段 => [槽位 => [短语]]]，一次性下发不做按字段 ajax。
      */
     public function test_面板数据九个字段都在且带槽位(): void

@@ -142,11 +142,15 @@ function initQuickPhrases() {
         // Use last focused textarea (survives focus-shift to button)
         var $target = lastFocusedTextarea ? $(lastFocusedTextarea) : null;
         if ($target && $target.is('textarea') && $target.closest('#medical-record-form').length) {
+            // {} 是光标位（与锚定面板 / ClinicalPhraseLibrarySeeder 约定一致）
+            var caretAt = String(phrase).indexOf('{}');
+            var text = caretAt >= 0 ? String(phrase).replace('{}', '') : String(phrase);
             var curPos = $target[0].selectionStart;
             var textBefore = $target.val().substring(0, curPos);
             var textAfter = $target.val().substring(curPos);
-            $target.val(textBefore + phrase + textAfter);
-            $target[0].selectionStart = $target[0].selectionEnd = curPos + phrase.length;
+            $target.val(textBefore + text + textAfter);
+            $target[0].selectionStart = $target[0].selectionEnd =
+                curPos + (caretAt >= 0 ? caretAt : text.length);
             $target.focus();
 
             // .val() 不触发 input 事件，不显式刷新的话派生文本还是旧的，
@@ -154,6 +158,7 @@ function initQuickPhrases() {
             if (typeof CaseItems !== 'undefined' && $target.hasClass('case-item-content')) {
                 CaseItems.syncDerived($target.closest('.case-item-row').data('section'));
             }
+            $target.trigger('input').trigger('change');
         } else if (typeof CaseItems !== 'undefined' && $('.case-items-section').length) {
             // 兜底：没有聚焦过任何输入框时插到检查段最后一行。
             // 原来这里写死 $('#examination')，分行之后那是隐藏的派生框。
@@ -161,7 +166,14 @@ function initQuickPhrases() {
         } else {
             // Fallback: append to examination
             var $exam = $('#examination');
-            $exam.val($exam.val() + phrase);
+            var caretAtFb = String(phrase).indexOf('{}');
+            var textFb = caretAtFb >= 0 ? String(phrase).replace('{}', '') : String(phrase);
+            var startFb = ($exam.val() || '').length;
+            $exam.val(($exam.val() || '') + textFb);
+            if ($exam[0] && $exam[0].setSelectionRange) {
+                var nextFb = startFb + (caretAtFb >= 0 ? caretAtFb : textFb.length);
+                $exam[0].setSelectionRange(nextFb, nextFb);
+            }
             $exam.focus();
         }
     });

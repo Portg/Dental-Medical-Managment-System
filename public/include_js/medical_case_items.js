@@ -335,9 +335,14 @@ var CaseItems = (function () {
         var tooth = ($row.find('.case-item-tooth-value').val() || '').trim();
         if (tooth) text = text.split('__').join(tooth);
 
-        $ta.val(val.substring(0, pos) + text + val.substring(pos));
+        // {} 是光标位（短语库约定）；先处理 __ 再剥 {}，避免牙位替换挪动光标位
+        var caretAt = String(text).indexOf('{}');
+        var insertText = caretAt >= 0 ? String(text).replace('{}', '') : String(text);
+
+        $ta.val(val.substring(0, pos) + insertText + val.substring(pos));
         if (el && el.setSelectionRange) {
-            el.setSelectionRange(pos + text.length, pos + text.length);
+            var next = pos + (caretAt >= 0 ? caretAt : insertText.length);
+            el.setSelectionRange(next, next);
         }
         $ta.focus();
         syncDerived($row.data('section'));

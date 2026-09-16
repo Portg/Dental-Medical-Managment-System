@@ -264,6 +264,11 @@ class MedicalCaseService
             return $query->count() + 1;
         }
 
+        // 脏数据 / 未设就诊日：不能拿空日期去比，MySQL 8 会直接报 Incorrect DATE value
+        if (empty($case->case_date)) {
+            return $query->where('id', '<=', $case->id)->count();
+        }
+
         // 排在这份病历之前的份数 + 1 —— 同日多份用 id 兜底，保证序号稳定
         return $query->where(function ($q) use ($case) {
             $q->where('case_date', '<', $case->case_date)
