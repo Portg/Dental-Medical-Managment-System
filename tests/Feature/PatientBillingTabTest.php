@@ -7,6 +7,7 @@ use App\Branch;
 use App\InsuranceCompany;
 use App\Invoice;
 use App\InvoicePayment;
+use App\MedicalService;
 use App\Patient;
 use App\Permission;
 use App\Role;
@@ -511,5 +512,239 @@ class PatientBillingTabTest extends TestCase
             (float) $after,
             '收款之后未付余额必须跟着降，否则汇总栏刷新了也还是旧数'
         );
+    }
+
+    /** @test */
+    public function 收费页首屏是划价历史折叠且能列出未结清账单(): void
+    {
+        $html = $this->actingAs($this->admin)
+            ->get('/patients/' . $this->patient->id)
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('id="billingOutstandingSection"', $html);
+        $this->assertStringContainsString(__('invoices.include_outstanding'), $html);
+        $this->assertStringContainsString(__('invoices.billing_history'), $html);
+        $this->assertStringContainsString('id="billingHistoryCollapse"', $html);
+        $this->assertStringNotContainsString('id="billing_sub_billing"', $html);
+    }
+
+    /**
+     * 划价勾选历史欠费：前端先 POST /billing/create（只吃本次实收），
+     * 再用支付总额多出来的部分逐张 POST add-overdue-payment。
+     */
+    /** @test */
+    public function 划价当场收再按勾选补收历史欠费(): void
+    {
+        $this->grantCreateInvoices();
+        $service = $this->makeBillingService(50);
+        $open = $this->makeOpenInvoice(100);
+
+        $created = $this->actingAs($this->admin)
+            ->postJson('/billing/create', [
+                'patient_id'   => $this->patient->id,
+                'billing_mode' => 'direct',
+                'items'        => [$this->billingLine($service, 50)],
+                'payments'     => [['payment_method' => 'Cash', 'amount' => 50]],
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', true)
+            ->json('invoice_id');
+
+        $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $open->id . '/add-overdue-payment', [
+                'amount'         => 100,
+                'payment_method' => 'Cash',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 1);
+
+        $this->assertDatabaseHas('invoices', [
+            'id'                 => $created,
+            'paid_amount'        => '50.00',
+            'outstanding_amount' => '0.00',
+            'payment_status'     => 'paid',
+        ]);
+        $this->assertDatabaseHas('invoices', [
+            'id'                 => $open->id,
+            'paid_amount'        => '100.00',
+            'outstanding_amount' => '0.00',
+            'payment_status'     => 'paid',
+        ]);
+    }
+
+    /** @test */
+    public function 多张欠费按勾选顺序补收(): void
+    {
+        $this->grantCreateInvoices();
+        $first  = $this->makeOpenInvoice(60);
+        $second = $this->makeOpenInvoice(40);
+
+        $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $first->id . '/add-overdue-payment', [
+                'amount'         => 60,
+                'payment_method' => 'Cash',
+            ])
+            ->assertJsonPath('status', 1);
+
+        $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $second->id . '/add-overdue-payment', [
+                'amount'         => 40,
+                'payment_method' => 'Cash',
+            ])
+            ->assertJsonPath('status', 1);
+
+        $this->assertEquals(0, (float) $first->fresh()->outstanding_amount);
+        $this->assertEquals(0, (float) $second->fresh()->outstanding_amount);
+    }
+
+    /** @test */
+    public function 付款不足时新单收满欠费只补一部分(): void
+    {
+        $this->grantCreateInvoices();
+        $service = $this->makeBillingService(50);
+        $open = $this->makeOpenInvoice(100);
+
+        // 一共只付 80：新单吃 50，欠费只能补 30
+        $this->actingAs($this->admin)
+            ->postJson('/billing/create', [
+                'patient_id'   => $this->patient->id,
+                'billing_mode' => 'direct',
+                'items'        => [$this->billingLine($service, 50)],
+                'payments'     => [['payment_method' => 'Cash', 'amount' => 50]],
+            ])
+            ->assertJsonPath('status', true);
+
+        $this->actingAs($this->admin)
+            ->postJson('/invoices/' . $open->id . '/add-overdue-payment', [
+                'amount'         => 30,
+                'payment_method' => 'Cash',
+            ])
+            ->assertJsonPath('status', 1);
+
+        $this->assertEquals(70, (float) $open->fresh()->outstanding_amount);
+        $this->assertEquals('partial', $open->fresh()->payment_status);
+    }
+
+    /** @test */
+    public function 转前台收费不开收款也不动历史欠费(): void
+    {
+        $this->grantCreateInvoices();
+        $service = $this->makeBillingService(50);
+        $open = $this->makeOpenInvoice(100);
+
+        $created = $this->actingAs($this->admin)
+            ->postJson('/billing/create', [
+                'patient_id'   => $this->patient->id,
+                'billing_mode' => 'front_desk',
+                'items'        => [$this->billingLine($service, 50)],
+                'payments'     => [['payment_method' => 'Cash', 'amount' => 150]],
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', true)
+            ->json('invoice_id');
+
+        $invoice = Invoice::find($created);
+        $this->assertEquals(0, (float) $invoice->paid_amount);
+        $this->assertEquals(100, (float) $open->fresh()->outstanding_amount);
+    }
+
+    /** @test */
+    public function 抹零从新单折后应收里扣(): void
+    {
+        $this->grantCreateInvoices();
+        $service = $this->makeBillingService(50.80);
+
+        $id = $this->actingAs($this->admin)
+            ->postJson('/billing/create', [
+                'patient_id'   => $this->patient->id,
+                'billing_mode' => 'direct',
+                'round_off'    => 0.80,
+                'items'        => [$this->billingLine($service, 50.80)],
+                'payments'     => [['payment_method' => 'Cash', 'amount' => 50]],
+            ])
+            ->assertJsonPath('status', true)
+            ->json('invoice_id');
+
+        $invoice = Invoice::find($id);
+        $this->assertEquals(50.0, (float) $invoice->total_amount);
+        $this->assertEquals(0.8, (float) $invoice->order_discount_amount);
+        $this->assertEquals(0.0, (float) $invoice->outstanding_amount);
+    }
+
+    /** @test */
+    public function 工作台收费按钮带患者和就诊id(): void
+    {
+        $this->grantCreateInvoices();
+        $viewAppt = Permission::firstOrCreate(
+            ['slug' => 'view-appointments'],
+            ['name' => 'View Appointments', 'module' => 'appointments']
+        );
+        RolePermission::firstOrCreate([
+            'role_id'       => $this->admin->role_id,
+            'permission_id' => $viewAppt->id,
+        ]);
+
+        $appointmentId = $this->overdueInvoice->appointment_id;
+
+        $json = $this->actingAs($this->admin)
+            ->getJson('/today-work/data?status=all&date=' . now()->format('Y-m-d'))
+            ->assertOk()
+            ->json();
+
+        $this->assertNotEmpty($json['data'] ?? [], '今日就诊表应有这条预约');
+        $invoiceCell = collect($json['data'])->pluck('act_invoice')->implode(' ');
+        $this->assertStringContainsString(
+            'quickInvoice(' . $this->patient->id . ',' . $appointmentId . ')',
+            $invoiceCell
+        );
+    }
+
+    private function grantCreateInvoices(): void
+    {
+        $perm = Permission::firstOrCreate(
+            ['slug' => 'create-invoices'],
+            ['name' => 'Create Invoices', 'module' => 'invoices']
+        );
+        RolePermission::firstOrCreate([
+            'role_id'       => $this->admin->role_id,
+            'permission_id' => $perm->id,
+        ]);
+    }
+
+    private function makeBillingService(float $price): MedicalService
+    {
+        return MedicalService::create([
+            'name'       => '口腔检查',
+            'price'      => $price,
+            '_who_added' => $this->admin->id,
+        ]);
+    }
+
+    private function billingLine(MedicalService $service, float $price): array
+    {
+        return [
+            'medical_service_id' => $service->id,
+            'qty'                => 1,
+            'price'              => $price,
+            'discount_rate'      => 100,
+            'discounted_price'   => $price,
+            'actual_paid'        => $price,
+            'arrears'            => 0,
+        ];
+    }
+
+    private function makeOpenInvoice(float $amount): Invoice
+    {
+        return Invoice::create([
+            'invoice_no'         => Invoice::InvoiceNo(),
+            'patient_id'         => $this->patient->id,
+            'subtotal'           => $amount,
+            'total_amount'       => $amount,
+            'paid_amount'        => 0,
+            'outstanding_amount' => $amount,
+            'payment_status'     => 'unpaid',
+            '_who_added'         => $this->admin->id,
+        ]);
     }
 }
