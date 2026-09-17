@@ -128,3 +128,36 @@
     .tg-t { width: 19px; height: 19px; }
     .tg-row-milk .tg-quad { min-width: calc(8 * 19px + 7 * 2px); }
 }
+
+/* ==========================================================================
+   牙位软键盘（public/include_js/tooth_pad.js）
+   ==========================================================================
+   贴着正在编辑的那一行弹出。原来是个模态框 —— 盖住正在写的行，选完还要点
+   「确认」再关掉，一行里改两次牙位就得开关两次弹窗。 */
+
+.tooth-pad {
+    position: absolute;
+    z-index: 1060;              /* 高于 Bootstrap modal(1050)：病历页本身可能开在弹窗里 */
+    background: #fff;
+    border: 1px solid #c9d2da;
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(20, 30, 40, .08), 0 10px 28px rgba(20, 30, 40, .14);
+    padding: 10px 12px 8px;
+}
+
+.tooth-pad .tg { display: inline-grid; }
+
+.tooth-pad-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+    padding-top: 7px;
+    border-top: 1px solid #eef1f4;
+}
+
+.tooth-pad-hint {
+    font-size: 11px;
+    color: #8b959e;
+}

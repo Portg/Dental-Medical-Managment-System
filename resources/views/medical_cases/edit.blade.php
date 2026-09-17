@@ -11,10 +11,9 @@
 @section('css')
     @include('layouts.page_loader')
     <link rel="stylesheet" href="{{ asset('css/medical-record-edit.css') }}?v={{ filemtime(public_path('css/medical-record-edit.css')) }}">
-    <link rel="stylesheet" href="{{ asset('css/tooth-selector.css') }}?v={{ filemtime(public_path('css/tooth-selector.css')) }}">
     {{-- 锚定短语面板 --}}
     <link rel="stylesheet" href="{{ asset('css/phrase-panel.css') }}?v={{ filemtime(public_path('css/phrase-panel.css')) }}">
-    {{-- 牙位网格（恒牙乳牙同屏）：侧栏与选牙位弹窗共用 --}}
+    {{-- 牙位网格 + 软键盘 --}}
     <link rel="stylesheet" href="{{ asset('css/tooth-grid.css') }}?v={{ filemtime(public_path('css/tooth-grid.css')) }}">
 @endsection
 
@@ -212,8 +211,9 @@
                 'currentPatient' => $currentPatient
             ])
 
-            {{-- Tooth Chart Mini --}}
-            @include('medical_cases.partials.sidebar_tooth_chart')
+            {{-- 侧栏牙位图已去掉：它与牙位软键盘是同一件事的两份实现。
+                 软键盘就出现在正在编辑的那一行上，「往哪写」不言自明；
+                 侧栏那份离光标远，还要先让某一行获得焦点才知道往哪写。 --}}
 
             {{-- History Records --}}
             @include('medical_cases.partials.sidebar_history', ['historyRecords' => $historyRecords ?? []])
@@ -229,8 +229,22 @@
     <span>{{ __('common.loading') }}</span>
 </div>
 
-{{-- Tooth Selector Modal --}}
-@include('medical_cases.partials.tooth_selector_modal')
+{{-- 牙位软键盘的模板。点行里的牙位格时，tooth_pad.js 把这段搬到 body 下、
+     贴着那一行弹出来 —— 与短语面板同一个思路：要用的东西出现在光标旁边。
+
+     原来这里是一个模态框：盖住正在写的那一行，选完还要点「确认」再关掉，
+     一行里改两次牙位就得开关两次弹窗。 --}}
+<div id="tooth-pad-template" style="display:none">
+    @include('medical_cases.partials.tooth_grid', [
+        'idPrefix' => 'tooth-pad-grid',
+        'compact'  => false,
+        'onclick'  => null,
+    ])
+    <div class="tooth-pad-foot">
+        <span class="tooth-pad-hint">{{ __('medical_cases.tooth_pad_hint') }}</span>
+        <button type="button" class="btn btn-xs btn-default tooth-pad-done">{{ __('common.close') }}</button>
+    </div>
+</div>
 
 {{-- Service Selector Modal --}}
 @include('medical_cases.partials.service_selector_modal')
@@ -344,4 +358,6 @@ LanguageManager.loadAllFromPHP({
 {{-- 锚定短语面板：点进字段就在下方弹出对应槽位。排在最后 —— 它只挂事件，
      不依赖前面的初始化顺序。 --}}
 <script src="{{ asset('include_js/phrase_panel.js') }}?v={{ filemtime(public_path('include_js/phrase_panel.js')) }}"></script>
+{{-- 牙位软键盘：点行里的牙位格，网格贴着这一行弹出 --}}
+<script src="{{ asset('include_js/tooth_pad.js') }}?v={{ filemtime(public_path('include_js/tooth_pad.js')) }}"></script>
 @endsection

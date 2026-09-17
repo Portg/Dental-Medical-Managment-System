@@ -201,6 +201,7 @@ return [
     'diagnosis_hint' => 'Diagnostic conclusion',
     'icd10_code' => 'ICD-10 Code',
     'search_icd10' => 'Search ICD-10 diagnosis code',
+    'tooth_pad_hint' => 'Click a tooth to toggle; All selects the quadrant',
     'phrase_slot' => 'Slot',
     'phrase_slot_hint' => 'e.g. Onset, Site, Caries — reuse a name to join that group',
     'phrase_sort_order' => 'Order in slot',

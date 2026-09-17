@@ -20,7 +20,6 @@ $(document).ready(function() {
     initDoctorSelect();
     initCharacterCounter();
     initQuickPhrases();
-    initToothMiniChart();
     initTemplatePicker();
     if (typeof CaseItems !== 'undefined') {
         CaseItems.init();
@@ -179,82 +178,13 @@ function initQuickPhrases() {
     });
 }
 
-/**
- * 侧栏牙位图的「全」：整象限一键选 / 再点取消。
- *
- * 整区记录（某区牙周治疗、半口洁治）原来要一颗一颗点 8 下。
+/*
+ * 侧栏牙位图已去掉（改用贴着行弹出的牙位软键盘 tooth_pad.js），
+ * 原来挂在 #sidebar-tooth-grid 上的两个处理器（点牙写入当前行、「全」选整象限）
+ * 随之删除 —— 它们要找的元素在页面上已经不存在了。
+ * 高亮改由软键盘自己维护（它知道自己开在哪一行上），updateMiniChartHighlights
+ * 保留作空操作，仍有若干旧调用点。
  */
-function initToothGridAll() {
-    $(document).on('click', '#sidebar-tooth-grid .tg-all', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if ($(this).closest('.sidebar-tool-panel').hasClass('disabled')) return;
-        if (typeof CaseItems === 'undefined' || !$('.case-items-section').length) return;
-
-        var teeth = String($(this).data('teeth')).split(',');
-        var $row  = CaseItems.getFocusedRow();
-        var cur   = $row ? CaseItems.splitTeeth($row.find('.case-item-tooth-value').val()) : [];
-        var allOn = teeth.every(function (t) { return cur.indexOf(t) !== -1; });
-
-        // 一次算完再写回去，避免逐颗 toggle 触发 8 次重渲染
-        var next = allOn
-            ? cur.filter(function (t) { return teeth.indexOf(t) === -1; })
-            : cur.concat(teeth.filter(function (t) { return cur.indexOf(t) === -1; }));
-
-        if ($row) {
-            CaseItems.setRowTooth($row, next);
-        } else if (next.length) {
-            CaseItems.addRow('examination', next.join(','), '', false);
-        }
-        updateMiniChartHighlights();
-    });
-}
-
-/**
- * Initialize tooth mini chart click events (using event delegation)
- * Sidebar mini chart operates on examination teeth, with downstream sync to diagnosis
- */
-function initToothMiniChart() {
-    initToothGridAll();
-
-    $(document).on('click', '#sidebar-tooth-grid .tg-t', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Check if panel is disabled
-        if ($(this).closest('.sidebar-tool-panel').hasClass('disabled')) {
-            return;
-        }
-
-        var tooth = $(this).data('tooth');
-        if (!tooth) return;
-        var toothStr = tooth.toString();
-
-        // 分行录入：牙位属于某一行。点一颗牙 = 给当前聚焦行设这颗牙；
-        // 没有聚焦行时在检查段新建一行 —— 让「先点牙再写字」也能用。
-        // 旧结构是往整段的牙位集合里加/减，并把 examination 单向同步到 diagnosis。
-        if (typeof CaseItems !== 'undefined' && $('.case-items-section').length) {
-            // 往当前行里加/减这颗牙。一行可以带多颗 —— 16、17 都在右上区，
-            // 合并写在同一格里，不用分两行各写一遍。再点一次去掉。
-            CaseItems.toggleToothOnRow(CaseItems.getFocusedRow(), toothStr, 'examination');
-            updateMiniChartHighlights();
-            return;
-        }
-
-        // Check if tooth is in examination field
-        var examTeeth = JSON.parse($('#examination_teeth').val() || '[]');
-        var isSelected = examTeeth.indexOf(toothStr) !== -1;
-
-        if (isSelected) {
-            removeToothFromField('examination', tooth);
-        } else {
-            addToothToField('examination', tooth);
-        }
-
-        updateMiniChartHighlights();
-    });
-}
 
 /**
  * Add tooth to a specific field, with one-way downstream sync:
@@ -385,18 +315,9 @@ function removeTooth(field, tooth) {
  * (sidebar mini chart reflects examination state)
  */
 function updateMiniChartHighlights() {
-    // 分行录入下，"已选牙位" = 所有行的牙位去重；旧结构读的是整段的隐藏 json
-    var examTeeth = (typeof CaseItems !== 'undefined' && $('.case-items-section').length)
-        ? CaseItems.selectedTeeth()
-        : JSON.parse($('#examination_teeth').val() || '[]');
-    var allSelected = examTeeth;
-
-    // 恒牙与乳牙同屏之后没有 tab 可标了，原来那段「未激活 tab 上挂圆点」
-    // 的提示随之作废 —— 选中的牙就在眼前，不需要再提示「另一面也有选中」。
-    $('.tg-t').each(function() {
-        var tooth = $(this).data('tooth').toString();
-        $(this).toggleClass('selected', allSelected.indexOf(tooth) !== -1);
-    });
+    // 空操作。侧栏牙位图去掉之后没有「另一处高亮」需要同步了 ——
+    // 牙位软键盘开在哪一行上就画哪一行，自己维护高亮。
+    // 保留这个函数是因为它还有十来个调用点，逐个删动静比留一个空壳大。
 }
 
 // ==========================================================================

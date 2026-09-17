@@ -27,6 +27,21 @@
     $compact  = $compact ?? false;
     $onclick  = $onclick ?? null;
 
+    /**
+     * 格子上显示什么 —— 部位记录法：恒牙 1-8、乳牙 Ⅰ-Ⅴ，象限靠格子在十字里的
+     * 位置表示，不写在数字上。这是中文牙科的通行写法，也是参考产品的写法。
+     *
+     * data-tooth 仍然存 FDI 全码（16、55）：那是落库和查询用的。显示与存储分开，
+     * 与行内十字图（toothSymbol）同一套规则 —— 原来网格显示全码，和它自己的行
+     * 对不上，医生在网格上点的是「15」，行里却显示成「5」。
+     */
+    $symbol = function (int $t): string {
+        $quad = intdiv($t, 10);
+        $pos  = $t % 10;
+        $roman = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'];
+        return $quad >= 5 ? ($roman[$pos] ?? (string) $t) : (string) $pos;
+    };
+
     // [象限 => [乳牙, 恒牙]]，外→内的顺序
     $quadrants = [
         'ur' => ['milk' => [55, 54, 53, 52, 51], 'perm' => [18, 17, 16, 15, 14, 13, 12, 11]],
@@ -56,7 +71,7 @@
                         <span class="tg-t {{ $dent === 'milk' ? 'tg-milk' : '' }}"
                               data-tooth="{{ $t }}"
                               @if($onclick) onclick="{{ $onclick }}({{ $t }})" @endif
-                              title="{{ $t }}">{{ $t }}</span>
+                              title="{{ $t }}">{{ $symbol($t) }}</span>
                     @endforeach
                 </span>
 
@@ -67,7 +82,7 @@
                         <span class="tg-t {{ $dent === 'milk' ? 'tg-milk' : '' }}"
                               data-tooth="{{ $t }}"
                               @if($onclick) onclick="{{ $onclick }}({{ $t }})" @endif
-                              title="{{ $t }}">{{ $t }}</span>
+                              title="{{ $t }}">{{ $symbol($t) }}</span>
                     @endforeach
                 </span>
 
