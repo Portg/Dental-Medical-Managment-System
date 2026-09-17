@@ -141,36 +141,22 @@
     }
 
     /**
-     * Build action buttons for a card based on status.
+     * 看板卡片动作：流程走单列「下一步」下拉（与列表同链）；病历/收费旁挂图标。
      */
     function buildCardActions(item, status) {
         var btns = '';
-        switch (status) {
-            case 'not_arrived':
-                btns += '<button class="btn btn-xs btn-success" onclick="quickCheckIn(' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-sign-in"></i> ' + LanguageManager.trans('today_work.check_in') + '</button>';
-                btns += '<button class="btn btn-xs btn-danger" onclick="quickNoShow(' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-times"></i> ' + LanguageManager.trans('today_work.mark_no_show') + '</button>';
-                break;
-            case 'waiting':
-                btns += '<button class="btn btn-xs btn-info" onclick="quickCall(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-bullhorn"></i> ' + LanguageManager.trans('today_work.call') + '</button>';
-                btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.rollback') + '"><i class="fa fa-undo"></i></button>';
-                btns += '<button class="btn btn-xs btn-danger" onclick="quickCancelQueue(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-times"></i> ' + LanguageManager.trans('common.cancel') + '</button>';
-                break;
-            case 'called':
-                btns += '<button class="btn btn-xs btn-primary" onclick="quickStartTreatment(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-play"></i> ' + LanguageManager.trans('today_work.start_treatment') + '</button>';
-                btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.rollback') + '"><i class="fa fa-undo"></i></button>';
-                btns += '<button class="btn btn-xs btn-info" onclick="quickCall(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-bullhorn"></i> ' + LanguageManager.trans('today_work.recall') + '</button>';
-                break;
-            case 'in_treatment':
-                btns += '<button class="btn btn-xs btn-default" onclick="quickMedicalCase(' + item.patient_id + ',' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-file-text-o"></i></button>';
-                btns += '<button class="btn btn-xs btn-default" onclick="quickPrescription(' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-medkit"></i></button>';
-                btns += '<button class="btn btn-xs btn-default" onclick="quickInvoice(' + item.patient_id + ',' + item.appointment_id + ');event.stopPropagation();"><i class="fa fa-money"></i></button>';
-                btns += '<button class="btn btn-xs btn-success" onclick="quickCompleteTreatment(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.complete_treatment') + '"><i class="fa fa-check"></i></button>';
-                btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();" title="' + LanguageManager.trans('today_work.rollback') + '"><i class="fa fa-undo"></i></button>';
-                break;
-            case 'completed':
-                btns += '<button class="btn btn-xs btn-default" onclick="quickRollback(' + item.queue_id + ');event.stopPropagation();"><i class="fa fa-undo"></i> ' + LanguageManager.trans('today_work.rollback') + '</button>';
-                break;
+        if (typeof twRenderNextStepSelect === 'function') {
+            btns += twRenderNextStepSelect(status, item.appointment_id, item.queue_id);
         }
+        // 与列表旁挂列一致：病历 / 收费不塞进流程下拉
+        btns += ' <button class="btn btn-xs btn-default tw-icon-btn" title="'
+            + LanguageManager.trans('today_work.medical_case')
+            + '" onclick="quickMedicalCase(' + item.patient_id + ',' + item.appointment_id + ');event.stopPropagation();">'
+            + '<i class="fa fa-file-text-o"></i></button>';
+        btns += ' <button class="btn btn-xs btn-default tw-icon-btn" title="'
+            + LanguageManager.trans('today_work.invoice')
+            + '" onclick="quickInvoice(' + item.patient_id + ',' + item.appointment_id + ');event.stopPropagation();">'
+            + '<i class="fa fa-money"></i></button>';
         return btns;
     }
 

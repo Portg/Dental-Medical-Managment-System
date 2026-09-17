@@ -133,7 +133,7 @@ return [
 
     // Billing
     'billing_method'     => 'Method',
-    'col_flow' => 'Flow',
+    'col_flow' => 'Visit flow',
     'badge_member' => 'Member',
     'badge_outstanding' => 'Outstanding ¥:amount',
     'col_more' => 'More',

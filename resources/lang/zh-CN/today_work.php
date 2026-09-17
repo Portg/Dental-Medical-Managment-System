@@ -135,7 +135,7 @@ return [
 
     // 今日对账
     'billing_method'     => '支付方式',
-    'col_flow' => '流程',
+    'col_flow' => '就诊流程',
     'badge_member' => '会员',
     'badge_outstanding' => '欠费 ¥:amount',
     'col_more' => '更多',

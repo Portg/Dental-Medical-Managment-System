@@ -178,12 +178,17 @@
 .kanban-card-actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 4px;
 }
 
 .kanban-card-actions .btn {
     padding: 2px 8px;
     font-size: var(--tw-fs-aux);
+}
+
+.kanban-card-actions select.tw-next-dd {
+    max-width: 120px;
 }
 
 /* Collapsed card: hide body details but keep action buttons (check-in / no-show) */

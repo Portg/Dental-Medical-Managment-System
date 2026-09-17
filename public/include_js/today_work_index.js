@@ -233,23 +233,6 @@ function refreshStats() {
     });
 }
 
-/** 「下一步」下拉：执行所选流程动作后复位到展示态 */
-function twOnNextStepChange(sel) {
-    var opt = sel.options[sel.selectedIndex];
-    var fn = opt && opt.value;
-    var arg = opt ? opt.getAttribute('data-arg') : null;
-    sel.selectedIndex = 0;
-    if (!fn || typeof window[fn] !== 'function') {
-        return;
-    }
-    var n = arg === null || arg === '' ? undefined : Number(arg);
-    if (n !== undefined && !isNaN(n)) {
-        window[fn](n);
-    } else {
-        window[fn](arg);
-    }
-}
-
 /**
  * 状态分档页签：点一下按该状态筛。
  *

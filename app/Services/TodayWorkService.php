@@ -580,10 +580,15 @@ class TodayWorkService
             return '';
         }
 
-        $primaryLabel = $options[0][1];
+        $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
+        // 已离开：合上时显示终态文案，展开才是「回退」——对齐视频列里看到的是当前态/下一步，不是回退本身
+        $closedLabel = $status === 'completed'
+            ? __('today_work.completed')
+            : $options[0][1];
+
         $html = '<select class="tw-next-dd" aria-label="' . e(__('today_work.col_flow')) . '"'
             . ' onchange="twOnNextStepChange(this)">'
-            . '<option value="" selected disabled hidden>' . e($primaryLabel) . '</option>';
+            . '<option value="" selected disabled hidden>' . e($closedLabel) . '</option>';
         foreach ($options as [$fn, $label, $arg]) {
             $html .= '<option value="' . e($fn) . '" data-arg="' . e((string) $arg) . '">'
                 . e($label) . '</option>';

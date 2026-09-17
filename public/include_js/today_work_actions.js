@@ -218,6 +218,79 @@
         }
     };
 
+    /**
+     * 「就诊流程」单列下一步：与 TodayWorkService::nextStepOptions 保持同序同动作。
+     * 列表由服务端渲染；看板复用这份，避免两套状态链各长各的。
+     */
+    window.twNextStepOptions = function (status, aptId, queueId) {
+        switch (status) {
+            case 'not_arrived':
+                return [
+                    ['quickCheckIn', LanguageManager.trans('today_work.check_in'), aptId],
+                    ['quickNoShow', LanguageManager.trans('today_work.mark_no_show'), aptId]
+                ];
+            case 'waiting':
+                return [
+                    ['quickCall', LanguageManager.trans('today_work.call'), queueId],
+                    ['quickRollback', LanguageManager.trans('today_work.rollback'), queueId],
+                    ['quickCancelQueue', LanguageManager.trans('common.cancel'), queueId]
+                ];
+            case 'called':
+                return [
+                    ['quickStartTreatment', LanguageManager.trans('today_work.start_treatment'), queueId],
+                    ['quickCall', LanguageManager.trans('today_work.recall'), queueId],
+                    ['quickRollback', LanguageManager.trans('today_work.rollback'), queueId]
+                ];
+            case 'in_treatment':
+                return [
+                    ['quickCompleteTreatment', LanguageManager.trans('today_work.complete_treatment'), queueId],
+                    ['quickRollback', LanguageManager.trans('today_work.rollback'), queueId]
+                ];
+            case 'completed':
+                return [
+                    ['quickRollback', LanguageManager.trans('today_work.rollback'), queueId]
+                ];
+            default:
+                return [];
+        }
+    };
+
+    window.twRenderNextStepSelect = function (status, aptId, queueId) {
+        var options = window.twNextStepOptions(status, aptId, queueId);
+        if (!options.length) {
+            return '';
+        }
+        var closed = status === 'completed'
+            ? LanguageManager.trans('today_work.completed')
+            : options[0][1];
+        var html = '<select class="tw-next-dd" aria-label="'
+            + LanguageManager.trans('today_work.col_flow', '就诊流程')
+            + '" onchange="twOnNextStepChange(this);event.stopPropagation();">'
+            + '<option value="" selected disabled hidden>' + closed + '</option>';
+        options.forEach(function (row) {
+            html += '<option value="' + row[0] + '" data-arg="' + row[2] + '">' + row[1] + '</option>';
+        });
+        html += '</select>';
+        return html;
+    };
+
+    /** 「下一步」下拉：执行所选流程动作后复位到展示态 */
+    window.twOnNextStepChange = function (sel) {
+        var opt = sel.options[sel.selectedIndex];
+        var fn = opt && opt.value;
+        var arg = opt ? opt.getAttribute('data-arg') : null;
+        sel.selectedIndex = 0;
+        if (!fn || typeof window[fn] !== 'function') {
+            return;
+        }
+        var n = arg === null || arg === '' ? undefined : Number(arg);
+        if (n !== undefined && !isNaN(n)) {
+            window[fn](n);
+        } else {
+            window[fn](arg);
+        }
+    };
+
     // ── Helper: get chair options for bootbox select ─────
     function getChairOptions() {
         var options = [{ text: '---', value: '' }];
