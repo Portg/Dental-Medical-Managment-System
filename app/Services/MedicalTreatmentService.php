@@ -12,13 +12,13 @@ class MedicalTreatmentService
      */
     public function getTreatmentDataForAppointment(int $appointmentId): array
     {
-        $patientId = DB::table('appointments')
+        $appointment = DB::table('appointments')
             ->where('id', $appointmentId)
             ->whereNull('deleted_at')
-            ->value('patient_id');
+            ->first(['patient_id', 'doctor_id']);
 
         // Use Eloquent so Blade can access accessors like full_name
-        $patient = $patientId ? Patient::find($patientId) : null;
+        $patient = $appointment?->patient_id ? Patient::find($appointment->patient_id) : null;
 
         $medicalCards = collect();
         if ($patient) {
@@ -29,12 +29,18 @@ class MedicalTreatmentService
                 ->get();
         }
 
+        $doctorId = $appointment->doctor_id ?? null;
+        $doctor = $doctorId ? \App\User::find($doctorId) : null;
+
         return [
             'patient' => $patient,
             'medical_cards' => $medicalCards,
             'appointment_id' => $appointmentId,
             // 划价面板的「操作医生」下拉，与患者页同一份列表
             'doctors' => \App\User::activeDoctorOptions(),
+            // 开加工单预填接诊医生（与本次预约一致）
+            'doctor_id' => $doctorId,
+            'doctor_text' => $doctor ? trim(($doctor->surname ?? '') . ($doctor->othername ?? '')) : null,
         ];
     }
 }

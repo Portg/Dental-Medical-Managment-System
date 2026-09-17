@@ -107,11 +107,13 @@
                                                     @can('manage-labs')
                                                         @if(!empty($patient))
                                                             <a class="btn green btn-outline btn-circle btn-sm"
-                                                               href="{{ url('lab-cases') }}?{{ http_build_query([
+                                                               href="{{ url('lab-cases') }}?{{ http_build_query(array_filter([
                                                                     'patient_id'     => $patient->id,
                                                                     'patient_text'   => $patient->patient_no . ' - ' . $patient->full_name,
                                                                     'appointment_id' => $appointment_id,
-                                                               ]) }}">
+                                                                    'doctor_id'      => $doctor_id ?? null,
+                                                                    'doctor_text'    => $doctor_text ?? null,
+                                                               ])) }}">
                                                                 <i class="fa fa-cogs"></i> {{ __('medical_treatment.create_lab_case') }}
                                                             </a>
                                                         @endif

@@ -207,6 +207,8 @@ return [
     'lab_status_try_in'        => '试戴',
     'lab_status_completed'     => '完成',
     'lab_status_rework'        => '返工',
+    'lab_mark_sent'            => '送出',
+    'lab_mark_returned'        => '签收',
 
     // 增强筛选
     'filter_all_types'         => '所有类型',

@@ -339,6 +339,11 @@
                         <li>
                             <a href="#billing_tab" data-toggle="tab">{{ __('invoices.billing_tab_label') }}</a>
                         </li>
+                        @can('manage-labs')
+                        <li>
+                            <a href="#lab_cases_tab" data-toggle="tab">{{ __('patient.lab_cases') }} <span class="badge">{{ $labCasesCount ?? 0 }}</span></a>
+                        </li>
+                        @endcan
                         <li>
                             <a href="#followups_tab" data-toggle="tab">{{ __('patient.followups') }} <span class="badge">{{ $followupsCount }}</span></a>
                         </li>
@@ -636,6 +641,37 @@
                             @include('patients.partials.billing_tab')
                         </div>
 
+                        @can('manage-labs')
+                        <!-- Lab Cases Tab -->
+                        <div class="tab-pane" id="lab_cases_tab">
+                            <div class="table-toolbar">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn blue btn-outline sbold" onclick="createPatientLabCase()">
+                                                {{ __('lab_cases.add_lab_case') }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <table class="table table-striped table-bordered table-hover order-column" id="patient_lab_cases_table">
+                                <thead>
+                                <tr>
+                                    <th>{{ __('common.id') }}</th>
+                                    <th>{{ __('lab_cases.lab_case_no') }}</th>
+                                    <th>{{ __('lab_cases.lab') }}</th>
+                                    <th>{{ __('lab_cases.items') }}</th>
+                                    <th>{{ __('lab_cases.status') }}</th>
+                                    <th>{{ __('lab_cases.expected_return_date') }}</th>
+                                </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        @endcan
+
                         <!-- Follow-ups Tab -->
                         <div class="tab-pane" id="followups_tab">
                             <div class="table-toolbar">
@@ -681,6 +717,9 @@
 @include('patients.modals.view_image')
 @include('patients.modals.add_followup')
 @include('patients.modals.view_followup')
+@can('manage-labs')
+@include('patients.modals.add_lab_case')
+@endcan
 {{-- 改约弹窗与预约页共用同一个 partial：预约记录页签的「改约」就地完成，不用跳去
      预约页再翻一遍列表。其余操作（编辑/删除/生成账单）仍跳转过去，见
      AppointmentService::buildActionColumn() 的注释。
@@ -704,8 +743,17 @@
             'invoices': @json(__('invoices')),
             'messages': @json(__('messages')),
             'data_security': @json(__('data_security')),
-            'odontogram': @json(__('odontogram'))
+            'odontogram': @json(__('odontogram')),
+            'lab_cases': @json(__('lab_cases')),
+            'common': @json(__('common'))
         });
+
+        @can('manage-labs')
+        var patientLabCaseData = {
+            prosthesisTypes: @json(collect(\App\LabCase::prosthesisTypeOptions())->mapWithKeys(fn ($label, $key) => [$key => __('lab_cases.type_' . $key)])),
+            materials: @json(collect(\App\LabCase::materialOptions())->mapWithKeys(fn ($label, $key) => [$key => __('lab_cases.material_' . $key)]))
+        };
+        @endcan
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
     <script src="{{ asset('include_js/reschedule_appointment.js') }}?v={{ filemtime(public_path('include_js/reschedule_appointment.js')) }}"></script>
@@ -730,7 +778,17 @@
             }
         });
 
-        // 支持 #billing_tab / #dental_chart_tab 等 hash 直达对应 Tab
+        @can('manage-labs')
+        var labCasesInited = false;
+        $('a[href="#lab_cases_tab"]').on('shown.bs.tab', function () {
+            if (!labCasesInited && typeof loadPatientLabCases === 'function') {
+                labCasesInited = true;
+                loadPatientLabCases();
+            }
+        });
+        @endcan
+
+        // 支持 #billing_tab / #dental_chart_tab / #lab_cases_tab 等 hash 直达对应 Tab
         // （工作台「收费」→ #billing_tab；「开始记录」后回跳牙位图等）
         $(function () {
             var hash = window.location.hash;

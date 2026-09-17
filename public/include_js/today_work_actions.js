@@ -312,4 +312,39 @@
         return options;
     }
 
+    /**
+     * 工作台外加工：送出 / 签收。
+     * LabCaseController 返回 status: true/false（布尔），与候诊队列的 'success' 字符串不同。
+     */
+    window.quickLabStatus = function (labCaseId, status) {
+        var payload = { _token: csrfToken, status: status };
+        if (status === 'sent') {
+            var d = new Date();
+            var m = d.getMonth() + 1;
+            var day = d.getDate();
+            payload.sent_date = d.getFullYear() + '-' +
+                (m < 10 ? '0' : '') + m + '-' +
+                (day < 10 ? '0' : '') + day;
+        }
+        $.post('/lab-cases/' + labCaseId + '/update-status', payload, function (response) {
+            if (response.status) {
+                toastr.success(response.message || LanguageManager.trans('lab_cases.status_updated', '状态已更新'));
+                if (typeof invalidateTabCache === 'function') {
+                    invalidateTabCache();
+                }
+                if (typeof loadTabData === 'function') {
+                    loadTabData('lab-cases');
+                }
+                if (typeof loadTabCounts === 'function') {
+                    loadTabCounts();
+                }
+            } else {
+                toastr.error(response.message || 'Error');
+            }
+        }).fail(function (xhr) {
+            var msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error';
+            toastr.error(msg);
+        });
+    };
+
 })(window);

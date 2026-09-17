@@ -1,4 +1,4 @@
-<div class="modal fade modal-form" id="create-lab-case-modal" role="dialog" aria-hidden="true">
+<div class="modal fade modal-form modal-form-lg" id="create-lab-case-modal" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -24,59 +24,39 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label class="text-primary">{{ __('lab_cases.lab') }} *</label>
-                                <select name="lab_id" class="form-control">
+                                <select id="create_lab_id" name="lab_id" class="form-control">
                                     <option value="">{{ __('lab_cases.select_lab') }}</option>
                                     @foreach($labs as $lab)
-                                        <option value="{{ $lab->id }}">{{ $lab->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="text-primary">{{ __('lab_cases.prosthesis_type') }} *</label>
-                                <select name="prosthesis_type" class="form-control">
-                                    <option value="">--</option>
-                                    @foreach(\App\LabCase::prosthesisTypeOptions() as $key => $label)
-                                        <option value="{{ $key }}">{{ __('lab_cases.type_' . $key) }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>{{ __('lab_cases.material') }}</label>
-                                <select name="material" class="form-control">
-                                    <option value="">--</option>
-                                    @foreach(\App\LabCase::materialOptions() as $key => $label)
-                                        <option value="{{ $key }}">{{ __('lab_cases.material_' . $key) }}</option>
+                                        <option value="{{ $lab->id }}"
+                                                data-turnaround="{{ $lab->avg_turnaround_days ?? '' }}"
+                                                data-contact="{{ $lab->contact ?? '' }}"
+                                                data-phone="{{ $lab->phone ?? '' }}"
+                                                data-specialties="{{ $lab->specialties ?? '' }}">{{ $lab->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label>{{ __('lab_cases.color_shade') }}</label>
-                                <input type="text" name="color_shade" class="form-control" placeholder="A2">
+                                <label>{{ __('lab_cases.processing_days') }}</label>
+                                <input type="number" id="create_processing_days" name="processing_days" class="form-control" value="7" min="1" max="365">
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>{{ __('lab_cases.teeth_positions') }}</label>
-                                <input type="text" name="teeth_positions" class="form-control" placeholder="11, 12, 21">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>{{ __('lab_cases.expected_return_date') }}</label>
-                                <input type="text" name="expected_return_date" class="form-control js-date" autocomplete="off">
+                                <input type="text" id="create_expected_return_date" name="expected_return_date" class="form-control js-date" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>{{ __('lab_cases.sent_date') }}</label>
+                                <input type="text" id="create_sent_date" name="sent_date" class="form-control js-date" autocomplete="off">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -92,6 +72,36 @@
                             </div>
                         </div>
                     </div>
+                    <div id="create_lab_info_box" class="alert alert-info" style="display:none; padding:8px 12px;">
+                        <span>{{ __('lab_cases.lab_info_contact') }}: <strong id="create_lab_info_contact">-</strong></span>
+                        <span style="margin-left:12px;">{{ __('lab_cases.lab_info_phone') }}: <strong id="create_lab_info_phone">-</strong></span>
+                        <span style="margin-left:12px;">{{ __('lab_cases.lab_info_turnaround') }}: <strong id="create_lab_info_turnaround">-</strong></span>
+                    </div>
+
+                    {{-- 明细走 items[]，与 store 校验一致；原先平铺字段提交会被拒 --}}
+                    <div class="form-group" style="margin-top:12px;">
+                        <label class="text-primary">{{ __('lab_cases.items') }} *</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-condensed">
+                                <thead>
+                                <tr>
+                                    <th style="width:30px">#</th>
+                                    <th>{{ __('lab_cases.prosthesis_type') }} *</th>
+                                    <th>{{ __('lab_cases.material') }}</th>
+                                    <th>{{ __('lab_cases.color_shade') }}</th>
+                                    <th>{{ __('lab_cases.teeth_positions') }}</th>
+                                    <th style="width:60px">{{ __('lab_cases.qty') }}</th>
+                                    <th style="width:30px"></th>
+                                </tr>
+                                </thead>
+                                <tbody id="create-item-rows" class="item-rows-container"></tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-xs btn-default" onclick="addItemRow('create')">
+                            <i class="fa fa-plus"></i> {{ __('lab_cases.add_item_row') }}
+                        </button>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">

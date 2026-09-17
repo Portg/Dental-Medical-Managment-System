@@ -403,11 +403,12 @@ function renderLabCasesTab(data) {
     html += '<th>' + LanguageManager.trans('common.status') + '</th>';
     html += '<th>' + LanguageManager.trans('today_work.lab_expected_date') + '</th>';
     html += '<th>' + LanguageManager.trans('today_work.lab_actual_date') + '</th>';
+    html += '<th>' + LanguageManager.trans('common.action', '操作') + '</th>';
     html += '</tr></thead><tbody>';
     data.forEach(function(item) {
         var badgeClass = statusColors[item.status] || 'label-default';
         html += '<tr>';
-        html += '<td>' + _escHtml(item.lab_case_no) + '</td>';
+        html += '<td><a href="/lab-cases/' + item.id + '">' + _escHtml(item.lab_case_no) + '</a></td>';
         html += '<td><span class="clickable-name" onclick="openPatientDrawer(' + item.patient_id + ')">' + _escHtml(item.patient_name) + '</span></td>';
         html += '<td>' + _escHtml(item.doctor_name) + '</td>';
         html += '<td>' + _escHtml(item.prosthesis_type) + '</td>';
@@ -416,6 +417,18 @@ function renderLabCasesTab(data) {
         html += '<td><span class="label ' + badgeClass + '">' + LanguageManager.trans('today_work.lab_status_' + item.status) + '</span></td>';
         html += '<td>' + _escHtml(item.expected_return_date || '-') + '</td>';
         html += '<td>' + _escHtml(item.actual_return_date || '-') + '</td>';
+        html += '<td class="tw-lab-actions">';
+        // 待送出 → 一键送出；在途 → 一键签收；已到件则只留打开
+        if (item.status === 'pending') {
+            html += '<button type="button" class="btn btn-xs btn-info" onclick="quickLabStatus(' + item.id + ',\'sent\')">'
+                + LanguageManager.trans('today_work.lab_mark_sent', '送出') + '</button> ';
+        } else if (item.status === 'sent' || item.status === 'in_production' || item.status === 'rework') {
+            html += '<button type="button" class="btn btn-xs btn-success" onclick="quickLabStatus(' + item.id + ',\'returned\')">'
+                + LanguageManager.trans('today_work.lab_mark_returned', '签收') + '</button> ';
+        }
+        html += '<a class="btn btn-xs btn-default" href="/lab-cases/' + item.id + '">'
+            + LanguageManager.trans('common.view', '查看') + '</a>';
+        html += '</td>';
         html += '</tr>';
     });
     html += '</tbody></table></div></div>';

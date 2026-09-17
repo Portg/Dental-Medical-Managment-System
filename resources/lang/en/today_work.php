@@ -205,6 +205,8 @@ return [
     'lab_status_try_in'        => 'Try-in',
     'lab_status_completed'     => 'Completed',
     'lab_status_rework'        => 'Rework',
+    'lab_mark_sent'            => 'Send out',
+    'lab_mark_returned'        => 'Receive',
 
     // Enhanced filters
     'filter_all_types'         => 'All Types',
