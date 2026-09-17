@@ -14,50 +14,11 @@
     'required'    => true,
 ])
 
-{{-- 治疗项目原来单占一张卡片，和「治疗」平级 —— 它是这次治疗做了哪些收费项目，
-     附属于治疗。并进同一张卡片。 --}}
-<div class="soap-section soap-section-attached">
-    <div class="soap-section-body">
-        <div>
-            <label style="font-size: 13px; color: #666; margin-bottom: 6px; display: block;">
-                {{ __('medical_cases.treatment_services') }}
-            </label>
-            <div class="service-tags" id="treatment-service-tags">
-                @foreach($treatmentServices as $service)
-                    <span class="service-tag" data-id="{{ $service['id'] }}">
-                        {{ $service['name'] ?? $service['id'] }}
-                        <span class="remove-service" onclick="removeService('{{ $service['id'] }}')">&times;</span>
-                    </span>
-                @endforeach
-                <button type="button" class="add-teeth-btn" onclick="openServiceSelector()">
-                    {{ __('medical_cases.add_service') }}
-                </button>
-            </div>
+{{-- 治疗项目（关联收费项目）已去掉。
 
-            {{-- 制定治疗计划 —— 医生是在写完治疗时决定要不要做方案的，入口就该在这儿。
+     划价面板是唯一的开单入口（92f20f8 把两套开单 UI 合成一套之后），这里再放一处
+     选项目，等于同一件事有两个录入口 —— 两处对不上时谁也说不清以哪个为准。
+     医生写病历只管临床叙述；这次做了哪些收费项目，在划价面板里划。
 
-                 治疗计划不是「病历的一段」：它有报价、要患者签字（treatment_plans 上
-                 有 estimated_cost / final_price / risk_disclosure / electronic_signature），
-                 而且跨多次就诊。所以做成独立文书，从这里带上下文跳过去，
-                 而不是塞进病历里 —— 和加工单同样的处理。
-
-                 treatment_plans 此前一直是 0 条，原因和 diagnoses 一样：主流程走不到，
-                 只能从病历详情页的 Tab 里单独添加。 --}}
-            @can('edit-patients')
-                @if(isset($case) && $case->exists)
-                    <div style="margin-top: 10px;">
-                        <a class="btn btn-xs btn-default"
-                           href="{{ url('treatment-plans') }}?{{ http_build_query([
-                                'patient_id'      => $case->patient_id,
-                                'medical_case_id' => $case->id,
-                           ]) }}">
-                            <i class="fa fa-list-alt"></i> {{ __('medical_cases.create_treatment_plan') }}
-                        </a>
-                    </div>
-                @endif
-            @endcan
-            <input type="hidden" name="treatment_services" id="treatment_services"
-                   value="{{ json_encode($treatmentServices) }}">
-        </div>
-    </div>
-</div>
+     treatment_services 这一列没有删，老病历上存过的项目仍能读出来（打印、详情页、
+     API 都在消费它），只是不再从病历页录入。 --}}

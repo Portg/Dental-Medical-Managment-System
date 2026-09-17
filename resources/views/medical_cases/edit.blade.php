@@ -218,8 +218,14 @@
             {{-- History Records --}}
             @include('medical_cases.partials.sidebar_history', ['historyRecords' => $historyRecords ?? []])
 
-            {{-- Quick Phrases --}}
-            @include('medical_cases.partials.sidebar_quick_phrases')
+            {{-- 侧栏快捷短语已去掉。
+
+                 短语面板改成锚定在正在编辑的字段上之后，这一份就成了同一批数据的
+                 远距离副本；而短语库从 30 条扩到 439 条、九个字段之后，它在侧栏里
+                 摊开就是一面墙 —— 越全越没法用。
+
+                 <kbd>/</kbd> 模板、<kbd>;</kbd> 短语两个键盘入口挪到了锚定面板的
+                 页脚上，就在医生眼前，比压在侧栏底部更容易被发现。 --}}
         </div>
     </div>
 </div>
@@ -246,8 +252,8 @@
     </div>
 </div>
 
-{{-- Service Selector Modal --}}
-@include('medical_cases.partials.service_selector_modal')
+{{-- 服务选择器弹窗已去掉：它唯一的入口是治疗项目那块的「添加项目」，
+     而治疗项目已从病历页移除（划价面板是唯一开单入口）。 --}}
 
 {{-- Image Upload Modal --}}
 @include('medical_cases.partials.image_upload_modal')
@@ -286,7 +292,12 @@ var MedicalRecordConfig = {
     // 段落名从服务端下发：这一页只往 LanguageManager 灌了 templates 一组，
     // medical_cases.* 在前端拿不到，面板标题会印出键名而不是「现病史」。
     phraseLabels: @json(collect(array_keys($phrasePanel ?? []))
-        ->mapWithKeys(fn ($f) => [$f => __('medical_cases.phrase_category_' . $f)])),
+        ->mapWithKeys(fn ($f) => [$f => __('medical_cases.phrase_category_' . $f)])
+        ->merge([
+            // 面板页脚的两个键盘入口（原来压在侧栏底部，侧栏已去掉）
+            'medical_cases.hint_template_key' => __('medical_cases.hint_template_key'),
+            'medical_cases.hint_phrase_key'   => __('medical_cases.hint_phrase_key'),
+        ])),
     urls: {
         searchPatient: '{{ url("search-patient") }}',
         medicalCases: '{{ url("medical-cases") }}'

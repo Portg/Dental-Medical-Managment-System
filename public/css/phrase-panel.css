@@ -116,3 +116,16 @@
     .phrase-slot { grid-template-columns: 1fr; gap: 2px; }
     .phrase-slot-name { text-align: left; text-align-last: left; }
 }
+
+/* 页脚的键盘入口。原来这两条压在侧栏底部，侧栏去掉之后挪到面板上 ——
+   就在医生眼前，反而比原来容易被发现。 */
+.phrase-panel-foot {
+    flex: 0 0 auto;
+    padding: 5px 10px;
+    border-top: 1px solid #e6eaee;
+    background: #f6f8f9;
+    font-size: 11px;
+    color: #8b959e;
+}
+
+.phrase-panel-sep { margin: 0 8px; color: #c9d2da; }

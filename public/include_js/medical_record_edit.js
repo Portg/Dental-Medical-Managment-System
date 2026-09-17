@@ -324,12 +324,11 @@ function updateMiniChartHighlights() {
 // Service & Image Management
 // ==========================================================================
 
-/**
- * Open service selector modal
+/*
+ * openServiceSelector 已删除：入口（治疗项目的「添加项目」）与它打开的弹窗
+ * 都已从病历页移除。
  */
-function openServiceSelector() {
-    $('#service_selector_modal').modal('show');
-}
+
 
 /**
  * Open image upload modal
@@ -342,15 +341,10 @@ function openImageSelector() {
     $('#image_upload_modal').modal('show');
 }
 
-/**
- * Remove a service from the list
+/*
+ * removeService 已删除：治疗项目那一块从病历页去掉了（划价面板是唯一开单入口），
+ * 调用它的那个服务标签 × 按钮随之不存在。
  */
-function removeService(serviceId) {
-    var services = JSON.parse($('#treatment_services').val() || '[]');
-    services = services.filter(function(s) { return s.id != serviceId; });
-    $('#treatment_services').val(JSON.stringify(services));
-    $('#treatment-service-tags .service-tag[data-id="' + serviceId + '"]').remove();
-}
 
 // ==========================================================================
 // Template Insertion
@@ -450,14 +444,11 @@ function runQualityCheck() {
         });
     }
 
-    // Check treatment services
-    var services = JSON.parse($('#treatment_services').val() || '[]');
-    if (services.length === 0) {
-        warnings.push({
-            text: MedicalRecordConfig.translations.qcTreatmentLink,
-            rule: MedicalRecordConfig.translations.qcTreatmentRule
-        });
-    }
+    // 「未关联收费项目」这条质检去掉了。
+    //
+    // 治疗项目那一块已从病历页移除（划价面板是唯一开单入口），#treatment_services
+    // 这个隐藏字段不再渲染 —— 留着这条检查的话 services.length === 0 恒成立，
+    // 医生每写一份病历都会看到一条**修不掉**的提醒。收费有没有开单，该在划价那边看。
 
     // Display QC results
     if (errors.length > 0 || warnings.length > 0) {
@@ -612,7 +603,10 @@ function doSaveMedicalRecord(action, signatureData) {
                 } else {
                     toastr.success(MedicalRecordConfig.translations.recordSubmitted);
                     if (response.id) {
-                        window.location.href = '/medical-cases/' + response.id;
+                        // 提交完落到病历纸，不是老的详情页 —— 医生写完最想看的是
+                        // 「这份病历长什么样」，而那正是交给患者、打印出来的那一页。
+                        // 详情页仍可从纸上的「编辑」回去。
+                        window.location.href = '/print-medical-case/' + response.id;
                     }
                 }
             } else {

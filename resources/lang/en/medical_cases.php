@@ -201,6 +201,8 @@ return [
     'diagnosis_hint' => 'Diagnostic conclusion',
     'icd10_code' => 'ICD-10 Code',
     'search_icd10' => 'Search ICD-10 diagnosis code',
+    'hint_template_key' => 'Templates',
+    'hint_phrase_key' => 'Phrases',
     'tooth_pad_hint' => 'Click a tooth to toggle; All selects the quadrant',
     'phrase_slot' => 'Slot',
     'phrase_slot_hint' => 'e.g. Onset, Site, Caries — reuse a name to join that group',
@@ -368,7 +370,7 @@ return [
     'chronic_diseases' => 'Chronic Diseases',
 
     // Auxiliary section
-    'auxiliary_section' => 'Auxiliary Examination',
+    'auxiliary_section' => 'Other Examination',
     'auxiliary_hint' => 'X-ray, CT scan results, etc.',
     'auxiliary_placeholder' => 'Describe auxiliary examination results...',
     'attach_images' => 'Attach Images',

@@ -101,17 +101,8 @@ class AppServiceProvider extends ServiceProvider
             ));
         });
 
-        // 病历页的快捷短语侧栏 —— 从 quick_phrases 表按分类取，而不是写死在 Blade 里。
-        //
-        // 用 View Composer 而不是在 Controller 里传：病历编辑页有三个入口
-        // （edit / create / createForPatient）都渲染 medical_cases.edit，
-        // 逐个去传必定漏一个，漏掉的那个入口侧栏就是空的。
-        View::composer('medical_cases.partials.sidebar_quick_phrases', function ($view) {
-            $view->with(
-                'phrasesByCategory',
-                Auth::check() ? \App\QuickPhrase::groupedForUser(Auth::id()) : collect()
-            );
-        });
+        // 病历页的快捷短语侧栏已去掉（改用锚定在字段上的短语面板），
+        // 对应的 View Composer 随之删除 —— 它指向的 partial 已经不存在了。
 
         // 快捷短语管理页的槽位下拉：列出库里已有的槽位，省得医生手打错字
         // 开出一个只有一条的新组。它是自由文本，不是枚举 —— 打新名字照样能开新组。

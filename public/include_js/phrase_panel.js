@@ -13,7 +13,7 @@
  *   标点在短语里 —— 这里不补任何分隔符，直接追加。
  *   {} 是光标位 —— 插入后光标落在该处，医生只补数值（「PD={}mm，」）。
  *
- * 侧栏那份保留作总览，与本面板共用同一批数据。
+ * 侧栏那份已去掉：短语库扩到 439 条、九个字段之后，在侧栏摊开就是一面墙。
  */
 (function () {
     'use strict';
@@ -88,7 +88,15 @@
             html += '</div></div>';
         });
 
-        ensurePanel().html(html + '</div>');
+        // 页脚的 / 与 ; 提示。原来压在侧栏底部，侧栏去掉之后挪到这里 ——
+        // 就在医生眼前，反而比原来容易被发现。
+        html += '</div><div class="phrase-panel-foot">' +
+                '<kbd>/</kbd> ' + escapeHtml(hint('medical_cases.hint_template_key', '病历模板')) +
+                '<span class="phrase-panel-sep">·</span>' +
+                '<kbd>;</kbd> ' + escapeHtml(hint('medical_cases.hint_phrase_key', '常用短语')) +
+                '</div>';
+
+        ensurePanel().html(html);
         return true;
     }
 
@@ -99,6 +107,12 @@
      * LanguageManager 里灌了 templates 一组，medical_cases.* 在前端拿不到，
      * 直接 trans 会把键名原样印出来（「present_illness」而不是「现病史」）。
      */
+    /** 页脚提示文案，与段落名同一条路子：服务端下发，不走 LanguageManager */
+    function hint(key, fallback) {
+        var labels = (window.MedicalRecordConfig && window.MedicalRecordConfig.phraseLabels) || {};
+        return labels[key] || fallback;
+    }
+
     function labelFor(field) {
         var labels = (window.MedicalRecordConfig && window.MedicalRecordConfig.phraseLabels) || {};
         return labels[field] || field;

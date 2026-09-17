@@ -206,6 +206,8 @@ return [
     // 全局工具条：一键展开 / 折叠所有分段（复诊翻旧病历时用）
     // 快捷短语管理页：语义槽位与槽位内排序
     // 牙位软键盘：贴着当前行弹出的牙位网格
+    'hint_template_key' => '病历模板',
+    'hint_phrase_key' => '常用短语',
     'tooth_pad_hint' => '点牙位加/减，点「全」选整个区',
     'phrase_slot' => '语义槽位',
     'phrase_slot_hint' => '如「时间」「部位」「龋坏」；打已有的名字并进该组，打新的开一组',
@@ -375,7 +377,9 @@ return [
     'chronic_diseases' => '慢性病史',
 
     // Auxiliary section
-    'auxiliary_section' => '辅助检查',
+    // 段落名跟参考产品对齐叫「其他检查」。section key 仍是 auxiliary_examination
+    // —— 那是落库与查询用的，改标签不动数据。
+    'auxiliary_section' => '其他检查',
     'auxiliary_hint' => 'X光、CT等检查结果',
     'auxiliary_placeholder' => '描述辅助检查结果...',
     'attach_images' => '附加影像资料',
