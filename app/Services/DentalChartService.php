@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Appointment;
 use App\DentalChart;
+use App\MedicalCase;
+use App\MedicalCaseItem;
 use App\Patient;
 use App\User;
 use Illuminate\Support\Collection;
@@ -33,6 +35,7 @@ class DentalChartService
     public const TOOTH_STATUSES = [
         'normal', 'caries', 'filled', 'crown', 'rct',
         'missing', 'implant', 'pontic', 'extraction_planned', 'impacted',
+        'residual_root',
     ];
 
     /**
@@ -248,21 +251,130 @@ class DentalChartService
      * Chart rows are stored per appointment but scoped by patient on load/save;
      * there is no versioned history — only the latest mark set.
      */
+    /**
+     * 牙位标记 → 牙位状态。
+     *
+     *     △ residual_root → residual_root  牙冠没了、牙根还在
+     *     ✕ extracted     → missing        牙已经不在
+     *     — missing       → missing
+     *
+     * ✕ 与 — 都落到 missing：就**当前状态**而言，拔掉的和天生缺的没有区别；
+     * 区别在于「怎么没的」，那是病历里记的事，不该塞进状态枚举。
+     */
+    /**
+     * public：DentalChartColorMapParityTest 用它断言「投影能写出来的状态，
+     * 牙位图编辑器都认识」—— 编辑器的 buildPayload 会跳过 STATUS_MAP 里没有的
+     * 状态，漏一个就意味着医生一点保存就把投影抹掉，且不会有任何报错。
+     */
+    public const MARK_TO_STATUS = [
+        MedicalCaseItem::MARK_RESIDUAL_ROOT => 'residual_root',
+        MedicalCaseItem::MARK_EXTRACTED     => 'missing',
+        MedicalCaseItem::MARK_MISSING       => 'missing',
+    ];
+
+    /**
+     * 哪些段落的标记能投影成牙位状态。
+     *
+     * 检查 / 其他检查  —— 记的是「我看到这颗牙现在是什么样」，是事实
+     * 治疗            —— 记的是「这次做了什么」，做完牙的状态就变了，也是事实
+     * **治疗计划不在其列** —— 它记的是「打算做什么」。医生在治疗计划里给一颗牙
+     *   标 ✕ 表示「计划拔除」，那颗牙此刻还在嘴里；投影成 missing 等于把打算
+     *   当成了既成事实，牙位图上会显示一颗根本没拔的牙已经没了。
+     */
+    private const PROJECTABLE_SECTIONS = [
+        MedicalCaseItem::SECTION_EXAMINATION,
+        MedicalCaseItem::SECTION_AUXILIARY,
+        MedicalCaseItem::SECTION_TREATMENT,
+    ];
+
+    /**
+     * 把一份病历里的牙位标记投影成牙位状态。
+     *
+     * dental_charts 存的是牙齿的**当前状态**，它该由历次临床观察派生 —— 而不是
+     * 另开一个录入口让人手工维护。那张表此前只有 1 条记录，正是因为从来没有东西
+     * 去喂它：医生在病历里写「45 残根」，牙位图上 45 还是 normal，于是「45 这颗牙
+     * 历次做过什么」根本查不出来。
+     *
+     * 整份替换（先删这份病历投出去的旧记录再重建），与 syncCaseItems 同样的口径：
+     * 医生把标记改掉或去掉时，旧的投影必须跟着消失，否则会留下永远撤不掉的状态。
+     */
+    public function projectFromMedicalCase(MedicalCase $case): void
+    {
+        DB::transaction(function () use ($case) {
+            // 这份病历以前投出去的，整批撤掉（软删，审计链不断）
+            DentalChart::where('medical_case_id', $case->id)->delete();
+
+            $rows = MedicalCaseItem::where('medical_case_id', $case->id)
+                ->whereIn('section', self::PROJECTABLE_SECTIONS)
+                ->whereNotNull('tooth_mark')
+                ->whereNotNull('tooth_no')
+                ->orderBy('sort_order')->orderBy('id')
+                ->get(['tooth_no', 'tooth_mark', 'content']);
+
+            // 同一颗牙在几段里都标了：以最后一条为准（治疗排在检查之后，
+            // 「这次拔掉了」应当盖过「检查时是残根」）
+            $byTooth = [];
+            foreach ($rows as $row) {
+                $status = self::MARK_TO_STATUS[$row->tooth_mark] ?? null;
+                if ($status === null) {
+                    continue;
+                }
+                $byTooth[(string) $row->tooth_no] = ['status' => $status, 'notes' => $row->content];
+            }
+
+            $appointmentId = \App\Appointment::where('medical_case_id', $case->id)->value('id');
+
+            foreach ($byTooth as $tooth => $info) {
+                DentalChart::create([
+                    'tooth'           => is_numeric($tooth) ? (float) $tooth : null,
+                    'tooth_number'    => $tooth,
+                    'tooth_status'    => $info['status'],
+                    'notes'           => $info['notes'],
+                    'medical_case_id' => $case->id,
+                    // 带上就诊。关联方向是反的 —— medical_cases 上没有 appointment_id，
+                    // 是 appointments.medical_case_id 指过来（一次就诊一份病历）。
+                    // 带上它是因为 getChartSummaryForPatient 按 appointment 找患者，
+                    // 不带的话这条记录对那份汇总是隐形的；下面把那个查询也补上了
+                    // 走 medical_case 的路，两头都兜住。
+                    'appointment_id'  => $appointmentId,
+                    'doctor_id'       => $case->doctor_id,
+                    '_who_added'      => Auth::id() ?? $case->_who_added,
+                ]);
+            }
+        });
+    }
+
     public function getChartSummaryForPatient(int $patientId): array
     {
         $COLOR_TO_STATUS = self::COLOR_TO_STATUS;
-        $STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'crown', 'rct', 'filled', 'caries'];
+        // residual_root 排在 impacted 之后、crown 之前：牙冠没了比任何修复体状态都
+        // 更该被一眼看到，但比「牙已经不在」弱一档。
+        $STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'residual_root', 'crown', 'rct', 'filled', 'caries'];
         $SHORT_KEYS = [
             'caries' => 'short_caries', 'filled' => 'short_filled', 'rct' => 'short_rct',
             'crown' => 'short_crown', 'missing' => 'short_missing', 'implant' => 'short_implant',
-            'impacted' => 'short_impacted',
+            'impacted' => 'short_impacted', 'residual_root' => 'short_residual_root',
         ];
 
+        // 患者要从两条路认：预约，或者病历。
+        //
+        // 原来只 join appointments（还是 inner join）—— 只挂 medical_case_id 没挂
+        // appointment_id 的记录对这份汇总完全隐形。病历投影出来的状态正是这种：
+        // 从患者页建的病历没有对应预约。漏掉的不会报错，只是牙位图上少几颗牙的
+        // 状态，最难发现。
         $rows = DB::table('dental_charts')
-            ->join('appointments', 'appointments.id', '=', 'dental_charts.appointment_id')
+            ->leftJoin('appointments', 'appointments.id', '=', 'dental_charts.appointment_id')
+            ->leftJoin('medical_cases', 'medical_cases.id', '=', 'dental_charts.medical_case_id')
             ->whereNull('dental_charts.deleted_at')
-            ->whereNull('appointments.deleted_at')
-            ->where('appointments.patient_id', $patientId)
+            ->where(function ($q) use ($patientId) {
+                $q->where(function ($a) use ($patientId) {
+                    $a->where('appointments.patient_id', $patientId)
+                      ->whereNull('appointments.deleted_at');
+                })->orWhere(function ($m) use ($patientId) {
+                    $m->where('medical_cases.patient_id', $patientId)
+                      ->whereNull('medical_cases.deleted_at');
+                });
+            })
             ->select(
                 'dental_charts.tooth_number',
                 'dental_charts.tooth',

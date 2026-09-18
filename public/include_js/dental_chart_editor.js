@@ -16,7 +16,16 @@
         crown:    { color: '8',  bg: '#2563EB', shortKey: 'short_crown', labelKey: 'crown' },
         missing:  { color: '4',  bg: '#F43F5E', shortKey: 'short_missing', labelKey: 'absent' },
         implant:  { color: '6',  bg: '#A855F7', shortKey: 'short_implant', labelKey: 'implant' },
-        impacted: { color: '11', bg: '#14B8A6', shortKey: 'short_impacted', labelKey: 'impacted_teeth' }
+        impacted: { color: '11', bg: '#14B8A6', shortKey: 'short_impacted', labelKey: 'impacted_teeth' },
+        // 残根没有工具按钮，是只读的一项：它由病历里的牙位标记投影过来
+        // （DentalChartService::projectFromMedicalCase），牙位图不另开录入口。
+        // 但必须登记在这里 —— buildPayload 遇到 STATUS_MAP 里没有的状态会直接跳过，
+        // 少了这一条，医生一点保存就把投影出来的残根抹掉了。
+        //
+        // color 为 null 是有意的：COLOR_TO_STATUS 那张表是给只存颜色编号的旧版
+        // Angular 牙位图做兼容的，而残根在旧版里根本不存在，编一个编号等于伪造历史。
+        // 回读走 row.tooth_status，不依赖颜色。
+        residual_root: { color: null, bg: '#92400E', shortKey: 'short_residual_root', labelKey: 'residual_root' }
     };
 
     var COLOR_TO_STATUS = {
@@ -24,7 +33,7 @@
         '6': 'implant', '8': 'crown', '11': 'impacted'
     };
 
-    var STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'crown', 'rct', 'filled', 'caries'];
+    var STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'residual_root', 'crown', 'rct', 'filled', 'caries'];
 
     var marks = {};       // toothNumber -> statusKey
     var activeTool = null; // statusKey | 'clear' | null

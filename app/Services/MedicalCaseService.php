@@ -490,6 +490,11 @@ class MedicalCaseService
                     '_who_added'      => Auth::id(),
                 ]);
             }
+
+            // 牙位标记投影成牙位状态。dental_charts 存的是牙齿的**当前状态**，
+            // 它该由历次临床观察派生 —— 而不是另开一个录入口让人手工维护。
+            // 那张表此前长期只有 1 条记录，正是因为从来没有东西去喂它。
+            app(DentalChartService::class)->projectFromMedicalCase($case);
         });
     }
 

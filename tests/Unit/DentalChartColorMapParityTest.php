@@ -51,6 +51,46 @@ class DentalChartColorMapParityTest extends TestCase
         );
     }
 
+    /**
+     * 病历牙位标记投影出来的状态，牙位图编辑器必须都认识。
+     *
+     * 编辑器的 buildPayload 对 STATUS_MAP 里没有的状态是 `if (!meta) return;` ——
+     * 直接跳过。于是漏登记一个状态的后果不是报错，而是：投影把残根写进去了，
+     * 医生打开牙位图点一次保存，那颗牙就被静默抹回正常。没有任何痕迹。
+     */
+    public function test_projected_statuses_are_known_to_the_editor(): void
+    {
+        $path = dirname(__DIR__, 2) . '/public/include_js/dental_chart_editor.js';
+        $this->assertFileExists($path);
+
+        $js = file_get_contents($path);
+
+        $this->assertSame(
+            1,
+            preg_match('/var\s+STATUS_MAP\s*=\s*\{(.*?)\n    \};/s', $js, $m),
+            'dental_chart_editor.js 里找不到 STATUS_MAP，映射可能被改名或搬走了'
+        );
+
+        preg_match_all('/^\s*([a-z_]+)\s*:\s*\{/m', $m[1], $keys);
+        $editorStatuses = $keys[1];
+
+        $this->assertNotEmpty($editorStatuses, 'STATUS_MAP 解析出来是空的');
+
+        foreach (DentalChartService::MARK_TO_STATUS as $mark => $status) {
+            $this->assertContains(
+                $status,
+                $editorStatuses,
+                "牙位标记 {$mark} 投影出的 {$status} 不在 dental_chart_editor.js 的 STATUS_MAP 里，"
+                . '医生在牙位图上点保存会把它抹掉'
+            );
+            $this->assertContains(
+                $status,
+                DentalChartService::TOOTH_STATUSES,
+                "牙位标记 {$mark} 投影出的 {$status} 不在 tooth_status 枚举白名单里"
+            );
+        }
+    }
+
     public function test_mapped_statuses_are_all_valid_enum_values(): void
     {
         foreach (DentalChartService::COLOR_TO_STATUS as $color => $status) {

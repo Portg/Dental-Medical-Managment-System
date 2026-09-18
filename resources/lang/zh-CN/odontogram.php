@@ -13,6 +13,7 @@ return [
     'implant' => '种植体',
     'sealant' => '窝沟封闭',
     'crown' => '牙冠',
+    'residual_root' => '残根',
     'normal' => '正常',
     'view' => '查看',
     'add' => '添加',
@@ -44,6 +45,7 @@ return [
     'short_missing' => '缺',
     'short_implant' => '种',
     'short_impacted' => '阻',
+    'short_residual_root' => '残',
 
     // 控制器消息
     'chart_saved_success' => '牙科图变更已成功保存',

@@ -13,6 +13,7 @@ return [
     'implant' => 'Implant',
     'sealant' => 'Sealant',
     'crown' => 'Crown',
+    'residual_root' => 'Residual root',
     'normal' => 'Normal',
     'view' => 'View',
     'add' => 'Add',
@@ -44,6 +45,7 @@ return [
     'short_missing' => 'X',
     'short_implant' => 'I',
     'short_impacted' => 'Im',
+    'short_residual_root' => 'RR',
 
     // Controller messages
     'chart_saved_success' => 'Dental chart changes have been captured successfully',
