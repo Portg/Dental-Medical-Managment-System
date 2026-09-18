@@ -54,16 +54,15 @@ function Expand-Zip([string]$ZipPath, [string]$Destination) {
     $zip = $shell.NameSpace($ZipPath)
     $target = $shell.NameSpace($Destination)
     if (($zip -eq $null) -or ($target -eq $null)) {
-        throw "Windows 无法打开 ZIP 部署包"
+        throw "Windows cannot open the ZIP deployment package"
     }
     $target.CopyHere($zip.Items(), 20)
 
-    # Shell.Application 异步解压；等待文件数量稳定后再继续。
+    # Shell.Application extracts asynchronously. Wait until file count and size stabilize.
     #
-    # 上限给到 20 分钟（2400 × 500ms）而不是 5 分钟：Windows 全量包里装着
-    # laragon 运行时、Python 安装器和 OCR wheels，几百 MB 上万个文件，Win7 的
-    # 机械盘上走 Shell.CopyHere 跑满 5 分钟很正常。超时抛错会让一次本来能成的
-    # 安装白跑，而等待本身不花什么代价 —— 文件数一稳定就立刻返回。
+    # Allow up to 20 minutes (2400 x 500ms). The full Windows package contains
+    # Laragon, the Python installer, and OCR wheels. Extracting thousands of files
+    # with Shell.CopyHere can legitimately take more than five minutes on Win7 HDDs.
     $lastCount = -1
     $lastBytes = -1
     $stableCount = 0
@@ -83,7 +82,7 @@ function Expand-Zip([string]$ZipPath, [string]$Destination) {
             $lastBytes = $bytes
         }
     }
-    throw "ZIP 部署包解压超时"
+    throw "Timed out while extracting the ZIP deployment package"
 }
 
 function Find-PackageFile([string]$Root, [string]$Name) {
@@ -95,7 +94,7 @@ function Find-PackageFile([string]$Root, [string]$Name) {
 }
 
 if ($Repo -notmatch '^[^/]+/[^/]+$') {
-    throw "GitHub 仓库格式错误: $Repo（应为 OWNER/REPO）"
+    throw "Invalid GitHub repository: $Repo (expected OWNER/REPO)"
 }
 
 $projectExists = (Test-Path (Join-Path $InstallDir "laragon\www\dental\artisan")) -or
@@ -105,7 +104,7 @@ if ($Mode -eq "auto") {
     if ($projectExists) { $Mode = "update" } else { $Mode = "install" }
 }
 if (($Mode -eq "install") -and ($InstallDir -ne "C:\DentalClinic")) {
-    throw "Windows 全量安装包当前固定安装到 C:\DentalClinic；自定义目录请使用安装向导"
+    throw "The full Windows package installs to C:\DentalClinic; use the installer wizard for a custom path"
 }
 
 if ($Mode -eq "update") {
@@ -134,7 +133,7 @@ if ($DryRun) { exit 0 }
 
 $scriptPath = $MyInvocation.MyCommand.Path
 if (-not (Test-Administrator)) {
-    if (-not $scriptPath) { throw "请将脚本保存到本地后，以管理员身份运行" }
+    if (-not $scriptPath) { throw "Save the script locally and run it as Administrator" }
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", (Quote-Argument $scriptPath),
                    "-Mode", $Mode, "-Repo", (Quote-Argument $Repo), "-Version", (Quote-Argument $Version),
                    "-InstallDir", (Quote-Argument $InstallDir))
@@ -169,9 +168,9 @@ try {
                 break
             }
         }
-        if (-not $expected) { throw "SHA256SUMS 中没有 $asset 的有效校验值" }
+        if (-not $expected) { throw "SHA256SUMS does not contain a valid checksum for $asset" }
         $actual = Get-Sha256 $zipPath
-        if ($actual -ne $expected) { throw "部署包 SHA256 校验失败，已停止部署" }
+        if ($actual -ne $expected) { throw "Package SHA256 verification failed; deployment stopped" }
         Write-Host "SHA256 verified."
     }
 
@@ -182,7 +181,7 @@ try {
     } else {
         $entrypoint = Find-PackageFile $packageDir "setup.bat"
     }
-    if (-not $entrypoint) { throw "部署包内容不完整：找不到执行入口" }
+    if (-not $entrypoint) { throw "The deployment package does not contain an entrypoint" }
 
     $workingDir = Split-Path -Parent $entrypoint
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
@@ -196,7 +195,7 @@ try {
     $startInfo.UseShellExecute = $false
     $process = [System.Diagnostics.Process]::Start($startInfo)
     $process.WaitForExit()
-    if ($process.ExitCode -ne 0) { throw "部署脚本执行失败，退出码: $($process.ExitCode)" }
+    if ($process.ExitCode -ne 0) { throw "Deployment script failed with exit code $($process.ExitCode)" }
     Write-Host "GitHub deployment completed."
 } finally {
     if (Test-Path $tempDir) { Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue }
