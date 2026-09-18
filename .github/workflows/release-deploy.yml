@@ -1,0 +1,183 @@
+name: Release deployment packages
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (for example 1.2.0; defaults to VERSION)'
+        required: false
+        type: string
+      prerelease:
+        description: 'Mark as a prerelease'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deployment-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: release
+        name: Resolve release version
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="${INPUT_VERSION:-$(tr -d '[:space:]' < VERSION)}"
+          version="${version#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $version" >&2
+            exit 1
+          fi
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "v${version}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION ${version}" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+  verify:
+    uses: ./.github/workflows/verify.yml
+
+  build:
+    # 发版必须过门禁。ci.yml 只在 branches/PR 上触发，tag 推上来时它根本不跑 ——
+    # 不在这里 needs 一下，推个 tag 就能把没过测试的包直接发给客户。
+    needs: [metadata, verify]
+    name: Build ${{ matrix.platform }} packages
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            target: linux
+            runner: ubuntu-latest
+            public_name: linux
+            skip_ocr_wheels: false
+          - platform: macOS
+            target: mac
+            runner: macos-15-intel
+            public_name: mac
+            # macOS 包本身与 CPU 架构无关；目标机在线安装自身架构的 OCR wheels。
+            skip_ocr_wheels: true
+          - platform: Windows
+            target: win
+            runner: ubuntu-latest
+            public_name: windows
+            skip_ocr_wheels: false
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, mysql, gd, zip, curl, bcmath
+          coverage: none
+          tools: composer:v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+          cache: npm
+
+      - name: Build frontend assets
+        run: npm ci && npm run production
+
+      - name: Cache deployment downloads
+        uses: actions/cache@v4
+        with:
+          path: deploy/.cache
+          key: deploy-${{ matrix.target }}-${{ hashFiles('scripts/requirements*.txt', 'deploy/build.sh') }}
+          restore-keys: |
+            deploy-${{ matrix.target }}-
+
+      - name: Install build tools (Linux runner)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rsync zip unzip
+
+      - name: Build full and upgrade packages
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.metadata.outputs.version }}
+          TARGET: ${{ matrix.target }}
+          PUBLIC_NAME: ${{ matrix.public_name }}
+          SKIP_OCR_WHEELS: ${{ matrix.skip_ocr_wheels }}
+        run: |
+          set -euo pipefail
+          # 不设的话 build.sh 会因为 npm run production 改动了入库的 public/ 产物
+          # 而把发布包标成 -dirty。取前 7 位，与 git rev-parse --short 一致。
+          export DENTAL_BUILD_ID="${GITHUB_SHA:0:7}"
+          extra_args=()
+          if [[ "$SKIP_OCR_WHEELS" == "true" ]]; then
+            extra_args+=(--skip-ocr)
+          fi
+          ./deploy/build.sh --target "$TARGET" --version "$RELEASE_VERSION" --skip-obfuscate ${extra_args[@]+"${extra_args[@]}"}
+          ./deploy/build.sh --target "$TARGET" --version "$RELEASE_VERSION" --upgrade --skip-obfuscate ${extra_args[@]+"${extra_args[@]}"}
+
+          mkdir -p release-assets
+          full="$(find deploy/output -maxdepth 1 -type f -name "dental-clinic-${RELEASE_VERSION}-${TARGET}-*.zip" ! -name '*-upgrade-*' -print -quit)"
+          upgrade="$(find deploy/output -maxdepth 1 -type f -name "dental-clinic-${RELEASE_VERSION}-${TARGET}-upgrade-*.zip" -print -quit)"
+          test -n "$full" && test -n "$upgrade"
+          cp "$full" "release-assets/dental-clinic-${PUBLIC_NAME}.zip"
+          cp "$upgrade" "release-assets/dental-clinic-${PUBLIC_NAME}-upgrade.zip"
+
+      - name: Upload platform packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-${{ matrix.public_name }}
+          path: release-assets/*.zip
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  release:
+    needs: [metadata, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: deploy-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Add launchers and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp deploy/github-deploy.sh release-assets/github-deploy.sh
+          printf '\357\273\277' > release-assets/github-deploy-windows.ps1
+          cat deploy/github-deploy-windows.ps1 >> release-assets/github-deploy-windows.ps1
+          cp deploy/github-deploy-windows.bat release-assets/github-deploy-windows.bat
+          cd release-assets
+          for archive in dental-clinic-*.zip; do unzip -tq "$archive" >/dev/null; done
+          sha256sum dental-clinic-*.zip > SHA256SUMS
+          test "$(find . -maxdepth 1 -name 'dental-clinic-*.zip' | wc -l)" -eq 6
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.metadata.outputs.tag }}
+          name: Dental Clinic ${{ needs.metadata.outputs.version }}
+          prerelease: ${{ inputs.prerelease || false }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: release-assets/*

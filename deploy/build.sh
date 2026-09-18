@@ -827,16 +827,19 @@ fi
 
 # ── 计算总步骤数 ───────────────────────────────────────────────────────
 # 必须与实际的 step "..." 调用数一致，否则会打出 [10/9] 这种进度。
-# 无条件执行的 7 步：清理目录 / 复制项目 / Composer / 复制部署脚本 /
-# OCR / 发布内容校验 / 打包
+# 基础 7 步：清理目录 / 复制项目 / Composer / Schema或升级元数据 /
+# 复制部署脚本 / OCR / 打包。
 TOTAL_STEPS=7
 if [[ "$SKIP_OBFUSCATE" == false ]]; then
     TOTAL_STEPS=$((TOTAL_STEPS + 1))  # PHP 代码混淆
 fi
-# 全量包导出 schema，升级包生成升级元数据 —— 二选一，总有一步
-TOTAL_STEPS=$((TOTAL_STEPS + 1))
 if [[ "$TARGET" == "win" ]]; then
     TOTAL_STEPS=$((TOTAL_STEPS + 2))  # .bat 转 GBK + .ps1 转 UTF-8 BOM
+fi
+if [[ "$UPGRADE" == true ]]; then
+    TOTAL_STEPS=$((TOTAL_STEPS + 2))  # 升级脚本兼容性 + 健康检查实跑
+elif [[ "$TARGET" == "win" ]]; then
+    TOTAL_STEPS=$((TOTAL_STEPS + 1))  # Windows 全量发布内容校验
 fi
 
 # ── 构建路径 ───────────────────────────────────────────────────────────
@@ -864,8 +867,15 @@ fi
 
 # 产物名带上 commit 短哈希：现场反复拿旧包测试、以为改动没生效，是真实发生过的事。
 # 文件名里有构建标识，一眼就能对上是哪次提交出的包。
-BUILD_ID="$(cd "$PROJECT_ROOT" 2>/dev/null && git rev-parse --short HEAD 2>/dev/null)"
-[[ -n "$(cd "$PROJECT_ROOT" 2>/dev/null && git status --porcelain 2>/dev/null)" ]] && BUILD_ID="${BUILD_ID}-dirty"
+# CI 上先 npm run production 再打包，而 public/ 下的打包产物是入库的 —— 于是工作区
+# 必然「脏」，发布物会带上 -dirty，看着像出了问题。发布流程用 DENTAL_BUILD_ID
+# 显式指定提交号绕开这点；本地构建不设这个变量，保持原来的脏标记行为。
+if [[ -n "${DENTAL_BUILD_ID:-}" ]]; then
+    BUILD_ID="$DENTAL_BUILD_ID"
+else
+    BUILD_ID="$(cd "$PROJECT_ROOT" 2>/dev/null && git rev-parse --short HEAD 2>/dev/null)"
+    [[ -n "$(cd "$PROJECT_ROOT" 2>/dev/null && git status --porcelain 2>/dev/null)" ]] && BUILD_ID="${BUILD_ID}-dirty"
+fi
 [[ -z "$BUILD_ID" ]] && BUILD_ID="nogit"
 
 ARCHIVE_NAME="dental-clinic-${VERSION}-${SUFFIX}-${BUILD_ID}.zip"
@@ -1350,7 +1360,7 @@ done
 case "$TARGET" in
     win)
         # Windows 脚本放到 zip 根目录
-        for script in install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat; do
+        for script in install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat github-deploy-windows.ps1 github-deploy-windows.bat; do
             if [[ -f "$PROJECT_ROOT/deploy/$script" ]]; then
                 cp "$PROJECT_ROOT/deploy/$script" "$DIST_DIR/"
                 info "复制 $script"
@@ -1459,7 +1469,7 @@ REM 这些是几十 KB 的 .bat/.ps1，不属于运行时目录，不会被正�
 REM 所以提前复制是安全的；真正需要先停服务的是后面 xampp/laragon 那棵树。
 if "%IN_PLACE%"=="1" goto :scripts_refreshed
 call :log "refreshing deployment scripts before stopping services"
-for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
+for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat github-deploy-windows.ps1 github-deploy-windows.bat) do (
     if exist "%PKG_DIR%\%%F" copy "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" /Y >nul 2>>"%SETUP_LOG%"
 )
 if exist "%PKG_DIR%\batch-helpers" xcopy "%PKG_DIR%\batch-helpers" "%INSTALL_DIR%\batch-helpers\" /E /I /H /Y /Q >nul 2>>"%SETUP_LOG%"
@@ -1602,7 +1612,7 @@ for %%F in (artisan composer.json composer.lock .env.deploy VERSION .htaccess) d
 
 REM 同目录重跑时这些资源已经在正确位置；跳过可避免 copy "file" "file"。
 if "%IN_PLACE%"=="0" (
-    for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
+    for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat github-deploy-windows.ps1 github-deploy-windows.bat) do (
         if exist "%PKG_DIR%\%%F" (
             call :copy_file "%PKG_DIR%\%%F" "%INSTALL_DIR%\%%F" "deployment script %%F"
             if errorlevel 1 goto :copy_failed
@@ -1720,7 +1730,7 @@ SHORTCUT_BAT
         info "创建 setup.bat（双击即可安装）"
         ;;
     linux|mac)
-        for script in install-linux.sh upgrade-linux.sh start-linux.sh stop-linux.sh uninstall-linux.sh; do
+        for script in install-linux.sh upgrade-linux.sh start-linux.sh stop-linux.sh uninstall-linux.sh github-deploy.sh; do
             if [[ -f "$PROJECT_ROOT/deploy/$script" ]]; then
                 cp "$PROJECT_ROOT/deploy/$script" "$DIST_DIR/"
                 chmod +x "$DIST_DIR/$script"
@@ -2172,7 +2182,7 @@ echo  [2/4] Copying installer assets...
 copy "%~dp0laragon-wamp.exe" "%INSTALL_DIR%\laragon-wamp.exe" /Y >nul 2>&1
 if exist "%~dp0ocr-wheels" xcopy "%~dp0ocr-wheels" "%INSTALL_DIR%\ocr-wheels\" /E /I /H /Y /Q >nul 2>&1
 if exist "%~dp0python-installer.exe" copy "%~dp0python-installer.exe" "%INSTALL_DIR%\python-installer.exe" /Y >nul 2>&1
-for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat) do (
+for %%F in (install-win.bat install-win.ps1 upgrade-win.bat start-win.bat stop-win.bat uninstall-win.bat laragon-startup.bat github-deploy-windows.ps1 github-deploy-windows.bat) do (
     if exist "%~dp0%%F" copy "%~dp0%%F" "%INSTALL_DIR%\" /Y >nul 2>&1
 )
 if exist "%~dp0batch-helpers" xcopy "%~dp0batch-helpers" "%INSTALL_DIR%\batch-helpers\" /E /I /H /Y /Q >nul 2>&1

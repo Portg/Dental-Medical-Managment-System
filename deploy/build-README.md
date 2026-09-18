@@ -2,6 +2,59 @@
 
 一键构建、安装、升级、运维牙科诊所管理系统，支持 Windows / Linux / macOS。
 
+## GitHub 一键部署与更新
+
+推送与 `VERSION` 一致的版本标签（例如 `v1.0.2`）后，GitHub Actions 的
+`Release deployment packages` 工作流会先跑完整门禁（PHP 测试矩阵 + 部署入口检查，
+与分支 CI 同一套），通过后才构建并发布 6 个固定名称的部署包：
+
+- `dental-clinic-linux.zip` / `dental-clinic-linux-upgrade.zip`
+- `dental-clinic-mac.zip` / `dental-clinic-mac-upgrade.zip`
+- `dental-clinic-windows.zip` / `dental-clinic-windows-upgrade.zip`
+
+另外附 `SHA256SUMS` 和三端一键部署入口脚本。
+
+Linux / macOS 首次安装或自动更新：
+
+```bash
+curl -fL https://github.com/Portg/Dental-Medical-Managment-System/releases/latest/download/github-deploy.sh \
+  -o /tmp/github-deploy.sh
+bash /tmp/github-deploy.sh --auto
+```
+
+脚本检测到 `/opt/dental` 已安装时自动下载升级包，并调用原有的备份、迁移、
+健康检查和失败回滚流程。也可显式指定操作或版本：
+
+```bash
+bash /tmp/github-deploy.sh --install -- --port 8088 --skip-ocr
+bash /tmp/github-deploy.sh --update --version 1.0.2
+bash /tmp/github-deploy.sh --update -- --skip-backup
+```
+
+`--` 之后的参数原样透传给底层的 `install-linux.sh` / `upgrade-linux.sh`。
+
+macOS 默认监听 `8081`（Homebrew 服务以登录用户运行，不能绑定 80，且默认站点占用 8080）；Linux 默认监听
+`80`。两端都可在首次安装时用 `-- --port PORT` 覆盖。macOS 发布包不内置特定
+CPU 架构的 OCR wheels，安装时会从 PyPI 获取当前机器的原生版本；核心系统不受影响。
+macOS 首装前需已有 Homebrew；脚本会通过 Homebrew 自动补齐 PHP、MySQL、Nginx 和 Composer。
+
+Windows 下载并双击 Release 中的 `github-deploy-windows.bat`。它会请求管理员权限，
+首次运行下载全量包；检测到 `C:\DentalClinic` 已安装后下载升级包。命令行也可显式执行：
+
+```bat
+github-deploy-windows.bat -Mode update
+github-deploy-windows.bat -Mode install -Version 1.0.2
+```
+
+GitHub 更新入口会以无人值守模式调用 Windows 升级脚本；升级失败时返回非零退出码，
+并沿用原升级脚本的数据库/文件备份与自动回滚策略。
+
+所有部署包在执行前都会按 Release 中的 `SHA256SUMS` 做完整性校验。私有仓库可在
+Linux/macOS 或 PowerShell 环境中设置 `GH_TOKEN`；内网镜像可设置
+`DENTAL_RELEASE_BASE_URL`（该地址是「一个目录里放着固定文件名的包」，没有版本维度，
+所以不能和 `--version` 同时用，同时给会直接报错而不是静默忽略）。无需打标签时，也可以从 GitHub Actions 页面手动运行
+该工作流并填写版本号。
+
 ---
 
 ## ⚠️ 本分支为 Windows 7 专用版（win7/deploy-only）

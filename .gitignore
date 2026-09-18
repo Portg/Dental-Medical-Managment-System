@@ -33,3 +33,5 @@ deploy/output/
 deploy/dental-clinic-*/
 # 由 deploy/build-README.md 渲染出来的构建产物，跟着源文件走，不入库
 deploy/build-README.pdf
+# 会话期临时产物（venv、视频截帧等），只在本机存在
+.tmp-*/

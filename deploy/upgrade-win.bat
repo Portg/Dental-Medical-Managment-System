@@ -6,8 +6,9 @@ title 牙科诊所管理系统 - 升级工具
 REM ═══════════════════════════════════════════════════════════════
 REM  牙科诊所管理系统 - Windows 升级脚本
 REM
-REM  用法: upgrade-win.bat [安装目录]
+REM  用法: upgrade-win.bat [安装目录] [--unattended]
 REM        默认安装目录: C:\DentalClinic
+REM        --unattended: 不暂停/询问，并用退出码报告结果（GitHub 更新入口使用）
 REM
 REM  升级包结构（本脚本所在目录即为升级包根目录）:
 REM    deploy/upgrade-win.bat   ← 本脚本
@@ -32,6 +33,9 @@ REM ═════════════════════════�
 REM ── 参数解析 ────────────────────────────────────────────────────
 set "INSTALL_DIR=%~1"
 if "%INSTALL_DIR%"=="" set "INSTALL_DIR=C:\DentalClinic"
+set "UNATTENDED=0"
+if /i "%~2"=="--unattended" set "UNATTENDED=1"
+set "FINAL_EXIT_CODE=0"
 REM 先规范成绝对路径再用。参数是人手敲的，写成 .\DentalClinic、
 REM C:\Dental\..\DentalClinic 这类等价写法都很常见 —— 下面「升级包是不是落在
 REM 项目目录里」那条保护是纯字符串比较，不规范化就直接漏判。
@@ -276,7 +280,12 @@ if "!IS_SAME!"=="1" (
     echo.
     echo         继续将按完整升级流程重新应用包内代码（备份 -^> 覆盖 -^> 迁移 -^> 清缓存），
     echo         不是重装，.env 与 storage\app 会保留。
-    set /p "FORCE_UPGRADE=  是否继续? ^(y/N^): "
+    if "!UNATTENDED!"=="1" (
+        set "FORCE_UPGRADE=y"
+        echo        无人值守模式：继续重新应用同版本升级包。
+    ) else (
+        set /p "FORCE_UPGRADE=  是否继续? ^(y/N^): "
+    )
     if /i not "!FORCE_UPGRADE!"=="y" (
         echo  操作已取消。
         goto :done
@@ -781,6 +790,7 @@ REM
 REM 所以这里只做三件事：保持维护模式（应用真坏了也不会被用户看到）、
 REM 把失败原因原样打出来、告诉操作员回滚需要哪几条命令。要不要回滚由人决定。
 :health_failed
+set "FINAL_EXIT_CODE=1"
 echo.
 echo  +=========================================================+
 echo  ^|  [警告] 健康检查未通过 -- 未自动回滚                    ^|
@@ -812,6 +822,7 @@ REM ═════════════════════════�
 REM  自动回滚（仅用于文件复制 / 迁移 / 缓存等确实改坏了东西的步骤）
 REM ═══════════════════════════════════════════════════════════════
 :rollback
+set "FINAL_EXIT_CODE=1"
 echo.
 echo  +=========================================================+
 echo  ^|  [错误] 升级失败！正在自动回滚...                       ^|
@@ -950,6 +961,7 @@ exit /b %ERRORLEVEL%
 exit /b %ERRORLEVEL%
 
 :abort_no_rollback
+set "FINAL_EXIT_CODE=1"
 echo.
 echo  +=========================================================+
 echo  ^|  升级中止 -- 未进行任何修改                             ^|
@@ -958,5 +970,9 @@ echo  +=========================================================+
 echo.
 
 :done
-endlocal
-pause
+set "EXIT_CODE=!FINAL_EXIT_CODE!"
+if "!UNATTENDED!"=="1" goto :done_unattended
+endlocal & pause & exit /b %EXIT_CODE%
+
+:done_unattended
+endlocal & exit /b %EXIT_CODE%

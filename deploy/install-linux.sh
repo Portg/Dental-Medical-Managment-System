@@ -77,6 +77,7 @@ DB_PASS=""
 DB_ROOT_PASS=""
 APP_URL=""
 LISTEN_PORT="80"
+LISTEN_PORT_EXPLICIT=false
 SKIP_OCR=false
 NO_SERVICE=false
 AUTO_DEPS=false
@@ -131,7 +132,7 @@ while [[ $# -gt 0 ]]; do
         --db-pass)       DB_PASS="$2";       shift 2 ;;
         --db-root-pass)  DB_ROOT_PASS="$2";  shift 2 ;;
         --app-url)       APP_URL="$2";       shift 2 ;;
-        --port)          LISTEN_PORT="$2";   shift 2 ;;
+        --port)          LISTEN_PORT="$2"; LISTEN_PORT_EXPLICIT=true; shift 2 ;;
         --skip-ocr)      SKIP_OCR=true;      shift ;;
         --no-service)    NO_SERVICE=true;    shift ;;
         --auto-deps)     AUTO_DEPS=true;     shift ;;
@@ -160,6 +161,12 @@ if [[ -f "$SOURCE_DIR/VERSION" ]]; then
     VERSION="$(tr -d '[:space:]' < "$SOURCE_DIR/VERSION")"
 elif [[ -f "$SCRIPT_DIR/VERSION" ]]; then
     VERSION="$(tr -d '[:space:]' < "$SCRIPT_DIR/VERSION")"
+fi
+
+# Homebrew 服务以登录用户身份运行，不能绑定 1024 以下端口；其默认站点已占用
+# 8080，因此 macOS 未显式指定 --port 时使用 8081。Linux 仍保持传统的 80。
+if [[ "$(uname -s)" == "Darwin" ]] && [[ "$LISTEN_PORT_EXPLICIT" == false ]]; then
+    LISTEN_PORT="8081"
 fi
 
 # 默认 APP_URL
@@ -228,6 +235,25 @@ OS_TYPE=""
 DISTRO=""
 PKG_MANAGER=""
 INIT_SYSTEM=""
+BREW_BIN=""
+BREW_PREFIX=""
+BREW_USER=""
+BREW_PHP_SERVICE=""
+
+run_brew() {
+    if [[ -z "$BREW_BIN" ]]; then
+        return 127
+    fi
+    if [[ "$(id -u)" -eq 0 && -n "$BREW_USER" && "$BREW_USER" != "root" ]]; then
+        /usr/bin/sudo -H -u "$BREW_USER" "$BREW_BIN" "$@"
+    else
+        "$BREW_BIN" "$@"
+    fi
+}
+
+brew_formula_installed() {
+    run_brew list --versions "$1" >/dev/null 2>&1
+}
 
 case "$(uname -s)" in
     Linux*)
@@ -262,7 +288,17 @@ case "$(uname -s)" in
         DISTRO="macos"
         INIT_SYSTEM="launchd"
         ok "操作系统: macOS $(sw_vers -productVersion 2>/dev/null || echo 'unknown')"
-        if command -v brew &>/dev/null; then
+        BREW_BIN="$(command -v brew 2>/dev/null || true)"
+        if [[ -z "$BREW_BIN" && -x /opt/homebrew/bin/brew ]]; then
+            BREW_BIN="/opt/homebrew/bin/brew"
+        elif [[ -z "$BREW_BIN" && -x /usr/local/bin/brew ]]; then
+            BREW_BIN="/usr/local/bin/brew"
+        fi
+        if [[ -n "$BREW_BIN" ]]; then
+            BREW_USER="${SUDO_USER:-$(stat -f '%Su' /dev/console 2>/dev/null || true)}"
+            BREW_PREFIX="$(run_brew --prefix 2>/dev/null || dirname "$(dirname "$BREW_BIN")")"
+            PATH="${BREW_PREFIX}/opt/php@8.4/bin:${BREW_PREFIX}/opt/php/bin:${BREW_PREFIX}/opt/mysql@8.4/bin:${BREW_PREFIX}/opt/mysql/bin:${BREW_PREFIX}/bin:${PATH}"
+            export PATH
             PKG_MANAGER="brew"
         fi
         ;;
@@ -275,8 +311,8 @@ esac
 # Platform-specific helpers
 if [[ "$OS_TYPE" == "macos" ]]; then
     SED_INPLACE=(sed -i '')
-    WEB_USER="_www"
-    WEB_GROUP="_www"
+    WEB_USER="${BREW_USER:-_www}"
+    WEB_GROUP="$(id -gn "$WEB_USER" 2>/dev/null || echo '_www')"
 else
     SED_INPLACE=(sed -i)
     # Detect web user
@@ -321,6 +357,7 @@ fi
 
 # ── 1d. 必要依赖检查 ─────────────────────────────────────────────────────────
 MISSING_DEPS=()
+PHP_NEEDS_INSTALL=false
 
 # PHP 8.2+
 if command -v php &>/dev/null; then
@@ -332,6 +369,7 @@ if command -v php &>/dev/null; then
     else
         fail "PHP ${PHP_VER} — 需要 8.2+"
         MISSING_DEPS+=("php>=8.2")
+        PHP_NEEDS_INSTALL=true
     fi
     # Check required extensions
     REQUIRED_EXTS=(pdo_mysql mbstring openssl tokenizer xml ctype json bcmath fileinfo gd)
@@ -347,6 +385,7 @@ if command -v php &>/dev/null; then
 else
     fail "未找到 PHP"
     MISSING_DEPS+=("php>=8.2")
+    PHP_NEEDS_INSTALL=true
 fi
 
 # MySQL / MariaDB client
@@ -380,6 +419,9 @@ elif command -v apache2 &>/dev/null || command -v httpd &>/dev/null; then
     ok "Apache: $(apache2 -v 2>/dev/null | head -1 || httpd -v 2>/dev/null | head -1)"
 else
     warn "未找到 Nginx 或 Apache — 安装完成后需要手动配置 Web 服务器"
+    if [[ "$AUTO_DEPS" == true ]]; then
+        MISSING_DEPS+=("nginx")
+    fi
 fi
 
 # Python 3.8+ (for OCR, non-blocking)
@@ -465,12 +507,33 @@ if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
                 ;;
             brew)
                 info "使用 Homebrew 安装依赖..."
-                brew install php@8.2 mysql nginx composer
-                brew services start mysql
+                if [[ "$PHP_NEEDS_INSTALL" == true ]]; then run_brew install php@8.4; fi
+                if ! command -v mysql >/dev/null 2>&1 && ! command -v mariadb >/dev/null 2>&1; then
+                    run_brew install mysql@8.4
+                fi
+                if ! command -v nginx >/dev/null 2>&1; then run_brew install nginx; fi
+                if ! command -v composer >/dev/null 2>&1; then run_brew install composer; fi
+                PATH="${BREW_PREFIX}/opt/php@8.4/bin:${BREW_PREFIX}/opt/php/bin:${BREW_PREFIX}/opt/mysql@8.4/bin:${BREW_PREFIX}/opt/mysql/bin:${BREW_PREFIX}/bin:${PATH}"
+                export PATH
+                if brew_formula_installed mysql@8.4; then
+                    run_brew services start mysql@8.4
+                elif brew_formula_installed mysql; then
+                    run_brew services start mysql
+                fi
+                if brew_formula_installed php@8.4; then
+                    BREW_PHP_SERVICE="php@8.4"
+                elif brew_formula_installed php; then
+                    BREW_PHP_SERVICE="php"
+                fi
+                if [[ -n "$BREW_PHP_SERVICE" ]]; then run_brew services start "$BREW_PHP_SERVICE"; fi
                 ok "Homebrew 依赖安装完成"
                 ;;
             *)
-                fail "无法自动安装: 未识别的包管理器"
+                if [[ "$OS_TYPE" == "macos" ]]; then
+                    fail "无法自动安装: 未找到 Homebrew（https://brew.sh）"
+                else
+                    fail "无法自动安装: 未识别的包管理器"
+                fi
                 fail "请手动安装: PHP 8.2+, MySQL/MariaDB, Composer, Nginx"
                 exit 1
                 ;;
@@ -480,6 +543,14 @@ if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
         MYSQL_CMD=""
         if command -v mysql &>/dev/null; then MYSQL_CMD="mysql"; fi
         if command -v mariadb &>/dev/null; then MYSQL_CMD="mariadb"; fi
+
+        # 首次安装依赖前 WEB_SERVER 为空；安装完成后必须重探测，否则后续会
+        # 错误跳过 Nginx 配置，导致“安装成功”但浏览器无法访问。
+        if command -v nginx &>/dev/null; then
+            WEB_SERVER="nginx"
+        elif command -v apache2 &>/dev/null || command -v httpd &>/dev/null; then
+            WEB_SERVER="apache"
+        fi
 
         # 启动 MySQL 服务（新安装的可能未启动）
         if [[ "$INIT_SYSTEM" == "systemd" ]]; then
@@ -511,7 +582,7 @@ if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
                 echo -e "  ${CYAN}  php-xml php-bcmath php-gd php-zip mysql-server nginx composer${NC}"
                 ;;
             brew)
-                echo -e "  ${CYAN}brew install php@8.2 mysql nginx composer${NC}"
+                echo -e "  ${CYAN}brew install php@8.4 mysql@8.4 nginx composer${NC}"
                 ;;
             *)
                 echo -e "  ${CYAN}请安装: PHP 8.2+, MySQL/MariaDB, Composer, Nginx${NC}"
@@ -902,8 +973,8 @@ SERVER_NAME=$(echo "$APP_URL" | sed -E 's|https?://||; s|/.*||; s|:[0-9]+$||')
 [[ -z "$SERVER_NAME" ]] && SERVER_NAME="localhost"
 
 if [[ "$OS_TYPE" == "macos" ]]; then
-    NGINX_ACCESS_LOG="/usr/local/var/log/nginx/dental-access.log"
-    NGINX_ERROR_LOG="/usr/local/var/log/nginx/dental-error.log"
+    NGINX_ACCESS_LOG="${BREW_PREFIX:-/usr/local}/var/log/nginx/dental-access.log"
+    NGINX_ERROR_LOG="${BREW_PREFIX:-/usr/local}/var/log/nginx/dental-error.log"
 else
     NGINX_ACCESS_LOG="/var/log/nginx/dental-access.log"
     NGINX_ERROR_LOG="/var/log/nginx/dental-error.log"
@@ -923,7 +994,7 @@ if [[ "$WEB_SERVER" == "nginx" ]] || command -v nginx &>/dev/null; then
             NGINX_CONF_PATH="/etc/nginx/${NGINX_CONF_FILE}"
         fi
     elif [[ "$OS_TYPE" == "macos" ]]; then
-        BREW_PREFIX="$(brew --prefix 2>/dev/null || echo '/usr/local')"
+        BREW_PREFIX="${BREW_PREFIX:-$(run_brew --prefix 2>/dev/null || echo '/usr/local')}"
         NGINX_CONF_PATH="${BREW_PREFIX}/etc/nginx/servers/${NGINX_CONF_FILE}"
         mkdir -p "${BREW_PREFIX}/etc/nginx/servers" 2>/dev/null || true
     fi
@@ -990,7 +1061,10 @@ NGINXEOF
         fi
     done
 
-    if [[ -n "$PHP_FPM_SOCK" ]] && [[ "$PHP_FPM_SOCK" != "/run/php/php-fpm.sock" ]]; then
+    if [[ "$OS_TYPE" == "macos" ]]; then
+        "${SED_INPLACE[@]}" 's|unix:/run/php/php-fpm.sock|127.0.0.1:9000|g' "$NGINX_CONF_PATH"
+        info "PHP-FPM 已配置为 Homebrew 默认地址: 127.0.0.1:9000"
+    elif [[ -n "$PHP_FPM_SOCK" ]] && [[ "$PHP_FPM_SOCK" != "/run/php/php-fpm.sock" ]]; then
         "${SED_INPLACE[@]}" "s|unix:/run/php/php-fpm.sock|unix:${PHP_FPM_SOCK}|g" "$NGINX_CONF_PATH"
         info "PHP-FPM socket 路径已调整为: $PHP_FPM_SOCK"
     elif [[ -z "$PHP_FPM_SOCK" ]]; then
@@ -1006,9 +1080,30 @@ NGINXEOF
         fi
     fi
 
+    if [[ "$OS_TYPE" == "macos" && "$NO_SERVICE" == false ]]; then
+        if [[ -z "$BREW_PHP_SERVICE" ]]; then
+            if brew_formula_installed php@8.4; then
+                BREW_PHP_SERVICE="php@8.4"
+            elif brew_formula_installed php; then
+                BREW_PHP_SERVICE="php"
+            fi
+        fi
+        if [[ -n "$BREW_PHP_SERVICE" ]]; then
+            run_brew services restart "$BREW_PHP_SERVICE"
+        else
+            warn "未识别 Homebrew PHP-FPM 服务名，请手动启动 php-fpm"
+        fi
+        run_brew services restart nginx
+        ok "Homebrew PHP-FPM 与 Nginx 服务已启动"
+    fi
+
     echo ""
     info "启用 Nginx 站点:"
-    echo -e "    ${CYAN}sudo nginx -t && sudo systemctl reload nginx${NC}"
+    if [[ "$OS_TYPE" == "macos" ]]; then
+        echo -e "    ${CYAN}${BREW_BIN:-brew} services restart nginx${NC}"
+    else
+        echo -e "    ${CYAN}sudo nginx -t && sudo systemctl reload nginx${NC}"
+    fi
 
 elif [[ "$WEB_SERVER" == "apache" ]] || command -v apache2 &>/dev/null || command -v httpd &>/dev/null; then
     # Generate Apache config
@@ -1276,7 +1371,11 @@ NEXT_STEP=1
 # Web server reload hint
 if [[ "$WEB_SERVER" == "nginx" ]]; then
     echo -e "  ${NEXT_STEP}. 检查并重载 Nginx:"
-    echo -e "     ${CYAN}sudo nginx -t && sudo systemctl reload nginx${NC}"
+    if [[ "$OS_TYPE" == "macos" ]]; then
+        echo -e "     ${CYAN}${BREW_BIN:-brew} services restart nginx${NC}"
+    else
+        echo -e "     ${CYAN}sudo nginx -t && sudo systemctl reload nginx${NC}"
+    fi
     NEXT_STEP=$((NEXT_STEP + 1))
 elif [[ "$WEB_SERVER" == "apache" ]]; then
     echo -e "  ${NEXT_STEP}. 检查并重载 Apache:"

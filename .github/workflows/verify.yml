@@ -1,0 +1,138 @@
+name: Verify
+
+# 复用工作流：分支/PR 的 CI 和打标签发版都调它，保证两条路跑的是同一套门禁。
+# 直接在 release 流程里另抄一份测试配置的话，两边迟早会漂 —— 而漂掉的那次
+# 正好是发版那次，代价最大。
+on:
+  workflow_call:
+
+jobs:
+  deployment-launchers:
+    name: Deployment launcher checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test GitHub deployment launchers
+        run: ./deploy/tests/test-github-deploy.sh
+
+  deployment-windows-launcher:
+    name: Windows deployment launcher check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse and resolve Windows deployment package
+        shell: powershell
+        run: |
+          $output = powershell -NoProfile -ExecutionPolicy Bypass `
+            -File deploy/github-deploy-windows.ps1 `
+            -Mode update -Version 1.2.3 -DryRun
+          if ($LASTEXITCODE -ne 0) { throw "Windows launcher failed to parse" }
+          # $output 是多行字符串数组。PowerShell 里左边是集合时 -match/-notmatch 是
+          # **过滤**而不是判断，会返回不匹配的那几行 —— 非空数组在 if 里恒为真，
+          # 写成 `$output -notmatch ...` 这条检查会每次都抛。先 join 成单个字符串。
+          $joined = $output -join "`n"
+          if ($joined -notmatch 'releases/download/v1\.2\.3/dental-clinic-windows-upgrade\.zip') {
+            throw "Windows launcher selected an unexpected asset. Output: $joined"
+          }
+
+  test:
+    # Win7 目标机运行 MySQL 5.7（8.0 不支持 Win7），因此必须同时在 5.7 上验证：
+    # 5.7 与 8.0 在默认排序规则、JSON 函数、CTE 支持上都有差异。
+    name: PHP Tests (MySQL ${{ matrix.mysql }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql: ['8.0', '5.7']
+
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql }}
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: dental_medical_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: dental_medical_test
+      DB_USERNAME: root
+      DB_PASSWORD: password
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, mysql, gd, zip
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          mkdir -p \
+            storage/framework/cache/data \
+            storage/framework/sessions \
+            storage/framework/views \
+            storage/logs
+          php artisan key:generate
+
+      - name: Verify Laravel runtime paths
+        run: php artisan view:clear
+
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping -h 127.0.0.1 -u root -ppassword --silent; do
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run tests
+        run: php artisan test
+
+  build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run production
