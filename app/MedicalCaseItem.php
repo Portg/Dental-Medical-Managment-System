@@ -17,7 +17,36 @@ class MedicalCaseItem extends Model
     use SerializesDatesInAppTimezone, SoftDeletes;
 
     protected $fillable = [
-        'medical_case_id', 'section', 'tooth_no', 'content', 'sort_order', '_who_added',
+        'medical_case_id', 'section', 'tooth_no', 'tooth_mark', 'content', 'sort_order', '_who_added',
+    ];
+
+    /**
+     * 牙位标记（部位记录法里写在牙位号上下的符号）。
+     *
+     *     △ residual_root  残根 —— 牙冠基本没了，只剩牙根
+     *     ✕ extracted      已拔除 / 该牙缺失
+     *     — missing        缺失
+     *
+     * 存 slug 不存符号：符号是显示层的事。
+     *
+     * 「—」连起来画表示连冠固定假牙（跨牙关系），不在此列 —— 见
+     * 2026_09_17_100000 迁移的说明，那是有意省略。
+     */
+    public const MARK_RESIDUAL_ROOT = 'residual_root';
+    public const MARK_EXTRACTED     = 'extracted';
+    public const MARK_MISSING       = 'missing';
+
+    public const MARKS = [
+        self::MARK_RESIDUAL_ROOT,
+        self::MARK_EXTRACTED,
+        self::MARK_MISSING,
+    ];
+
+    /** slug → 部位记录法的符号 */
+    public const MARK_SYMBOLS = [
+        self::MARK_RESIDUAL_ROOT => '△',
+        self::MARK_EXTRACTED     => '✕',
+        self::MARK_MISSING       => '—',
     ];
 
     protected $casts = [

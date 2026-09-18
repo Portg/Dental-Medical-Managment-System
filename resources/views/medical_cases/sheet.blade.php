@@ -141,7 +141,9 @@
                     @forelse($caseItems[$section] ?? [] as $row)
                         <div class="mr-item">
                             @if(!empty($row['tooth_no']))
-                                <span class="mr-tooth">{{ $row['tooth_no'] }}</span>
+                                {{-- 牙位标记（△残根 / ✕已拔除 / —缺失）跟在牙位号后面：
+                                     不印的话「45 缺失」看不出这颗牙是残根还是已拔除。 --}}
+                                <span class="mr-tooth">{{ $row['tooth_no'] }}@if(!empty($row['tooth_mark'])){{ \App\MedicalCaseItem::MARK_SYMBOLS[$row['tooth_mark']] ?? '' }}@endif</span>
                             @endif
                             <span class="mr-item-text">{{ $row['content'] }}</span>
                         </div>
@@ -189,7 +191,9 @@
                     @foreach($caseItems['treatment_plan'] as $row)
                         <div class="mr-item">
                             @if(!empty($row['tooth_no']))
-                                <span class="mr-tooth">{{ $row['tooth_no'] }}</span>
+                                {{-- 牙位标记（△残根 / ✕已拔除 / —缺失）跟在牙位号后面：
+                                     不印的话「45 缺失」看不出这颗牙是残根还是已拔除。 --}}
+                                <span class="mr-tooth">{{ $row['tooth_no'] }}@if(!empty($row['tooth_mark'])){{ \App\MedicalCaseItem::MARK_SYMBOLS[$row['tooth_mark']] ?? '' }}@endif</span>
                             @endif
                             <span class="mr-item-text">{{ $row['content'] }}</span>
                         </div>

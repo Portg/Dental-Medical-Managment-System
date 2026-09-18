@@ -28,9 +28,14 @@
         var $src = $('#tooth-pad-template');
         if (!$src.length) return null;
 
+        // 搬走而不是复制：模板里有 #tooth-pad-grid 这类 id，留着的话页面上同一个
+        // id 会出现两次。虽然模板是 display:none 看不见，但重复 id 下
+        // document.getElementById 只认得到第一个 —— 这套代码为重复 id 栽过一次
+        // （46287dc）。用完即拆，不给下一个人留这个坑。
         $pad = $('<div class="tooth-pad" style="display:none"></div>')
-            .html($src.html())
+            .append($src.children())
             .appendTo('body');
+        $src.remove();
 
         // 点牙：加/减这一颗
         $pad.on('mousedown', '.tg-t', function (e) {
@@ -42,6 +47,14 @@
         $pad.on('mousedown', '.tg-all', function (e) {
             e.preventDefault();
             toggle(String($(this).data('teeth')).split(','));
+        });
+
+        // 牙位标记 △ 残根 / ✕ 已拔除 / — 缺失：落在行上，再点同一个取消
+        $pad.on('mousedown', '.tooth-pad-mark', function (e) {
+            e.preventDefault();
+            if (!$row || !$row.length) return;
+            CaseItems.setRowMark($row, $(this).data('mark'));
+            paintMarks();
         });
 
         $pad.on('mousedown', '.tooth-pad-done', function (e) {
@@ -83,6 +96,15 @@
         var cur = current();
         $pad.find('.tg-t').each(function () {
             $(this).toggleClass('selected', cur.indexOf(String($(this).data('tooth'))) !== -1);
+        });
+        paintMarks();
+    }
+
+    /** 这一行当前的标记按钮压下去 */
+    function paintMarks() {
+        var mark = ($row && $row.length) ? CaseItems.rowMark($row) : '';
+        $pad.find('.tooth-pad-mark').each(function () {
+            $(this).toggleClass('active', $(this).data('mark') === mark);
         });
     }
 

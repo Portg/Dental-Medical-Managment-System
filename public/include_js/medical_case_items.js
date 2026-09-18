@@ -94,6 +94,14 @@ var CaseItems = (function () {
      */
     var ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'];
 
+    // 牙位标记的符号（部位记录法里写在牙位号上下的那三个）。
+    // 与服务端 MedicalCaseItem::MARK_SYMBOLS 对齐。
+    var MARK_SYMBOLS = {
+        residual_root: '△',   // 残根：牙冠基本没了，只剩牙根
+        extracted:     '✕',   // 已拔除 / 该牙缺失
+        missing:       '—'    // 缺失
+    };
+
     function toothSymbol(tooth) {
         var str = String(tooth || '');
         var quad = parseInt(str.charAt(0), 10);
@@ -102,6 +110,27 @@ var CaseItems = (function () {
         if (!quad || !pos) return str;                    // 非 FDI 编号，原样显示
         if (quad >= 5 && quad <= 8) return ROMAN[pos] || str;   // 乳牙
         return String(pos);                                // 恒牙
+    }
+
+    /** 这一行的牙位标记（△/✕/—），没有就是空串 */
+    function rowMark($row) {
+        return ($row && $row.length) ? ($row.find('.case-item-mark').val() || '') : '';
+    }
+
+    /**
+     * 设置这一行的牙位标记。
+     *
+     * 标记落在**行**上而不是单颗牙上：一行是一条临床陈述，「16,17 残根」就是两颗
+     * 都残根；若 16 残根而 17 只是龋坏，本来就该分两行 —— 与「一行一条陈述」一致。
+     * 再点同一个标记等于取消。
+     */
+    function setRowMark($row, mark) {
+        if (!$row || !$row.length) return;
+
+        var next = rowMark($row) === mark ? '' : mark;
+        $row.find('.case-item-mark').val(next);
+        // 十字图要跟着重画（符号画在牙位号上）
+        setRowTooth($row, splitTeeth($row.find('.case-item-tooth-value').val()));
     }
 
     /** 把 '16,17' 这种拆成数组 */
@@ -117,7 +146,7 @@ var CaseItems = (function () {
      * 写成一格「76」，不用分两行各写一遍。这就是部位记录法的写法 ——
      * 十字分区，同区的牙位序号并排写。
      */
-    function toothCrossHtml(tooth) {
+    function toothCrossHtml(tooth, mark) {
         var teeth = splitTeeth(tooth);
         if (!teeth.length) {
             return '<span class="tooth-empty">' + t('medical_cases.pick_tooth', '选牙位') + '</span>';
@@ -145,21 +174,27 @@ var CaseItems = (function () {
                 var d = parseInt(a.charAt(1), 10) - parseInt(b.charAt(1), 10);
                 return (cell === 'tl' || cell === 'bl') ? -d : d;
             });
+            if (!list.length) return '<span class="tq tq-' + cell + '"></span>';
+            // 标记跟在这一格的牙位号后面：「6△」。部位记录法里符号写在牙位号
+            // 上下，格子里跟在后面是同一个意思，且不用为它另占一行。
             return '<span class="tq tq-' + cell + '">' +
-                   escapeHtml(list.map(toothSymbol).join('')) + '</span>';
+                   escapeHtml(list.map(toothSymbol).join('')) +
+                   (mark ? '<i class="tq-mark">' + escapeHtml(MARK_SYMBOLS[mark] || '') + '</i>' : '') +
+                   '</span>';
         }).join('');
 
         return '<span class="tooth-cross"' + title + '>' + cells + '</span>';
     }
 
-    function rowHtml(section, tooth, content) {
+    function rowHtml(section, tooth, content, mark) {
         return '' +
             '<div class="case-item-row" data-section="' + section + '">' +
               '<button type="button" class="case-item-tooth js-pick-tooth' + (tooth ? ' has-tooth' : '') + '"' +
                       ' title="' + t('medical_cases.pick_tooth', '选牙位') + '">' +
-                toothCrossHtml(tooth) +
+                toothCrossHtml(tooth, mark) +
               '</button>' +
               '<input type="hidden" class="case-item-tooth-value" value="' + escapeHtml(tooth || '') + '">' +
+              '<input type="hidden" class="case-item-mark" value="' + escapeHtml(mark || '') + '">' +
               '<textarea class="case-item-content phrase-enabled' +
                         (TEMPLATE_TYPES[section] ? ' template-enabled' : '') + '" rows="2"' +
                        (TEMPLATE_TYPES[section] ? ' data-template-type="' + TEMPLATE_TYPES[section] + '"' : '') +
@@ -171,11 +206,11 @@ var CaseItems = (function () {
             '</div>';
     }
 
-    function addRow(section, tooth, content, focus) {
+    function addRow(section, tooth, content, focus, mark) {
         var $rows = $('#rows-' + section);
         if (!$rows.length) return null;
 
-        var $row = $(rowHtml(section, tooth, content));
+        var $row = $(rowHtml(section, tooth, content, mark));
         $rows.append($row);
         syncDerived(section);
 
@@ -192,7 +227,8 @@ var CaseItems = (function () {
             try { rows = JSON.parse($(this).text() || '[]'); } catch (e) { rows = []; }
 
             rows.forEach(function (r) {
-                addRow(section, r.tooth_no, r.content, false);
+                // 带上 tooth_mark —— 不带的话重新打开病历，牙位标记就丢了
+                addRow(section, r.tooth_no, r.content, false, r.tooth_mark);
             });
 
             // 空段落给一行空的，省得每次都要先点「添加」
@@ -211,7 +247,12 @@ var CaseItems = (function () {
                 var tooth = $(this).find('.case-item-tooth-value').val() || '';
                 var content = $(this).find('.case-item-content').val() || '';
                 if (!tooth.trim() && !content.trim()) return;   // 空行不提交
-                out.push({ section: section, tooth_no: tooth.trim(), content: content.trim() });
+                out.push({
+                    section: section,
+                    tooth_no: tooth.trim(),
+                    tooth_mark: $(this).find('.case-item-mark').val() || '',
+                    content: content.trim()
+                });
             });
         });
         return out;
@@ -264,7 +305,7 @@ var CaseItems = (function () {
         var value = Array.isArray(tooth) ? tooth.join(',') : (tooth || '');
         $row.find('.case-item-tooth-value').val(value);
         $row.find('.js-pick-tooth').toggleClass('has-tooth', !!value)
-            .html(toothCrossHtml(value));
+            .html(toothCrossHtml(value, rowMark($row)));
 
         // 模板插进来的 __ 占位符换成这一行的牙位。旧实现是拿整段的牙位串去替换，
         // 一行一个牙位之后这里才是对的粒度。
@@ -637,6 +678,8 @@ var CaseItems = (function () {
         addDiagnosisRow: addDiagnosisRow,
         collectDiagnoses: collectDiagnoses,
         syncDiagnosisDerived: syncDiagnosisDerived,
+        setRowMark: setRowMark,
+        rowMark: rowMark,
         SECTIONS: SECTIONS
     };
 })();

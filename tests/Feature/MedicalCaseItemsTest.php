@@ -51,6 +51,20 @@ class MedicalCaseItemsTest extends TestCase
         ]);
     }
 
+    /** 牙位标记那几条用例的病历夹具 */
+    private function makeCase(): MedicalCase
+    {
+        return MedicalCase::create([
+            'case_no'         => MedicalCase::CaseNumber(),
+            'patient_id'      => $this->patient->id,
+            'doctor_id'       => $this->doctor->id,
+            'case_date'       => now()->format('Y-m-d'),
+            'chief_complaint' => '牙疼',
+            'status'          => MedicalCase::STATUS_OPEN,
+            '_who_added'      => $this->doctor->id,
+        ]);
+    }
+
     private function service(): MedicalCaseService
     {
         return app(MedicalCaseService::class);
@@ -387,5 +401,86 @@ class MedicalCaseItemsTest extends TestCase
         foreach (MedicalCaseItem::SECTIONS as $section) {
             $this->assertSame([], $items[$section]);
         }
+    }
+
+    // ─── 牙位标记 △ 残根 / ✕ 已拔除 / — 缺失 ────────────────────
+
+    /**
+     * 标记落在**行**上：一行是一条临床陈述，「16,17 残根」就是两颗都残根。
+     * 落库仍是一牙一行，每行各带一份标记。
+     */
+    public function test_牙位标记随行落库(): void
+    {
+        $case = $this->makeCase();
+
+        $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'tooth_no' => '16,17',
+             'tooth_mark' => 'residual_root', 'content' => '冠部大面积缺损'],
+        ])['items']);
+
+        $this->assertSame(2, MedicalCaseItem::where('medical_case_id', $case->id)->count());
+        foreach (['16', '17'] as $tooth) {
+            $this->assertDatabaseHas('medical_case_items', [
+                'medical_case_id' => $case->id,
+                'tooth_no'        => $tooth,
+                'tooth_mark'      => 'residual_root',
+            ]);
+        }
+    }
+
+    /**
+     * 认不出的标记当没填 —— 宁可少一个标记，也不要把前端传来的任意字符串塞进库里。
+     */
+    public function test_不认识的标记被丢掉(): void
+    {
+        $case = $this->makeCase();
+
+        $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'tooth_no' => '16',
+             'tooth_mark' => '<script>', 'content' => '龋坏'],
+        ])['items']);
+
+        $this->assertDatabaseHas('medical_case_items', [
+            'medical_case_id' => $case->id, 'tooth_no' => '16', 'tooth_mark' => null,
+        ]);
+    }
+
+    /**
+     * 符号要跟着牙位号进派生文本。不带的话打印出来只有「45 …」，
+     * 看不出这颗牙是残根还是已拔除 —— 而文本列正是打印、详情、API、OCR、
+     * 工作日志五处在消费的东西。
+     */
+    public function test_标记符号进派生文本(): void
+    {
+        $out = $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'tooth_no' => '45',
+             'tooth_mark' => 'residual_root', 'content' => '仅存牙根'],
+            ['section' => 'treatment', 'tooth_no' => '38',
+             'tooth_mark' => 'extracted', 'content' => '已拔除'],
+        ]);
+
+        $this->assertSame('45△ 仅存牙根', $out['columns']['examination']);
+        $this->assertSame('38✕ 已拔除', $out['columns']['treatment']);
+    }
+
+    /**
+     * 同段落同内容但标记不同的两行是两条不同的事实，读回编辑器时不能并成一行。
+     */
+    public function test_标记不同的行不被合并(): void
+    {
+        $case = $this->makeCase();
+
+        $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'tooth_no' => '16', 'tooth_mark' => 'residual_root', 'content' => '缺损'],
+            ['section' => 'examination', 'tooth_no' => '17', 'tooth_mark' => 'extracted',     'content' => '缺损'],
+        ])['items']);
+
+        $rows = $this->service()->getCaseItemsForEdit($case->fresh())['examination'];
+
+        $this->assertCount(2, $rows, '标记不同不该并成一行');
+        $this->assertSame(
+            ['residual_root', 'extracted'],
+            array_column($rows, 'tooth_mark')
+        );
     }
 }

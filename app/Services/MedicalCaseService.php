@@ -212,6 +212,12 @@ class MedicalCaseService
             $content = trim((string) ($row['content'] ?? ''));
             $tooth   = trim((string) ($row['tooth_no'] ?? ''));
 
+            // 牙位标记（△ 残根 / ✕ 已拔除 / — 缺失）落在**行**上：一行是一条临床
+            // 陈述，「16,17 残根」就是两颗都残根。认不出的值当没填 —— 宁可少一个
+            // 标记，也不要把前端传来的任意字符串塞进库里。
+            $mark = (string) ($row['tooth_mark'] ?? '');
+            $mark = in_array($mark, MedicalCaseItem::MARKS, true) ? $mark : null;
+
             // 牙位和文字都空的行是用户点了「添加」又没填，直接丢掉，
             // 不然每次保存都会攒下一堆空行
             if ($content === '' && $tooth === '') {
@@ -230,6 +236,7 @@ class MedicalCaseService
                 $items[] = [
                     'section'    => $section,
                     'tooth_no'   => $one === '' ? null : $one,
+                    'tooth_mark' => $mark,
                     'content'    => $content === '' ? null : $content,
                     'sort_order' => count($bySection[$section] ?? []),
                 ];
@@ -441,10 +448,18 @@ class MedicalCaseService
         foreach (MedicalCaseItem::SECTIONS as $section) {
             $rows = $bySection[$section] ?? [];
 
+            // 牙位标记跟着牙位号走进派生文本：「45△ 残根」。不带的话打印出来
+            // 只有「45 …」，看不出这颗牙是残根还是已拔除 —— 而文本列正是打印、
+            // 病历详情、API、OCR、工作日志五处在消费的东西。
             $columns[$section] = $rows === [] ? null : implode("\n", array_map(function ($r) {
-                return $r['tooth_no'] !== null && $r['content'] !== null
-                    ? $r['tooth_no'] . ' ' . $r['content']
-                    : ($r['content'] ?? $r['tooth_no']);
+                $tooth = $r['tooth_no'];
+                if ($tooth !== null && !empty($r['tooth_mark'])) {
+                    $tooth .= MedicalCaseItem::MARK_SYMBOLS[$r['tooth_mark']] ?? '';
+                }
+
+                return $tooth !== null && $r['content'] !== null
+                    ? $tooth . ' ' . $r['content']
+                    : ($r['content'] ?? $tooth);
             }, $rows));
 
             // 牙位列 = 本段所有行牙位的去重集合，顺序按录入
@@ -495,7 +510,7 @@ class MedicalCaseService
 
         $existing = MedicalCaseItem::where('medical_case_id', $case->id)
             ->orderBy('sort_order')->orderBy('id')
-            ->get(['section', 'tooth_no', 'content']);
+            ->get(['section', 'tooth_no', 'tooth_mark', 'content']);
 
         // 按「同段落 + 同内容」把牙位合回一行：落库是一牙一行（为了按牙位可查），
         // 但医生写的时候「16、17 缺失」本来就是一条，读回来要还原成一条。
@@ -504,7 +519,9 @@ class MedicalCaseService
             if (!isset($out[$row->section])) {
                 continue;
             }
-            $key = $row->section . "\0" . (string) $row->content;
+            // 合并键带上标记：同段落同内容但标记不同的两行（16 残根 / 17 已拔除）
+            // 是两条不同的事实，不能并成一行。
+            $key = $row->section . "\0" . (string) $row->content . "\0" . (string) $row->tooth_mark;
 
             if (isset($merged[$key])) {
                 if ($row->tooth_no !== null && $row->tooth_no !== '') {
@@ -514,16 +531,18 @@ class MedicalCaseService
             }
 
             $merged[$key] = [
-                'section' => $row->section,
-                'content' => $row->content,
-                'teeth'   => ($row->tooth_no !== null && $row->tooth_no !== '') ? [$row->tooth_no] : [],
+                'section'    => $row->section,
+                'content'    => $row->content,
+                'tooth_mark' => $row->tooth_mark,
+                'teeth'      => ($row->tooth_no !== null && $row->tooth_no !== '') ? [$row->tooth_no] : [],
             ];
         }
 
         foreach ($merged as $row) {
             $out[$row['section']][] = [
-                'tooth_no' => $row['teeth'] === [] ? null : implode(',', array_unique($row['teeth'])),
-                'content'  => $row['content'],
+                'tooth_no'   => $row['teeth'] === [] ? null : implode(',', array_unique($row['teeth'])),
+                'tooth_mark' => $row['tooth_mark'] ?? null,
+                'content'    => $row['content'],
             ];
         }
 

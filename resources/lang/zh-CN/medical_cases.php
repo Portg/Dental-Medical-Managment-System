@@ -208,6 +208,11 @@ return [
     // 牙位软键盘：贴着当前行弹出的牙位网格
     'hint_template_key' => '病历模板',
     'hint_phrase_key' => '常用短语',
+    // 牙位标记（部位记录法）。「—」连起来画还表示连冠固定假牙，那是跨牙关系，
+    // 现在不做（见 2026_09_17_100000 迁移的说明）。
+    'tooth_mark_residual_root' => '残根',
+    'tooth_mark_extracted' => '已拔除',
+    'tooth_mark_missing' => '缺失',
     'tooth_pad_hint' => '点牙位加/减，点「全」选整个区',
     'phrase_slot' => '语义槽位',
     'phrase_slot_hint' => '如「时间」「部位」「龋坏」；打已有的名字并进该组，打新的开一组',

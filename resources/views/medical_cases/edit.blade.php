@@ -246,6 +246,18 @@
         'compact'  => false,
         'onclick'  => null,
     ])
+    {{-- 牙位标记（部位记录法里写在牙位号上下的符号）。参考产品的选择器底部
+         就是这三个。落在**行**上：一行是一条临床陈述，「16,17 残根」就是两颗
+         都残根；再点同一个等于取消。 --}}
+    <div class="tooth-pad-marks">
+        @foreach(\App\MedicalCaseItem::MARKS as $mark)
+            <button type="button" class="tooth-pad-mark" data-mark="{{ $mark }}"
+                    title="{{ __('medical_cases.tooth_mark_' . $mark) }}">
+                {{ \App\MedicalCaseItem::MARK_SYMBOLS[$mark] }}
+                <span class="tooth-pad-mark-label">{{ __('medical_cases.tooth_mark_' . $mark) }}</span>
+            </button>
+        @endforeach
+    </div>
     <div class="tooth-pad-foot">
         <span class="tooth-pad-hint">{{ __('medical_cases.tooth_pad_hint') }}</span>
         <button type="button" class="btn btn-xs btn-default tooth-pad-done">{{ __('common.close') }}</button>
