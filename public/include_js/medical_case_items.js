@@ -149,6 +149,17 @@ var CaseItems = (function () {
     function toothCrossHtml(tooth, mark) {
         var teeth = splitTeeth(tooth);
         if (!teeth.length) {
+            // 只标了符号、没写牙位号 —— 部位记录法里「符号直接取代数字」的写法，
+            // 符号站在数字该站的位置上。没有牙位号就没有象限信息，所以居中显示
+            // （与认不出的编号走同一条路）。
+            //
+            // 原来这里直接返回「选牙位」占位、把 mark 丢掉：医生点了 △ 屏幕上
+            // 毫无反应，看起来就是这个按钮坏了。
+            if (mark) {
+                return '<span class="tooth-cross tooth-cross-plain">' +
+                       '<i class="tq-mark">' + escapeHtml(MARK_SYMBOLS[mark] || '') + '</i>' +
+                       '</span>';
+            }
             return '<span class="tooth-empty">' + t('medical_cases.pick_tooth', '选牙位') + '</span>';
         }
 
@@ -246,7 +257,9 @@ var CaseItems = (function () {
             $('#rows-' + section).find('.case-item-row').each(function () {
                 var tooth = $(this).find('.case-item-tooth-value').val() || '';
                 var content = $(this).find('.case-item-content').val() || '';
-                if (!tooth.trim() && !content.trim()) return;   // 空行不提交
+                // 带标记的行不是空行（只画一个 △ 也是一条临床陈述）。
+                // 与服务端 normalizeCaseItems() 的空行判定保持一致。
+                if (!tooth.trim() && !content.trim() && !rowMark($(this))) return;
                 out.push({
                     section: section,
                     tooth_no: tooth.trim(),
@@ -269,8 +282,14 @@ var CaseItems = (function () {
         $('#rows-' + section).find('.case-item-row').each(function () {
             var tooth = ($(this).find('.case-item-tooth-value').val() || '').trim();
             var content = ($(this).find('.case-item-content').val() || '').trim();
-            if (!tooth && !content) return;
-            lines.push(tooth && content ? (tooth + ' ' + content) : (content || tooth));
+            var mark = rowMark($(this));
+            // 行首那一段与服务端 deriveColumnsFromItems() 逐字对齐：有牙位号是
+            // 「45△」，没有就让符号自己顶上。原来这里根本不拼符号，而服务端拼 ——
+            // 正是这个函数的注释里写着「必须一致」的地方。
+            var head = tooth ? (tooth + (mark ? (MARK_SYMBOLS[mark] || '') : ''))
+                             : (mark ? (MARK_SYMBOLS[mark] || '') : '');
+            if (!head && !content) return;
+            lines.push(head && content ? (head + ' ' + content) : (content || head));
         });
         $('#' + section).val(lines.join('\n'));
     }

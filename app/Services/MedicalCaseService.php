@@ -218,9 +218,14 @@ class MedicalCaseService
             $mark = (string) ($row['tooth_mark'] ?? '');
             $mark = in_array($mark, MedicalCaseItem::MARKS, true) ? $mark : null;
 
-            // 牙位和文字都空的行是用户点了「添加」又没填，直接丢掉，
-            // 不然每次保存都会攒下一堆空行
-            if ($content === '' && $tooth === '') {
+            // 牙位、文字、标记全空的行是用户点了「添加」又没填，直接丢掉，
+            // 不然每次保存都会攒下一堆空行。
+            //
+            // 标记必须算进这个判断：部位记录法里「符号直接取代数字」是正经写法 ——
+            // 医生在格子里只画一个 △，意思是「这个区有颗牙是残根」，牙位号和文字
+            // 都不写。只看 content 和 tooth 的话，这样一行会被当成空行丢掉，而且
+            // 丢得无声无息。
+            if ($content === '' && $tooth === '' && $mark === null) {
                 continue;
             }
 
@@ -452,14 +457,21 @@ class MedicalCaseService
             // 只有「45 …」，看不出这颗牙是残根还是已拔除 —— 而文本列正是打印、
             // 病历详情、API、OCR、工作日志五处在消费的东西。
             $columns[$section] = $rows === [] ? null : implode("\n", array_map(function ($r) {
-                $tooth = $r['tooth_no'];
-                if ($tooth !== null && !empty($r['tooth_mark'])) {
-                    $tooth .= MedicalCaseItem::MARK_SYMBOLS[$r['tooth_mark']] ?? '';
-                }
+                $symbol = empty($r['tooth_mark'])
+                    ? ''
+                    : (MedicalCaseItem::MARK_SYMBOLS[$r['tooth_mark']] ?? '');
 
-                return $tooth !== null && $r['content'] !== null
-                    ? $tooth . ' ' . $r['content']
-                    : ($r['content'] ?? $tooth);
+                // 行首那一段：有牙位号就是「45△」，没有就让符号自己顶上去 ——
+                // 部位记录法里「符号直接取代数字」本就是一种写法，符号站在数字
+                // 该站的位置上。原来只在 tooth_no 非空时才拼符号，于是不填牙位的
+                // 行打印出来符号无声消失。
+                $head = $r['tooth_no'] !== null
+                    ? $r['tooth_no'] . $symbol
+                    : ($symbol === '' ? null : $symbol);
+
+                return $head !== null && $r['content'] !== null
+                    ? $head . ' ' . $r['content']
+                    : ($r['content'] ?? $head);
             }, $rows));
 
             // 牙位列 = 本段所有行牙位的去重集合，顺序按录入

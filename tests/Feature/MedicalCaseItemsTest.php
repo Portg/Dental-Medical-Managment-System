@@ -464,6 +464,47 @@ class MedicalCaseItemsTest extends TestCase
     }
 
     /**
+     * 只写符号、不写牙位号 —— 部位记录法里「符号直接取代数字」的写法。
+     *
+     * 医生在格子里直接画一个 △，意思是「这个区有颗牙是残根」，连牙位号都不写。
+     * 这一行的 content 和 tooth_no 都是空的，但它**不是**空行：带着一个标记的行
+     * 是一条临床陈述。之前被当成「点了添加又没填」整行丢掉了。
+     */
+    public function test_只有标记的行不算空行(): void
+    {
+        $case = $this->makeCase();
+
+        $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'tooth_no' => '', 'tooth_mark' => 'residual_root', 'content' => ''],
+        ])['items']);
+
+        $this->assertDatabaseHas('medical_case_items', [
+            'medical_case_id' => $case->id,
+            'tooth_no'        => null,
+            'tooth_mark'      => 'residual_root',
+            'content'         => null,
+        ]);
+    }
+
+    /**
+     * 不写牙位号时，符号顶替数字的位置进派生文本。
+     *
+     * 原来符号只在 tooth_no 非空时才拼进去，于是「不填牙位、只标 △ 加一句话」
+     * 打印出来只剩那句话，符号无声消失 —— 而文本列是打印、详情、API、OCR、
+     * 工作日志五处在消费的东西。
+     */
+    public function test_没有牙位时符号顶替数字进派生文本(): void
+    {
+        $out = $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'tooth_no' => '', 'tooth_mark' => 'residual_root', 'content' => '仅存牙根'],
+            ['section' => 'treatment',   'tooth_no' => '', 'tooth_mark' => 'extracted',     'content' => ''],
+        ]);
+
+        $this->assertSame('△ 仅存牙根', $out['columns']['examination']);
+        $this->assertSame('✕', $out['columns']['treatment']);
+    }
+
+    /**
      * 同段落同内容但标记不同的两行是两条不同的事实，读回编辑器时不能并成一行。
      */
     public function test_标记不同的行不被合并(): void
