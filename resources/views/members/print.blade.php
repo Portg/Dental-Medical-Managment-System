@@ -3,9 +3,11 @@
 <head>
     <meta charset="utf-8">
     <title>{{ __('members.print_member_info') }}</title>
+    <link href="{{ asset('fonts/noto-sans-sc/font-face.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/typography.css') }}" rel="stylesheet">
     <style>
         body {
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            font-family: var(--font-ui);
             margin: 0;
             padding: 20px;
         }

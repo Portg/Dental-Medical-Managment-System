@@ -6,7 +6,9 @@
     <meta name="robots" content="noindex, nofollow">
     <title>{{ __('satisfaction.link_invalid') }} - {{ config('app.name') }}</title>
     <link href="{{ asset('backend/assets/global/plugins/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('fonts/noto-sans-sc/font-face.css') }}" rel="stylesheet">
     <link href="{{ asset('css/survey-fill.css') }}?v={{ file_exists(public_path('css/survey-fill.css')) ? filemtime(public_path('css/survey-fill.css')) : time() }}" rel="stylesheet">
+    <link href="{{ asset('css/typography.css') }}?v={{ filemtime(public_path('css/typography.css')) }}" rel="stylesheet">
 </head>
 <body>
 <div class="survey-wrap">

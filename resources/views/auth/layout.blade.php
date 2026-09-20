@@ -30,6 +30,8 @@
     <link href="{{ asset('backend/assets/global/css/plugins.min.css') }}" rel="stylesheet" type="text/css"/>
     <link href="{{ asset('backend/assets/pages/css/login-5.min.css') }}" rel="stylesheet" type="text/css"/>
     <link href="{{ asset('css/theme-purple.css') }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('fonts/noto-sans-sc/font-face.css') }}?v={{ filemtime(public_path('fonts/noto-sans-sc/font-face.css')) }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('css/typography.css') }}?v={{ filemtime(public_path('css/typography.css')) }}" rel="stylesheet" type="text/css"/>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"/>
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}"/>
 </head>

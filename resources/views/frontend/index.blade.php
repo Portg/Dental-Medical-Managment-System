@@ -8,8 +8,7 @@
     <meta content="width=device-width, initial-scale=1" name="viewport"/>
     <meta content="Thrust Dental Systems " name="description"/>
     <meta content="" name="author"/>
-    <link href="http://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&amp;subset=all" rel="stylesheet"
-          type="text/css"/>
+    <link href="{{ asset('fonts/noto-sans-sc/font-face.css') }}" rel="stylesheet" type="text/css"/>
     <link href="{{ asset('backend/assets/global/plugins/font-awesome/css/font-awesome.min.css') }}" rel="stylesheet"
           type="text/css"/>
     <link href="{{ asset('backend/assets/global/plugins/simple-line-icons/simple-line-icons.min.css') }}"
@@ -37,7 +36,7 @@
             font-weight: 600;
             color: #e0e0e0;
             font-size: 18px;
-            font-family: "Open Sans", sans-serif;
+            font-family: var(--font-ui);
         }
 
         .radio_ {
@@ -89,6 +88,7 @@
             min-height: 100px;
         }
     </style>
+    <link href="{{ asset('css/typography.css') }}?v={{ filemtime(public_path('css/typography.css')) }}" rel="stylesheet" type="text/css"/>
 </head>
 
 <body class=" login">

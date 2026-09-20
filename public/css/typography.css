@@ -1,0 +1,127 @@
+/*
+ * Global UI typography
+ *
+ * Noto Sans SC is self-hosted under SIL OFL 1.1. Keep the proprietary
+ * platform fonts below as fallbacks only; they are not redistributed.
+ */
+:root {
+    --font-ui: "Noto Sans SC Variable", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    --font-size-caption: 12px;
+    --font-size-body: 14px;
+    --font-size-section: 16px;
+    --font-size-page-title: 20px;
+}
+
+html,
+body,
+body h1,
+body h2,
+body h3,
+body h4,
+body h5,
+body h6,
+body button,
+body input,
+body select,
+body textarea,
+body .btn,
+body .form-control,
+body .input-group-addon,
+body .dropdown-menu,
+body .nav,
+body .pagination,
+body .table,
+body .modal,
+body .tooltip,
+body .popover,
+body .select2-container,
+body .select2-results,
+body .datepicker,
+body .daterangepicker,
+body .dataTables_wrapper,
+body .fc,
+body .sweet-alert,
+body .toast {
+    font-family: var(--font-ui) !important;
+}
+
+body {
+    font-size: var(--font-size-body);
+    font-weight: 400;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body .form-control,
+body .btn,
+body .select2-container,
+body .dropdown-menu,
+body .table {
+    font-size: var(--font-size-body) !important;
+}
+
+body .select2-container .select2-selection,
+body .select2-container .select2-selection__rendered,
+body .select2-container .select2-selection__placeholder,
+body .select2-container .select2-results__option {
+    font-family: var(--font-ui) !important;
+    font-size: var(--font-size-body) !important;
+}
+
+body .page-sidebar .page-sidebar-menu > li > a,
+body .page-header .top-menu .navbar-nav > li.dropdown > .dropdown-toggle,
+body .table > thead > tr > th,
+body .table > tbody > tr > td,
+body .dataTable > thead > tr > th,
+body .dataTable > tbody > tr > td,
+body .form-section-label,
+body .time-slot-period-title {
+    font-size: var(--font-size-body) !important;
+}
+
+body .badge,
+body .field-hint,
+body .page-footer,
+body .page-footer-inner {
+    font-size: var(--font-size-caption) !important;
+}
+
+body .page-title,
+body .page-header-l1 .page-title {
+    font-size: var(--font-size-page-title);
+    font-weight: 600;
+    line-height: 28px;
+}
+
+body .modal-title,
+body .portlet-title > .caption,
+body .portlet-title > .caption > .caption-subject {
+    font-size: var(--font-size-section);
+    font-weight: 600;
+    line-height: 24px;
+}
+
+body .control-label,
+body .table > thead > tr > th,
+body .dataTable > thead > tr > th {
+    font-weight: 500;
+}
+
+body .help-block,
+body .text-muted,
+body .dataTables_info,
+body .pagination-info {
+    font-size: var(--font-size-caption);
+    line-height: 18px;
+}
+
+body .table,
+body .dataTable,
+body .amount,
+body input[type="number"],
+body input[type="date"],
+body input[type="time"] {
+    font-variant-numeric: tabular-nums;
+}
