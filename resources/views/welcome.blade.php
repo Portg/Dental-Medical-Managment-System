@@ -6,15 +6,16 @@
 
         <title>Laravel</title>
 
-        <!-- Fonts -->
-        <link href="https://fonts.googleapis.com/css?family=Nunito:200,600" rel="stylesheet">
+        <!-- Self-hosted font for offline deployments -->
+        <link href="{{ asset('fonts/noto-sans-sc/font-face.css') }}" rel="stylesheet">
+        <link href="{{ asset('css/typography.css') }}" rel="stylesheet">
 
         <!-- Styles -->
         <style>
             html, body {
                 background-color: #fff;
                 color: #636b6f;
-                font-family: 'Nunito', sans-serif;
+                font-family: var(--font-ui);
                 font-weight: 200;
                 height: 100vh;
                 margin: 0;

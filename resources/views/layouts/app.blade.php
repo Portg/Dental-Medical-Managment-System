@@ -14,6 +14,8 @@
     <meta content="" name="author"/>
     {{-- Backend CSS Bundle (compiled via npm run dev/prod) --}}
     <link href="{{ asset('css/backend-bundle.css') }}" rel="stylesheet" type="text/css"/>
+    {{-- Self-hosted Noto Sans SC. OFL.txt is shipped with the font assets. --}}
+    <link href="{{ asset('fonts/noto-sans-sc/font-face.css') }}?v={{ filemtime(public_path('fonts/noto-sans-sc/font-face.css')) }}" rel="stylesheet" type="text/css"/>
     {{-- Icon fonts stay at their original paths so relative font URLs resolve correctly. --}}
     <link href="{{ asset('backend/assets/global/plugins/simple-line-icons/simple-line-icons.min.css') }}" rel="stylesheet" type="text/css"/>
     <link href="{{ asset('backend/assets/global/plugins/font-awesome/css/all.min.css') }}" rel="stylesheet" type="text/css"/>
@@ -39,6 +41,8 @@
     <link href="{{ asset('css/theme-purple.css') }}" rel="stylesheet" type="text/css"/>
 
     @yield('css')
+    {{-- Load last so page and vendor CSS cannot reintroduce Open Sans/Helvetica. --}}
+    <link href="{{ asset('css/typography.css') }}?v={{ filemtime(public_path('css/typography.css')) }}" rel="stylesheet" type="text/css"/>
 </head>
 
 <body class="page-header-fixed page-sidebar-fixed page-sidebar-closed-hide-logo page-content-white">
