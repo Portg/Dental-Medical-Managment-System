@@ -14,6 +14,7 @@ return [
     'sealant' => '窝沟封闭',
     'crown' => '牙冠',
     'residual_root' => '残根',
+    'pontic' => '桥体',
     'normal' => '正常',
     'view' => '查看',
     'add' => '添加',
@@ -46,6 +47,7 @@ return [
     'short_implant' => '种',
     'short_impacted' => '阻',
     'short_residual_root' => '残',
+    'short_pontic' => '桥',
 
     // 控制器消息
     'chart_saved_success' => '牙科图变更已成功保存',

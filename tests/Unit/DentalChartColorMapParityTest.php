@@ -91,6 +91,40 @@ class DentalChartColorMapParityTest extends TestCase
         }
     }
 
+    /**
+     * 工具栏上的每个状态按钮，编辑器和数据库都得认识。
+     *
+     * pontic 就是从这道缝里漏了很久：枚举里从 2026_01_17_800003 起就有这个值，
+     * 但编辑器的 STATUS_MAP 和工具栏都没有它 —— 于是牙位图画不出「这里有座桥」，
+     * 而且这种缺口不会报错，只会安静地少一个功能。
+     */
+    public function test_toolbar_statuses_are_known_to_editor_and_enum(): void
+    {
+        $blade = dirname(__DIR__, 2) . '/resources/views/dental_chart/partials/fdi_editor.blade.php';
+        $js    = dirname(__DIR__, 2) . '/public/include_js/dental_chart_editor.js';
+
+        $this->assertFileExists($blade);
+        $this->assertFileExists($js);
+
+        preg_match_all('/data-status="([a-z_]+)"/', file_get_contents($blade), $m);
+        $toolbar = array_values(array_diff(array_unique($m[1]), ['clear']));
+
+        $this->assertNotEmpty($toolbar, '工具栏解析出来是空的');
+
+        $source = file_get_contents($js);
+        $this->assertSame(
+            1,
+            preg_match('/var\s+STATUS_MAP\s*=\s*\{(.*?)\n    \};/s', $source, $sm),
+            'dental_chart_editor.js 里找不到 STATUS_MAP'
+        );
+        preg_match_all('/^\s*([a-z_]+)\s*:\s*\{/m', $sm[1], $keys);
+
+        foreach ($toolbar as $status) {
+            $this->assertContains($status, $keys[1], "工具栏上的 {$status} 不在编辑器 STATUS_MAP 里，点了不会有反应");
+            $this->assertContains($status, DentalChartService::TOOTH_STATUSES, "工具栏上的 {$status} 不在 tooth_status 枚举里，存不进去");
+        }
+    }
+
     public function test_mapped_statuses_are_all_valid_enum_values(): void
     {
         foreach (DentalChartService::COLOR_TO_STATUS as $color => $status) {

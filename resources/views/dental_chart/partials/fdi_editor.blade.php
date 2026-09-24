@@ -50,6 +50,10 @@
                 <span class="dce-status-swatch" style="background:#A855F7"></span>
                 <span class="dce-status-label">{{ __('odontogram.implant') }}</span>
             </button>
+            <button type="button" class="dce-status-btn" data-status="pontic" data-bg="#0891B2" data-label="{{ __('odontogram.pontic') }}">
+                <span class="dce-status-swatch" style="background:#0891B2"></span>
+                <span class="dce-status-label">{{ __('odontogram.pontic') }}</span>
+            </button>
             <button type="button" class="dce-status-btn" data-status="impacted" data-bg="#14B8A6" data-label="{{ __('odontogram.impacted_teeth') }}">
                 <span class="dce-status-swatch" style="background:#14B8A6"></span>
                 <span class="dce-status-label">{{ __('odontogram.impacted_teeth') }}</span>

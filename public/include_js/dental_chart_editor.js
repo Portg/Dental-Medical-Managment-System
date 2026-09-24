@@ -25,7 +25,12 @@
         // color 为 null 是有意的：COLOR_TO_STATUS 那张表是给只存颜色编号的旧版
         // Angular 牙位图做兼容的，而残根在旧版里根本不存在，编一个编号等于伪造历史。
         // 回读走 row.tooth_status，不依赖颜色。
-        residual_root: { color: null, bg: '#92400E', shortKey: 'short_residual_root', labelKey: 'residual_root' }
+        residual_root: { color: null, bg: '#92400E', shortKey: 'short_residual_root', labelKey: 'residual_root' },
+        // 桥体：固定桥上替代缺失牙的那一段。枚举里从 2026_01_17_800003 就有这个值，
+        // 一直没有入口，于是牙位图画不出「这里有座桥」—— 只能看到一颗 missing，
+        // 看不出缺隙已经被修复。基牙标 crown、缺隙标 pontic，三颗连起来就是一座
+        // 三单位桥；跨牙的那条长横线不在这里做（见 8a9fa7d 的说明）。
+        pontic: { color: null, bg: '#0891B2', shortKey: 'short_pontic', labelKey: 'pontic' }
     };
 
     var COLOR_TO_STATUS = {
@@ -33,7 +38,7 @@
         '6': 'implant', '8': 'crown', '11': 'impacted'
     };
 
-    var STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'residual_root', 'crown', 'rct', 'filled', 'caries'];
+    var STATUS_PRIORITY = ['missing', 'implant', 'pontic', 'impacted', 'residual_root', 'crown', 'rct', 'filled', 'caries'];
 
     var marks = {};       // toothNumber -> statusKey
     var activeTool = null; // statusKey | 'clear' | null

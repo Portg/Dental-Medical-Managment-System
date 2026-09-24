@@ -357,11 +357,12 @@ class DentalChartService
         $COLOR_TO_STATUS = self::COLOR_TO_STATUS;
         // residual_root 排在 impacted 之后、crown 之前：牙冠没了比任何修复体状态都
         // 更该被一眼看到，但比「牙已经不在」弱一档。
-        $STATUS_PRIORITY = ['missing', 'implant', 'impacted', 'residual_root', 'crown', 'rct', 'filled', 'caries'];
+        $STATUS_PRIORITY = ['missing', 'implant', 'pontic', 'impacted', 'residual_root', 'crown', 'rct', 'filled', 'caries'];
         $SHORT_KEYS = [
             'caries' => 'short_caries', 'filled' => 'short_filled', 'rct' => 'short_rct',
             'crown' => 'short_crown', 'missing' => 'short_missing', 'implant' => 'short_implant',
             'impacted' => 'short_impacted', 'residual_root' => 'short_residual_root',
+            'pontic' => 'short_pontic',
         ];
 
         // 患者要从两条路认：预约，或者病历。
