@@ -270,12 +270,15 @@
          MedicalCaseItem::isQuadrantCode。 --}}
     <div class="tooth-pad-quadrants">
         @foreach(['ur' => 1, 'ul' => 2, 'lr' => 4, 'll' => 3] as $key => $code)
-            <span class="tpq" data-quadrant-code="{{ $code }}"
-                  title="{{ __('medical_cases.quadrant_' . $key) }}"></span>
+            <button type="button" class="tpq" data-quadrant-code="{{ $code }}"
+                    title="{{ __('medical_cases.quadrant_' . $key) }}"></button>
         @endforeach
     </div>
+    {{-- 这里原来有一句「点牙位加/减，点「全」选整个区」。撤掉：牙位格是明摆着的
+         按钮、选中有高亮，「全」挨着它那一区的牙、字面就是「全（选）」——
+         都不需要读字才会用。控件自己说不清楚的时候才该补文案，而补文案通常说明
+         控件该改。 --}}
     <div class="tooth-pad-foot">
-        <span class="tooth-pad-hint">{{ __('medical_cases.tooth_pad_hint') }}</span>
         <button type="button" class="btn btn-xs btn-default tooth-pad-done">{{ __('common.close') }}</button>
     </div>
 </div>

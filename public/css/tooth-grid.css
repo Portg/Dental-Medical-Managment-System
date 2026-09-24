@@ -218,14 +218,19 @@
 }
 
 /* 象限迷你十字：只有拿起标记笔时才出现 —— 没拿笔时它没有意义（放哪个符号？）。
-   形状与行里那个十字一致，点哪格符号就落哪格，所以不配任何文字说明。 */
-.tooth-pad-quadrants { display: none; padding: 6px 10px; border-top: 1px solid #eee; }
+   形状与行里那个十字一致，点哪格符号就落哪格，所以不配任何文字说明。
+   四格分别是按钮，套一圈浅边把它从「效果示意图」变成看得出能点的控件。 */
+.tooth-pad-quadrants { display: none; }
 
 .tooth-pad.tooth-pad-armed .tooth-pad-quadrants {
-    display: grid;
+    display: inline-grid;
     grid-template-columns: repeat(2, 22px);
     grid-template-rows: repeat(2, 16px);
-    width: 44px;
+    margin: 8px 10px 2px;
+    padding: 4px;
+    border: 1px solid #e6d5d3;
+    border-radius: 3px;
+    background: #fff;
 }
 
 .tooth-pad-quadrants .tpq {
@@ -235,6 +240,11 @@
     font-size: 11px;
     color: #a8443c;
     cursor: cell;
+    /* 抹掉 button 的默认外观，否则四格各带一圈边框，十字的形就散了 */
+    padding: 0;
+    background: transparent;
+    border: 0;
+    transition: background .12s, color .12s;
 }
 
 /* 只描内侧边，拼出十字的两条线 —— 与 .tooth-cross 同一套画法 */
@@ -242,4 +252,5 @@
 .tooth-pad-quadrants .tpq:nth-child(2) { border-bottom: 1px solid #333; }
 .tooth-pad-quadrants .tpq:nth-child(3) { border-right: 1px solid #333; }
 
-.tooth-pad-quadrants .tpq:hover { background: #fdf3f2; }
+/* 悬停整格填色：一眼看出四格是分别可点的，不是一张效果图 */
+.tooth-pad-quadrants .tpq:hover { background: #a8443c; color: #fff; }
