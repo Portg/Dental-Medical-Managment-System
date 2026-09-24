@@ -252,6 +252,7 @@
     <div class="tooth-pad-marks">
         @foreach(\App\MedicalCaseItem::MARKS as $mark)
             <button type="button" class="tooth-pad-mark" data-mark="{{ $mark }}"
+                    data-symbol="{{ \App\MedicalCaseItem::MARK_SYMBOLS[$mark] }}"
                     title="{{ __('medical_cases.tooth_mark_' . $mark) }}">
                 {{ \App\MedicalCaseItem::MARK_SYMBOLS[$mark] }}
                 <span class="tooth-pad-mark-label">{{ __('medical_cases.tooth_mark_' . $mark) }}</span>
@@ -259,14 +260,18 @@
         @endforeach
     </div>
     {{-- 拿起标记笔后才出现：把一个光秃秃的符号放进某个象限，不指名哪颗牙。
-         存成一位数字的象限码（见 MedicalCaseItem::isQuadrantCode）——
-         恒牙 1-4 与 FDI 首位一致，十字上落在对应的格子里。 --}}
+
+         做成一个迷你十字而不是四个写着「右上/左上…」的按钮 —— 它长得就是它
+         产生的结果（行里那个十字），点哪格符号就落哪格，不需要一句话解释。
+         象限名留在 title 里，给悬停和读屏用，不占视觉。
+
+         格子顺序按 toothQuadrant 的镜像规则：左上格=患者右上=1，右上格=2，
+         左下格=患者右下=4，右下格=3。存一位数字的象限码，见
+         MedicalCaseItem::isQuadrantCode。 --}}
     <div class="tooth-pad-quadrants">
-        <span class="tooth-pad-quadrant-hint">{{ __('medical_cases.tooth_pad_quadrant_hint') }}</span>
-        @foreach(['ur' => 1, 'ul' => 2, 'll' => 3, 'lr' => 4] as $key => $code)
-            <button type="button" class="tooth-pad-quadrant" data-quadrant-code="{{ $code }}">
-                {{ __('medical_cases.quadrant_' . $key) }}
-            </button>
+        @foreach(['ur' => 1, 'ul' => 2, 'lr' => 4, 'll' => 3] as $key => $code)
+            <span class="tpq" data-quadrant-code="{{ $code }}"
+                  title="{{ __('medical_cases.quadrant_' . $key) }}"></span>
         @endforeach
     </div>
     <div class="tooth-pad-foot">

@@ -60,7 +60,7 @@
         //
         // 没有走「全」那条路：那几个按钮管的是「把这个区的牙全选上」，语义正相反；
         // 而且恒牙那四个是 visibility:hidden 的，点不着。
-        $pad.on('mousedown', '.tooth-pad-quadrant', function (e) {
+        $pad.on('mousedown', '.tpq', function (e) {
             e.preventDefault();
             if (!activeMark || !$row || !$row.length) return;
             CaseItems.setToothMark($row, String($(this).data('quadrantCode')), activeMark);
@@ -130,6 +130,11 @@
             $(this).toggleClass('active', String($(this).data('mark')) === shown);
         });
         $pad.toggleClass('tooth-pad-armed', !!activeMark);
+
+        // 把当前这支笔的符号填进迷你十字的四个格子 —— 医生看到的就是「点哪格
+        // 就会变成什么样」，不用旁边写一行字告诉他。
+        var sym = activeMark ? ($pad.find('.tooth-pad-mark[data-mark="' + activeMark + '"]').data('symbol') || '') : '';
+        $pad.find('.tpq').text(sym);
     }
 
     /**
