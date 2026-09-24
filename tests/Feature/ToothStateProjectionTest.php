@@ -329,6 +329,95 @@ class ToothStateProjectionTest extends TestCase
     }
 
     /**
+     * 牙位图**编辑器**也要看得见没有就诊的病历投影。
+     *
+     * 8a9fa7d 修过这个模式，但只修了汇总（getChartSummaryForPatient）。编辑器
+     * 走的是另一个端点 getChartByAppointment，那里仍然是
+     * `leftJoin(appointments).where(appointments.patient_id, …)` —— 左连接被
+     * where 条件打回内连接，只挂 medical_case_id 的行完全隐形。
+     *
+     * 后果是整个投影功能在「从患者页建的病历」上白做：医生在病历里写 45 残根，
+     * 打开牙位图还是什么都没有 —— 正是这个功能当初要解决的那个问题本身。
+     */
+    public function test_编辑器加载也看得见没有就诊的病历投影(): void
+    {
+        $case = $this->makeCase();     // 刻意不给这份病历建预约
+
+        $this->save($case, [
+            ['section' => 'examination', 'tooth_no' => '45', 'tooth_mark' => 'residual_root', 'content' => '残根'],
+        ]);
+
+        // 患者另有一次就诊 —— 医生就是从这次就诊打开牙位图的
+        $other = Appointment::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id'  => $this->doctor->id,
+            'start_date' => now()->format('Y-m-d'),
+            '_who_added' => $this->doctor->id,
+        ]);
+
+        $rows = app(DentalChartService::class)->getChartByAppointment($other->id);
+
+        $this->assertCount(1, $rows, '病历投影的牙位状态不该对编辑器隐形');
+        $this->assertSame('45', (string) $rows->first()->tooth_number);
+        $this->assertSame('residual_root', $rows->first()->tooth_status);
+    }
+
+    /**
+     * 开加工单时要带过去的牙位 = 牙位图上做了修复体的那几颗。
+     *
+     * 医生刚在牙位图上标完 17冠-16桥-15桥-14冠，转头去加工单又要把
+     * 「17, 16, 15, 14」手敲一遍 —— 加工单那边的 teeth_positions 是个纯文本框。
+     * 接收端（lab_case_list.js 的 ctx.teeth）一直就绪，缺的只是把牙位带过去。
+     *
+     * 只取 crown / pontic：那是技工真正要做的单位。取全部记过的牙会把龋坏、
+     * 残根这些也带进加工单，医生不察觉就发出去比不预填更糟。
+     */
+    public function test_开加工单带过去的是修复体牙位(): void
+    {
+        $case = $this->makeCase();
+        $appointment = Appointment::create([
+            'patient_id'      => $this->patient->id,
+            'doctor_id'       => $this->doctor->id,
+            'start_date'      => now()->format('Y-m-d'),
+            'medical_case_id' => $case->id,
+            '_who_added'      => $this->doctor->id,
+        ]);
+
+        $svc = app(DentalChartService::class);
+        $svc->replaceChartData($appointment->id, [
+            ['tooth_number' => '17', 'tooth' => 17, 'tooth_status' => 'crown'],
+            ['tooth_number' => '16', 'tooth' => 16, 'tooth_status' => 'pontic'],
+            ['tooth_number' => '15', 'tooth' => 15, 'tooth_status' => 'crown'],
+            ['tooth_number' => '26', 'tooth' => 26, 'tooth_status' => 'caries'],
+            ['tooth_number' => '36', 'tooth' => 36, 'tooth_status' => 'missing'],
+        ]);
+
+        $teeth = $svc->prostheticTeethForPatient($this->patient->id);
+
+        sort($teeth);
+        $this->assertSame(['15', '16', '17'], $teeth, '只带修复体牙位，龋坏与缺失不带');
+    }
+
+    /** 牙位图上没有修复体时不预填 —— 宁可空着，也不要带错的牙位过去。 */
+    public function test_没有修复体时不带牙位(): void
+    {
+        $case = $this->makeCase();
+        $appointment = Appointment::create([
+            'patient_id'      => $this->patient->id,
+            'doctor_id'       => $this->doctor->id,
+            'start_date'      => now()->format('Y-m-d'),
+            'medical_case_id' => $case->id,
+            '_who_added'      => $this->doctor->id,
+        ]);
+
+        app(DentalChartService::class)->replaceChartData($appointment->id, [
+            ['tooth_number' => '26', 'tooth' => 26, 'tooth_status' => 'caries'],
+        ]);
+
+        $this->assertSame([], app(DentalChartService::class)->prostheticTeethForPatient($this->patient->id));
+    }
+
+    /**
      * 有就诊时也要带上 appointment_id —— 牙位图那条老路是按就诊查的。
      */
     public function test_有就诊时投影带上就诊id(): void

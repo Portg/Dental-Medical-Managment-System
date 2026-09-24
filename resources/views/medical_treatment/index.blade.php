@@ -108,11 +108,14 @@
                                                         @if(!empty($patient))
                                                             <a class="btn green btn-outline btn-circle btn-sm"
                                                                href="{{ url('lab-cases') }}?{{ http_build_query(array_filter([
-                                                                    'patient_id'     => $patient->id,
-                                                                    'patient_text'   => $patient->patient_no . ' - ' . $patient->full_name,
-                                                                    'appointment_id' => $appointment_id,
-                                                                    'doctor_id'      => $doctor_id ?? null,
-                                                                    'doctor_text'    => $doctor_text ?? null,
+                                                                    'patient_id'      => $patient->id,
+                                                                    'patient_text'    => $patient->patient_no . ' - ' . $patient->full_name,
+                                                                    'appointment_id'  => $appointment_id,
+                                                                    'medical_case_id' => $medical_case_id ?? null,
+                                                                    'doctor_id'       => $doctor_id ?? null,
+                                                                    'doctor_text'     => $doctor_text ?? null,
+                                                                    // 牙位图上做了修复体的那几颗，省得到加工单再手敲一遍
+                                                                    'teeth'           => $lab_teeth ?? null,
                                                                ])) }}">
                                                                 <i class="fa fa-cogs"></i> {{ __('medical_treatment.create_lab_case') }}
                                                             </a>
@@ -351,9 +354,11 @@
     <script>
         LanguageManager.loadFromPHP(@json(__('odontogram')), 'odontogram');
         LanguageManager.loadFromPHP(@json(__('medical_treatment')), 'medical_treatment');
-        {{-- 划价面板（BillingModule）用的是 invoices.* 与 messages.* 两组键 --}}
+        {{-- 划价面板（BillingModule）用的是 invoices.* 与 messages.* 两组键；
+             面板里的「剩余项目」另用 prepaid.* --}}
         LanguageManager.loadFromPHP(@json(__('invoices')), 'invoices');
         LanguageManager.loadFromPHP(@json(__('messages')), 'messages');
+        LanguageManager.loadFromPHP(@json(__('prepaid')), 'prepaid');
         let global_patient_id = ($('#global_patient_id').val() || '').trim();
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>

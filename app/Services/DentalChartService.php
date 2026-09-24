@@ -237,10 +237,23 @@ class DentalChartService
             return collect();
         }
 
+        // 患者要从两条路认：预约，或者病历。
+        //
+        // 原来只 leftJoin appointments 再 where appointments.patient_id —— where
+        // 条件把左连接打回了内连接，只挂 medical_case_id 没挂 appointment_id 的行
+        // 完全隐形。病历投影出来的状态正是这种：从患者页建的病历没有对应预约。
+        //
+        // 后果是整个投影功能在这类病历上白做 —— 医生在病历里写 45 残根，打开
+        // 牙位图还是什么都没有，正是这个功能当初要解决的那个问题本身。
+        // 汇总那边（getChartSummaryForPatient）在 8a9fa7d 修过，这个端点漏了。
         return DB::table('dental_charts')
-            ->leftJoin('appointments', 'appointments.id', 'dental_charts.appointment_id')
+            ->leftJoin('appointments', 'appointments.id', '=', 'dental_charts.appointment_id')
+            ->leftJoin('medical_cases', 'medical_cases.id', '=', 'dental_charts.medical_case_id')
             ->whereNull('dental_charts.deleted_at')
-            ->where('appointments.patient_id', $appointment->patient_id)
+            ->where(function ($q) use ($appointment) {
+                $q->where('appointments.patient_id', $appointment->patient_id)
+                  ->orWhere('medical_cases.patient_id', $appointment->patient_id);
+            })
             ->select('dental_charts.*')
             ->get();
     }
@@ -376,6 +389,34 @@ class DentalChartService
                 ]);
             }
         });
+    }
+
+    /**
+     * 这位患者做了修复体的牙位，给「开加工单」预填用。
+     *
+     * 医生刚在牙位图上标完 17冠-16桥-15桥-14冠，转头去加工单又要把
+     * 「17, 16, 15, 14」手敲一遍 —— 加工单那边的 teeth_positions 是个纯文本框，
+     * 而接收端（lab_case_list.js 的 ctx.teeth）一直就绪，缺的只是把牙位带过去。
+     *
+     * 只取 crown / pontic：那是技工真正要做的单位。把全部记过的牙都带过去会
+     * 混进龋坏、残根这些诊断性状态，医生不察觉就把错的牙位发给技工所 ——
+     * 预填错了比不预填更糟，所以宁可少带。
+     *
+     * 复用 getChartSummaryForPatient 而不是另写一个查询：那边已经处理好
+     * 「一颗牙多条记录取哪条」和「病历投影的记录也要算进来」两件麻烦事。
+     */
+    public function prostheticTeethForPatient(int $patientId): array
+    {
+        $summary = $this->getChartSummaryForPatient($patientId);
+
+        $teeth = [];
+        foreach ($summary['marks'] ?? [] as $mark) {
+            if (in_array($mark['status'] ?? '', ['crown', 'pontic'], true)) {
+                $teeth[] = (string) $mark['tooth'];
+            }
+        }
+
+        return array_values(array_unique($teeth));
     }
 
     public function getChartSummaryForPatient(int $patientId): array
