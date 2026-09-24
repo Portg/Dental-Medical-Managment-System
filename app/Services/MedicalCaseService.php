@@ -210,38 +210,31 @@ class MedicalCaseService
             }
 
             $content = trim((string) ($row['content'] ?? ''));
-            $tooth   = trim((string) ($row['tooth_no'] ?? ''));
 
-            // 牙位标记（△ 残根 / ✕ 已拔除 / — 缺失）落在**行**上：一行是一条临床
-            // 陈述，「16,17 残根」就是两颗都残根。认不出的值当没填 —— 宁可少一个
-            // 标记，也不要把前端传来的任意字符串塞进库里。
-            $mark = (string) ($row['tooth_mark'] ?? '');
-            $mark = in_array($mark, MedicalCaseItem::MARKS, true) ? $mark : null;
+            $entries = $this->normalizeToothEntries($row);
 
             // 牙位、文字、标记全空的行是用户点了「添加」又没填，直接丢掉，
             // 不然每次保存都会攒下一堆空行。
             //
             // 标记必须算进这个判断：部位记录法里「符号直接取代数字」是正经写法 ——
-            // 医生在格子里只画一个 △，意思是「这个区有颗牙是残根」，牙位号和文字
-            // 都不写。只看 content 和 tooth 的话，这样一行会被当成空行丢掉，而且
-            // 丢得无声无息。
-            if ($content === '' && $tooth === '' && $mark === null) {
+            // 医生在格子里只画一个 △，牙位号和文字都不写。只看 content 和牙位的话，
+            // 这样一行会被当成空行丢掉，而且丢得无声无息。
+            $hasAnything = false;
+            foreach ($entries as $e) {
+                if ($e['no'] !== null || $e['mark'] !== null) { $hasAnything = true; break; }
+            }
+            if ($content === '' && !$hasAnything) {
                 continue;
             }
 
-            // 一行可以写多颗牙（「16,17 缺失」）—— 那是**写法**上的合并。
-            // 落库仍然一牙一行：MedicalCaseItem::forTooth('16') 得查得到，
-            // 那是这张表存在的理由；存成 '16,17' 就得靠 LIKE 去猜，索引也废了。
+            // 落库一牙一条：MedicalCaseItem::forTooth('16') 得查得到，那是这张表
+            // 存在的理由；存成 '16,17' 就得靠 LIKE 去猜，索引也废了。
             // 读回来时再按「同段落 + 同内容」合并（见 getCaseItemsForEdit）。
-            $teeth = $tooth === ''
-                ? [null]
-                : array_values(array_filter(array_map('trim', preg_split('/[,，\s]+/u', $tooth))));
-
-            foreach ($teeth === [] ? [null] : $teeth as $one) {
+            foreach ($entries as $e) {
                 $items[] = [
                     'section'    => $section,
-                    'tooth_no'   => $one === '' ? null : $one,
-                    'tooth_mark' => $mark,
+                    'tooth_no'   => $e['no'],
+                    'tooth_mark' => $e['mark'],
                     'content'    => $content === '' ? null : $content,
                     'sort_order' => count($bySection[$section] ?? []),
                 ];
@@ -250,6 +243,60 @@ class MedicalCaseService
         }
 
         return ['items' => $items, 'columns' => $this->deriveColumnsFromItems($bySection)];
+    }
+
+    /** 整行标记一致时返回那个标记，各牙不同则返回 null（旧格式表达不了）。 */
+    private function uniformMark(array $entries): ?string
+    {
+        $marks = array_unique(array_column($entries, 'mark'));
+
+        return count($marks) === 1 ? (reset($marks) ?: null) : null;
+    }
+
+    /**
+     * 把一行的牙位载荷归一成 [['no' => ?string, 'mark' => ?string], ...]。
+     *
+     * 两种载荷并存：
+     *
+     *   新：teeth: [{no:'45', mark:null}, {no:'1', mark:'residual_root'}]
+     *       每个条目各带自己的标记 —— 一个十字里「左下写牙位、左上一个 △」
+     *       就是这么表达的。标记挂在行上的话，渲染时会把同一个符号盖到每一个
+     *       有牙的格子上，那正是这套东西原来的毛病。
+     *
+     *   旧：tooth_no: '16,17' + tooth_mark: 'residual_root'（整行共用一个标记）
+     *       老页面和 API 还在用，保留。
+     *
+     * 认不出的标记当没填 —— 宁可少一个标记，也不要把前端传来的任意字符串塞进库里。
+     */
+    private function normalizeToothEntries(array $row): array
+    {
+        $clean = function ($mark) {
+            $mark = (string) ($mark ?? '');
+            return in_array($mark, MedicalCaseItem::MARKS, true) ? $mark : null;
+        };
+
+        if (isset($row['teeth']) && is_array($row['teeth'])) {
+            $out = [];
+            foreach ($row['teeth'] as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+                $no = trim((string) ($entry['no'] ?? ''));
+                $out[] = ['no' => $no === '' ? null : $no, 'mark' => $clean($entry['mark'] ?? null)];
+            }
+            return $out === [] ? [['no' => null, 'mark' => null]] : $out;
+        }
+
+        $mark  = $clean($row['tooth_mark'] ?? null);
+        $tooth = trim((string) ($row['tooth_no'] ?? ''));
+
+        if ($tooth === '') {
+            return [['no' => null, 'mark' => $mark]];
+        }
+
+        $teeth = array_values(array_filter(array_map('trim', preg_split('/[,，\s]+/u', $tooth))));
+
+        return array_map(fn ($one) => ['no' => $one, 'mark' => $mark], $teeth ?: [null]);
     }
 
     /**
@@ -463,10 +510,14 @@ class MedicalCaseService
 
                 // 行首那一段：有牙位号就是「45△」，没有就让符号自己顶上去 ——
                 // 部位记录法里「符号直接取代数字」本就是一种写法，符号站在数字
-                // 该站的位置上。原来只在 tooth_no 非空时才拼符号，于是不填牙位的
-                // 行打印出来符号无声消失。
-                $head = $r['tooth_no'] !== null
-                    ? $r['tooth_no'] . $symbol
+                // 该站的位置上。
+                //
+                // 象限码（一位数字）只是定位用的，它本身并没有被医生写出来 ——
+                // 左上格里画的就是一个光秃秃的 △，不是「1△」。所以这里把它
+                // 当成没有牙位号处理。
+                $tooth = $r['tooth_no'];
+                $head = ($tooth !== null && !MedicalCaseItem::isQuadrantCode($tooth))
+                    ? $tooth . $symbol
                     : ($symbol === '' ? null : $symbol);
 
                 return $head !== null && $r['content'] !== null
@@ -474,9 +525,14 @@ class MedicalCaseService
                     : ($r['content'] ?? $head);
             }, $rows));
 
-            // 牙位列 = 本段所有行牙位的去重集合，顺序按录入
+            // 牙位列 = 本段所有行牙位的去重集合，顺序按录入。
+            // 象限码不是牙位，排掉 —— 这一列是「这次看了哪几颗牙」，
+            // 混进一个 '1' 会让按牙位查的地方把它当成 FDI 的 11。
             if (isset(MedicalCaseItem::TEETH_COLUMNS[$section])) {
-                $teeth = array_values(array_unique(array_filter(array_column($rows, 'tooth_no'))));
+                $teeth = array_values(array_unique(array_filter(
+                    array_column($rows, 'tooth_no'),
+                    fn ($t) => $t !== null && $t !== '' && !MedicalCaseItem::isQuadrantCode($t)
+                )));
                 $columns[MedicalCaseItem::TEETH_COLUMNS[$section]] = $teeth === [] ? null : $teeth;
             }
         }
@@ -536,29 +592,40 @@ class MedicalCaseService
             if (!isset($out[$row->section])) {
                 continue;
             }
-            // 合并键带上标记：同段落同内容但标记不同的两行（16 残根 / 17 已拔除）
-            // 是两条不同的事实，不能并成一行。
-            $key = $row->section . "\0" . (string) $row->content . "\0" . (string) $row->tooth_mark;
+            // 合并键**不带**标记：标记现在是每个牙位各自的（45 不带、象限码 1 带 △），
+            // 把它并进键里的话，医生画的那一个十字读回来就散成两行了。
+            $key = $row->section . "\0" . (string) $row->content;
 
-            if (isset($merged[$key])) {
-                if ($row->tooth_no !== null && $row->tooth_no !== '') {
-                    $merged[$key]['teeth'][] = $row->tooth_no;
-                }
-                continue;
+            if (!isset($merged[$key])) {
+                $merged[$key] = [
+                    'section' => $row->section,
+                    'content' => $row->content,
+                    'teeth'   => [],
+                ];
             }
 
-            $merged[$key] = [
-                'section'    => $row->section,
-                'content'    => $row->content,
-                'tooth_mark' => $row->tooth_mark,
-                'teeth'      => ($row->tooth_no !== null && $row->tooth_no !== '') ? [$row->tooth_no] : [],
-            ];
+            if ($row->tooth_no !== null && $row->tooth_no !== '') {
+                $merged[$key]['teeth'][$row->tooth_no] = $row->tooth_mark;
+            } elseif ($row->tooth_mark !== null) {
+                // 没有牙位号、只有一个标记：也是一个条目（旧数据里有）
+                $merged[$key]['teeth'][''] = $row->tooth_mark;
+            }
         }
 
         foreach ($merged as $row) {
+            $entries = [];
+            foreach ($row['teeth'] as $no => $mark) {
+                $entries[] = ['no' => $no === '' ? null : (string) $no, 'mark' => $mark];
+            }
+
+            $numbered = array_values(array_filter(array_column($entries, 'no')));
+
             $out[$row['section']][] = [
-                'tooth_no'   => $row['teeth'] === [] ? null : implode(',', array_unique($row['teeth'])),
-                'tooth_mark' => $row['tooth_mark'] ?? null,
+                'tooth_no'   => $numbered === [] ? null : implode(',', $numbered),
+                // 行级标记保留给只认旧格式的读者：整行标记一致时给那个值，
+                // 各牙不同就给 null（旧格式本来就表达不了）。
+                'tooth_mark' => $this->uniformMark($entries),
+                'teeth'      => $entries,
                 'content'    => $row['content'],
             ];
         }

@@ -258,6 +258,17 @@
             </button>
         @endforeach
     </div>
+    {{-- 拿起标记笔后才出现：把一个光秃秃的符号放进某个象限，不指名哪颗牙。
+         存成一位数字的象限码（见 MedicalCaseItem::isQuadrantCode）——
+         恒牙 1-4 与 FDI 首位一致，十字上落在对应的格子里。 --}}
+    <div class="tooth-pad-quadrants">
+        <span class="tooth-pad-quadrant-hint">{{ __('medical_cases.tooth_pad_quadrant_hint') }}</span>
+        @foreach(['ur' => 1, 'ul' => 2, 'll' => 3, 'lr' => 4] as $key => $code)
+            <button type="button" class="tooth-pad-quadrant" data-quadrant-code="{{ $code }}">
+                {{ __('medical_cases.quadrant_' . $key) }}
+            </button>
+        @endforeach
+    </div>
     <div class="tooth-pad-foot">
         <span class="tooth-pad-hint">{{ __('medical_cases.tooth_pad_hint') }}</span>
         <button type="button" class="btn btn-xs btn-default tooth-pad-done">{{ __('common.close') }}</button>

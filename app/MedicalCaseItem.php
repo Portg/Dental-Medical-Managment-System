@@ -98,6 +98,26 @@ class MedicalCaseItem extends Model
      * 只有检查和诊断有牙位列（examination_teeth / related_teeth），
      * 其他检查与治疗没有 —— 保持现状，不为此加列。
      */
+    /**
+     * 象限码：一位数字的 tooth_no，表示「这个区，但不指定是哪颗牙」。
+     *
+     * 部位记录法里「符号直接取代数字」是正经写法 —— 医生在左上格里只画一个 △，
+     * 意思是「患者右上区有颗牙是残根」，牙位号不写。两位 FDI 全码表达不了这件事
+     * （它必须指到具体某颗牙），所以借一位数字表示象限：
+     *
+     *     1-4  恒牙的四个象限，与 FDI 首位一致
+     *     5-8  乳牙的四个象限
+     *
+     * 与 FDI 全码共用 tooth_no 一列是有意的：象限本来就是 FDI 首位的含义，
+     * toothQuadrant() 一直只读首位，两者落在同一套定位规则里。代价是这一列
+     * 有两种粒度，所以凡是「按牙位查」「往牙位图投影」的地方都要先把它排掉 ——
+     * 见 isQuadrantCode() 的调用点。
+     */
+    public static function isQuadrantCode(?string $toothNo): bool
+    {
+        return $toothNo !== null && preg_match('/^[1-8]$/', $toothNo) === 1;
+    }
+
     public const TEETH_COLUMNS = [
         self::SECTION_EXAMINATION => 'examination_teeth',
         // related_teeth 由 diagnoses 表的牙位派生，不在本表的段落里

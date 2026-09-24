@@ -21,6 +21,7 @@
     var $pad   = null;
     var $row   = null;     // 正在编辑牙位的那一行
     var positioning = false;   // 见 position()：自身滚动会触发 scroll 事件，防自激
+    var activeMark  = '';      // armed 的标记工具，见下面 .tooth-pad-mark 的注释
 
     function ensurePad() {
         if ($pad) return $pad;
@@ -37,23 +38,45 @@
             .appendTo('body');
         $src.remove();
 
-        // 点牙：加/减这一颗
+        // 点牙：armed 了标记就给这颗牙盖上（再点同一颗取消），否则加/减这一颗
         $pad.on('mousedown', '.tg-t', function (e) {
             e.preventDefault();          // 不要让当前行失焦
-            toggle([String($(this).data('tooth'))]);
+            var tooth = String($(this).data('tooth'));
+            if (activeMark) {
+                CaseItems.setToothMark($row, tooth, activeMark);
+                paint();
+            } else {
+                toggle([tooth]);
+            }
         });
 
-        // 「全」：整象限一键选 / 再点取消
+        // 「全」：整象限一键选 / 再点取消（维持原样）
         $pad.on('mousedown', '.tg-all', function (e) {
             e.preventDefault();
             toggle(String($(this).data('teeth')).split(','));
         });
 
-        // 牙位标记 △ 残根 / ✕ 已拔除 / — 缺失：落在行上，再点同一个取消
+        // 象限按钮：把一个光秃秃的符号放进这个区，不指名哪颗牙。
+        //
+        // 没有走「全」那条路：那几个按钮管的是「把这个区的牙全选上」，语义正相反；
+        // 而且恒牙那四个是 visibility:hidden 的，点不着。
+        $pad.on('mousedown', '.tooth-pad-quadrant', function (e) {
+            e.preventDefault();
+            if (!activeMark || !$row || !$row.length) return;
+            CaseItems.setToothMark($row, String($(this).data('quadrantCode')), activeMark);
+            paint();
+        });
+
+        // 牙位标记 △ 残根 / ✕ 已拔除 / — 缺失。
+        //
+        // 按下去是「拿起这支笔」，不是立刻涂到整行上 —— 标记现在是每个牙位
+        // 各自一个，得让医生指明涂在哪。拿起笔后点牙位=给那颗牙盖章，点「全」=
+        // 给那个区放一个光秃秃的符号。再点同一个按钮放下笔。
         $pad.on('mousedown', '.tooth-pad-mark', function (e) {
             e.preventDefault();
             if (!$row || !$row.length) return;
-            CaseItems.setRowMark($row, $(this).data('mark'));
+            var mark = String($(this).data('mark'));
+            activeMark = (activeMark === mark) ? '' : mark;
             paintMarks();
         });
 
@@ -100,12 +123,13 @@
         paintMarks();
     }
 
-    /** 这一行当前的标记按钮压下去 */
+    /** armed 的那支笔压下去；没 armed 时退回「整行同一个标记」的旧显示 */
     function paintMarks() {
-        var mark = ($row && $row.length) ? CaseItems.rowMark($row) : '';
+        var shown = activeMark || (($row && $row.length) ? CaseItems.rowMark($row) : '');
         $pad.find('.tooth-pad-mark').each(function () {
-            $(this).toggleClass('active', $(this).data('mark') === mark);
+            $(this).toggleClass('active', String($(this).data('mark')) === shown);
         });
+        $pad.toggleClass('tooth-pad-armed', !!activeMark);
     }
 
     /**
@@ -188,6 +212,7 @@
         // 弹出来 —— 看起来就是 Esc 关不掉面板。
         var wasOpen = !!($pad && $pad.is(':visible'));
 
+        activeMark = '';          // 收起时放下笔，下次打开是干净的
         if ($pad) $pad.hide();
         $row = null;
 

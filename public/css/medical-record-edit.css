@@ -885,3 +885,12 @@
 /* hint 已从段落头去掉（医生知道「检查」该写什么，它只占位置）。
    保留规则挡住其他 partial 里可能残留的 hint。 */
 .soap-section-header .soap-section-hint { display: none; }
+
+/* 牙位都删光时的十字：框还在，只是空的。
+   十字是记录法的框架，不该因为没填内容就退回一个「选牙位」文字占位 ——
+   框没了，医生看不出这里还是个牙位格。 */
+.tooth-cross-blank .tq-tl,
+.tooth-cross-blank .tq-tr,
+.tooth-cross-blank .tq-bl {
+    border-color: #c9c9c9;
+}

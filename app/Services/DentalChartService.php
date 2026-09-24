@@ -315,6 +315,14 @@ class DentalChartService
             // 「这次拔掉了」应当盖过「检查时是残根」）
             $byTooth = [];
             foreach ($rows as $row) {
+                // 象限码（一位数字的 tooth_no）说的是「这个区有颗牙怎么样」，
+                // 不是某颗牙。这张表一行就是一颗牙的当前状态，写不出「某区的某颗牙」
+                // —— 硬写会落成 tooth_number='1'，而 1 在 FDI 里不是牙位，
+                // 牙位图上会多出一颗根本不存在的牙。
+                if (MedicalCaseItem::isQuadrantCode((string) $row->tooth_no)) {
+                    continue;
+                }
+
                 $status = self::MARK_TO_STATUS[$row->tooth_mark] ?? null;
                 if ($status === null) {
                     continue;

@@ -505,23 +505,160 @@ class MedicalCaseItemsTest extends TestCase
     }
 
     /**
-     * 同段落同内容但标记不同的两行是两条不同的事实，读回编辑器时不能并成一行。
+     * 复合行读回编辑器时仍是**一行**，每个牙位带着自己的标记。
+     *
+     * 按「同段落 + 同内容 + 同标记」合并的话，45（无标记）和象限码 1（带 △）
+     * 会被拆成两行 —— 医生画的那一个十字，刷新一次就散了。
      */
-    public function test_标记不同的行不被合并(): void
+    public function test_复合行读回编辑器仍是一行(): void
     {
         $case = $this->makeCase();
 
         $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
-            ['section' => 'examination', 'tooth_no' => '16', 'tooth_mark' => 'residual_root', 'content' => '缺损'],
-            ['section' => 'examination', 'tooth_no' => '17', 'tooth_mark' => 'extracted',     'content' => '缺损'],
+            ['section' => 'examination', 'teeth' => [
+                ['no' => '45', 'mark' => null],
+                ['no' => '1',  'mark' => 'residual_root'],
+            ], 'content' => '检查所见'],
         ])['items']);
 
         $rows = $this->service()->getCaseItemsForEdit($case->fresh())['examination'];
 
-        $this->assertCount(2, $rows, '标记不同不该并成一行');
+        $this->assertCount(1, $rows, '一个十字读回来应当仍是一行');
+        $this->assertSame('45,1', $rows[0]['tooth_no']);
         $this->assertSame(
-            ['residual_root', 'extracted'],
-            array_column($rows, 'tooth_mark')
+            [['no' => '45', 'mark' => null], ['no' => '1', 'mark' => 'residual_root']],
+            $rows[0]['teeth']
         );
+    }
+
+    // ─── 部位记录法的三种体现方式（照医生给的样例验收）─────────────
+
+    /**
+     * 方式 A：符号直接取代数字。
+     *
+     * 医生在左上格里只画一个 △，不写牙位号 —— 意思是「患者右上区有颗牙是残根」。
+     * 两位 FDI 全码表达不了（它必须指到具体某颗牙），用一位数字表示象限。
+     */
+    public function test_方式A_象限码带标记能落库(): void
+    {
+        $case = $this->makeCase();
+
+        $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'teeth' => [['no' => '1', 'mark' => 'residual_root']], 'content' => ''],
+        ])['items']);
+
+        $this->assertDatabaseHas('medical_case_items', [
+            'medical_case_id' => $case->id,
+            'tooth_no'        => '1',
+            'tooth_mark'      => 'residual_root',
+        ]);
+    }
+
+    /** 方式 A：象限码的派生文本是符号本身，不是「1△」—— 数字并没有被写出来。 */
+    public function test_方式A_象限码派生文本只有符号(): void
+    {
+        $out = $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'teeth' => [['no' => '1', 'mark' => 'residual_root']], 'content' => '仅存牙根'],
+        ]);
+
+        $this->assertSame('△ 仅存牙根', $out['columns']['examination']);
+    }
+
+    /** 方式 A：象限码不是牙位，不该混进牙位列。 */
+    public function test_方式A_象限码不进牙位列(): void
+    {
+        $out = $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'teeth' => [
+                ['no' => '45', 'mark' => null],
+                ['no' => '1',  'mark' => 'residual_root'],
+            ], 'content' => '检查所见'],
+        ]);
+
+        $this->assertSame(['45'], $out['columns']['examination_teeth']);
+    }
+
+    /**
+     * 复合：一个十字里，左下写牙位号、左上单独一个 △。
+     *
+     * 这是医生最常写的形式，也是标记从「每行一个」改成「每条目一个」的理由 ——
+     * 行上只有一个标记的话，渲染时会把 △ 盖到每一个有牙的格子上。
+     */
+    public function test_复合_同一行里牙位与象限符号各自独立(): void
+    {
+        $case = $this->makeCase();
+
+        $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'teeth' => [
+                ['no' => '45', 'mark' => null],
+                ['no' => '1',  'mark' => 'residual_root'],
+            ], 'content' => '检查所见'],
+        ])['items']);
+
+        $this->assertDatabaseHas('medical_case_items', [
+            'medical_case_id' => $case->id, 'tooth_no' => '45', 'tooth_mark' => null,
+        ]);
+        $this->assertDatabaseHas('medical_case_items', [
+            'medical_case_id' => $case->id, 'tooth_no' => '1', 'tooth_mark' => 'residual_root',
+        ]);
+    }
+
+    /** 复合：同一行里两颗牙带不同的标记。 */
+    public function test_复合_两颗牙各带不同标记(): void
+    {
+        $case = $this->makeCase();
+
+        $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'teeth' => [
+                ['no' => '16', 'mark' => 'residual_root'],
+                ['no' => '17', 'mark' => 'extracted'],
+            ], 'content' => '检查所见'],
+        ])['items']);
+
+        $this->assertDatabaseHas('medical_case_items', [
+            'medical_case_id' => $case->id, 'tooth_no' => '16', 'tooth_mark' => 'residual_root',
+        ]);
+        $this->assertDatabaseHas('medical_case_items', [
+            'medical_case_id' => $case->id, 'tooth_no' => '17', 'tooth_mark' => 'extracted',
+        ]);
+    }
+
+    /** 旧载荷（tooth_no 逗号串 + 行级 tooth_mark）仍然可用。 */
+    public function test_旧载荷格式仍然兼容(): void
+    {
+        $out = $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'tooth_no' => '16,17', 'tooth_mark' => 'residual_root', 'content' => '残根'],
+        ]);
+
+        $this->assertSame("16△ 残根\n17△ 残根", $out['columns']['examination']);
+    }
+
+    /**
+     * 同段落同内容、标记不同的两颗牙，读回来是**一行两个条目**，各带各的标记。
+     *
+     * 这条用例原来断言的是相反的行为（拆成两行）—— 那是标记还挂在「行」上时的
+     * 唯一出路：一行只能有一个标记，16 残根和 17 已拔除就只能分开放。标记改成
+     * 每个牙位各自一个之后，它们本来就是同一个十字里的两颗牙，合成一行才对，
+     * 也才画得出医生写的那个十字。
+     */
+    public function test_同内容不同标记的牙合成一行各带各的标记(): void
+    {
+        $case = $this->makeCase();
+
+        $this->service()->syncCaseItems($case, $this->service()->normalizeCaseItems([
+            ['section' => 'examination', 'teeth' => [
+                ['no' => '16', 'mark' => 'residual_root'],
+                ['no' => '17', 'mark' => 'extracted'],
+            ], 'content' => '缺损'],
+        ])['items']);
+
+        $rows = $this->service()->getCaseItemsForEdit($case->fresh())['examination'];
+
+        $this->assertCount(1, $rows, '同一个十字读回来应当仍是一行');
+        $this->assertSame('16,17', $rows[0]['tooth_no']);
+        $this->assertSame(
+            [['no' => '16', 'mark' => 'residual_root'], ['no' => '17', 'mark' => 'extracted']],
+            $rows[0]['teeth']
+        );
+        $this->assertNull($rows[0]['tooth_mark'], '各牙标记不同时行级标记无从表达，应为 null');
     }
 }

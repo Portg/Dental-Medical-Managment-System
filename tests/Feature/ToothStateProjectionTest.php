@@ -206,6 +206,46 @@ class ToothStateProjectionTest extends TestCase
     }
 
     /**
+     * 象限码不投影。
+     *
+     * 「左上区有颗牙是残根」说的是一个区，不是某颗牙。dental_charts 一行就是
+     * 一颗牙的当前状态，写不出「某个区的某颗牙」—— 硬写会得到 tooth_number='1'，
+     * 而 1 在 FDI 里不是牙位，牙位图上会多出一颗根本不存在的牙。
+     */
+    public function test_象限码不投影到牙位图(): void
+    {
+        $case = $this->makeCase();
+
+        $this->save($case, [
+            ['section' => 'examination', 'teeth' => [['no' => '1', 'mark' => 'residual_root']], 'content' => '右上区残根'],
+        ]);
+
+        $this->assertSame(
+            0,
+            DentalChart::where('medical_case_id', $case->id)->count(),
+            '象限码没有具体牙位，不该在牙位图上落一条'
+        );
+    }
+
+    /** 同一行里具体牙位照常投影，象限码被跳过 —— 两者互不影响。 */
+    public function test_复合行里只投影具体牙位(): void
+    {
+        $case = $this->makeCase();
+
+        $this->save($case, [
+            ['section' => 'examination', 'teeth' => [
+                ['no' => '45', 'mark' => 'residual_root'],
+                ['no' => '1',  'mark' => 'extracted'],
+            ], 'content' => '检查所见'],
+        ]);
+
+        $this->assertSame(1, DentalChart::where('medical_case_id', $case->id)->count());
+        $this->assertDatabaseHas('dental_charts', [
+            'medical_case_id' => $case->id, 'tooth_number' => '45', 'tooth_status' => 'residual_root',
+        ]);
+    }
+
+    /**
      * 有就诊时也要带上 appointment_id —— 牙位图那条老路是按就诊查的。
      */
     public function test_有就诊时投影带上就诊id(): void

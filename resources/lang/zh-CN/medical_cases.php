@@ -213,7 +213,14 @@ return [
     'tooth_mark_residual_root' => '残根',
     'tooth_mark_extracted' => '已拔除',
     'tooth_mark_missing' => '缺失',
-    'tooth_pad_hint' => '点牙位加/减，点「全」选整个区',
+    'tooth_pad_hint' => '点牙位加/减，点「全」选整个区；点符号后再点牙位＝给那颗牙盖章',
+    // 拿起标记笔后出现：把一个光秃秃的符号放进某个象限（不指名哪颗牙）——
+    // 部位记录法里「符号直接取代数字」的写法。
+    'tooth_pad_quadrant_hint' => '放进整个区：',
+    'quadrant_ur' => '右上',
+    'quadrant_ul' => '左上',
+    'quadrant_ll' => '左下',
+    'quadrant_lr' => '右下',
     'phrase_slot' => '语义槽位',
     'phrase_slot_hint' => '如「时间」「部位」「龋坏」；打已有的名字并进该组，打新的开一组',
     'phrase_sort_order' => '组内排序',

@@ -204,3 +204,25 @@
     /* 比牙位号略小一档：符号是牙位号的修饰，不该比它还抢眼 */
     font-size: 12px;
 }
+
+/* 拿起了一支标记笔：牙位格提示「点我盖章」，与未 armed 时的「点我选牙」区分 */
+.tooth-pad.tooth-pad-armed .tg-t,
+.tooth-pad.tooth-pad-armed .tg-all {
+    cursor: cell;
+}
+
+.tooth-pad .tooth-pad-mark.active {
+    border-color: #a8443c;
+    background: #fdf3f2;
+    color: #a8443c;
+}
+
+/* 象限按钮：只有拿起标记笔时才出现 —— 没拿笔时它没有意义（放哪个符号？） */
+.tooth-pad-quadrants { display: none; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid #eee; }
+.tooth-pad.tooth-pad-armed .tooth-pad-quadrants { display: flex; }
+.tooth-pad-quadrant-hint { font-size: 11px; color: #888; }
+.tooth-pad-quadrant {
+    border: 1px solid #d9d9d9; background: #fff; border-radius: 3px;
+    font-size: 11px; padding: 2px 8px; cursor: cell;
+}
+.tooth-pad-quadrant:hover { border-color: #a8443c; color: #a8443c; }
