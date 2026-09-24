@@ -23,6 +23,7 @@
     var $panel   = null;
     var $target  = null;    // 当前要插入的 textarea
     var pinned   = false;   // 点了面板里的东西之后不要因为失焦就关掉
+    var inline   = false;   // 见 placeInline()：在流里排版时不再做绝对定位
 
     function data() {
         return (window.MedicalRecordConfig && window.MedicalRecordConfig.phrasePanel) || {};
@@ -153,11 +154,61 @@
         });
     }
 
+    /**
+     * 试点：把面板放进文档流，顶开下面的内容，而不是浮在上面盖住它。
+     *
+     * 浮层方案有个绕不过去的毛病：面板正好压在医生下一步要点的控件上（主诉的
+     * 面板盖住现病史整个输入框）。此时点「现病史」落在面板内部，走的是插入分支
+     * —— 短语被插进主诉，现病史连焦点都拿不到，而且看不出哪里错了。
+     * 「点外部就关掉」这类补丁救不了它，那一下点击在面板里面。
+     *
+     * 排进流里就不存在「点到的不是看到的」：当前字段不动，动的是它下面的内容，
+     * 与 IME 候选框、内联编辑器一致。tooth_pad.js 里那句「真实的软键盘是顶起
+     * 内容，而不是盖住内容」说的也是这件事。
+     *
+     * 页面上的短语字段有三种容器形态，各自的落点不同：
+     *
+     *   叙述型（主诉/现病史/既往史）  textarea 在 .narrative-field 里，
+     *                                 面板排进这一列，跟着字段宽度走。
+     *   分行明细（检查/其他检查/诊断/  .case-item-row 是 flex 行，塞进去会和
+     *   治疗计划/治疗）                牙位格挤在同一行，所以排在**行之后**。
+     *   整段文本（医嘱）              直接挂在 .soap-section-body 下，排在
+     *                                 该 textarea 之后即可。
+     *
+     * 每段那个 #<section> 派生 textarea 是 display:none，拿不到焦点，不在此列。
+     *
+     * 认不出容器就回退浮层 —— 与其把面板插到一个没量过的地方撑破布局，
+     * 不如维持旧行为。
+     */
+    function placeInline($el) {
+        var $field = $el.closest('.narrative-field');
+        if ($field.length) { $panel.appendTo($field); return true; }
+
+        var $row = $el.closest('.case-item-row');
+        if ($row.length) { $panel.insertAfter($row); return true; }
+
+        if ($el.closest('.soap-section-body').length) { $panel.insertAfter($el); return true; }
+
+        return false;
+    }
+
     function show($el) {
         var field = fieldOf($el);
         if (!field || !render(field)) { hide(); return; }
 
         $target = $el;
+
+        inline = placeInline($el);
+
+        if (inline) {
+            // 绝对定位那套留下的内联样式要清掉，否则它还按老坐标摆
+            $panel.addClass('phrase-panel-inline').css({ left: '', top: '', 'max-height': '' });
+            $panel.show();
+            return;
+        }
+
+        if ($panel.parent()[0] !== document.body) { $panel.appendTo('body'); }
+        $panel.removeClass('phrase-panel-inline');
         $panel.show();
         position($el);
     }
@@ -236,11 +287,25 @@
         $(document).on('focus', SEL, function () { show($(this)); });
 
         $(document).on('blur', SEL, function () {
-            // 点面板里的短语也会让 textarea 失焦，pinned 期间不关
-            setTimeout(function () { if (!pinned) hide(); }, 120);
+            var blurred = this;
+
+            setTimeout(function () {
+                // 点面板里的短语也会让 textarea 失焦，pinned 期间不关
+                if (pinned) return;
+
+                // 这 120ms 里另一个字段可能已经接管了面板（医生就是在字段之间
+                // 来回跳的）。此时面板是**新字段**的，不是这次失焦的遗留 ——
+                // 无条件 hide() 会把刚弹出来的面板立刻关掉，表现为「点进下一个
+                // 框，面板一闪就没了，而且再也叫不出来」（焦点没再变过，
+                // 不会有新的 focus 事件）。
+                if ($target && $target[0] !== blurred) return;
+
+                hide();
+            }, 120);
         });
 
         $(window).on('resize scroll', function () {
+            if (inline) return;   // 在流里，位置由布局决定
             if ($panel && $panel.is(':visible') && $target) position($target);
         });
 

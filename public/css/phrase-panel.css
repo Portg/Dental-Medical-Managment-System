@@ -129,3 +129,18 @@
 }
 
 .phrase-panel-sep { margin: 0 8px; color: #c9d2da; }
+
+/**
+ * 试点：排进文档流的面板（phrase_panel.js 的 placeInline）。
+ *
+ * 排在流里就不再是浮层了 —— 去掉投影与绝对定位，宽度跟着所在列走。
+ * 高度仍设上限：37 条短语摊开会把下面的内容顶出去很远，超出的部分内部滚动。
+ */
+.phrase-panel.phrase-panel-inline {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: 320px;
+    margin: 6px 0 4px;
+    box-shadow: none;
+}
