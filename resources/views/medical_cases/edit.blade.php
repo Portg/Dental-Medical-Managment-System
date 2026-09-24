@@ -259,21 +259,6 @@
             </button>
         @endforeach
     </div>
-    {{-- 拿起标记笔后才出现：把一个光秃秃的符号放进某个象限，不指名哪颗牙。
-
-         做成一个迷你十字而不是四个写着「右上/左上…」的按钮 —— 它长得就是它
-         产生的结果（行里那个十字），点哪格符号就落哪格，不需要一句话解释。
-         象限名留在 title 里，给悬停和读屏用，不占视觉。
-
-         格子顺序按 toothQuadrant 的镜像规则：左上格=患者右上=1，右上格=2，
-         左下格=患者右下=4，右下格=3。存一位数字的象限码，见
-         MedicalCaseItem::isQuadrantCode。 --}}
-    <div class="tooth-pad-quadrants">
-        @foreach(['ur' => 1, 'ul' => 2, 'lr' => 4, 'll' => 3] as $key => $code)
-            <button type="button" class="tpq" data-quadrant-code="{{ $code }}"
-                    title="{{ __('medical_cases.quadrant_' . $key) }}"></button>
-        @endforeach
-    </div>
     {{-- 这里原来有一句「点牙位加/减，点「全」选整个区」。撤掉：牙位格是明摆着的
          按钮、选中有高亮，「全」挨着它那一区的牙、字面就是「全（选）」——
          都不需要读字才会用。控件自己说不清楚的时候才该补文案，而补文案通常说明

@@ -28,6 +28,18 @@
     gap: 2px;
 }
 
+/* 左右象限之间的竖线。
+   .tg-mid 这个空 span 一直就在模板里、却没有任何样式 —— 位置早留好了，
+   只是从没画出来。加上它，软键盘本身就是一个十字，四个象限一眼可辨；
+   否则只有上下那条横线，看着像两排牙，不像部位记录法。
+   与横线（.tg-midline-rule）同一个颜色与粗细，拼出来才是一个十字。 */
+.tg-mid {
+    align-self: stretch;
+    width: 1px;
+    margin: 0 4px;
+    background: #dde2e6;
+}
+
 /* 乳牙一侧只有 5 颗、恒牙 8 颗，靠 min-width 把两行撑到同宽，
    中线才是一条直的 —— 不然上下两行的中线会错开。 */
 .tg-row-milk .tg-quad {
@@ -217,40 +229,3 @@
     color: #a8443c;
 }
 
-/* 象限迷你十字：只有拿起标记笔时才出现 —— 没拿笔时它没有意义（放哪个符号？）。
-   形状与行里那个十字一致，点哪格符号就落哪格，所以不配任何文字说明。
-   四格分别是按钮，套一圈浅边把它从「效果示意图」变成看得出能点的控件。 */
-.tooth-pad-quadrants { display: none; }
-
-.tooth-pad.tooth-pad-armed .tooth-pad-quadrants {
-    display: inline-grid;
-    grid-template-columns: repeat(2, 22px);
-    grid-template-rows: repeat(2, 16px);
-    margin: 8px 10px 2px;
-    padding: 4px;
-    border: 1px solid #e6d5d3;
-    border-radius: 3px;
-    background: #fff;
-}
-
-.tooth-pad-quadrants .tpq {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    color: #a8443c;
-    cursor: cell;
-    /* 抹掉 button 的默认外观，否则四格各带一圈边框，十字的形就散了 */
-    padding: 0;
-    background: transparent;
-    border: 0;
-    transition: background .12s, color .12s;
-}
-
-/* 只描内侧边，拼出十字的两条线 —— 与 .tooth-cross 同一套画法 */
-.tooth-pad-quadrants .tpq:nth-child(1) { border-right: 1px solid #333; border-bottom: 1px solid #333; }
-.tooth-pad-quadrants .tpq:nth-child(2) { border-bottom: 1px solid #333; }
-.tooth-pad-quadrants .tpq:nth-child(3) { border-right: 1px solid #333; }
-
-/* 悬停整格填色：一眼看出四格是分别可点的，不是一张效果图 */
-.tooth-pad-quadrants .tpq:hover { background: #a8443c; color: #fff; }
