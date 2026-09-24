@@ -637,10 +637,18 @@
    数字落在它真正所属的象限里 —— 医生扫一眼就知道是哪个区。 */
 .tooth-cross {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, 1fr) 而不是 1fr：网格项默认 min-width:auto，一格内容一长就把
+       自己那一列撑开，十字的竖线被推到一边去（实测整区八颗带符号时左列 79px、
+       右列 13px）。中线居中是部位记录法的语义 —— 它分的是四个象限，不是装饰。
+       minmax(0,·) 让两列永远等宽。 */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: 1fr 1fr;
-    /* 视频里那个十字在行里占的比例明显更大、看得更清楚；原来 72×38 数字挤在角上 */
-    width: 92px;
+    /* 视频里那个十字在行里占的比例明显更大、看得更清楚；原来 72×38 数字挤在角上。
+       内容装不下时整体等比变宽（两列一起），封到 200px —— 再宽就把右边的文字
+       输入框挤没了，而牙位号在派生文本和 title 里都留着。 */
+    width: max-content;
+    min-width: 92px;
+    max-width: 200px;
     height: 52px;
 }
 
@@ -648,6 +656,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* 配合上面的 minmax(0,·)：不这么写，flex 项自身的 min-width:auto 同样会
+       把列撑开，等宽就白设了 */
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
     /* 17px 时一格里放「76△」会顶满格子、挤到十字线上（46×26 的格子）。
        降到 14px 后两颗牙加一个符号仍有余量。 */
     font-size: 14px;
@@ -660,6 +673,16 @@
 .tooth-cross .tq-tl { border-right: 1.5px solid #333; border-bottom: 1.5px solid #333; }
 .tooth-cross .tq-tr { border-bottom: 1.5px solid #333; }
 .tooth-cross .tq-bl { border-right: 1.5px solid #333; }
+
+/* 贴着中线写，两侧向中线靠拢 —— 部位记录法本来就是这么写的（数字紧挨中线，
+   越往外越靠边）。顺带决定了装不下时切哪头：溢出统一从**远端**裁掉，
+   保住靠中线的前牙，切掉远端的磨牙。居中对齐会两头一起切，把前牙也切没。
+   完整牙位列表在 title 和派生文本里都留着。 */
+.tooth-cross .tq-tl,
+.tooth-cross .tq-bl { justify-content: flex-end; padding-right: 2px; }
+
+.tooth-cross .tq-tr,
+.tooth-cross .tq-br { justify-content: flex-start; padding-left: 2px; }
 
 /* 非 FDI 编号：不画象限，居中显示 */
 .tooth-cross-plain {
