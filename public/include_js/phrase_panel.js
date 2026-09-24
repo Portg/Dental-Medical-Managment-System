@@ -204,12 +204,38 @@
             .replace(/"/g, '&quot;');
     }
 
+    var SEL = '#medical-record-form textarea, #medical-record-form input[data-phrase-field]';
+
+    /**
+     * 对外给 hide() 和 restore()。
+     *
+     * 牙位软键盘弹出时要用它把本面板收起来：软键盘的 mousedown 里有一句
+     * preventDefault（「不要让当前行失焦」），而本面板正是靠 textarea 的 blur
+     * 才关闭的 —— 那句 preventDefault 把关闭条件一并挡掉了，于是两个浮层同时
+     * 开着，z-index 又都是 1060，谁压谁只看 DOM 插入顺序。
+     */
+    window.PhrasePanel = {
+        hide: hide,
+
+        /**
+         * 焦点还在短语字段上就重新弹出 —— 牙位软键盘收起后调。
+         *
+         * 不能指望 focus 事件把面板带回来：软键盘全程 preventDefault，textarea
+         * **从未失焦**，所以医生点回文本框时不会有新的 focus，面板就再也不出现了。
+         * 这是收起面板换来的代价，必须在这里补上。
+         */
+        restore: function () {
+            var el = document.activeElement;
+            if (el && $(el).is(SEL)) {
+                show($(el));
+            }
+        }
+    };
+
     $(function () {
-        var sel = '#medical-record-form textarea, #medical-record-form input[data-phrase-field]';
+        $(document).on('focus', SEL, function () { show($(this)); });
 
-        $(document).on('focus', sel, function () { show($(this)); });
-
-        $(document).on('blur', sel, function () {
+        $(document).on('blur', SEL, function () {
             // 点面板里的短语也会让 textarea 失焦，pinned 期间不关
             setTimeout(function () { if (!pinned) hide(); }, 120);
         });

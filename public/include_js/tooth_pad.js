@@ -159,6 +159,18 @@
         $row = $toothBtn.closest('.case-item-row');
         if (!$row.length) return;
 
+        // 先收短语面板。两个浮层都贴着同一行弹出、z-index 都是 1060，同时开着
+        // 必然互相遮挡（实测短语面板会压住半个牙位网格，那片区域的牙点不动）。
+        //
+        // 它不会自己关：本函数的调用方在 mousedown 里 preventDefault 了
+        // （「不要让当前行失焦」），而短语面板恰恰是靠 textarea 失焦才关的。
+        //
+        // 只需要这一个方向 —— 反过来（面板开着时点文本框）现有逻辑会正确收起
+        // 软键盘：那次点击落在面板外，走 document 的 mousedown 收起分支。
+        if (window.PhrasePanel && window.PhrasePanel.hide) {
+            window.PhrasePanel.hide();
+        }
+
         $pad.show();
         paint();
         position($toothBtn);
@@ -167,6 +179,12 @@
     function hide() {
         if ($pad) $pad.hide();
         $row = null;
+
+        // 把 show() 里收起的短语面板还回去。焦点这一路都没离开过文本框，
+        // 不主动还原的话它永远不会再出现（focus 事件不会二次触发）。
+        if (window.PhrasePanel && window.PhrasePanel.restore) {
+            window.PhrasePanel.restore();
+        }
     }
 
     $(function () {
