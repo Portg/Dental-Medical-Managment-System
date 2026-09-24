@@ -273,7 +273,9 @@ return [
     'phrase_category_chief_complaint' => '主诉',
     'phrase_category_present_illness' => '现病史',
     'phrase_category_past_history' => '既往史',
-    'phrase_category_auxiliary_examination' => '辅助检查',
+    // 段落名在 bbe39ad 里跟参考产品对齐改叫「其他检查」（见 auxiliary_section），
+    // 面板标题当时没跟上 —— 同一段落在分区头和短语面板里叫两个名字。
+    'phrase_category_auxiliary_examination' => '其他检查',
     'phrase_category_treatment_plan' => '治疗计划',
     'no_quick_phrases' => '暂无快捷短语，可在「快捷短语」页添加',
 

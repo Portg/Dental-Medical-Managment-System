@@ -264,7 +264,8 @@ return [
     'phrase_category_chief_complaint' => 'Chief Complaint',
     'phrase_category_present_illness' => 'Present Illness',
     'phrase_category_past_history' => 'Past History',
-    'phrase_category_auxiliary_examination' => 'Auxiliary Exam',
+    // Keep in step with auxiliary_section — same section, one name.
+    'phrase_category_auxiliary_examination' => 'Other Examination',
     'phrase_category_treatment_plan' => 'Treatment Plan',
     'no_quick_phrases' => 'No quick phrases yet',
 
