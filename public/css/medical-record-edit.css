@@ -648,7 +648,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 17px;
+    /* 17px 时一格里放「76△」会顶满格子、挤到十字线上（46×26 的格子）。
+       降到 14px 后两颗牙加一个符号仍有余量。 */
+    font-size: 14px;
     font-weight: 600;
     color: #1890ff;
     line-height: 1;

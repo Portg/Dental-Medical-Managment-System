@@ -201,4 +201,6 @@
     margin-left: 1px;
     color: #a8443c;
     font-weight: 700;
+    /* 比牙位号略小一档：符号是牙位号的修饰，不该比它还抢眼 */
+    font-size: 12px;
 }
