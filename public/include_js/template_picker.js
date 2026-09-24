@@ -133,10 +133,14 @@ var TemplatePicker = (function () {
             }
         });
 
-        // Close picker when clicking outside
+        // Close picker when clicking outside.
+        //
+        // 原来这里给 .template-enabled 开了例外，于是点回文本框时下拉不关 —— 它会一直
+        // 浮在那儿盖住底下的控件（实测盖住主诉的四个模板快捷按钮，按不动）。
+        // 点进字段是重新定位光标，「/」那次触发的上下文已经过期，该收起。
+        // 点在下拉内部仍由上面第一个条件保住。
         $(document).on('click', function (e) {
-            if (!$(e.target).closest('.template-picker-dropdown').length &&
-                !$(e.target).hasClass('template-enabled')) {
+            if (!$(e.target).closest('.template-picker-dropdown').length) {
                 hidePicker();
             }
         });
@@ -655,10 +659,14 @@ var PhrasePicker = (function () {
             }
         });
 
-        // Close picker when clicking outside
+        // Close picker when clicking outside.
+        //
+        // 原来这里给 .phrase-enabled 开了例外，于是点回文本框时下拉不关 —— 它会一直
+        // 浮在那儿盖住底下的控件（实测盖住主诉的四个模板快捷按钮，按不动）。
+        // 点进字段是重新定位光标，「;」那次触发的上下文已经过期，该收起。
+        // 点在下拉内部仍由上面第一个条件保住。
         $(document).on('click', function (e) {
-            if (!$(e.target).closest('.phrase-picker-dropdown').length &&
-                !$(e.target).hasClass('phrase-enabled')) {
+            if (!$(e.target).closest('.phrase-picker-dropdown').length) {
                 hidePicker();
             }
         });
