@@ -30,7 +30,11 @@
         // 一直没有入口，于是牙位图画不出「这里有座桥」—— 只能看到一颗 missing，
         // 看不出缺隙已经被修复。基牙标 crown、缺隙标 pontic，三颗连起来就是一座
         // 三单位桥；跨牙的那条长横线不在这里做（见 8a9fa7d 的说明）。
-        pontic: { color: null, bg: '#0891B2', shortKey: 'short_pontic', labelKey: 'pontic' }
+        pontic: { color: null, bg: '#0891B2', shortKey: 'short_pontic', labelKey: 'pontic' },
+        // 计划拔除：和残根一样是只读的一项 —— 它由病历「治疗计划」段的 ✕ 投影过来
+        // （DentalChartService::PLAN_MARK_TO_STATUS），牙位图不另开录入口。
+        // 但必须登记在这里，否则 buildPayload 会跳过它，医生一点保存就抹掉。
+        extraction_planned: { color: null, bg: '#DB2777', shortKey: 'short_extraction_planned', labelKey: 'extraction_planned' }
     };
 
     var COLOR_TO_STATUS = {
@@ -38,7 +42,7 @@
         '6': 'implant', '8': 'crown', '11': 'impacted'
     };
 
-    var STATUS_PRIORITY = ['missing', 'implant', 'pontic', 'impacted', 'residual_root', 'crown', 'rct', 'filled', 'caries'];
+    var STATUS_PRIORITY = ['missing', 'implant', 'pontic', 'impacted', 'residual_root', 'extraction_planned', 'crown', 'rct', 'filled', 'caries'];
 
     var marks = {};       // toothNumber -> statusKey
     var activeTool = null; // statusKey | 'clear' | null

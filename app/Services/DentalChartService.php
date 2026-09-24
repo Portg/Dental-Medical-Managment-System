@@ -273,19 +273,45 @@ class DentalChartService
     ];
 
     /**
+     * 治疗计划段单独一张表：同一个符号，在这一段里说的是「打算」不是「事实」。
+     *
+     *     ✕ extracted → extraction_planned  牙还在嘴里，打算拔
+     *
+     * 只有 ✕ 在列。△ 残根和 — 缺失说的是牙**现在**什么样，是观察不是计划；
+     * 写在治疗计划段里只是复述检查段已经记过的事实，再投一次没有新信息，
+     * 还会让「这条状态是从哪来的」变糊涂。
+     *
+     * public：与 MARK_TO_STATUS 同样的理由 —— parity 测试要断言这里能写出来的
+     * 状态，牙位图编辑器都认识。
+     */
+    public const PLAN_MARK_TO_STATUS = [
+        MedicalCaseItem::MARK_EXTRACTED => 'extraction_planned',
+    ];
+
+    /**
      * 哪些段落的标记能投影成牙位状态。
      *
      * 检查 / 其他检查  —— 记的是「我看到这颗牙现在是什么样」，是事实
      * 治疗            —— 记的是「这次做了什么」，做完牙的状态就变了，也是事实
-     * **治疗计划不在其列** —— 它记的是「打算做什么」。医生在治疗计划里给一颗牙
-     *   标 ✕ 表示「计划拔除」，那颗牙此刻还在嘴里；投影成 missing 等于把打算
-     *   当成了既成事实，牙位图上会显示一颗根本没拔的牙已经没了。
+     * 治疗计划       —— 记的是「打算做什么」，只有 ✕ 投影，且落到
+     *   extraction_planned 而不是 missing。这一段原来整个不投影，不是不想记，
+     *   是当时没有合适的状态可落：投成 missing 等于把打算当成既成事实，
+     *   牙位图上会显示一颗根本没拔的牙已经没了。见 PLAN_MARK_TO_STATUS。
      */
     private const PROJECTABLE_SECTIONS = [
         MedicalCaseItem::SECTION_EXAMINATION,
         MedicalCaseItem::SECTION_AUXILIARY,
         MedicalCaseItem::SECTION_TREATMENT,
+        MedicalCaseItem::SECTION_TREATMENT_PLAN,
     ];
+
+    /** 这一段的标记该查哪张表 */
+    private static function markTableFor(string $section): array
+    {
+        return $section === MedicalCaseItem::SECTION_TREATMENT_PLAN
+            ? self::PLAN_MARK_TO_STATUS
+            : self::MARK_TO_STATUS;
+    }
 
     /**
      * 把一份病历里的牙位标记投影成牙位状态。
@@ -309,7 +335,7 @@ class DentalChartService
                 ->whereNotNull('tooth_mark')
                 ->whereNotNull('tooth_no')
                 ->orderBy('sort_order')->orderBy('id')
-                ->get(['tooth_no', 'tooth_mark', 'content']);
+                ->get(['section', 'tooth_no', 'tooth_mark', 'content']);
 
             // 同一颗牙在几段里都标了：以最后一条为准（治疗排在检查之后，
             // 「这次拔掉了」应当盖过「检查时是残根」）
@@ -323,7 +349,7 @@ class DentalChartService
                     continue;
                 }
 
-                $status = self::MARK_TO_STATUS[$row->tooth_mark] ?? null;
+                $status = self::markTableFor($row->section)[$row->tooth_mark] ?? null;
                 if ($status === null) {
                     continue;
                 }
@@ -357,12 +383,12 @@ class DentalChartService
         $COLOR_TO_STATUS = self::COLOR_TO_STATUS;
         // residual_root 排在 impacted 之后、crown 之前：牙冠没了比任何修复体状态都
         // 更该被一眼看到，但比「牙已经不在」弱一档。
-        $STATUS_PRIORITY = ['missing', 'implant', 'pontic', 'impacted', 'residual_root', 'crown', 'rct', 'filled', 'caries'];
+        $STATUS_PRIORITY = ['missing', 'implant', 'pontic', 'impacted', 'residual_root', 'extraction_planned', 'crown', 'rct', 'filled', 'caries'];
         $SHORT_KEYS = [
             'caries' => 'short_caries', 'filled' => 'short_filled', 'rct' => 'short_rct',
             'crown' => 'short_crown', 'missing' => 'short_missing', 'implant' => 'short_implant',
             'impacted' => 'short_impacted', 'residual_root' => 'short_residual_root',
-            'pontic' => 'short_pontic',
+            'pontic' => 'short_pontic', 'extraction_planned' => 'short_extraction_planned',
         ];
 
         // 患者要从两条路认：预约，或者病历。

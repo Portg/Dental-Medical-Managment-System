@@ -108,13 +108,16 @@ class ToothStateProjectionTest extends TestCase
     }
 
     /**
-     * 治疗计划里的标记**不**投影。
+     * 治疗计划里的 ✕ 永远不会落成 missing。
      *
-     * 治疗计划记的是「打算做什么」。医生在那里给一颗牙标 ✕ 表示「计划拔除」，
-     * 那颗牙此刻还在嘴里 —— 投影成 missing 等于把打算当成既成事实，
-     * 牙位图上会显示一颗根本没拔的牙已经没了。
+     * 这条用例原来断言的是「治疗计划整段不投影」—— 那是当时唯一安全的做法：
+     * 能落的只有 missing，而那颗牙此刻还在嘴里，投成 missing 等于把打算当成
+     * 既成事实，牙位图上会显示一颗根本没拔的牙已经没了。
+     *
+     * 现在它落到 extraction_planned（见 PLAN_MARK_TO_STATUS），信息不再被整个
+     * 丢掉。但当初那个担心一步都不能松：这里守的就是「绝不是 missing」。
      */
-    public function test_治疗计划里的标记不投影(): void
+    public function test_治疗计划的叉绝不落成缺失(): void
     {
         $case = $this->makeCase();
 
@@ -123,7 +126,9 @@ class ToothStateProjectionTest extends TestCase
              'tooth_mark' => 'extracted', 'content' => '择期拔除'],
         ]);
 
-        $this->assertDatabaseMissing('dental_charts', ['medical_case_id' => $case->id, 'tooth_number' => '18']);
+        $this->assertDatabaseMissing('dental_charts', [
+            'medical_case_id' => $case->id, 'tooth_number' => '18', 'tooth_status' => 'missing',
+        ]);
     }
 
     /**
@@ -203,6 +208,84 @@ class ToothStateProjectionTest extends TestCase
 
         $this->assertNotEmpty($summary, '没有就诊的病历投影不该对汇总隐形');
         $this->assertStringContainsString('45', json_encode($summary, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * 治疗计划里的 ✕ 投影成「计划拔除」，不是「缺失」。
+     *
+     * 这一段原来整个不投影 —— 不是不想记，是当时没有合适的状态可落：投影成
+     * missing 等于把打算当成既成事实，牙位图上会显示一颗根本没拔的牙已经没了。
+     * extraction_planned 这个枚举值存在的意义恰好就是它，接上之后「计划拔除」
+     * 这条信息不再被整个丢掉。
+     */
+    public function test_治疗计划的叉投影成计划拔除(): void
+    {
+        $case = $this->makeCase();
+
+        $this->save($case, [
+            ['section' => 'treatment_plan', 'tooth_no' => '18', 'tooth_mark' => 'extracted', 'content' => '择期拔除'],
+        ]);
+
+        $this->assertDatabaseHas('dental_charts', [
+            'medical_case_id' => $case->id,
+            'tooth_number'    => '18',
+            'tooth_status'    => 'extraction_planned',
+        ]);
+    }
+
+    /**
+     * 治疗计划里的 △ 和 — 不投影。
+     *
+     * 那两个符号说的是牙**现在**什么样（残根/缺失），是观察不是计划。写在治疗
+     * 计划段里只是复述检查段已经记过的事实，再投一次没有新信息，还会让「这条
+     * 状态是从哪来的」变糊涂。只有 ✕ 在这一段里带计划语义。
+     */
+    public function test_治疗计划里只有叉投影(): void
+    {
+        $case = $this->makeCase();
+
+        $this->save($case, [
+            ['section' => 'treatment_plan', 'tooth_no' => '45', 'tooth_mark' => 'residual_root', 'content' => '残根待处理'],
+            ['section' => 'treatment_plan', 'tooth_no' => '36', 'tooth_mark' => 'missing',       'content' => '缺失待修复'],
+        ]);
+
+        $this->assertSame(0, DentalChart::where('medical_case_id', $case->id)->count());
+    }
+
+    /** 检查段的 ✕ 仍然是「已经不在」，不受上面那条影响。 */
+    public function test_检查段的叉仍投影成缺失(): void
+    {
+        $case = $this->makeCase();
+
+        $this->save($case, [
+            ['section' => 'examination', 'tooth_no' => '38', 'tooth_mark' => 'extracted', 'content' => '已拔除'],
+        ]);
+
+        $this->assertDatabaseHas('dental_charts', [
+            'medical_case_id' => $case->id, 'tooth_number' => '38', 'tooth_status' => 'missing',
+        ]);
+    }
+
+    /**
+     * 同一颗牙：检查标残根、治疗计划标计划拔除 —— 以靠后的段为准。
+     *
+     * 两件事同时为真（冠没了，且打算拔掉），但牙位图一颗牙只显示一个状态。
+     * 沿用既有规则「靠后的段盖过靠前的」：计划拔除是更可操作的那条，
+     * 残根这个细节在病历文字里留着。
+     */
+    public function test_检查残根与计划拔除并存时以计划为准(): void
+    {
+        $case = $this->makeCase();
+
+        $this->save($case, [
+            ['section' => 'examination',    'tooth_no' => '45', 'tooth_mark' => 'residual_root', 'content' => '残根'],
+            ['section' => 'treatment_plan', 'tooth_no' => '45', 'tooth_mark' => 'extracted',     'content' => '择期拔除'],
+        ]);
+
+        $this->assertSame(1, DentalChart::where('medical_case_id', $case->id)->where('tooth_number', '45')->count());
+        $this->assertDatabaseHas('dental_charts', [
+            'medical_case_id' => $case->id, 'tooth_number' => '45', 'tooth_status' => 'extraction_planned',
+        ]);
     }
 
     /**

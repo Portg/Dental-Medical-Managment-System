@@ -76,7 +76,17 @@ class DentalChartColorMapParityTest extends TestCase
 
         $this->assertNotEmpty($editorStatuses, 'STATUS_MAP 解析出来是空的');
 
-        foreach (DentalChartService::MARK_TO_STATUS as $mark => $status) {
+        // 按**值**合并，不能用 + 或 array_merge 的键语义：两张表都有 extracted
+        // 这个键（检查段落成 missing、治疗计划段落成 extraction_planned），
+        // 键合并会把其中一个悄悄丢掉 —— 这条断言就成了摆设。
+        $projected = [];
+        foreach ([DentalChartService::MARK_TO_STATUS, DentalChartService::PLAN_MARK_TO_STATUS] as $table) {
+            foreach ($table as $mark => $status) {
+                $projected[$status] = $mark;
+            }
+        }
+
+        foreach ($projected as $status => $mark) {
             $this->assertContains(
                 $status,
                 $editorStatuses,

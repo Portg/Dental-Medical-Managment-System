@@ -15,6 +15,7 @@ return [
     'crown' => '牙冠',
     'residual_root' => '残根',
     'pontic' => '桥体',
+    'extraction_planned' => '计划拔除',
     'normal' => '正常',
     'view' => '查看',
     'add' => '添加',
@@ -48,6 +49,7 @@ return [
     'short_impacted' => '阻',
     'short_residual_root' => '残',
     'short_pontic' => '桥',
+    'short_extraction_planned' => '拔',
 
     // 控制器消息
     'chart_saved_success' => '牙科图变更已成功保存',
