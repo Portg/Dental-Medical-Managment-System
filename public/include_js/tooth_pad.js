@@ -176,9 +176,24 @@
         position($toothBtn);
     }
 
-    function hide() {
+    /**
+     * 收起软键盘。
+     *
+     * restorePhrase 传 false 表示「别把短语面板还回来」——按 Esc 时用，
+     * Esc 的语义是把浮层全关掉，还回来一个等于没关。
+     */
+    function hide(restorePhrase) {
+        // 本来就没开就什么都不做。下面那个 Esc 处理器是全局的、不带可见性判断，
+        // 少了这道闸，医生在主诉里按一下 Esc 也会走到还原分支，把短语面板重新
+        // 弹出来 —— 看起来就是 Esc 关不掉面板。
+        var wasOpen = !!($pad && $pad.is(':visible'));
+
         if ($pad) $pad.hide();
         $row = null;
+
+        if (!wasOpen || restorePhrase === false) {
+            return;
+        }
 
         // 把 show() 里收起的短语面板还回去。焦点这一路都没离开过文本框，
         // 不主动还原的话它永远不会再出现（focus 事件不会二次触发）。
@@ -214,7 +229,7 @@
         });
 
         $(document).on('keydown', function (e) {
-            if (e.key === 'Escape') hide();
+            if (e.key === 'Escape') hide(false);
         });
 
         $(window).on('resize scroll', function () {
