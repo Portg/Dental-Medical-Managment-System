@@ -50,20 +50,22 @@
             }
         });
 
-        // 「全」：没拿笔时整象限一键选；拿了笔就是「把这个符号放进这个区」。
+        // 「全」始终只有一个含义：**它管的那些牙**。没拿笔是把它们选上，
+        // 拿了笔是把符号盖到它们身上。
         //
-        // 不另做控件：软键盘本身就是个十字，每个象限的外角正好有一个「全」，
-        // 位置就说明了是哪个区；而「全 + 符号」读起来就是「这个区（有颗牙）残根」。
-        // 拿着笔时点什么就涂什么 —— 点牙涂那颗牙，点「全」涂整个区，
-        // 与牙位图编辑器的取色-涂抹是同一套隐喻。
+        // 曾经让它在拿笔时改成「放一个不指名的象限码」—— 那是错的：医生拿着 ✕
+        // 点「全」，预期是「这些牙全标成缺失」（整区缺失是真实的临床陈述），
+        // 而那样做只会产生一条不指名的记录。预期若干颗被标记、实际 1 条，
+        // 是会出错的数据，不是语义美不美的问题。
         $pad.on('mousedown', '.tg-all', function (e) {
             e.preventDefault();
+            var teeth = String($(this).data('teeth')).split(',').filter(Boolean);
             if (activeMark) {
-                CaseItems.setToothMark($row, quadrantCode($(this).data('quadrant')), activeMark);
-                paint();
+                CaseItems.setTeethMark($row, teeth, activeMark);
             } else {
-                toggle(String($(this).data('teeth')).split(','));
+                toggle(teeth);
             }
+            paint();
         });
 
         // 牙位标记 △ 残根 / ✕ 已拔除 / — 缺失。
@@ -85,15 +87,6 @@
         });
 
         return $pad;
-    }
-
-    /**
-     * 象限简写 → 一位数字的象限码（见 MedicalCaseItem::isQuadrantCode）。
-     * 恒牙 1-4 与 FDI 首位一致；乳牙 5-8 落在同一个格子里（toothQuadrant 只看首位），
-     * 所以一个光秃秃的符号用恒牙码表示就够了。
-     */
-    function quadrantCode(quad) {
-        return { ur: '1', ul: '2', ll: '3', lr: '4' }[String(quad)] || '';
     }
 
     function current() {
@@ -139,14 +132,6 @@
         });
         $pad.toggleClass('tooth-pad-armed', !!activeMark);
 
-        // 拿着笔时，「全」显示这支笔的符号 —— 明示点它会发生什么，不用配文案。
-        // 放下笔就变回「全」。
-        var sym = activeMark ? ($pad.find('.tooth-pad-mark[data-mark="' + activeMark + '"]').data('symbol') || '') : '';
-        $pad.find('.tg-all').each(function () {
-            var $b = $(this);
-            if ($b.data('label') === undefined) { $b.data('label', $b.text()); }
-            $b.text(sym || $b.data('label'));
-        });
     }
 
     /**

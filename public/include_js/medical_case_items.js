@@ -202,6 +202,28 @@ var CaseItems = (function () {
         setRowTooth($row, teeth);
     }
 
+    /**
+     * 给一组牙一起设标记（软键盘的「全」用）。
+     *
+     * 与「全」选牙同一套口径：组里**全都已是这个标记**才算取消，否则算补齐 ——
+     * 点「全」时这一区已经标了两颗，医生要的是把整区标满，不是把那两颗取消掉。
+     */
+    function setTeethMark($row, teeth, mark) {
+        if (!$row || !$row.length || !teeth.length) return;
+
+        var marks = rowMarks($row);
+        var allOn = teeth.every(function (t) { return marks[t] === mark; });
+
+        teeth.forEach(function (t) {
+            if (allOn) { delete marks[t]; } else { marks[t] = mark; }
+        });
+        setRowMarks($row, marks);
+
+        var cur = splitTeeth($row.find('.case-item-tooth-value').val());
+        teeth.forEach(function (t) { if (cur.indexOf(String(t)) === -1) cur.push(String(t)); });
+        setRowTooth($row, cur);
+    }
+
     /** 整行一起设（旧入口：没有选中具体牙位时，摊到当前所有牙位上） */
     function setRowMark($row, mark) {
         if (!$row || !$row.length) return;
@@ -814,6 +836,7 @@ var CaseItems = (function () {
         syncDiagnosisDerived: syncDiagnosisDerived,
         setRowMark: setRowMark,
         setToothMark: setToothMark,
+        setTeethMark: setTeethMark,
         rowMark: rowMark,
         rowMarks: rowMarks,
         markOf: markOf,
