@@ -408,7 +408,10 @@
                                             <th width="40%">{{ __('patient.drug_allergy') }}</th>
                                             <td>
                                                 @if($patient->drug_allergies)
-                                                    @foreach(json_decode($patient->drug_allergies, true) ?? [] as $allergy)
+                                                    {{-- drug_allergies 在模型里已经 cast 成 array，再 json_decode 一次
+                                                         会抛 TypeError（Argument #1 must be of type string）——
+                                                         只要患者真有过敏史，这一页就 500。 --}}
+                                                    @foreach((array) $patient->drug_allergies as $allergy)
                                                         <span class="label label-danger" style="margin-right:4px;">{{ __('patient.allergy_' . $allergy) }}</span>
                                                     @endforeach
                                                     @if($patient->drug_allergies_other)
@@ -423,7 +426,7 @@
                                             <th>{{ __('patient.chronic_diseases') }}</th>
                                             <td>
                                                 @if($patient->systemic_diseases)
-                                                    @foreach(json_decode($patient->systemic_diseases, true) ?? [] as $disease)
+                                                    @foreach((array) $patient->systemic_diseases as $disease)
                                                         <span class="label label-warning" style="margin-right:4px;">{{ __('patient.disease_' . $disease) }}</span>
                                                     @endforeach
                                                     @if($patient->systemic_diseases_other)
