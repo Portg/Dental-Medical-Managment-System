@@ -293,6 +293,7 @@ function bindServiceModal() {
             category_id:      $('#service-category-id').val() || null,
             is_discountable:  $('#service-is-discountable').is(':checked') ? 1 : 0,
             is_favorite:      $('#service-is-favorite').is(':checked') ? 1 : 0,
+            track_delivery:   $('#service-track-delivery').is(':checked') ? 1 : 0,
             is_active:        $('#service-is-active').is(':checked') ? 1 : 0
         };
 
@@ -333,6 +334,7 @@ function resetServiceForm() {
     $('#service-category-id').val(null).trigger('change');
     $('#service-is-discountable').prop('checked', true);
     $('#service-is-favorite').prop('checked', false);
+    $('#service-track-delivery').prop('checked', false);
     $('#service-is-active').prop('checked', true);
 }
 
@@ -350,6 +352,7 @@ window.editRecord = function (id) {
         $('#service-description').val(data.description);
         $('#service-is-discountable').prop('checked', !!data.is_discountable);
         $('#service-is-favorite').prop('checked', !!data.is_favorite);
+        $('#service-track-delivery').prop('checked', !!data.track_delivery);
         $('#service-is-active').prop('checked', data.is_active === undefined ? true : !!data.is_active);
 
         // Set Select2 value

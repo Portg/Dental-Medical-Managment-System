@@ -114,12 +114,13 @@ class MedicalServiceController extends Controller
             'is_active'       => 'boolean',
             'is_discountable' => 'boolean',
             'is_favorite'     => 'boolean',
+            'track_delivery'  => 'boolean',
             'sort_order'      => 'integer|min:0',
         ])->validate();
 
         $status = $this->medicalServiceService->createService($request->only([
             'name', 'price', 'unit', 'description', 'category_id',
-            'is_active', 'is_discountable', 'is_favorite', 'sort_order',
+            'is_active', 'is_discountable', 'is_favorite', 'track_delivery', 'sort_order',
         ]));
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_added_successfully'), 'status' => 1]);
@@ -167,12 +168,13 @@ class MedicalServiceController extends Controller
             'is_active'       => 'boolean',
             'is_discountable' => 'boolean',
             'is_favorite'     => 'boolean',
+            'track_delivery'  => 'boolean',
             'sort_order'      => 'integer|min:0',
         ])->validate();
 
         $status = $this->medicalServiceService->updateService((int) $id, $request->only([
             'name', 'price', 'unit', 'description', 'category_id',
-            'is_active', 'is_discountable', 'is_favorite', 'sort_order',
+            'is_active', 'is_discountable', 'is_favorite', 'track_delivery', 'sort_order',
         ]));
         if ($status) {
             return response()->json(['message' => __('clinical_services.clinical_services_updated_successfully'), 'status' => 1]);

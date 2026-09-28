@@ -96,6 +96,7 @@ class MedicalServiceService
             'is_active'       => $data['is_active'] ?? true,
             'is_discountable' => $data['is_discountable'] ?? true,
             'is_favorite'     => $data['is_favorite'] ?? false,
+            'track_delivery'  => $data['track_delivery'] ?? false,
             'sort_order'      => $data['sort_order'] ?? 0,
             '_who_added'      => Auth::id(),
         ]);
@@ -119,6 +120,7 @@ class MedicalServiceService
             'is_active'       => $data['is_active'] ?? true,
             'is_discountable' => $data['is_discountable'] ?? true,
             'is_favorite'     => $data['is_favorite'] ?? false,
+            'track_delivery'  => $data['track_delivery'] ?? false,
             'sort_order'      => $data['sort_order'] ?? 0,
         ]);
 

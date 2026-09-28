@@ -57,6 +57,16 @@
                                 <span></span>
                         </label>
                     </div>
+                    {{-- 勾上后这个项目收费会进「剩余项目」，做一次核销一次。
+                         带说明是因为这个开关决定的是账怎么记，不是显示偏好 --}}
+                    <div class="service-toggle-item">
+                        <label class="mt-checkbox service-toggle-label">
+                                <input type="checkbox" id="service-track-delivery">
+                                {{ __('prepaid.track_delivery') }}
+                                <span></span>
+                        </label>
+                        <div class="help-block small service-toggle-hint">{{ __('prepaid.track_delivery_hint') }}</div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer service-form-modal__footer">

@@ -11,7 +11,7 @@ class MedicalService extends Model
 {
     use SerializesDatesInAppTimezone;
     use SoftDeletes;
-    protected $fillable = ['name', 'unit', 'price', 'category', 'description', 'is_active', 'is_prescription', '_who_added', 'category_id', 'is_discountable', 'is_favorite', 'sort_order'];
+    protected $fillable = ['name', 'unit', 'price', 'category', 'description', 'is_active', 'is_prescription', '_who_added', 'category_id', 'is_discountable', 'is_favorite', 'track_delivery', 'sort_order'];
 
     protected $casts = [
         'is_prescription'  => 'boolean',
@@ -19,6 +19,8 @@ class MedicalService extends Model
         'price'            => 'decimal:2',
         'is_discountable'  => 'boolean',
         'is_favorite'      => 'boolean',
+        // 按次核销：收费后进「剩余项目」，见 App\Services\PrepaidItemService
+        'track_delivery'   => 'boolean',
     ];
 
     public function category()
