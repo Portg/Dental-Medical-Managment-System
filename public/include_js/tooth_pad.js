@@ -89,6 +89,19 @@
         return $pad;
     }
 
+    /**
+     * 十字格 → 一位数字的象限码（见 MedicalCaseItem::isQuadrantCode）。
+     * 恒牙 1-4 与 FDI 首位一致；乳牙 5-8 落在同一个格子里（toothQuadrant 只看首位），
+     * 所以一个光秃秃的符号用恒牙码表示就够了。
+     */
+    function cellQuadrantCode(cls) {
+        if (/\btq-tl\b/.test(cls)) return '1';
+        if (/\btq-tr\b/.test(cls)) return '2';
+        if (/\btq-br\b/.test(cls)) return '3';
+        if (/\btq-bl\b/.test(cls)) return '4';
+        return '';
+    }
+
     function current() {
         if (!$row || !$row.length) return [];
         return CaseItems.splitTeeth($row.find('.case-item-tooth-value').val());
@@ -235,8 +248,23 @@
             e.preventDefault();
             e.stopPropagation();
 
-            // 已经开在这一行上就收起来，再点一次是「关掉」
-            if ($pad && $pad.is(':visible') && $row && $row.is($(this).closest('.case-item-row'))) {
+            var openHere = $pad && $pad.is(':visible') && $row && $row.is($(this).closest('.case-item-row'));
+
+            // 手上拿着符号、软键盘又正开在这一行 —— 那这个十字就是**填写区**：
+            // 点哪一格，符号就写进哪一格，不指名是哪颗牙（部位记录法里「符号直接
+            // 取代数字」的写法）。软键盘管选具体牙位，十字管按区写符号，两条路并存。
+            //
+            // 没拿笔时仍然是开关软键盘，与原来一致。
+            if (openHere && activeMark) {
+                var code = cellQuadrantCode(String($(e.target).closest('.tq').attr('class') || ''));
+                if (code) {
+                    CaseItems.setToothMark($row, code, activeMark);
+                    paint();
+                    return;
+                }
+            }
+
+            if (openHere) {
                 hide();
                 return;
             }
