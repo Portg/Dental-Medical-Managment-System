@@ -76,7 +76,28 @@
         $pad.on('mousedown', '.tooth-pad-mark', function (e) {
             e.preventDefault();
             if (!$row || !$row.length) return;
+
             var mark = String($(this).data('mark'));
+
+            // 已经选了牙就直接落上去。
+            //
+            // 行业通行的顺序是「选牙 → 点症状 → 落上」（Open Dental、e看牙 都是
+            // 这样）。原来这里只是把符号「拿起来」，医生选完 45、46 点了 △ 什么
+            // 都没发生，还得回去把两颗牙各再点一遍 —— 一颗牙点两次。
+            //
+            // 落完仍然保持拿着这支笔：接着点别的牙就是继续盖章，点十字格就是
+            // 按区写，都不用再点一次符号。
+            var selected = CaseItems.splitTeeth($row.find('.case-item-tooth-value').val())
+                .filter(function (t) { return !CaseItems.isQuadrantCode(t); });
+
+            if (activeMark !== mark && selected.length) {
+                CaseItems.setTeethMark($row, selected, mark);
+                activeMark = mark;
+                paint();
+                return;
+            }
+
+            // 没选牙（或再点同一个符号）时是拿起/放下这支笔
             activeMark = (activeMark === mark) ? '' : mark;
             paintMarks();
         });
