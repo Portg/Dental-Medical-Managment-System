@@ -27,7 +27,57 @@ class MedicalTemplateService
             $query->where('medical_templates.type', $filters['type']);
         }
 
+        // 学科分类筛选：点一级分类要能看到它整棵子树下的模板，
+        // 否则父节点永远是空的，前台以为没归好类。
+        // 'none' 必须先判：它是个非空字符串，落到下面那个分支会被 (int) 成 0，
+        // 于是 categorySubtreeIds(0) 把所有一级分类当成了子树。
+        $categoryFilter = $filters['template_category_id'] ?? null;
+        if ($categoryFilter === 'none') {
+            $query->whereNull('medical_templates.template_category_id');
+        } elseif (!empty($categoryFilter) && is_numeric($categoryFilter)) {
+            $query->whereIn(
+                'medical_templates.template_category_id',
+                $this->categorySubtreeIds((int) $categoryFilter)
+            );
+        }
+
         return $query->orderBy('medical_templates.usage_count', 'desc')->get();
+    }
+
+    /**
+     * 一个分类连同它所有后代的 id。
+     *
+     * 分类是个位到几十的量级，一次拉全表在内存里走比递归查库省事得多，
+     * 也避免了 MySQL 5.7 没有递归 CTE 的问题（本项目最低支持 5.7）。
+     */
+    private function categorySubtreeIds(int $rootId): array
+    {
+        $pairs = DB::table('template_categories')
+            ->whereNull('deleted_at')
+            ->select('id', 'parent_id')
+            ->get();
+
+        $childrenOf = [];
+        foreach ($pairs as $row) {
+            $childrenOf[$row->parent_id ?? 0][] = $row->id;
+        }
+
+        $ids = [];
+        $stack = [$rootId];
+        // 计数上限兜底：数据真出环时不该在这里死循环
+        $guard = 0;
+        while ($stack && $guard++ < 10000) {
+            $id = array_pop($stack);
+            if (isset($ids[$id])) {
+                continue;
+            }
+            $ids[$id] = true;
+            foreach ($childrenOf[$id] ?? [] as $childId) {
+                $stack[] = $childId;
+            }
+        }
+
+        return array_keys($ids);
     }
 
     /**
@@ -50,6 +100,8 @@ class MedicalTemplateService
             'name' => $data['name'],
             'code' => $code,
             'category' => $data['category'],
+            // 学科分类（与上一行的归属范围不是一回事，见 TemplateCategory）
+            'template_category_id' => $data['template_category_id'] ?? null,
             'type' => $data['type'],
             'content' => $content,
             'department' => $data['department'] ?? null,
@@ -111,6 +163,8 @@ class MedicalTemplateService
             'name' => $data['name'],
             'code' => $data['code'],
             'category' => $data['category'],
+            // 学科分类（与上一行的归属范围不是一回事，见 TemplateCategory）
+            'template_category_id' => $data['template_category_id'] ?? null,
             'type' => $data['type'],
             'content' => $content,
             'department' => $data['department'] ?? null,

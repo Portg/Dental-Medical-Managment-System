@@ -47,6 +47,8 @@ class MedicalTemplateController extends Controller
                 'search'   => $request->input('search.value', ''),
                 'category' => $request->input('category'),
                 'type'     => $request->input('type'),
+                // 学科分类筛选：传节点 id 则含整棵子树，传 'none' 则只看未归类的
+                'template_category_id' => $request->input('template_category_id'),
             ]);
 
             return Datatables::of($data)
@@ -108,6 +110,7 @@ class MedicalTemplateController extends Controller
             'name' => 'required|string|max:255',
             'category' => 'required|in:system,department,personal',
             'type' => 'required|in:progress_note,diagnosis,treatment_plan,chief_complaint',
+            'template_category_id' => 'nullable|integer|exists:template_categories,id',
             'content' => 'required',
         ];
 
@@ -118,7 +121,7 @@ class MedicalTemplateController extends Controller
 
         Validator::make($request->all(), $rules)->validate();
 
-        $data = $request->only(['name', 'code', 'category', 'type', 'content', 'description']);
+        $data = $request->only(['name', 'code', 'category', 'template_category_id', 'type', 'content', 'description']);
 
         // AG-022: Non-admin users can only create personal templates
         if (!Auth::user()->can('manage-medical-services')) {
@@ -178,10 +181,13 @@ class MedicalTemplateController extends Controller
             'code' => 'required|string|max:50|unique:medical_templates,code,' . $id . ',id,deleted_at,NULL',
             'category' => 'required|in:system,department,personal',
             'type' => 'required|in:progress_note,diagnosis,treatment_plan,chief_complaint',
+            'template_category_id' => 'nullable|integer|exists:template_categories,id',
             'content' => 'required',
         ])->validate();
 
-        $status = $this->medicalTemplateService->updateTemplate((int) $id, $request->only(['name', 'code', 'category', 'type', 'content']));
+        $status = $this->medicalTemplateService->updateTemplate((int) $id, $request->only([
+            'name', 'code', 'category', 'template_category_id', 'type', 'content',
+        ]));
 
         if ($status) {
             return response()->json([

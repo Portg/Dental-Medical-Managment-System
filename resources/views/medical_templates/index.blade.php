@@ -4,10 +4,23 @@
 @section('table_id', 'templates_table')
 
 @section('header_actions')
+    @can('manage-medical-services')
+        <button type="button" class="btn btn-default" onclick="openCategoryManager()">
+            <i class="fa fa-sitemap"></i> {{ __('templates.category_tree') }}
+        </button>
+    @endcan
     <button type="button" class="btn btn-primary" onclick="createTemplate()">{{ __('common.add_new') }}</button>
 @endsection
 
 @section('filter_primary')
+    {{-- 学科分类筛选。选一级分类时连整棵子树一起筛（后端 categorySubtreeIds），
+         否则父节点永远是空的，看着像没归好类。 --}}
+    <div class="col-md-3">
+        <select id="filter_template_category" class="form-control">
+            <option value="">{{ __('templates.category_all') }}</option>
+            <option value="none">{{ __('templates.category_uncategorized') }}</option>
+        </select>
+    </div>
     <div class="col-md-3">
         <select id="filter_category" class="form-control">
             <option value="">{{ __('templates.all_categories') }}</option>
@@ -41,6 +54,9 @@
 @section('modals')
     @include('medical_templates.create')
     @include('medical_templates.preview')
+    @can('manage-medical-services')
+        @include('medical_templates.category_manager')
+    @endcan
 @endsection
 
 @section('page_js')
@@ -60,6 +76,7 @@
                 data: function (d) {
                     d.category = $('#filter_category').val();
                     d.type = $('#filter_type').val();
+                    d.template_category_id = $('#filter_template_category').val();
                 }
             },
             dom: 'rtip',
@@ -157,6 +174,8 @@
                     $('[name="name"]').val(data.name);
                     $('[name="code"]').val(data.code);
                     $('[name="category"]').val(data.category);
+                    // 学科分类的 option 是异步拉的，交给它自己填 + 选中
+                    fillTemplateCategorySelect(data.template_category_id);
                     $('[name="type"]').val(data.type);
                     $('#template_type').val(data.type);
                     $('[name="department"]').val(data.department);
@@ -306,4 +325,7 @@
     }
 
 </script>
+{{-- 学科分类树：筛选下拉、表单里的分类选择、以及分类管理弹窗都由它驱动 --}}
+<link rel="stylesheet" href="{{ asset('css/template-categories.css') }}?v={{ filemtime(public_path('css/template-categories.css')) }}">
+<script src="{{ asset('include_js/template_categories.js') }}?v={{ filemtime(public_path('include_js/template_categories.js')) }}"></script>
 @endsection

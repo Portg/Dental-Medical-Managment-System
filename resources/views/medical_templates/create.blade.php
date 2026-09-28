@@ -41,6 +41,17 @@
                                         </select>
                                     </div>
                                 </div>
+                                {{-- 学科分类：与上面的「分类」（归属范围）不是一回事。
+                                     选项由 template_categories 的三级树拍平后带缩进渲染，
+                                     见 medical_templates_index.js。 --}}
+                                <div class="form-group">
+                                    <label class="control-label col-md-4 text-primary">{{ __('templates.category_of_template') }}</label>
+                                    <div class="col-md-8">
+                                        <select name="template_category_id" id="template_category_id" class="form-control">
+                                            <option value="">{{ __('templates.category_none') }}</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">

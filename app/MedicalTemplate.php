@@ -12,9 +12,17 @@ class MedicalTemplate extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name', 'code', 'category', 'type', 'content', 'department',
+        // category = 归属范围（system/department/personal）；
+        // template_category_id = 学科分类树的节点。两者是不同的事，别混
+        'name', 'code', 'category', 'template_category_id', 'type', 'content', 'department',
         'description', 'is_active', 'usage_count', 'created_by', '_who_added'
     ];
+
+    /** 学科分类（口腔正畸学 / 牙体牙髓病学 …），见 TemplateCategory */
+    public function templateCategory()
+    {
+        return $this->belongsTo(TemplateCategory::class, 'template_category_id');
+    }
 
     protected $casts = [
         'is_active' => 'boolean',

@@ -1,0 +1,62 @@
+/* 病历模板的学科分类树（管理弹窗）。
+   与模板的「分类」字段（归属范围）无关，见 App\TemplateCategory。 */
+.tc-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.tc-hint {
+    font-size: 12px;
+}
+.tc-tree {
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid #e4e8eb;
+    border-radius: 3px;
+}
+.tc-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid #f2f5f7;
+}
+.tc-row:last-child {
+    border-bottom: none;
+}
+.tc-row:hover {
+    background: #fafbfc;
+}
+.tc-name {
+    flex: 1;
+}
+/* 计数是子树合计：父节点折叠时也要看得出下面有没有东西 */
+.tc-count {
+    min-width: 28px;
+    text-align: center;
+    color: #8a99a6;
+    font-size: 12px;
+}
+/* 操作常驻，不做悬停才显形。
+   原先用 opacity:0 + hover 显形，看着干净，但代价是「不悬停就不知道能点」——
+   这个弹窗刚因为「点了没反应」返工过一次，不该再留一处要靠猜的交互。
+   用弱化的颜色降低干扰，hover 时提亮，效果够了。 */
+.tc-actions {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+}
+.tc-actions a {
+    color: #8a99a6;
+}
+.tc-row:hover .tc-actions a {
+    color: #337ab7;
+}
+.tc-row:hover .tc-actions a.text-danger {
+    color: #d9534f;
+}
+.tc-empty {
+    padding: 20px;
+    text-align: center;
+}
