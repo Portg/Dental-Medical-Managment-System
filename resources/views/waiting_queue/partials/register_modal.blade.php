@@ -23,6 +23,13 @@
                             </label>
                             <div class="col-md-9">
                                 <select id="reg_patient_id" name="patient_id" class="form-control" style="width:100%"></select>
+                                {{-- 新患者不在这儿建：建档走既有的「添加新患者」弹窗，
+                                     它保存后本来就会自动弹回挂号（today_work_index.js）。
+                                     在这里再放一套简化表单，等于给患者建档开第二个入口，
+                                     两套字段、两套校验，迟早对不上。 --}}
+                                <a href="javascript:;" class="reg-new-patient-link" id="reg-new-patient">
+                                    {{ __('today_work.register_new_patient') }}
+                                </a>
                             </div>
                         </div>
                         <div class="form-group">

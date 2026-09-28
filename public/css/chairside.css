@@ -1,0 +1,79 @@
+/* 椅旁工作台：患者条 + 治疗史面板。
+   克制为主——这两块天天在医生眼前，不能抢病历和牙位图的注意力。
+   没有卡片阴影、没有图标，只用细线、字重和一处警示色区分层级。 */
+
+/* ── 患者条 ───────────────────────────────────────────── */
+.cs-bar{
+    display:flex; align-items:center; flex-wrap:wrap; gap:14px 18px;
+    padding:10px 16px; margin-bottom:12px;
+    background:#fff; border:1px solid #dfe6ea; border-radius:3px;
+}
+.cs-name{ font-size:17px; font-weight:700; color:#16212b; letter-spacing:-.01em; }
+.cs-name:hover{ color:#0d7d82; text-decoration:none; }
+.cs-meta{ margin-left:8px; color:#8496a2; font-size:13px; }
+
+/* 警示：整页唯一用红的地方 */
+.cs-alerts{ display:flex; flex-wrap:wrap; gap:6px; }
+.cs-alert{
+    display:inline-block; padding:1px 9px; border-radius:2px;
+    font-size:12.5px; font-weight:600;
+    color:#b8342a; background:#fbeceb; border:1px solid #efc8c5;
+}
+.cs-alert::before{ content:"!"; margin-right:5px; font-family:ui-monospace,Menlo,monospace; }
+/* 系统病比过敏低一档：过敏直接关系到今天开什么药 */
+.cs-alert-systemic{ color:#8a6100; background:#fdf5e3; border-color:#ecd9a8; }
+
+/* 钱：两个方向分开、不同色 */
+.cs-money{ margin-left:auto; display:flex; gap:16px; align-items:baseline; }
+.cs-m{ display:inline-flex; align-items:baseline; gap:5px; color:inherit; }
+.cs-m:hover{ text-decoration:none; }
+.cs-m em{ font-style:normal; font-size:12px; color:#8496a2; }
+.cs-m b{ font-size:15px; font-variant-numeric:tabular-nums; }
+.cs-m i{ font-style:normal; font-size:12px; color:#8496a2; }
+.cs-m-owed b{ color:#b8342a; }
+.cs-m-prepaid b{ color:#2b6c93; }
+
+.cs-actions .cs-status-form{ display:flex; gap:6px; align-items:center; margin:0; }
+.cs-actions select{ width:auto; min-width:11rem; }
+
+/* ── 治疗史面板 ───────────────────────────────────────── */
+.cs-history{ display:flex; flex-direction:column; gap:12px; }
+.cs-panel{ border:1px solid #e4ebee; border-radius:3px; background:#fff; }
+.cs-panel-h{
+    display:flex; align-items:baseline; gap:8px;
+    padding:8px 12px; border-bottom:1px solid #eef2f4;
+    font-size:12px; letter-spacing:.05em; color:#7d8f9b;
+}
+.cs-hist-all{ margin-left:auto; font-size:12px; }
+
+.cs-plan{ margin:0; padding:8px 12px; list-style:none; }
+.cs-plan li{ display:flex; gap:8px; align-items:baseline; padding:3px 0; font-size:13.5px; }
+
+/* 牙位号用等宽 + tabular：FDI 是定长数字，对齐了才好扫 */
+.cs-tno{
+    font-family:ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums;
+    font-size:12px; padding:0 6px; border:1px solid #dfe6ea; border-radius:2px;
+    color:#3b4f5d; flex:0 0 auto;
+}
+
+.cs-visit{
+    display:grid; grid-template-columns:5.6rem 1fr auto; gap:10px;
+    padding:7px 12px; border-bottom:1px solid #f1f5f7;
+    font-size:13.5px; align-items:baseline;
+}
+.cs-visit:last-child{ border-bottom:none; }
+.cs-date{
+    font-family:ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums;
+    font-size:12px; color:#8496a2;
+}
+.cs-what{ color:#1c2b36; }
+.cs-who{ color:#8496a2; font-size:12px; }
+/* 诊断行比治疗行弱：时间线的主干是「做了什么」 */
+.cs-visit.is-dx .cs-what{ color:#6a7f8d; }
+.cs-empty{ padding:16px 12px; text-align:center; color:#8496a2; font-size:13px; }
+
+@media (max-width:991px){
+    .cs-money{ margin-left:0; }
+    .cs-visit{ grid-template-columns:5.2rem 1fr; }
+    .cs-who{ grid-column:2; }
+}

@@ -164,7 +164,11 @@
     function paintTooth(tooth) {
         tooth = String(tooth);
         if (!activeTool) {
-            if (typeof toastr !== 'undefined') {
+            // 没选状态时点牙位不再是「误操作」：诊疗页上这一下的含义是
+            // 「看看这颗牙做过什么」（chairside.js 监听同一个点击，把右侧
+            // 治疗史切到该牙）。此时弹「请先选择上方状态」是在报一个
+            // 并不存在的错误 —— 所以只在没有治疗史面板的页面上才提示。
+            if (typeof toastr !== 'undefined' && !document.getElementById('csHistory')) {
                 toastr.warning(t('pick_tool_first', '请先选择上方状态'));
             }
             return;
