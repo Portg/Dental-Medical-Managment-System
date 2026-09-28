@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
+         backupGlobals="false"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         processIsolation="false"
+         stopOnFailure="false">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory suffix="Test.php">./tests/Unit</directory>
+        </testsuite>
+
+        <testsuite name="Feature">
+            <directory suffix="Test.php">./tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">./app</directory>
+        </include>
+    </source>
+    <php>
+        <!-- 显式给测试进程设内存上限。
+
+             原来没设，跑的是机器 php.ini 的出厂默认 128M —— 那不是这个项目选的值。
+             700 个测试跑在一个进程里，128M 已经只剩不到 10MB 余量：加一个用到
+             拼音词典（约 8MB 瞬时峰值）的功能就会把后面的测试撞 OOM，
+             PdfCjkFontTest 里那个「memory_limit 低于 384M 就跳过」的门也是同一个原因。
+
+             这不是把问题藏起来：128M 从来不是刻意的约束，只是没人设过。 -->
+        <ini name="memory_limit" value="512M"/>
+        <server name="APP_ENV" value="testing"/>
+        <server name="BCRYPT_ROUNDS" value="4"/>
+        <server name="CACHE_DRIVER" value="array"/>
+        <server name="DB_DATABASE" value="dental_medical_s90"/>
+        <server name="LOG_CHANNEL" value="stderr"/>
+        <server name="MAIL_MAILER" value="array"/>
+        <!-- Deterministic test-only key; production must use an independently generated secret. -->
+        <server name="NIN_BLIND_INDEX_KEY" value="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"/>
+        <server name="QUEUE_CONNECTION" value="sync"/>
+        <server name="SESSION_DRIVER" value="array"/>
+    </php>
+</phpunit>

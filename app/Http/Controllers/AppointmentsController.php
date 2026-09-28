@@ -91,6 +91,8 @@ class AppointmentsController extends Controller
             'appointment_time' => 'required',
             'patient_id' => 'required',
             'doctor_id' => 'required',
+            'service_ids' => 'nullable|array',
+            'service_ids.*' => 'integer|exists:medical_services,id',
         ])->validate();
 
         $advanceError = $this->validateAdvanceBooking(
@@ -122,7 +124,9 @@ class AppointmentsController extends Controller
 
         $data = $request->only([
             'visit_information', 'appointment_date', 'appointment_time',
-            'patient_id', 'doctor_id', 'notes', 'chair_id', 'service_id',
+            // service_ids 是抽屉的多选（全集），service_id 留给挂号/API 等单选调用点；
+            // 两者都给时以多选为准，见 AppointmentService::normalizeServiceIds
+            'patient_id', 'doctor_id', 'notes', 'chair_id', 'service_id', 'service_ids',
             'appointment_type', 'duration_minutes', 'send_sms',
             // 从「约下次」带过来的复诊待办 id：约成后由 Service 回填并置为已完成，
             // 否则前台约完了，待办还挂在随访列表上等人打电话。
@@ -166,6 +170,8 @@ class AppointmentsController extends Controller
             'appointment_date' => 'required',
             'appointment_time' => 'required',
             'doctor_id' => 'required',
+            'service_ids' => 'nullable|array',
+            'service_ids.*' => 'integer|exists:medical_services,id',
         ])->validate();
 
         $duration = (int) ($request->duration_minutes ?: SystemSetting::get('clinic.default_duration', 30));
@@ -182,6 +188,8 @@ class AppointmentsController extends Controller
         $status = $this->appointmentService->updateAppointment((int) $id, $request->only([
             'visit_information', 'patient_id', 'appointment_date',
             'appointment_time', 'doctor_id', 'notes',
+            // 抽屉编辑时项目是可改的；不带进来的话，改了勾选点保存等于没改
+            'service_id', 'service_ids',
         ]));
 
         if ($status) {

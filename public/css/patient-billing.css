@@ -671,3 +671,45 @@
 #patient_receipts_table tbody tr:hover {
     background-color: #f5f8ff;
 }
+
+/* ── 剩余项目（已收费未做完） ─────────────────────────────────────
+   底色用蓝灰、区别于历史欠费的橙：两块挨着，同色会让前台把「还欠钱」
+   和「还欠服务」看成一回事，而它们的处理动作正好相反。 */
+.billing-prepaid {
+    margin: 12px 0 8px;
+    padding: 10px 12px;
+    background: #f5f9fc;
+    border: 1px solid #d5e4ef;
+    border-radius: 4px;
+}
+.billing-prepaid-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.billing-prepaid-title { font-weight: 600; color: #2b6c93; }
+.billing-prepaid-count { font-style: normal; color: #6b8ea3; margin-left: 2px; }
+.billing-prepaid-sum { margin-left: auto; }
+.billing-prepaid-sum em { font-style: normal; color: #777; margin-right: 4px; }
+.billing-prepaid-table { width: 100%; font-size: 12px; background: #fff; }
+.billing-prepaid-table > thead > tr > th {
+    padding: 5px 8px; border-bottom: 1px solid #d5e4ef;
+    color: #567; font-weight: 600; text-align: left;
+}
+.billing-prepaid-table > tbody > tr > td {
+    padding: 5px 8px; border-bottom: 1px solid #eef3f7; vertical-align: middle;
+}
+.prepaid-svc { font-weight: 600; }
+.prepaid-tooth {
+    display: inline-block; padding: 0 4px; margin-left: 4px;
+    background: #eef3f7; border-radius: 2px; color: #567;
+}
+.prepaid-arrears { margin-left: 6px; font-weight: normal; }
+.prepaid-inv { display: block; }
+.prepaid-date { display: block; color: #999; font-size: 11px; }
+/* 剩余次数是这张表唯一要一眼扫到的数字 */
+.prepaid-left { font-size: 14px; color: #2b6c93; }
+.prepaid-actions { white-space: nowrap; }
+.billing-prepaid-hint { margin-top: 6px; font-size: 11px; }
+.prepaid-history-box { padding: 6px 10px; background: #fbfdfe; }
+.prepaid-history-table { width: 100%; font-size: 11px; }
+.prepaid-history-table > thead > tr > th,
+.prepaid-history-table > tbody > tr > td {
+    padding: 3px 6px; border-bottom: 1px solid #eef3f7; text-align: left;
+}

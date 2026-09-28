@@ -287,7 +287,7 @@ class AppointmentService
      */
     public function getAppointmentForEdit(int $id)
     {
-        return DB::table('appointments')
+        $appointment = DB::table('appointments')
             ->join('users', 'users.id', 'appointments.doctor_id')
             ->join('patients', 'patients.id', 'appointments.patient_id')
             ->where('appointments.id', $id)
@@ -295,6 +295,22 @@ class AppointmentService
             ->select('appointments.*', 'users.surname as d_surname', 'users.othername as d_othername',
                 'patients.surname', 'patients.othername')
             ->first();
+
+        if (!$appointment) {
+            return null;
+        }
+
+        // 项目多选的回填：抽屉的 select2 是 ajax 的，不把 {id, text} 现成塞进去，
+        // 已选的项目在框里就是空的 —— 前台一打开编辑就以为没选过，一保存全清光
+        $appointment->services = DB::table('appointment_services as aps')
+            ->join('medical_services as ms', 'ms.id', '=', 'aps.medical_service_id')
+            ->where('aps.appointment_id', $id)
+            ->orderBy('aps.sort_order')
+            ->select('ms.id', 'ms.name as text')
+            ->get()
+            ->all();
+
+        return $appointment;
     }
 
     // ─── Conflict detection ───────────────────────────────────────
@@ -446,7 +462,8 @@ class AppointmentService
                 'branch_id'        => Auth::user()->branch_id,
                 'sort_by'          => $data['appointment_date'] . " " . $time24,
                 'chair_id'         => $data['chair_id'] ?? null,
-                'service_id'       => $data['service_id'] ?? null,
+                // 主项目：多选里的第一个（见 normalizeServiceIds 的说明）
+                'service_id'       => $this->primaryServiceId($data),
                 'appointment_type' => $data['appointment_type'] ?? 'revisit',
                 'duration_minutes' => $data['duration_minutes'] ?? (int) SystemSetting::get('clinic.default_duration', 30),
                 'shift_id'         => $shiftId,
@@ -454,6 +471,7 @@ class AppointmentService
             ]);
 
             if ($appointment) {
+                $this->syncAppointmentServices($appointment, $data);
                 $sendSms = ($data['send_sms'] ?? '1') === '1';
                 $this->createAppointmentHistory($appointment->id, "Created", $sendSms);
                 $this->closeFollowupIfRequested($appointment, $data);
@@ -491,13 +509,65 @@ class AppointmentService
     }
 
     /**
+     * 把请求里的项目选择理成一个有序、去重的 id 列表。
+     *
+     * 兼容两种入参：service_ids[]（预约抽屉的多选）与 service_id（挂号、API v1、
+     * 以及所有还没改的老调用点）。两者都给时以多选为准 —— 抽屉提交时两个字段
+     * 会同时在，只认一个才不会出现「界面勾了三个、存进去一个」。
+     */
+    private function normalizeServiceIds(array $data): array
+    {
+        $ids = $data['service_ids'] ?? null;
+
+        if ($ids === null && !empty($data['service_id'])) {
+            $ids = [$data['service_id']];
+        }
+
+        return collect((array) $ids)
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /** 主项目 = 勾选里的第一个；一个都没勾就是 null */
+    private function primaryServiceId(array $data): ?int
+    {
+        return $this->normalizeServiceIds($data)[0] ?? null;
+    }
+
+    /**
+     * 同步 appointment_services（全集）。
+     *
+     * 这是 service_id 与透视表唯一的同步点 —— 两处存着重叠的信息，同步散在
+     * 多个地方就一定会漂。
+     *
+     * 请求里完全没提到项目时不动透视表：改期、改状态这类局部更新不该顺手
+     * 把项目清空。
+     */
+    private function syncAppointmentServices(Appointment $appointment, array $data): void
+    {
+        if (!array_key_exists('service_ids', $data) && !array_key_exists('service_id', $data)) {
+            return;
+        }
+
+        $payload = [];
+        foreach ($this->normalizeServiceIds($data) as $i => $id) {
+            $payload[$id] = ['sort_order' => $i];
+        }
+
+        $appointment->services()->sync($payload);
+    }
+
+    /**
      * Update an existing appointment.
      */
     public function updateAppointment(int $id, array $data): bool
     {
         $time24 = date("H:i:s", strtotime($data['appointment_time']));
 
-        return (bool) Appointment::where('id', $id)->update([
+        $payload = [
             'patient_id' => $data['patient_id'],
             'doctor_id' => $data['doctor_id'],
             'start_date' => $data['appointment_date'],
@@ -507,7 +577,24 @@ class AppointmentService
             'sort_by' => $data['appointment_date'] . " " . $time24,
             'notes' => $data['notes'] ?? null,
             '_who_added' => Auth::user()->id,
-        ]);
+        ];
+
+        // 请求提到了项目才动它：改期、改状态这类局部更新不该顺手清空项目
+        $touchesServices = array_key_exists('service_ids', $data) || array_key_exists('service_id', $data);
+        if ($touchesServices) {
+            $payload['service_id'] = $this->primaryServiceId($data);
+        }
+
+        $updated = (bool) Appointment::where('id', $id)->update($payload);
+
+        if ($updated && $touchesServices) {
+            $appointment = Appointment::find($id);
+            if ($appointment) {
+                $this->syncAppointmentServices($appointment, $data);
+            }
+        }
+
+        return $updated;
     }
 
     /**

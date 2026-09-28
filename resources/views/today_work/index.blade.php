@@ -47,6 +47,24 @@
                 <span>{{ __('today_work.tab_week_missed') }}</span>
                 <span class="tw-rail-n" id="badge-week-missed"></span>
             </a>
+            <a href="#tab-cancelled" class="tw-rail-item" data-toggle="tab" data-tab="cancelled" role="tab">
+                <span>{{ __('today_work.tab_cancelled') }}</span>
+                <span class="tw-rail-n" id="badge-cancelled"></span>
+            </a>
+            <a href="#tab-online-bookings" class="tw-rail-item" data-toggle="tab" data-tab="online-bookings" role="tab">
+                <span>{{ __('today_work.tab_online_bookings') }}</span>
+                <span class="tw-rail-n" id="badge-online-bookings"></span>
+            </a>
+            @can('manage-inventory')
+            <a href="#tab-stock-warnings" class="tw-rail-item" data-toggle="tab" data-tab="stock-warnings" role="tab">
+                <span>{{ __('today_work.tab_stock_warnings') }}</span>
+                <span class="tw-rail-n" id="badge-stock-warnings"></span>
+            </a>
+            <a href="#tab-expiry-warnings" class="tw-rail-item" data-toggle="tab" data-tab="expiry-warnings" role="tab">
+                <span>{{ __('today_work.tab_expiry_warnings') }}</span>
+                <span class="tw-rail-n" id="badge-expiry-warnings"></span>
+            </a>
+            @endcan
             <a href="#tab-doctor-table" class="tw-rail-item" data-toggle="tab" data-tab="doctor-table" role="tab">
                 <span>{{ __('today_work.tab_doctor_table') }}</span>
             </a>
@@ -358,6 +376,32 @@
             <div class="tw-tab-loading" id="doctor-table-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
             <div id="doctor-table-content" style="display:none;"></div>
         </div>
+        {{-- Tab: Cancelled Appointments --}}
+        <div role="tabpanel" class="tab-pane" id="tab-cancelled">
+            <div class="tw-tab-toolbar">
+                <input type="text" class="form-control input-sm tw-date-picker js-date" id="cancelled-date-filter"
+                       value="{{ date('Y-m-d') }}" onchange="onTabFilterChanged('cancelled')" autocomplete="off">
+            </div>
+            <div class="tw-tab-loading" id="cancelled-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
+            <div id="cancelled-content" style="display:none;"></div>
+        </div>
+
+        {{-- Tab: Online Bookings —— 待办箱，没有日期筛选，见 TodayWorkService::getOnlineBookings --}}
+        <div role="tabpanel" class="tab-pane" id="tab-online-bookings">
+            <div class="tw-tab-loading" id="online-bookings-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
+            <div id="online-bookings-content" style="display:none;"></div>
+        </div>
+
+        @can('manage-inventory')
+        <div role="tabpanel" class="tab-pane" id="tab-stock-warnings">
+            <div class="tw-tab-loading" id="stock-warnings-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
+            <div id="stock-warnings-content" style="display:none;"></div>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="tab-expiry-warnings">
+            <div class="tw-tab-loading" id="expiry-warnings-loading"><i class="fa fa-spinner fa-spin"></i> {{ __('common.loading') }}</div>
+            <div id="expiry-warnings-content" style="display:none;"></div>
+        </div>
+        @endcan
     </div>{{-- /.tw-tab-content --}}
         </div>{{-- /.tw-workspace-main --}}
     </div>{{-- /.tw-workspace --}}
@@ -434,6 +478,10 @@
             'week-missed':  '{{ url("today-work/week-missed") }}',
             'birthdays':    '{{ url("today-work/birthdays") }}',
             'doctor-table': '{{ url("today-work/doctor-table") }}',
+            'cancelled':       '{{ url("today-work/cancelled") }}',
+            'online-bookings': '{{ url("today-work/online-bookings") }}',
+            'stock-warnings':  '{{ url("today-work/stock-warnings") }}',
+            'expiry-warnings': '{{ url("today-work/expiry-warnings") }}',
             'tab-counts':   '{{ url("today-work/tab-counts") }}'
         };
 

@@ -74,6 +74,10 @@ function loadTabData(tab) {
             case 'unpaid':     html = renderUnpaidTab(data); break;
             case 'lab-cases':  html = renderLabCasesTab(data); break;
             case 'doctor-table': html = renderDoctorTableTab(data); break;
+            case 'cancelled':       html = renderCancelledTab(data); break;
+            case 'online-bookings': html = renderOnlineBookingsTab(data); break;
+            case 'stock-warnings':  html = renderStockWarningsTab(data); break;
+            case 'expiry-warnings': html = renderExpiryWarningsTab(data); break;
         }
         $content.html(html);
         $loading.hide();
@@ -435,6 +439,100 @@ function renderLabCasesTab(data) {
     return html;
 }
 
+function renderCancelledTab(data) {
+    if (!data || !data.length) {
+        return twTabEmpty('today_work.cancelled_no_data', '今日没有取消的预约', { icon: 'fa-calendar-times-o' });
+    }
+    var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table"><thead><tr>';
+    ['common.time','common.patient','common.phone','common.doctor','common.service','today_work.col_notes','common.action']
+        .forEach(function (k) { html += '<th>' + LanguageManager.trans(k) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    data.forEach(function (item) {
+        html += '<tr>';
+        html += '<td>' + _escHtml(item.start_time || '-') + '</td>';
+        html += '<td><span class="clickable-name" onclick="openPatientDrawer(' + item.patient_id + ')">' + _escHtml(item.patient_name) + '</span></td>';
+        html += '<td>' + _escHtml(item.patient_phone) + '</td>';
+        html += '<td>' + _escHtml(item.doctor_name) + '</td>';
+        html += '<td>' + _escHtml(item.service) + '</td>';
+        html += '<td>' + _escHtml(item.notes) + '</td>';
+        // 取消的预约最该发生的下一件事是重新约上，不是看一眼
+        html += '<td><button type="button" class="btn btn-xs btn-primary" onclick="openAppointmentDrawer({patient_id: ' + item.patient_id + '})">'
+             + LanguageManager.trans('today_work.rebook', '重新预约') + '</button></td>';
+        html += '</tr>';
+    });
+    return html + '</tbody></table></div></div>';
+}
+
+function renderOnlineBookingsTab(data) {
+    if (!data || !data.length) {
+        return twTabEmpty('today_work.online_bookings_no_data', '没有待处理的网络预约', { icon: 'fa-globe' });
+    }
+    var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table"><thead><tr>';
+    ['today_work.submitted_at','common.patient','common.phone','today_work.preferred_time',
+     'today_work.col_visit_type','today_work.col_notes','common.action']
+        .forEach(function (k) { html += '<th>' + LanguageManager.trans(k) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    data.forEach(function (item) {
+        var preferred = (item.preferred_date || '') + (item.preferred_time ? ' ' + item.preferred_time : '');
+        html += '<tr><td>' + _escHtml(item.submitted_at) + '</td>';
+        html += '<td>' + _escHtml(item.full_name) + '</td>';
+        html += '<td>' + _escHtml(item.phone) + '</td>';
+        html += '<td>' + _escHtml(preferred || '-') + '</td>';
+        html += '<td>' + LanguageManager.trans(item.is_revisit ? 'today_work.revisit' : 'today_work.first_visit') + '</td>';
+        html += '<td>' + _escHtml(item.message) + '</td>';
+        html += '<td><a class="btn btn-xs btn-default" href="/online-bookings">'
+             + LanguageManager.trans('today_work.go_handle', '去处理') + '</a></td></tr>';
+    });
+    return html + '</tbody></table></div></div>';
+}
+
+function renderStockWarningsTab(data) {
+    if (!data || !data.length) {
+        return twTabEmpty('today_work.stock_warnings_no_data', '库存都在安全线以上', { icon: 'fa-cubes' });
+    }
+    var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table"><thead><tr>';
+    ['inventory.item_code','inventory.item_name','inventory.category',
+     'today_work.current_stock','today_work.warning_level','common.action']
+        .forEach(function (k) { html += '<th>' + LanguageManager.trans(k) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    data.forEach(function (item) {
+        html += '<tr><td>' + _escHtml(item.code) + '</td>';
+        html += '<td>' + _escHtml(item.name) + '</td>';
+        html += '<td>' + _escHtml(item.category) + '</td>';
+        html += '<td><span class="label label-danger">' + item.current_stock + ' ' + _escHtml(item.unit) + '</span></td>';
+        html += '<td>' + item.warning_level + ' ' + _escHtml(item.unit) + '</td>';
+        html += '<td><a class="btn btn-xs btn-default" href="/inventory-items">'
+             + LanguageManager.trans('common.view', '查看') + '</a></td></tr>';
+    });
+    return html + '</tbody></table></div></div>';
+}
+
+function renderExpiryWarningsTab(data) {
+    if (!data || !data.length) {
+        return twTabEmpty('today_work.expiry_warnings_no_data', '近期没有批次到期', { icon: 'fa-clock-o' });
+    }
+    var html = '<div class="portlet light bordered"><div class="portlet-body"><table class="table tw-info-table"><thead><tr>';
+    ['inventory.item_name','inventory.category','today_work.batch_no',
+     'common.qty','today_work.expiry_date','today_work.days_left']
+        .forEach(function (k) { html += '<th>' + LanguageManager.trans(k) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    data.forEach(function (item) {
+        // 已过期的批次还躺在可用库存里，是比"快到期"更该立刻处理的事
+        var expired = item.days_left !== null && item.days_left < 0;
+        var daysText = expired
+            ? LanguageManager.trans('today_work.already_expired', '已过期')
+            : item.days_left + ' ' + LanguageManager.trans('common.days', '天');
+        html += '<tr><td>' + _escHtml(item.name) + '</td>';
+        html += '<td>' + _escHtml(item.category) + '</td>';
+        html += '<td>' + _escHtml(item.batch_no) + '</td>';
+        html += '<td>' + item.qty + '</td>';
+        html += '<td>' + _escHtml(item.expiry_date || '-') + '</td>';
+        html += '<td><span class="label ' + (expired ? 'label-danger' : 'label-warning') + '">'
+             + daysText + '</span></td></tr>';
+    });
+    return html + '</tbody></table></div></div>';
+}
+
 // ── Utility ─────────────────────────────────────────
 
 function _escHtml(str) {
@@ -466,5 +564,9 @@ function loadTabCounts() {
         setBadge('#badge-paid', data.paid);
         setBadge('#badge-unpaid', data.unpaid);
         setBadge('#badge-lab-cases', data.lab_cases);
+        setBadge('#badge-cancelled', data.cancelled);
+        setBadge('#badge-online-bookings', data.online_bookings);
+        setBadge('#badge-stock-warnings', data.stock_warnings);
+        setBadge('#badge-expiry-warnings', data.expiry_warnings);
     });
 }

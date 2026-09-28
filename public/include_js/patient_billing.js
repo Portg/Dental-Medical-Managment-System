@@ -48,8 +48,10 @@ var BillingModule = (function() {
 
         loadServiceCategories();
         loadPatientContext();
+        loadPrepaidItems();
         bindEvents();
         bindPanelEvents();
+        bindPrepaidEvents();
     }
 
     // ─── 面板顶栏患者上下文 ────────────────────────────────────────
@@ -73,6 +75,156 @@ var BillingModule = (function() {
         $('#billingCtxBalance').text(moneyFmt(data.member_balance));
         $('#billingCtxSpending').text(moneyFmt(data.total_spending));
         renderOutstandingList(data.open_invoices || []);
+    }
+
+    // ─── 剩余项目（已收费未做完） ──────────────────────────────────
+    /**
+     * 只有项目维护里勾了「按次核销」的项目才会有余量（见 PrepaidItemService）。
+     * 没有余量时整块隐藏 —— 大多数患者一条都没有，常驻一个空表是噪音。
+     */
+    function loadPrepaidItems() {
+        if (!patientId || !$('#billingPrepaidSection').length) return;
+        $.getJSON('/prepaid-items/patient/' + patientId, function (res) {
+            if (!res || !res.status) return;
+            renderPrepaidItems(res.data || []);
+        });
+    }
+
+    function prepaidT(key, fallback) {
+        return LanguageManager.trans('prepaid.' + key, fallback);
+    }
+
+    function renderPrepaidItems(rows) {
+        var $section = $('#billingPrepaidSection');
+        var $body = $('#billingPrepaidBd');
+        if (!$section.length) return;
+
+        if (!rows.length) { $section.hide(); $body.empty(); return; }
+
+        var canRedeem = String($section.data('can-redeem')) === '1';
+        var unearned = 0, html = '';
+
+        rows.forEach(function (row) {
+            unearned += parseFloat(row.prepaid_value) || 0;
+            html += '<tr data-item-id="' + row.invoice_item_id + '">';
+            html += '<td><span class="prepaid-svc">' + escapeHtml(row.service_name) + '</span>';
+            if (row.tooth_no) {
+                html += ' <span class="prepaid-tooth">' + escapeHtml(row.tooth_no) + '</span>';
+            }
+            // 这一行还欠钱的话它并不是真「预收」，前台得看得见
+            if (parseFloat(row.arrears) > 0) {
+                html += ' <span class="label label-warning prepaid-arrears">'
+                     + prepaidT('arrears', '该行欠费') + ' ' + moneyFmt(row.arrears) + '</span>';
+            }
+            html += '</td>';
+            html += '<td><span class="prepaid-inv">' + escapeHtml(row.invoice_no || '') + '</span>'
+                 + '<span class="prepaid-date">' + escapeHtml(row.invoice_date || '') + '</span></td>';
+            html += '<td>' + row.total_qty + escapeHtml(row.unit) + '</td>';
+            html += '<td>' + row.used_qty + '</td>';
+            html += '<td><strong class="prepaid-left">' + row.remaining_qty + '</strong></td>';
+            html += '<td>' + moneyFmt(row.prepaid_value) + '</td>';
+            html += '<td class="prepaid-actions">';
+            if (canRedeem) {
+                html += '<button type="button" class="btn btn-xs btn-primary js-prepaid-consume">'
+                     + prepaidT('consume', '用一次') + '</button> ';
+            }
+            html += '<button type="button" class="btn btn-xs btn-default js-prepaid-history">'
+                 + prepaidT('history', '核销记录') + '</button>';
+            html += '</td></tr>';
+            // 核销流水就地展开，不另开弹窗 —— 患者站在台前问「我还剩几次」时，
+            // 要当场把每一次用在哪天给他看
+            html += '<tr class="prepaid-history-row" style="display:none"><td colspan="7">'
+                 + '<div class="prepaid-history-box"></div></td></tr>';
+        });
+
+        $body.html(html);
+        $('#billingPrepaidCount').text('(' + rows.length + ')');
+        $('#billingPrepaidUnearned').text(moneyFmt(unearned));
+        $section.show();
+    }
+
+    function bindPrepaidEvents() {
+        var $section = $('#billingPrepaidSection');
+        if (!$section.length) return;
+
+        $section.on('click', '#billingPrepaidToggle', function () {
+            $('#billingPrepaidBody').slideToggle(120);
+            $(this).find('i').toggleClass('fa-chevron-up fa-chevron-down');
+        });
+
+        $section.on('click', '.js-prepaid-consume', function () {
+            var $btn = $(this);
+            var itemId = $btn.closest('tr').data('item-id');
+            $btn.prop('disabled', true);
+            $.ajax({
+                type: 'POST',
+                url: '/prepaid-items/' + itemId + '/consume',
+                data: {
+                    _token: (window.csrfToken || $('meta[name="csrf-token"]').attr('content')),
+                    qty: 1,
+                    // 诊疗页划价带着就诊上下文，核销要记在这次就诊上；
+                    // 患者页没有就诊，留空由后端记成手工补记
+                    appointment_id: appointmentId || null
+                },
+                success: function (resp) {
+                    toastr.success((resp && resp.message) || prepaidT('consume_success', '已核销'));
+                    loadPrepaidItems();
+                },
+                error: function (req) {
+                    $btn.prop('disabled', false);
+                    var json = req.responseJSON || {};
+                    toastr.error(json.message || LanguageManager.trans('common.error_message'));
+                }
+            });
+        });
+
+        $section.on('click', '.js-prepaid-history', function () {
+            var $row = $(this).closest('tr');
+            var $histRow = $row.next('.prepaid-history-row');
+            if ($histRow.is(':visible')) { $histRow.hide(); return; }
+
+            $.getJSON('/prepaid-items/' + $row.data('item-id') + '/history', function (res) {
+                var rows = (res && res.data) || [], box = '';
+                if (!rows.length) {
+                    box = '<div class="text-muted">' + prepaidT('history_empty', '还没有核销记录') + '</div>';
+                } else {
+                    box = '<table class="prepaid-history-table"><thead><tr>'
+                        + '<th>' + prepaidT('history_date', '日期') + '</th>'
+                        + '<th>' + prepaidT('history_qty', '数量') + '</th>'
+                        + '<th>' + prepaidT('history_doctor', '操作医生') + '</th>'
+                        + '<th>' + prepaidT('history_notes', '备注') + '</th>'
+                        + '<th></th></tr></thead><tbody>';
+                    rows.forEach(function (u) {
+                        box += '<tr><td>' + escapeHtml(u.used_at) + '</td>'
+                             + '<td>' + u.qty + '</td>'
+                             + '<td>' + escapeHtml(u.doctor_name) + '</td>'
+                             + '<td>' + escapeHtml(u.notes) + '</td>'
+                             + '<td><button type="button" class="btn btn-xs btn-link js-prepaid-revoke" '
+                             + 'data-usage-id="' + u.id + '">' + prepaidT('revoke', '撤销') + '</button></td></tr>';
+                    });
+                    box += '</tbody></table>';
+                }
+                $histRow.find('.prepaid-history-box').html(box);
+                $histRow.show();
+            });
+        });
+
+        $section.on('click', '.js-prepaid-revoke', function () {
+            if (!window.confirm(prepaidT('revoke_confirm', '撤销这次核销？余量会加回去。'))) return;
+            $.ajax({
+                type: 'POST',
+                url: '/prepaid-items/usages/' + $(this).data('usage-id') + '/revoke',
+                data: { _token: (window.csrfToken || $('meta[name="csrf-token"]').attr('content')) },
+                success: function (resp) {
+                    toastr.success((resp && resp.message) || prepaidT('revoke_success', '已撤销'));
+                    loadPrepaidItems();
+                },
+                error: function (req) {
+                    var json = req.responseJSON || {};
+                    toastr.error(json.message || LanguageManager.trans('common.error_message'));
+                }
+            });
+        });
     }
 
     // ─── 历史欠费勾选（并入本次收款） ──────────────────────────────
@@ -681,6 +833,10 @@ var BillingModule = (function() {
                         resetBillingForm();
                         reloadInvoicesTable();
                         reloadReceiptsTable();
+                        // 刚划的项目若是「按次核销」的，这一单就产生了新的余量 ——
+                        // 不刷新的话前台得刷页面才看得见自己刚卖出去的次卡
+                        loadPrepaidItems();
+                        loadPatientContext();
                         if (onSaved) { onSaved(resp); }
 
                         if (printAfter && resp.invoice_id) {

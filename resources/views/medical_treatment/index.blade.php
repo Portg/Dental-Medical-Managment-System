@@ -6,34 +6,12 @@
     <link href="{{ asset('css/dental-chart-editor.css') }}?v={{ filemtime(public_path('css/dental-chart-editor.css')) }}" rel="stylesheet" type="text/css"/>
     {{-- 划价面板样式，与患者页同一份 --}}
     <link href="{{ asset('css/patient-billing.css') }}?v={{ filemtime(public_path('css/patient-billing.css')) }}" rel="stylesheet" type="text/css"/>
+    <link href="{{ asset('css/chairside.css') }}?v={{ filemtime(public_path('css/chairside.css')) }}" rel="stylesheet" type="text/css"/>
 @endsection
 
-<div class="note note-success">
-    <div class="row">
-        <div class="col-md-6">
-            <p class="text-black-50"><a href="{{ url('appointments')}}" class="text-primary">{{ __('medical_treatment.view_appointments') }}
-                </a> / @if(isset($patient)) {{ $patient->full_name }} ({{ $patient->patient_no
-                }}) @endif
-            </p>
-        </div>
-        <div class="col-md-6">
-            <div class="float-right">
-                <form action="#" id="appointment-status-form" autocomplete="off">
-                    @csrf
-                    <select name="appointment_status">
-                        <option value="null">{{ __('medical_treatment.select_appointment_action') }}</option>
-                        <option value="Treatment Complete">{{ __('medical_treatment.treatment_complete') }}</option>
-                        <option value="Treatment Incomplete">{{ __('medical_treatment.treatment_incomplete') }}</option>
-                    </select>
-                    <input type="hidden" name="appointment_id" value="{{ $appointment_id }}">
-                    <button type="button" class="btn-sm btn-primary" id="btn-appointment-status"
-                            onclick="save_appointment_status();">{{ __('medical_treatment.save') }}
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+{{-- 患者条：身份 + 临床警示 + 两个方向的钱 + 就诊状态。
+     替掉原来那条只放面包屑的青色栏，见 partials/patient_bar.blade.php --}}
+@include('medical_treatment.partials.patient_bar')
 
 <input type="hidden" value="{{ $appointment_id }}" id="global_appointment_id">
 <input type="hidden" value="{{ $patient->id ?? '' }}" id="global_patient_id">
@@ -83,10 +61,20 @@
 
                                 </ul>
                                 <div class="tab-content">
+                                    {{-- 牙位图 + 治疗史并排：口腔科所有记录都挂在牙位上，
+                                         点一颗牙，右侧就只剩这颗牙历次做过什么。这条联动正是
+                                         原来两个兄弟页签（牙齿图表 / 牙科记录）做不到的事。 --}}
                                     <div class="tab-pane active" id="dental_charting_tab">
-                                        <div class="portlet light">
-                                            <div class="portlet-body">
-                                                @include('dental_chart.partials.fdi_editor')
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div class="portlet light">
+                                                    <div class="portlet-body">
+                                                        @include('dental_chart.partials.fdi_editor')
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                @include('medical_treatment.partials.history_panel')
                                             </div>
                                         </div>
                                     </div>
@@ -362,6 +350,7 @@
         let global_patient_id = ($('#global_patient_id').val() || '').trim();
     </script>
     <script src="{{ asset('backend/assets/pages/scripts/page_loader.js') }}" type="text/javascript"></script>
+    <script src="{{ asset('include_js/chairside.js') }}?v={{ filemtime(public_path('include_js/chairside.js')) }}"></script>
     <script src="{{ asset('include_js/chronic_diseases.js') }}"></script>
     <script src="{{ asset('include_js/allergies.js') }}"></script>
     <script src="{{ asset('include_js/prescriptions.js') }}?v={{ filemtime(public_path('include_js/prescriptions.js')) }}"></script>

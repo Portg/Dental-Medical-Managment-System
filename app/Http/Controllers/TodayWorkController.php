@@ -181,6 +181,40 @@ class TodayWorkController extends Controller
     }
 
     /**
+     * 预约已取消数据（AJAX）
+     */
+    public function getCancelled(Request $request)
+    {
+        return response()->json($this->service->getCancelledAppointments(
+            Auth::user()->branch_id, $request->input('date')));
+    }
+
+    /**
+     * 网络预约数据（AJAX）
+     */
+    public function getOnlineBookings(Request $request)
+    {
+        return response()->json($this->service->getOnlineBookings(Auth::user()->branch_id));
+    }
+
+    /**
+     * 库存预警数据（AJAX）
+     */
+    public function getStockWarnings(Request $request)
+    {
+        return response()->json($this->service->getStockWarnings(Auth::user()->branch_id));
+    }
+
+    /**
+     * 有效期预警数据（AJAX）
+     */
+    public function getExpiryWarnings(Request $request)
+    {
+        return response()->json($this->service->getExpiryWarnings(
+            Auth::user()->branch_id, $request->input('date')));
+    }
+
+    /**
      * 信息标签页徽章计数（AJAX）
      */
     public function getTabCounts(Request $request)

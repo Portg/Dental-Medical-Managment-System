@@ -6,6 +6,7 @@ use App\Appointment;
 use App\DictItem;
 use App\Http\Helper\NameHelper;
 use App\MedicalCase;
+use App\OnlineBooking;
 use App\Patient;
 use App\WaitingQueue;
 use Illuminate\Support\Collection;
@@ -16,6 +17,16 @@ use Yajra\DataTables\DataTables;
 
 class TodayWorkService
 {
+    /** 有效期预警的提前天数，与库房页面的默认值保持一致 */
+    private const EXPIRY_WARNING_DAYS = 30;
+
+    private InventoryItemService $inventoryItemService;
+
+    public function __construct(InventoryItemService $inventoryItemService)
+    {
+        $this->inventoryItemService = $inventoryItemService;
+    }
+
     /**
      * 工作台六格 KPI（日报扫一眼，非待办入口）。
      *
@@ -178,6 +189,8 @@ class TodayWorkService
                 'd.surname as d_surname',
                 'd.othername as d_othername',
                 'ms.name as service_name',
+                // 一次预约可能约多个项目；service_name 只是主项目
+                Appointment::serviceNamesSubquery('a'),
                 'wq.id as queue_id',
                 'wq.queue_number',
                 'wq.status as queue_status',
@@ -208,7 +221,7 @@ class TodayWorkService
                 'patient_name'     => NameHelper::join($row->p_surname, $row->p_othername),
                 'patient_phone'    => $row->phone_no ? substr($row->phone_no, 0, 3) . '****' . substr($row->phone_no, -4) : '',
                 'doctor_name'      => NameHelper::join($row->d_surname, $row->d_othername),
-                'service'          => $row->service_name ?? '',
+                'service'          => ($row->service_names ?: ($row->service_name ?? '')),
                 'start_time'       => $row->start_time ? date('H:i', strtotime($row->start_time)) : '',
                 'check_in_time'    => $row->check_in_time,
                 'appointment_type' => $row->appointment_type,
@@ -283,6 +296,8 @@ class TodayWorkService
                 'd.surname as d_surname',
                 'd.othername as d_othername',
                 'ms.name as service_name',
+                // 一次预约可能约多个项目；service_name 只是主项目
+                Appointment::serviceNamesSubquery('a'),
                 'wq.id as queue_id',
                 'wq.queue_number',
                 'wq.status as queue_status',
@@ -376,7 +391,7 @@ class TodayWorkService
                 return NameHelper::join($row->d_surname, $row->d_othername);
             })
             ->addColumn('service', function ($row) {
-                return $row->service_name ?? '-';
+                return $row->service_names ?: ($row->service_name ?? '-');
             })
             ->addColumn('display_status', function ($row) {
                 $status = $this->resolveDisplayStatus($row->apt_status, $row->queue_status);
@@ -835,7 +850,9 @@ class TodayWorkService
                 'p.phone_no',
                 'd.surname as d_surname',
                 'd.othername as d_othername',
-                'ms.name as service_name'
+                'ms.name as service_name',
+                // 一次预约可能约多个项目；service_name 只是主项目
+                Appointment::serviceNamesSubquery('a')
             )
             ->orderBy('a.start_time')
             ->get();
@@ -847,7 +864,7 @@ class TodayWorkService
                 'patient_name'     => NameHelper::join($row->p_surname, $row->p_othername),
                 'patient_phone'    => $row->phone_no ? substr($row->phone_no, 0, 3) . '****' . substr($row->phone_no, -4) : '',
                 'doctor_name'      => NameHelper::join($row->d_surname, $row->d_othername),
-                'service'          => $row->service_name ?? '',
+                'service'          => ($row->service_names ?: ($row->service_name ?? '')),
                 'start_time'       => $row->start_time ? date('H:i', strtotime($row->start_time)) : '',
                 'appointment_type' => $row->appointment_type,
             ];
@@ -880,7 +897,9 @@ class TodayWorkService
                 'p.phone_no',
                 'd.surname as d_surname',
                 'd.othername as d_othername',
-                'ms.name as service_name'
+                'ms.name as service_name',
+                // 一次预约可能约多个项目；service_name 只是主项目
+                Appointment::serviceNamesSubquery('a')
             )
             ->orderByDesc('a.start_date')
             ->get();
@@ -892,7 +911,7 @@ class TodayWorkService
                 'patient_name'  => NameHelper::join($row->p_surname, $row->p_othername),
                 'patient_phone' => $row->phone_no ? substr($row->phone_no, 0, 3) . '****' . substr($row->phone_no, -4) : '',
                 'doctor_name'   => NameHelper::join($row->d_surname, $row->d_othername),
-                'service'       => $row->service_name ?? '',
+                'service'       => ($row->service_names ?: ($row->service_name ?? '')),
                 'date'          => $row->start_date,
                 'time'          => $row->start_time ? date('H:i', strtotime($row->start_time)) : '',
             ];
@@ -1080,6 +1099,137 @@ class TodayWorkService
     }
 
     /**
+     * 预约已取消 —— 当天被取消/拒绝的预约。
+     *
+     * 前台要的是「这个空档能不能补人」，所以带上原定时间与医生；顺带给一个
+     * 重新预约的入口，让取消不至于变成一条只能看的死记录。
+     */
+    public function getCancelledAppointments(int $branchId, ?string $date = null): array
+    {
+        $today = $date ?? date('Y-m-d');
+
+        $rows = DB::table('appointments as a')
+            ->join('patients as p', 'p.id', '=', 'a.patient_id')
+            ->leftJoin('users as d', 'd.id', '=', 'a.doctor_id')
+            ->leftJoin('medical_services as ms', 'ms.id', '=', 'a.service_id')
+            ->where('a.start_date', $today)
+            ->whereIn('a.status', [Appointment::STATUS_CANCELLED, Appointment::STATUS_REJECTED])
+            ->whereNull('a.deleted_at')
+            ->select('a.id', 'a.start_time', 'a.status', 'a.notes',
+                'p.id as patient_id', 'p.surname as p_surname', 'p.othername as p_othername', 'p.phone_no',
+                'd.surname as d_surname', 'd.othername as d_othername',
+                'ms.name as service_name',
+                // 一次预约可能约多个项目；service_name 只是主项目
+                Appointment::serviceNamesSubquery('a'))
+            ->addSelect(Appointment::serviceNamesSubquery('a'))
+            ->orderBy('a.start_time')
+            ->get();
+
+        return $rows->map(fn ($row) => [
+            'id'            => $row->id,
+            'patient_id'    => $row->patient_id,
+            'patient_name'  => NameHelper::join($row->p_surname, $row->p_othername),
+            'patient_phone' => $this->maskPhone($row->phone_no),
+            'doctor_name'   => NameHelper::join($row->d_surname, $row->d_othername),
+            'service'       => $row->service_names ?: (($row->service_names ?: ($row->service_name ?? ''))),
+            'start_time'    => $row->start_time ? date('H:i', strtotime($row->start_time)) : '',
+            'status'        => $row->status,
+            'notes'         => $row->notes ?? '',
+        ])->toArray();
+    }
+
+    /**
+     * 网络预约 —— 还没处理的线上预约申请。
+     *
+     * 刻意**不按日期过滤**：这是一个待办箱，不是当日流水。昨天来的申请今天
+     * 没处理，它仍然要在台面上；按日期筛会让它随着翻页消失，而前台以为已经
+     * 处理完了。
+     */
+    public function getOnlineBookings(int $branchId, ?string $date = null): array
+    {
+        $rows = DB::table('online_bookings as ob')
+            ->leftJoin('insurance_companies as ic', 'ic.id', '=', 'ob.insurance_company_id')
+            ->where('ob.status', OnlineBooking::STATUS_WAITING)
+            ->select('ob.id', 'ob.full_name', 'ob.phone_no', 'ob.start_date', 'ob.start_time',
+                'ob.message', 'ob.visit_history', 'ob.created_at', 'ic.name as insurance_name')
+            ->orderByDesc('ob.created_at')
+            ->get();
+
+        return $rows->map(fn ($row) => [
+            'id'             => $row->id,
+            'full_name'      => $row->full_name,
+            'phone'          => $this->maskPhone($row->phone_no),
+            'preferred_date' => $row->start_date,
+            'preferred_time' => $row->start_time ? date('H:i', strtotime($row->start_time)) : '',
+            'is_revisit'     => (bool) $row->visit_history,
+            'insurance'      => $row->insurance_name ?? '',
+            'message'        => $row->message ?? '',
+            'submitted_at'   => $row->created_at ? date('Y-m-d H:i', strtotime($row->created_at)) : '',
+        ])->toArray();
+    }
+
+    /**
+     * 库存预警 —— 低于安全库存的物料。数据源复用库房自己的服务，
+     * 不在这里重写一遍阈值规则（改了阈值只该改一处）。
+     */
+    public function getStockWarnings(int $branchId, ?string $date = null): array
+    {
+        return $this->inventoryItemService->getLowStockItems()
+            ->map(fn ($item) => [
+                'id'            => $item->id,
+                'name'          => $item->name,
+                'code'          => $item->item_code ?? '',
+                'category'      => $item->category->name ?? '',
+                'current_stock' => (float) $item->current_stock,
+                'warning_level' => (float) ($item->stock_warning_level ?? 0),
+                'unit'          => $item->unit ?? '',
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * 有效期预警 —— 30 天内到期的批次。同样复用库房服务。
+     */
+    public function getExpiryWarnings(int $branchId, ?string $date = null): array
+    {
+        $today = $date ?? date('Y-m-d');
+
+        return $this->inventoryItemService->getExpiryWarningBatches(self::EXPIRY_WARNING_DAYS)
+            ->map(function ($batch) use ($today) {
+                $expiry = $batch->expiry_date ? date('Y-m-d', strtotime($batch->expiry_date)) : null;
+
+                return [
+                    'id'          => $batch->id,
+                    'item_id'     => $batch->inventory_item_id,
+                    'name'        => $batch->inventoryItem->name ?? '',
+                    'category'    => $batch->inventoryItem->category->name ?? '',
+                    'batch_no'    => $batch->batch_no ?? '',
+                    'qty'         => (float) $batch->qty,
+                    'expiry_date' => $expiry,
+                    // 负数 = 已经过期，前端按这个上红
+                    'days_left'   => $expiry
+                        ? (int) floor((strtotime($expiry) - strtotime($today)) / 86400)
+                        : null,
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * 手机号打码：前台核对身份够用，又不把完整号码摊在列表上。
+     */
+    private function maskPhone(?string $phone): string
+    {
+        if (!$phone || strlen($phone) < 7) {
+            return $phone ?? '';
+        }
+
+        return substr($phone, 0, 3) . '****' . substr($phone, -4);
+    }
+
+    /**
      * Get doctor IDs that have schedules on a given date.
      *
      * Checks both non-recurring schedules (exact date match) and recurring
@@ -1194,6 +1344,8 @@ class TodayWorkService
                 'd.surname as d_surname',
                 'd.othername as d_othername',
                 'ms.name as service_name',
+                // 一次预约可能约多个项目；service_name 只是主项目
+                Appointment::serviceNamesSubquery('a'),
                 'wq.status as queue_status',
                 'wq.check_in_time'
             )
@@ -1231,7 +1383,7 @@ class TodayWorkService
                 'appointment_id' => $row->appointment_id,
                 'patient_id'     => $row->patient_id,
                 'patient_name'   => NameHelper::join($row->p_surname, $row->p_othername),
-                'service'        => $row->service_name ?? '',
+                'service'        => ($row->service_names ?: ($row->service_name ?? '')),
                 'start_time'     => $row->start_time ? date('H:i', strtotime($row->start_time)) : '',
                 'status'         => $status,
                 'check_in_time'  => $row->check_in_time,
@@ -1278,6 +1430,28 @@ class TodayWorkService
             'unpaid' => (int) DB::table('invoices')
                 ->whereDate('invoice_date', $today)
                 ->whereIn('payment_status', ['unpaid', 'partial'])
+                ->whereNull('deleted_at')
+                ->count(),
+            'cancelled' => (int) DB::table('appointments')
+                ->where('start_date', $today)
+                ->whereIn('status', [Appointment::STATUS_CANCELLED, Appointment::STATUS_REJECTED])
+                ->whereNull('deleted_at')
+                ->count(),
+            // 下面三个是待办箱，不随所选日期变（见各自取数方法的说明）
+            'online_bookings' => (int) DB::table('online_bookings')
+                ->where('status', OnlineBooking::STATUS_WAITING)
+                ->count(),
+            // 两张库房表都是软删除模型，裸 DB::table 不走 SoftDeletes
+            'stock_warnings' => (int) DB::table('inventory_items')
+                ->where('is_active', 1)
+                ->whereRaw('current_stock <= stock_warning_level')
+                ->whereNull('deleted_at')
+                ->count(),
+            'expiry_warnings' => (int) DB::table('inventory_batches')
+                ->where('status', 'available')
+                ->where('qty', '>', 0)
+                ->whereNotNull('expiry_date')
+                ->where('expiry_date', '<=', date('Y-m-d', strtotime('+' . self::EXPIRY_WARNING_DAYS . ' days')))
                 ->whereNull('deleted_at')
                 ->count(),
             'lab_cases' => (int) DB::table('lab_cases')

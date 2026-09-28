@@ -120,6 +120,50 @@
                 </div>
             </div>
 
+            {{-- 剩余项目：已收费、还没做完的部分。
+                 放在历史欠费上面、收款按钮上方，是因为前台每次收钱前最该先看一眼
+                 「这个人是不是还有买过没做完的次数」—— 不然会把已经收过钱的项目
+                 再收一遍。核销按钮就地给，省得再跳一个页面。 --}}
+            @can('view-invoices')
+                {{-- 核销要 edit-invoices（把服务兑现掉＝减少诊所负债）。
+                     只看得见余量的人不该有核销按钮 —— 后端也会拦，但按钮先别给。 --}}
+                <div class="billing-prepaid" id="billingPrepaidSection" style="display:none"
+                     data-can-redeem="{{ auth()->user()->can('edit-invoices') ? 1 : 0 }}">
+                    <div class="billing-prepaid-header">
+                        <span class="billing-prepaid-title">
+                            <i class="fa fa-ticket"></i>
+                            {{ __('prepaid.title') }}
+                            <em class="billing-prepaid-count" id="billingPrepaidCount"></em>
+                        </span>
+                        <span class="billing-prepaid-sum">
+                            <em>{{ __('prepaid.summary_prepaid') }}</em>
+                            <strong class="text-danger" id="billingPrepaidUnearned">¥0.00</strong>
+                        </span>
+                        <button type="button" class="btn btn-xs btn-default billing-prepaid-toggle"
+                                id="billingPrepaidToggle"><i class="fa fa-chevron-up"></i></button>
+                    </div>
+                    <div class="billing-prepaid-body" id="billingPrepaidBody">
+                        <table class="billing-prepaid-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('prepaid.service') }}</th>
+                                    <th style="width:150px">{{ __('prepaid.invoice_no') }}</th>
+                                    <th style="width:60px">{{ __('prepaid.total_qty') }}</th>
+                                    <th style="width:60px">{{ __('prepaid.used_qty') }}</th>
+                                    <th style="width:60px">{{ __('prepaid.remaining_qty') }}</th>
+                                    <th style="width:100px">{{ __('prepaid.prepaid_value') }}</th>
+                                    <th style="width:150px">{{ __('prepaid.action') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="billingPrepaidBd"></tbody>
+                        </table>
+                        <div class="billing-prepaid-hint text-muted">
+                            <i class="fa fa-info-circle"></i> {{ __('prepaid.summary_hint') }}
+                        </div>
+                    </div>
+                </div>
+            @endcan
+
             {{-- 历史欠费：可勾选并入本次收款（收费成功后再按勾选项补收） --}}
             @can('collect-payments')
                 <div class="billing-outstanding" id="billingOutstandingSection" style="display:none">

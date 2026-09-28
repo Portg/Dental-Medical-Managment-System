@@ -141,6 +141,13 @@ Route::group(['middleware' => ['auth']], function () {
 
     // Billing (划价收费)
     Route::get('billing/service-categories/{patientId}', 'InvoiceController@getServiceCategories');
+
+    // 剩余项目（已收费未做完）—— 权限在控制器里分档，见 PrepaidItemController
+    Route::get('prepaid-items/patient/{patientId}', 'PrepaidItemController@forPatient');
+    Route::get('prepaid-items/summary/{patientId}', 'PrepaidItemController@summary');
+    Route::get('prepaid-items/{invoiceItemId}/history', 'PrepaidItemController@history');
+    Route::post('prepaid-items/{invoiceItemId}/consume', 'PrepaidItemController@consume');
+    Route::post('prepaid-items/usages/{usageId}/revoke', 'PrepaidItemController@revoke');
     Route::post('billing/create', 'InvoiceController@createBilling');
     Route::get('patient-receipts/{patient_id}', 'InvoiceController@patientReceipts');
     Route::get('export-invoices-report', 'InvoiceController@exportReport');
@@ -198,6 +205,8 @@ Route::group(['middleware' => ['auth']], function () {
 
 
     //listing treatment and prescriptions capture
+    // 某颗牙历次做过什么 —— 必须在 {id} 之前，否则被它吃掉
+    Route::get('medical-treatment/tooth-history/{patientId}', 'MedicalTreatmentController@toothHistory');
     Route::get('medical-treatment/{id}', 'MedicalTreatmentController@index');
 
     Route::get('treatments/{patient_id}', 'TreatmentController@index');
@@ -443,6 +452,13 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/language/{locale}', 'LanguageController@switch')->name('language.switch');
 
     // Medical Templates
+    // 模板的学科分类树（最多三级）。注意与 medical_templates.category
+    // ——「归属范围」—— 不是一回事，见 TemplateCategory
+    Route::get('template-categories', 'TemplateCategoryController@index');
+    Route::post('template-categories', 'TemplateCategoryController@store');
+    Route::put('template-categories/{id}', 'TemplateCategoryController@update');
+    Route::delete('template-categories/{id}', 'TemplateCategoryController@destroy');
+
     Route::resource('medical-templates', 'MedicalTemplateController');
     Route::get('medical-templates-search', 'MedicalTemplateController@search');
     Route::post('medical-templates/{id}/increment-usage', 'MedicalTemplateController@incrementUsage');
@@ -556,6 +572,10 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('today-work/paid', 'TodayWorkController@getPaid');
     Route::get('today-work/unpaid', 'TodayWorkController@getUnpaid');
     Route::get('today-work/lab-cases', 'TodayWorkController@getLabCases');
+    Route::get('today-work/cancelled', 'TodayWorkController@getCancelled');
+    Route::get('today-work/online-bookings', 'TodayWorkController@getOnlineBookings');
+    Route::get('today-work/stock-warnings', 'TodayWorkController@getStockWarnings');
+    Route::get('today-work/expiry-warnings', 'TodayWorkController@getExpiryWarnings');
     Route::get('today-work/tab-counts', 'TodayWorkController@getTabCounts')->name('today-work.tab-counts');
 
     // Waiting Queue Management System (候诊与叫号)

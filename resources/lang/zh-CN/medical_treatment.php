@@ -100,4 +100,12 @@ return [
 
     // 附加
     'treatment_history' => '治疗历史',
+    // 椅旁工作台
+    'cs_plan_pending'        => '计划未做',
+    'cs_visit_history'       => '历次就诊',
+    'cs_tooth_history_suffix'=> '做过什么',
+    'cs_back_to_all'         => '看全口',
+    'cs_no_history'          => '暂无记录',
+    'cs_tooth_no_history'    => '这颗牙还没有记录',
+    'cs_dx_prefix'           => '诊断：',
 ];

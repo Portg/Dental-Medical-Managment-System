@@ -100,4 +100,12 @@ return [
 
     // Additional
     'treatment_history' => 'Treatment History',
+    // Chairside workspace
+    'cs_plan_pending'        => 'Planned, not done',
+    'cs_visit_history'       => 'Visit history',
+    'cs_tooth_history_suffix'=> 'history',
+    'cs_back_to_all'         => 'All teeth',
+    'cs_no_history'          => 'No records',
+    'cs_tooth_no_history'    => 'No records for this tooth',
+    'cs_dx_prefix'           => 'Dx: ',
 ];
