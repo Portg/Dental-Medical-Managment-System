@@ -22,6 +22,7 @@
     var $row   = null;     // 正在编辑牙位的那一行
     var positioning = false;   // 见 position()：自身滚动会触发 scroll 事件，防自激
     var activeMark  = '';      // armed 的标记工具，见下面 .tooth-pad-mark 的注释
+    var dragOn      = null;    // 拖选方向：true=一路选上/盖章，false=一路取消。见 applyTooth()
 
     function ensurePad() {
         if ($pad) return $pad;
@@ -38,34 +39,23 @@
             .appendTo('body');
         $src.remove();
 
-        // 点牙：armed 了标记就给这颗牙盖上（再点同一颗取消），否则加/减这一颗
+        // 点牙 / 按住拖过一片牙。
+        //
+        // 替掉了原来那个「全」按钮：它写着「全」、位置在象限外角，看着像管这个区，
+        // 实际只管同一行的乳牙（55-51）—— 成年患者点它，选中的是一排本来不存在
+        // 的牙。一个自己都说不清的控件，接什么都是错的。
+        // Open Dental 的做法就是「click and drag to quickly select multiple teeth」，
+        // 少一个要解释的按钮，多一个不用解释的手势。
         $pad.on('mousedown', '.tg-t', function (e) {
             e.preventDefault();          // 不要让当前行失焦
-            var tooth = String($(this).data('tooth'));
-            if (activeMark) {
-                CaseItems.setToothMark($row, tooth, activeMark);
-                paint();
-            } else {
-                toggle([tooth]);
-            }
+            dragOn = null;               // 方向由第一颗决定
+            applyTooth(String($(this).data('tooth')));
         });
 
-        // 「全」始终只有一个含义：**它管的那些牙**。没拿笔是把它们选上，
-        // 拿了笔是把符号盖到它们身上。
-        //
-        // 曾经让它在拿笔时改成「放一个不指名的象限码」—— 那是错的：医生拿着 ✕
-        // 点「全」，预期是「这些牙全标成缺失」（整区缺失是真实的临床陈述），
-        // 而那样做只会产生一条不指名的记录。预期若干颗被标记、实际 1 条，
-        // 是会出错的数据，不是语义美不美的问题。
-        $pad.on('mousedown', '.tg-all', function (e) {
-            e.preventDefault();
-            var teeth = String($(this).data('teeth')).split(',').filter(Boolean);
-            if (activeMark) {
-                CaseItems.setTeethMark($row, teeth, activeMark);
-            } else {
-                toggle(teeth);
-            }
-            paint();
+        // 拖过去的每一颗都按第一颗定下的方向做，不 toggle
+        $pad.on('mouseover', '.tg-t', function () {
+            if (dragOn === null) return;
+            applyTooth(String($(this).data('tooth')));
         });
 
         // 牙位标记 △ 残根 / ✕ 已拔除 / — 缺失。
@@ -121,6 +111,23 @@
         if (/\btq-br\b/.test(cls)) return '3';
         if (/\btq-bl\b/.test(cls)) return '4';
         return '';
+    }
+
+    /**
+     * 对一颗牙落笔。方向只在起手那一颗决定，之后整条拖拽都照它做 ——
+     * 逐颗 toggle 的话，拖过已选中的牙会把它取消，结果取决于起点。
+     */
+    function applyTooth(tooth) {
+        if (!$row || !$row.length) return;
+
+        if (activeMark) {
+            if (dragOn === null) { dragOn = CaseItems.markOf($row, tooth) !== activeMark; }
+            CaseItems.putToothMark($row, tooth, activeMark, dragOn);
+        } else {
+            if (dragOn === null) { dragOn = current().indexOf(tooth) === -1; }
+            CaseItems.putTooth($row, tooth, dragOn);
+        }
+        paint();
     }
 
     function current() {
@@ -303,6 +310,9 @@
             if ($(e.target).closest('.js-pick-tooth').length) return;   // 由上面那个处理器管
             hide();
         });
+
+        // 松手就结束这次拖拽（可能松在面板外，所以挂在 document 上）
+        $(document).on('mouseup', function () { dragOn = null; });
 
         $(document).on('keydown', function (e) {
             if (e.key === 'Escape') hide(false);

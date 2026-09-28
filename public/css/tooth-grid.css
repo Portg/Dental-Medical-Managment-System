@@ -93,26 +93,6 @@
     color: #fff;
 }
 
-/* 整象限一键选。整区记录（某区牙周治疗、半口洁治）原来要点 8 下。 */
-.tg-all {
-    width: 26px;
-    height: 21px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #9ccdd2;
-    border-radius: 2px;
-    color: #0e7c86;
-    background: #fff;
-    cursor: pointer;
-    font-size: 10px;
-}
-
-.tg-all:hover { background: #e6f2f3; }
-
-/* 恒牙那一行不放「全」，但要占住位置，否则两行左右缘错开 */
-.tg-all-hidden { visibility: hidden; cursor: default; }
-
 /* 上下颌之间的中线 + 左右标 */
 .tg-midline {
     display: flex;
@@ -132,7 +112,6 @@
 /* 侧栏的紧凑尺寸 */
 .tg-compact { font-size: 10px; }
 .tg-compact .tg-t { width: 19px; height: 18px; }
-.tg-compact .tg-all { width: 22px; height: 18px; font-size: 9px; }
 .tg-compact .tg-row-milk .tg-quad { min-width: calc(8 * 19px + 7 * 2px); }
 
 @media (max-width: 767px) {
@@ -218,8 +197,7 @@
 }
 
 /* 拿起了一支标记笔：牙位格提示「点我盖章」，与未 armed 时的「点我选牙」区分 */
-.tooth-pad.tooth-pad-armed .tg-t,
-.tooth-pad.tooth-pad-armed .tg-all {
+.tooth-pad.tooth-pad-armed .tg-t {
     cursor: cell;
 }
 

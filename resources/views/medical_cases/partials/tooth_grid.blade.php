@@ -57,12 +57,11 @@
 
         @foreach($rows as $dent)
             <div class="tg-row tg-row-{{ $dent }}">
-                {{-- 「全」：整象限一键选。整区记录（某区牙周治疗、半口洁治）
-                     原来要一颗一颗点 8 下。乳牙那一行才放，避免一行两个「全」。 --}}
-                <span class="tg-all {{ $dent === 'milk' ? '' : 'tg-all-hidden' }}"
-                      data-quadrant="{{ $pair[0] }}"
-                      data-teeth="{{ implode(',', $quadrants[$pair[0]][$dent]) }}">{{ __('odontogram.all_abbr') }}</span>
-
+                {{-- 这里原来有个「全」按钮（整行一键选）。去掉了：它写着「全」、
+                     位置在象限外角，看着像管这个区，实际只管同一行的乳牙 ——
+                     成年患者点它选中的是一排本来不存在的牙。改成按住拖过一片牙，
+                     与 Open Dental 一致，少一个要解释的控件。见 tooth_pad.js 的
+                     applyTooth()。 --}}
                 {{-- 右侧象限的数组本身就是由外向内写的（18…11 / 55…51），
                      直接铺就是「最外侧在最左、门牙紧挨中线」—— 与牙位图的画法
                      一致。不要再 reverse，那会把 11 甩到最外侧去。 --}}
@@ -85,10 +84,6 @@
                               title="{{ $t }}">{{ $symbol($t) }}</span>
                     @endforeach
                 </span>
-
-                <span class="tg-all {{ $dent === 'milk' ? '' : 'tg-all-hidden' }}"
-                      data-quadrant="{{ $pair[1] }}"
-                      data-teeth="{{ implode(',', $quadrants[$pair[1]][$dent]) }}">{{ __('odontogram.all_abbr') }}</span>
             </div>
         @endforeach
 

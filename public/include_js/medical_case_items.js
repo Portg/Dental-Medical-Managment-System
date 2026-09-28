@@ -224,6 +224,43 @@ var CaseItems = (function () {
         setRowTooth($row, cur);
     }
 
+    /**
+     * 明确选中/取消某颗牙（不是 toggle）—— 拖选用。
+     *
+     * 拖过去必须是「照第一颗定下的方向一路做到底」：起手那颗原来没选就一路选，
+     * 原来已选就一路取消。用 toggle 的话，拖过已经选中的牙会把它取消掉，
+     * 拖出来的结果取决于起点，等于随机。
+     */
+    function putTooth($row, tooth, on) {
+        if (!$row || !$row.length || !tooth) return;
+
+        var cur = splitTeeth($row.find('.case-item-tooth-value').val());
+        var at  = cur.indexOf(String(tooth));
+
+        if (on && at === -1) { cur.push(String(tooth)); }
+        if (!on && at !== -1) { cur.splice(at, 1); }
+
+        if (!on) {
+            var marks = rowMarks($row);
+            delete marks[tooth];
+            setRowMarks($row, marks);
+        }
+        setRowTooth($row, cur);
+    }
+
+    /** 明确给某颗牙盖/撤标记（不是 toggle）—— 拖选用，理由同 putTooth */
+    function putToothMark($row, tooth, mark, on) {
+        if (!$row || !$row.length || !tooth) return;
+
+        var marks = rowMarks($row);
+        if (on) { marks[tooth] = mark; } else { delete marks[tooth]; }
+        setRowMarks($row, marks);
+
+        var cur = splitTeeth($row.find('.case-item-tooth-value').val());
+        if (on && cur.indexOf(String(tooth)) === -1) { cur.push(String(tooth)); }
+        setRowTooth($row, cur);
+    }
+
     /** 整行一起设（旧入口：没有选中具体牙位时，摊到当前所有牙位上） */
     function setRowMark($row, mark) {
         if (!$row || !$row.length) return;
@@ -837,6 +874,8 @@ var CaseItems = (function () {
         setRowMark: setRowMark,
         setToothMark: setToothMark,
         setTeethMark: setTeethMark,
+        putTooth: putTooth,
+        putToothMark: putToothMark,
         rowMark: rowMark,
         rowMarks: rowMarks,
         markOf: markOf,
