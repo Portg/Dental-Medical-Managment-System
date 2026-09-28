@@ -86,6 +86,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('search-patient', 'PatientController@filterPatients');
     Route::get('appointments/calendar-events', 'AppointmentsController@calendarEvents');
     Route::get('appointments/doctors', 'AppointmentsController@doctors');
+    // 诊室泳道视图的列（与 api/chairs 的 select2 形状不同，见控制器注释）
+    Route::get('appointments/chair-resources', 'AppointmentsController@chairResources');
     Route::get('appointments/doctor-info/{id}', 'AppointmentsController@doctorInfo');
     Route::post('appointments/{id}/send-reminder', 'AppointmentsController@sendReminder');
     Route::resource('appointments', 'AppointmentsController');

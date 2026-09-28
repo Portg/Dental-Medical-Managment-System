@@ -68,9 +68,42 @@ class Appointment extends Model
         return $this->belongsTo('App\Chair', 'chair_id');
     }
 
+    /**
+     * 主项目 —— 这次预约勾选的第一个。全集见 services()。
+     *
+     * 保留这个单值字段是有意的反规范化，理由见 appointment_services 建表迁移。
+     */
     public function service()
     {
         return $this->belongsTo('App\MedicalService', 'service_id');
+    }
+
+    /** 这次预约约的全部项目（权威），按勾选顺序 */
+    public function services()
+    {
+        return $this->belongsToMany('App\MedicalService', 'appointment_services', 'appointment_id', 'medical_service_id')
+            ->withPivot('sort_order')
+            ->orderBy('appointment_services.sort_order');
+    }
+
+    /**
+     * 「这次预约约了什么」的显示串，供列表与日历用。
+     *
+     * 做成子查询而不是 join + GROUP BY：调用它的六七个查询本身都带 join 和
+     * 各自的 group 语义，塞一个 GROUP_CONCAT 进去要顺带改它们的 groupBy，
+     * 改错一处就是整列数据重复或丢行。子查询对调用方是零影响的。
+     *
+     * @param string $alias 外层查询里 appointments 表的别名
+     */
+    public static function serviceNamesSubquery(string $alias = 'appointments'): \Illuminate\Database\Query\Expression
+    {
+        // $alias 只来自代码里的字面量（'a' / 'appointments'），不来自请求
+        return \Illuminate\Support\Facades\DB::raw("(
+            SELECT GROUP_CONCAT(aps_ms.name ORDER BY aps.sort_order SEPARATOR ', ')
+            FROM appointment_services aps
+            JOIN medical_services aps_ms ON aps_ms.id = aps.medical_service_id
+            WHERE aps.appointment_id = {$alias}.id
+        ) as service_names");
     }
 
     public function medicalCase()

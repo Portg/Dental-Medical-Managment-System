@@ -47,6 +47,8 @@ class AppointmentsController extends Controller
         // 高级查询的医生下拉此前只有「全部」一项，后端 filter_doctor 筛选虽已实现却无从选择
         return view('appointments.index', [
             'filterDoctors' => $this->appointmentService->getDoctorOptions(),
+            // 状态筛选面板的色卡。与日历事件底色同源，见 statusColorMap()
+            'filterStatuses' => $this->appointmentService->filterableStatuses(),
         ]);
     }
 
@@ -229,6 +231,28 @@ class AppointmentsController extends Controller
         return response()->json(
             $this->appointmentService->getChairs(Auth::user()->branch_id)
         );
+    }
+
+    /**
+     * 诊室泳道视图的列。
+     *
+     * 与 getChairs 分开是因为两处的形状不同：那个给 select2（{id, text}），
+     * 这个给资源网格（{id, title}），跟 doctors() 一致 —— 网格是同一份代码
+     * 按医生/诊室两种模式渲染的，列的形状必须一样。
+     *
+     * 末尾补一列「未分配诊室」：牙科排椅位常常是当天才定的，这些预约不能
+     * 从泳道视图里消失，否则看着就像今天没这些人。
+     */
+    public function chairResources(): JsonResponse
+    {
+        $chairs = $this->appointmentService->getChairs(Auth::user()->branch_id)
+            ->map(fn ($chair) => ['id' => $chair->id, 'title' => $chair->text])
+            ->values()
+            ->all();
+
+        $chairs[] = ['id' => 0, 'title' => __('appointment.chair_unassigned')];
+
+        return response()->json($chairs);
     }
 
     /**

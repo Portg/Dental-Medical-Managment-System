@@ -122,28 +122,15 @@ class AppointmentService
     }
 
     /**
-     * Get calendar events for FullCalendar.
+     * 预约状态的配色。
+     *
+     * 提成公共方法是因为它有**两个**消费方：日历事件块的底色，和状态筛选面板
+     * 的色卡。两边各写一份的话，改了一处颜色，图例就和事件对不上 —— 而这个
+     * 面板的全部作用就是「按颜色认状态」。
      */
-    public function getCalendarEvents(?string $start, ?string $end): array
+    public static function statusColorMap(): array
     {
-        $query = DB::table('appointments')
-            ->join('patients', 'patients.id', 'appointments.patient_id')
-            ->join('users', 'users.id', 'appointments.doctor_id')
-            ->leftJoin('medical_services', 'medical_services.id', 'appointments.service_id')
-            ->whereNull('appointments.deleted_at')
-            ->select(
-                'appointments.*',
-                'patients.surname', 'patients.othername', 'patients.phone_no as p_phone',
-                'patients.gender as p_gender',
-                'users.surname as d_surname', 'users.othername as d_othername',
-                'medical_services.name as service_name'
-            );
-
-        if ($start && $end) {
-            $query->whereBetween('appointments.sort_by', [$start, $end]);
-        }
-
-        $statusColorMap = [
+        return [
             Appointment::STATUS_WAITING => '#f0ad4e',
             Appointment::STATUS_SCHEDULED => '#5bc0de',
             Appointment::STATUS_CHECKED_IN => '#337ab7',
@@ -155,6 +142,70 @@ class AppointmentService
             Appointment::STATUS_RESCHEDULED => '#f0ad4e',
             Appointment::STATUS_REJECTED => '#d9534f',
         ];
+    }
+
+    /**
+     * 状态筛选面板的数据：状态码 + 颜色 + 译名。
+     *
+     * 只列前台真会拿来筛的那些。TREATMENT_COMPLETE / TREATMENT_INCOMPLETE
+     * 是历史遗留的旧枚举值，库里还有数据但新流程不再产生，摆进筛选面板
+     * 只会让人以为是两种不同的「完成」。
+     */
+    public function filterableStatuses(): array
+    {
+        $colors = self::statusColorMap();
+
+        $codes = [
+            Appointment::STATUS_SCHEDULED,
+            Appointment::STATUS_WAITING,
+            Appointment::STATUS_CHECKED_IN,
+            Appointment::STATUS_IN_PROGRESS,
+            Appointment::STATUS_COMPLETED,
+            Appointment::STATUS_RESCHEDULED,
+            Appointment::STATUS_NO_SHOW,
+            Appointment::STATUS_CANCELLED,
+            Appointment::STATUS_REJECTED,
+        ];
+
+        // 译名走 translateStatus（字典表 appointment_status），与气泡、列表
+        // 里显示的完全一致 —— 同一个状态在筛选面板叫一个名、在气泡里叫另一个，
+        // 比不翻译还糟
+        return array_map(fn ($code) => [
+            'code'  => $code,
+            'color' => $colors[$code] ?? '#3a87ad',
+            'label' => $this->translateStatus($code),
+        ], $codes);
+    }
+
+    /**
+     * Get calendar events for FullCalendar.
+     */
+    public function getCalendarEvents(?string $start, ?string $end): array
+    {
+        $query = DB::table('appointments')
+            ->join('patients', 'patients.id', 'appointments.patient_id')
+            ->join('users', 'users.id', 'appointments.doctor_id')
+            ->leftJoin('medical_services', 'medical_services.id', 'appointments.service_id')
+            // 诊室泳道视图按 chair_id 分列，没有这个 join 每个事件都落不进任何一列
+            ->leftJoin('chairs', 'chairs.id', 'appointments.chair_id')
+            ->whereNull('appointments.deleted_at')
+            ->select(
+                'appointments.*',
+                'patients.surname', 'patients.othername', 'patients.phone_no as p_phone',
+                'patients.gender as p_gender',
+                'users.surname as d_surname', 'users.othername as d_othername',
+                'medical_services.name as service_name',
+                'chairs.chair_name as chair_name'
+            )
+            // 一次预约可能约了多个项目；主项目（service_id）只是其中第一个。
+            // 子查询而不是 join + GROUP BY，见 Appointment::serviceNamesSubquery
+            ->addSelect(Appointment::serviceNamesSubquery('appointments'));
+
+        if ($start && $end) {
+            $query->whereBetween('appointments.sort_by', [$start, $end]);
+        }
+
+        $statusColorMap = self::statusColorMap();
 
         $events = [];
         foreach ($query->get() as $value) {
@@ -174,11 +225,15 @@ class AppointmentService
                 'patient_gender' => $value->p_gender ?? '',
                 'status' => $this->translateStatus($value->status ?? ''),
                 'status_code' => $value->status ?? '',
-                'service_name' => $value->service_name ?? '',
+                // 有多选就显示全部，否则退回主项目（本表上线前的老预约没有透视表记录）
+                'service_name' => $value->service_names ?: ($value->service_name ?? ''),
                 'start_time' => date_format($startDt, 'H:i'),
                 'end_time' => date_format($endDt, 'H:i'),
                 'appointment_no' => $value->appointment_no ?? '',
                 'doctor_id' => $value->doctor_id,
+                // 诊室泳道分列用；未指定椅位的预约会被归进「未分配诊室」一列
+                'chair_id' => $value->chair_id,
+                'chair_name' => $value->chair_name ?? '',
             ];
 
             if ((bool) SystemSetting::get('clinic.show_appointment_notes', true)) {

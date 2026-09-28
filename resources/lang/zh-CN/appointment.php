@@ -246,6 +246,7 @@ return [
     'chair_selection' => '椅位',
     'auto_assign' => '自动分配',
     'appointment_service' => '预约项目',
+    'appointment_service_hint' => '可多选：这次要做的项目都勾上',
     'visit_type' => '就诊类型',
     'first_visit' => '初诊',
     'revisit' => '复诊',
@@ -282,6 +283,12 @@ return [
     'popover_status' => '状态',
     'popover_send_sms' => '短信',
     'doctor_day_view' => '医生日视图',
+    'chair_day_view' => '诊室日视图',
+    // 没排椅位的预约归进这一列 —— 牙科排椅位常常是当天才定的，
+    // 不给它一列，这些预约就从泳道视图里消失了
+    'chair_unassigned' => '未分配诊室',
+    'select_all' => '全选',
+    'select_none' => '全不选',
     'no_appointments' => '暂无预约',
     'doctor_no_schedule_warning' => '该医生当日无排班记录，显示的为默认时段',
     'no_phone_for_sms' => '该患者无手机号，无法发送短信',

@@ -184,3 +184,60 @@
     color: #999;
     font-size: 14px;
 }
+
+/* ── 预约状态筛选面板 ─────────────────────────────────────────────
+   横铺在页签内容上方，三个视图（日历 / 医生泳道 / 诊室泳道）共用一份。
+   色点直接取事件底色，见 AppointmentService::statusColorMap()。 */
+.apt-status-filter {
+    margin: 0 0 10px;
+    padding: 8px 12px;
+    background: #fafbfc;
+    border: 1px solid #e4e8eb;
+    border-radius: 4px;
+}
+.apt-status-filter-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+.apt-status-filter-title {
+    font-weight: 600;
+    color: #555;
+}
+.apt-status-filter-head a {
+    font-size: 12px;
+}
+.apt-status-filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+}
+.apt-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    padding: 2px 8px 2px 4px;
+    font-weight: normal;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    /* 未勾选的压暗而不是隐藏：面板同时当图例用，
+       哪些状态存在这件事不该随勾选消失 */
+    opacity: .45;
+}
+.apt-status-chip.is-on {
+    opacity: 1;
+    background: #fff;
+    border-color: #dfe4e8;
+}
+.apt-status-chip input {
+    margin: 0;
+}
+.apt-status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}

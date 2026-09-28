@@ -76,6 +76,11 @@
                 if (prefillData.followup_id) {
                     $('#followup_id').val(prefillData.followup_id);
                 }
+                // 从诊室泳道拖选过来时带着椅位 —— 人在那一列上拖的，
+                // 不预填的话前台得再选一次，而且很容易选错列
+                if (prefillData.chair_id) {
+                    loadChairById(prefillData.chair_id);
+                }
                 // Load doctor last so change → loadTimeSlots sees date already set
                 if (prefillData.doctor_id) {
                     loadDoctorById(prefillData.doctor_id);
@@ -98,7 +103,8 @@
             $('#drawer_patient').val(null).trigger('change');
             $('#drawer_doctor').val(null).trigger('change');
             $('#drawer_chair').val('');
-            $('#drawer_service').val('');
+            // 多选 select2 得用 val(null)：val('') 会留下一个空标签
+            $('#drawer_service').empty().val(null).trigger('change');
             $('#patient-info-card').removeClass('show');
             $('#appointment-errors').hide().find('ul').empty();
             $('#date-weekday').text('');
@@ -462,6 +468,29 @@
             });
         };
 
+        /**
+         * 按 id 预选椅位。
+         *
+         * 走 /api/chairs 全量再挑，而不是单查一条：椅位是个位数量级的小表，
+         * 为它加一个 chair-info 接口不划算；而 select2 的 ajax 只在用户输入时
+         * 才跑，不手动塞 option 的话预填的值在框里是空的。
+         */
+        window.loadChairById = function(chairId) {
+            $.ajax({
+                url: '/api/chairs',
+                dataType: 'json',
+                success: function(chairs) {
+                    (chairs || []).forEach(function(chair) {
+                        if (String(chair.id) === String(chairId)) {
+                            $('#drawer_chair')
+                                .append(new Option(chair.text, chair.id, true, true))
+                                .trigger('change');
+                        }
+                    });
+                }
+            });
+        };
+
         // =====================================================================
         // Select2 & Datepicker initialization
         // =====================================================================
@@ -560,7 +589,9 @@
                 }
             }).on('select2:select', function(e) {
                 var service = e.params.data;
-                if (service.duration) {
+                // 只在选中第一个项目时按它带出时长：多选下每勾一个就改一次，
+                // 会把前台手工调过的时长悄悄冲掉
+                if (service.duration && ($('#drawer_service').val() || []).length === 1) {
                     $('#duration_minutes').val(service.duration);
                 }
             });

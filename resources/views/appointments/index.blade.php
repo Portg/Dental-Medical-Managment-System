@@ -26,8 +26,15 @@
                         <li class="" id="doctor_day_view_tab_link">
                             <a href="#doctor_day_view_tab" data-toggle="tab" aria-expanded="false">{{ __('appointment.doctor_day_view') }}</a>
                         </li>
+                        {{-- 诊室（椅位）泳道：椅位是牙科的产能单位，没有这一列排不了椅位 --}}
+                        <li class="" id="chair_day_view_tab_link">
+                            <a href="#chair_day_view_tab" data-toggle="tab" aria-expanded="false">{{ __('appointment.chair_day_view') }}</a>
+                        </li>
 
                     </ul>
+                    {{-- 状态筛选：一份管三个视图（日历 / 医生泳道 / 诊室泳道），
+                         所以挂在 tab-content 外面。色卡与事件底色同源。 --}}
+                    <div class="apt-status-filter" id="aptStatusFilter"></div>
                     <div class="tab-content">
                         <div class="tab-pane active" id="appointments_tab">
                             <div class="row">
@@ -218,6 +225,29 @@
                                             <span class="drg-date-label" id="drg-date-label"></span>
                                         </div>
                                         <div class="drg-container" id="drg-container">
+                                            {{-- Rendered by appointment_resource_grid.js --}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{-- Chair Day View Tab —— 与医生泳道共用 ResourceGrid，mode='chair' --}}
+                        <div class="tab-pane" id="chair_day_view_tab">
+                            <div class="row">
+                                <div class="portlet light">
+                                    <div class="portlet-title">
+                                        <div class="caption font-dark">
+                                            <span class="caption-subject">{{ __('appointment.chair_day_view') }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="portlet-body">
+                                        <div class="drg-toolbar">
+                                            <button type="button" class="btn btn-sm btn-default" id="crg-prev"><i class="fa fa-chevron-left"></i></button>
+                                            <button type="button" class="btn btn-sm btn-default" id="crg-today">{{ __('appointment.today') }}</button>
+                                            <button type="button" class="btn btn-sm btn-default" id="crg-next"><i class="fa fa-chevron-right"></i></button>
+                                            <span class="drg-date-label" id="crg-date-label"></span>
+                                        </div>
+                                        <div class="drg-container" id="crg-container">
                                             {{-- Rendered by appointment_resource_grid.js --}}
                                         </div>
                                     </div>
@@ -588,14 +618,23 @@
                                 }
                             });
                         }
-                        if (data.service_id) {
-                            // Load service option
+                        // 项目是多选：后端把已选项目按顺序一并返回（{id, text}），
+                        // select2 是 ajax 的，不现成塞 option 进去框里就是空的 ——
+                        // 前台一打开编辑就以为没选过，保存一次全清光。
+                        if (data.services && data.services.length) {
+                            data.services.forEach(function (svc) {
+                                $('#drawer_service').append(new Option(svc.text, svc.id, true, true));
+                            });
+                            $('#drawer_service').trigger('change');
+                        } else if (data.service_id) {
+                            // 本表上线前建的老预约只有主项目，没有透视表记录
                             $.ajax({
                                 url: '/search-medical-service?id=' + data.service_id,
                                 success: function(services) {
                                     if (services && services.length > 0) {
-                                        let serviceOption = new Option(services[0].text, services[0].id, true, true);
-                                        $('#drawer_service').append(serviceOption).trigger('change');
+                                        $('#drawer_service')
+                                            .append(new Option(services[0].text, services[0].id, true, true))
+                                            .trigger('change');
                                     }
                                 }
                             });
@@ -1018,6 +1057,9 @@
     @if(app()->getLocale() === 'zh-CN')
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/locales/zh-cn.min.js"></script>
     @endif
+    {{-- 状态筛选要先于日历与泳道加载：两边都会调它的 filterEvents --}}
+    <link rel="stylesheet" href="{{ asset('css/appointment-resource-grid.css') }}?v={{ filemtime(public_path('css/appointment-resource-grid.css')) }}">
+    <script src="{{ asset('include_js/appointment_status_filter.js') }}?v={{ filemtime(public_path('include_js/appointment_status_filter.js')) }}"></script>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
@@ -1040,6 +1082,13 @@
                         failure: function() {
                             console.error('Failed to load calendar events');
                         }
+                    },
+                    // 状态筛选在取回之后就地过滤：三个视图读同一个接口，
+                    // 筛选做在客户端才能切页签时不丢（见 appointment_status_filter.js）
+                    eventSourceSuccess: function(content) {
+                        return window.AppointmentStatusFilter
+                            ? window.AppointmentStatusFilter.filterEvents(content)
+                            : content;
                     },
                     select: function(info) {
                         var prefill = { date: info.startStr.substring(0, 10) };
@@ -1140,15 +1189,30 @@
                 $('a[href="#appointment_calender_tab"]').on('shown.bs.tab', function () {
                     calendar.render();
                 });
+
+                // 状态筛选面板。日历重取一次（eventSourceSuccess 里过滤），
+                // 两个泳道只重绘 —— 事件已经在它们手上，没必要再请求一遍
+                AppointmentStatusFilter.init({
+                    container: '#aptStatusFilter',
+                    statuses: @json($filterStatuses ?? []),
+                    onChange: function () {
+                        calendar.refetchEvents();
+                        if (window._drgInstance) window._drgInstance.redraw();
+                        if (window._crgInstance) window._crgInstance.redraw();
+                    }
+                });
             }
         });
     </script>
-    <link rel="stylesheet" href="{{ asset('css/appointment-resource-grid.css') }}">
+    {{-- 这份 CSS 已在状态筛选那一段随它一起引入（带版本号），此处不重复 --}}
     <script src="{{ asset('include_js/appointment_resource_grid.js') }}?v={{ filemtime(public_path('include_js/appointment_resource_grid.js')) }}"></script>
     <script>
         $(function() {
             $('a[href="#doctor_day_view_tab"]').on('shown.bs.tab', function () {
                 if (window._drgInstance) window._drgInstance.render();
+            });
+            $('a[href="#chair_day_view_tab"]').on('shown.bs.tab', function () {
+                if (window._crgInstance) window._crgInstance.render();
             });
 
             // When arriving from the patient list via ?new_for={patient_id},

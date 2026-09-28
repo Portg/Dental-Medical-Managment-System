@@ -130,12 +130,17 @@ $drawerTrans = [
                 <div class="field-hint">{{ __('appointment.chair_optional_hint') }}</div>
             </div>
 
-            {{-- Appointment Service --}}
+            {{-- Appointment Service —— 多选。
+                 对齐视频：新建预约右侧是一串可勾选的项目（补牙/拆线/戴牙/拔牙/
+                 根管预备/换药…）。原先只能选一个，前台要么只记一个、要么开两条预约。
+                 提交名是 service_ids[]；后端把第一个存进 appointments.service_id
+                 当主项目，全集进 appointment_services。 --}}
             <div class="form-group-drawer">
                 <label class="form-section-label">{{ __('appointment.appointment_service') }}</label>
-                <select id="drawer_service" name="service_id" class="form-control drawer-form-control" style="width: 100%;">
-                    <option value=""></option>
+                <select id="drawer_service" name="service_ids[]" multiple
+                        class="form-control drawer-form-control" style="width: 100%;">
                 </select>
+                <div class="field-hint">{{ __('appointment.appointment_service_hint') }}</div>
             </div>
 
             {{-- Visit Type --}}
